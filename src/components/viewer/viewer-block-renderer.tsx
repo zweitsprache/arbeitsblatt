@@ -16,6 +16,10 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
+  OrderItemsBlock,
+  InlineChoicesBlock,
+  WordSearchBlock,
+  SortingCategoriesBlock,
   ViewMode,
 } from "@/types/worksheet";
 
@@ -97,7 +101,7 @@ function MultipleChoiceView({
     <div className="space-y-3">
       <p className="font-medium">{block.question}</p>
       <div className="space-y-2">
-        {block.options.map((opt) => {
+        {block.options.map((opt, i) => {
           const isSelected = selected.includes(opt.id);
           const isCorrect = opt.isCorrect;
 
@@ -134,6 +138,9 @@ function MultipleChoiceView({
                 }
               }}
             >
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               {interactive ? (
                 <div
                   className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
@@ -148,7 +155,7 @@ function MultipleChoiceView({
               ) : (
                 <input type="radio" name={`mc-${block.id}`} disabled className="h-4 w-4 border-gray-300" />
               )}
-              <span className="text-sm flex-1">{opt.text}</span>
+              <span className="text-base flex-1">{opt.text}</span>
               {showResults && isCorrect && (
                 <span className="text-xs font-medium text-green-600">✓ Correct</span>
               )}
@@ -326,7 +333,7 @@ function MatchingView({
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <p className="text-sm text-muted-foreground">{block.instruction}</p>
+        <p className="text-base text-muted-foreground">{block.instruction}</p>
       )}
       {interactive && !showResults && (
         <p className="text-xs text-muted-foreground">
@@ -362,14 +369,14 @@ function MatchingView({
                 key={pair.id}
                 onClick={() => handleLeftClick(pair.id)}
                 disabled={!interactive || showResults}
-                className={`w-full flex items-center gap-2 p-3 rounded-lg border transition-all text-left
+                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left
                   ${borderClass} ${bgClass}
-                  ${interactive && !showResults ? "cursor-pointer hover:border-primary/50" : "cursor-default"}`}
+                  ${interactive && !showResults ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
-                <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">
-                  {i + 1}.
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="text-sm flex-1">{pair.left}</span>
+                <span className="text-base flex-1">{pair.left}</span>
                 {color && !showResults && (
                   <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
@@ -381,7 +388,7 @@ function MatchingView({
         </div>
         {/* Right side — shuffled answers */}
         <div className="space-y-2">
-          {shuffledRight.map((pair) => {
+          {shuffledRight.map((pair, i) => {
             const matchedByLeftId = rightToLeft[pair.id];
             const isMatched = !!matchedByLeftId;
             const colorIdx = matchedByLeftId ? colorAssignments[matchedByLeftId] : undefined;
@@ -404,11 +411,14 @@ function MatchingView({
                 key={`r-${pair.id}`}
                 onClick={() => handleRightClick(pair.id)}
                 disabled={!interactive || showResults || !activeLeftId}
-                className={`w-full flex items-center gap-2 p-3 rounded-lg border transition-all text-left
+                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left
                   ${borderClass} ${bgClass}
-                  ${interactive && !showResults && activeLeftId ? "cursor-pointer hover:border-primary/50" : "cursor-default"}`}
+                  ${interactive && !showResults && activeLeftId ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
-                <span className="text-sm flex-1">{pair.right}</span>
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="text-base flex-1">{pair.right}</span>
                 {color && !showResults && (
                   <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
@@ -441,10 +451,10 @@ function OpenResponseView({
 }) {
   return (
     <div className="space-y-2">
-      <p className="font-medium text-sm">{block.question}</p>
+      <p className="font-medium">{block.question}</p>
       {interactive ? (
         <textarea
-          className="w-full border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          className="w-full border rounded-lg p-3 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           rows={block.lines}
           value={(answer as string) || ""}
           onChange={(e) => onAnswer(e.target.value)}
@@ -471,7 +481,7 @@ function WordBankView({ block }: { block: WordBankBlock }) {
         {block.words.map((word, i) => (
           <span
             key={i}
-            className="px-3 py-1.5 bg-muted rounded-full text-sm font-medium"
+            className="px-3 py-1.5 bg-muted rounded-full text-base font-medium"
           >
             {word}
           </span>
@@ -537,9 +547,9 @@ function TrueFalseMatrixView({
   return (
     <div className="space-y-2">
       {block.instruction && (
-        <p className="text-sm font-medium">{block.instruction}</p>
+        <p className="font-medium">{block.instruction}</p>
       )}
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse">
         <thead>
           <tr>
             <th className="text-left p-2 border-b font-medium text-muted-foreground">Statement</th>
@@ -548,13 +558,20 @@ function TrueFalseMatrixView({
           </tr>
         </thead>
         <tbody>
-          {block.statements.map((stmt) => {
+          {block.statements.map((stmt, stmtIndex) => {
             const selected = answers[stmt.id];
             const isCorrect = selected === stmt.correctAnswer;
 
             return (
               <tr key={stmt.id} className="border-b last:border-b-0">
-                <td className="p-2">{stmt.text}</td>
+                <td className="p-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                      {String(stmtIndex + 1).padStart(2, "0")}
+                    </span>
+                    <span className="flex-1">{stmt.text}</span>
+                  </div>
+                </td>
                 <td className="p-2 text-center">
                   {interactive ? (
                     <button
@@ -648,6 +665,514 @@ function ColumnsView({
   );
 }
 
+// ─── Order Items View ────────────────────────────────────────
+function OrderItemsView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: OrderItemsBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  // Answer is an array of item IDs in user-chosen order
+  const userOrder = (answer as string[] | undefined) || [];
+
+  // Shuffle items deterministically based on block id for print/initial state
+  const shuffledItems = useMemo(() => {
+    const arr = [...block.items];
+    let seed = 0;
+    for (let i = 0; i < block.id.length; i++) {
+      seed = ((seed << 5) - seed + block.id.charCodeAt(i)) | 0;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 16807 + 0) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [block.items, block.id]);
+
+  // Initialize user order from shuffled if empty
+  React.useEffect(() => {
+    if (interactive && userOrder.length === 0 && block.items.length > 0) {
+      onAnswer(shuffledItems.map((item) => item.id));
+    }
+  }, [interactive, block.items.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const displayItems =
+    userOrder.length > 0
+      ? userOrder
+          .map((id) => block.items.find((item) => item.id === id))
+          .filter(Boolean)
+      : shuffledItems;
+
+  const moveItem = (currentIndex: number, direction: -1 | 1) => {
+    if (showResults) return;
+    const newIndex = currentIndex + direction;
+    if (newIndex < 0 || newIndex >= displayItems.length) return;
+    const newOrder = [...userOrder];
+    [newOrder[currentIndex], newOrder[newIndex]] = [
+      newOrder[newIndex],
+      newOrder[currentIndex],
+    ];
+    onAnswer(newOrder);
+  };
+
+  return (
+    <div className="space-y-2">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      <div className="space-y-2">
+        {displayItems.map((item, i) => {
+          if (!item) return null;
+          const isCorrectPosition = item.correctPosition === i + 1;
+          let borderClass = "border-border";
+          let bgClass = "";
+          if (showResults) {
+            borderClass = isCorrectPosition
+              ? "border-green-500"
+              : "border-red-500";
+            bgClass = isCorrectPosition ? "bg-green-50" : "bg-red-50";
+          }
+
+          return (
+            <div
+              key={item.id}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${borderClass} ${bgClass}`}
+            >
+              {interactive ? (
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground w-6 h-6 border rounded flex items-center justify-center shrink-0">
+                  &nbsp;
+                </span>
+              )}
+              <span className="text-base flex-1">{item.text}</span>
+              {interactive && !showResults && (
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    onClick={() => moveItem(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Move up"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
+                  </button>
+                  <button
+                    className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    onClick={() => moveItem(i, 1)}
+                    disabled={i === displayItems.length - 1}
+                    aria-label="Move down"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                </div>
+              )}
+              {showResults && (
+                <span className={`text-xs font-medium ${isCorrectPosition ? "text-green-600" : "text-red-600"}`}>
+                  {isCorrectPosition ? "✓" : `→ ${item.correctPosition}`}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {showResults && (
+        <p className="text-xs text-muted-foreground">
+          {displayItems.filter(
+            (item, i) => item && item.correctPosition === i + 1
+          ).length}{" "}
+          / {block.items.length} correct
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Inline Choices View ─────────────────────────────────────
+function InlineChoicesView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: InlineChoicesBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const selections = (answer as Record<string, string> | undefined) || {};
+  const parts = block.content.split(/(\{\{choice:[^}]+\}\})/g);
+  let choiceIndex = 0;
+
+  return (
+    <div className="leading-loose text-base">
+      {parts.map((part, i) => {
+        const match = part.match(/\{\{choice:(.+)\}\}/);
+        if (match) {
+          const options = match[1].split("|");
+          const key = `choice-${choiceIndex}`;
+          choiceIndex++;
+          const selectedValue = selections[key] || "";
+
+          // Find the correct answer (prefixed with *)
+          const correctLabel = options
+            .find((o) => o.startsWith("*"))
+            ?.slice(1) || "";
+          const isCorrect = selectedValue === correctLabel;
+
+          if (interactive) {
+            return (
+              <span key={i} className="inline-flex items-center gap-1 mx-0.5">
+                {options.map((opt, oi) => {
+                  const isCorrectOpt = opt.startsWith("*");
+                  const label = isCorrectOpt ? opt.slice(1) : opt;
+                  const isSelected = selectedValue === label;
+
+                  let btnClass =
+                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors";
+                  if (showResults) {
+                    if (isCorrectOpt) {
+                      btnClass += " bg-green-100 text-green-800 font-semibold";
+                    } else if (isSelected && !isCorrectOpt) {
+                      btnClass += " bg-red-100 text-red-800 line-through";
+                    } else {
+                      btnClass += " text-muted-foreground";
+                    }
+                  } else if (isSelected) {
+                    btnClass += " bg-primary/10 text-primary font-semibold";
+                  } else {
+                    btnClass += " hover:bg-muted";
+                  }
+
+                  return (
+                    <span key={oi} className="inline-flex items-center">
+                      {oi > 0 && (
+                        <span className="mx-0.5 text-muted-foreground">/</span>
+                      )}
+                      <button
+                        type="button"
+                        className={btnClass}
+                        onClick={() => {
+                          if (showResults) return;
+                          onAnswer({ ...selections, [key]: label });
+                        }}
+                        disabled={showResults}
+                      >
+                        <span
+                          className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                            isSelected
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/40"
+                          }`}
+                        />
+                        {label}
+                      </button>
+                    </span>
+                  );
+                })}
+              </span>
+            );
+          }
+
+          // Print mode: show circles only
+          return (
+            <span key={i} className="inline-flex items-center gap-1 mx-0.5">
+              {options.map((opt, oi) => {
+                const label = opt.startsWith("*") ? opt.slice(1) : opt;
+                return (
+                  <span key={oi} className="inline-flex items-center">
+                    {oi > 0 && (
+                      <span className="mx-0.5 text-muted-foreground">/</span>
+                    )}
+                    <span className="inline-flex items-center gap-0.5">
+                      <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/40 shrink-0" />
+                      <span>{label}</span>
+                    </span>
+                  </span>
+                );
+              })}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
+// ─── Word Search View ────────────────────────────────────────
+function WordSearchView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+}: {
+  block: WordSearchBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+}) {
+  const selectedCells = (answer as string[] | undefined) || [];
+
+  const toggleCell = (key: string) => {
+    if (!interactive) return;
+    const newSelection = selectedCells.includes(key)
+      ? selectedCells.filter((k) => k !== key)
+      : [...selectedCells, key];
+    onAnswer(newSelection);
+  };
+
+  if (block.grid.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="w-full">
+        <table className="w-full border-separate border-spacing-0">
+          <tbody>
+            {block.grid.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => {
+                  const key = `${ri}-${ci}`;
+                  const isSelected = selectedCells.includes(key);
+                  let cornerClass = "";
+                  if (ri === 0 && ci === 0) cornerClass = "rounded-tl-lg";
+                  if (ri === 0 && ci === row.length - 1) cornerClass = "rounded-tr-lg";
+                  if (ri === block.grid.length - 1 && ci === 0) cornerClass = "rounded-bl-lg";
+                  if (ri === block.grid.length - 1 && ci === row.length - 1) cornerClass = "rounded-br-lg";
+                  return (
+                    <td
+                      key={ci}
+                      className={`text-center text-base font-mono font-semibold select-none border border-border aspect-square transition-colors ${cornerClass}
+                        ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
+                        ${isSelected ? "bg-primary/20 text-primary" : ""}`}
+                      onClick={() => toggleCell(key)}
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {block.showWordList && (
+        <div className="flex flex-wrap gap-2">
+          {block.words.map((word, i) => (
+            <span
+              key={i}
+              className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sorting Categories View ────────────────────────────────
+function SortingCategoriesView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: SortingCategoriesBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const userSorting = (answer as Record<string, string[]> | undefined) || {};
+  const [dragItem, setDragItem] = useState<string | null>(null);
+
+  const sortedItemIds = Object.values(userSorting).flat();
+
+  // Deterministic shuffle for initial display
+  const shuffledItems = useMemo(() => {
+    const arr = [...block.items];
+    let seed = 0;
+    for (let i = 0; i < block.id.length; i++) {
+      seed = ((seed << 5) - seed + block.id.charCodeAt(i)) | 0;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 16807 + 0) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [block.items, block.id]);
+
+  const displayUnsorted = shuffledItems.filter(
+    (item) => !sortedItemIds.includes(item.id)
+  );
+
+  const addToCategory = (catId: string, itemId: string) => {
+    if (!interactive || showResults) return;
+    const newSorting = { ...userSorting };
+    for (const key of Object.keys(newSorting)) {
+      newSorting[key] = newSorting[key].filter((id) => id !== itemId);
+    }
+    newSorting[catId] = [...(newSorting[catId] || []), itemId];
+    onAnswer(newSorting);
+  };
+
+  const removeFromCategory = (catId: string, itemId: string) => {
+    if (!interactive || showResults) return;
+    const newSorting = { ...userSorting };
+    newSorting[catId] = (newSorting[catId] || []).filter((id) => id !== itemId);
+    onAnswer(newSorting);
+  };
+
+  const getItemById = (id: string) => block.items.find((item) => item.id === id);
+
+  // Print mode: show all items as chips + empty category boxes
+  if (!interactive) {
+    return (
+      <div className="space-y-3">
+        {block.instruction && (
+          <p className="font-medium">{block.instruction}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {shuffledItems.map((item) => (
+            <span
+              key={item.id}
+              className="px-3 py-1.5 rounded-lg border border-border text-base"
+            >
+              {item.text}
+            </span>
+          ))}
+        </div>
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+          {block.categories.map((cat) => (
+            <div key={cat.id} className="rounded-lg border border-border overflow-hidden">
+              <div className="bg-muted px-3 py-2">
+                <span className="text-sm font-semibold">{cat.label}</span>
+              </div>
+              <div className="p-2 min-h-[100px]" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      {/* Unsorted items */}
+      {displayUnsorted.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {displayUnsorted.map((item) => (
+            <span
+              key={item.id}
+              className={`px-3 py-1.5 rounded-lg border border-border text-base cursor-grab transition-colors
+                ${dragItem === item.id ? "bg-primary/10 border-primary" : "hover:bg-accent"}`}
+              draggable
+              onDragStart={() => setDragItem(item.id)}
+              onDragEnd={() => setDragItem(null)}
+            >
+              {item.text}
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Category boxes */}
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+        {block.categories.map((cat) => {
+          const catItemIds = userSorting[cat.id] || [];
+          return (
+            <div
+              key={cat.id}
+              className="rounded-lg border border-border overflow-hidden transition-shadow"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add("ring-2", "ring-primary");
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove("ring-2", "ring-primary");
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove("ring-2", "ring-primary");
+                if (dragItem) {
+                  addToCategory(cat.id, dragItem);
+                  setDragItem(null);
+                }
+              }}
+            >
+              <div className="bg-muted px-3 py-2">
+                <span className="text-sm font-semibold">{cat.label}</span>
+              </div>
+              <div className="p-2 space-y-1.5 min-h-[60px]">
+                {catItemIds.map((itemId) => {
+                  const item = getItemById(itemId);
+                  if (!item) return null;
+                  const isCorrect = cat.correctItems.includes(item.id);
+                  let borderClass = "border-border";
+                  let bgClass = "bg-card";
+                  if (showResults) {
+                    borderClass = isCorrect ? "border-green-500" : "border-red-500";
+                    bgClass = isCorrect ? "bg-green-50" : "bg-red-50";
+                  }
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-2 p-2 rounded border transition-colors ${borderClass} ${bgClass}`}
+                    >
+                      <span className="text-base flex-1">{item.text}</span>
+                      {!showResults && (
+                        <button
+                          className="p-0.5 hover:bg-muted rounded text-muted-foreground"
+                          onClick={() => removeFromCategory(cat.id, item.id)}
+                          aria-label="Remove from category"
+                        >
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      )}
+                      {showResults && (
+                        <span className={`text-xs font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                          {isCorrect ? "✓" : "✗"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {showResults && (
+        <p className="text-xs text-muted-foreground">
+          {Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
+            const cat = block.categories.find((c) => c.id === catId);
+            if (!cat) return total;
+            return total + itemIds.filter((id) => cat.correctItems.includes(id)).length;
+          }, 0)}{" "}
+          / {block.items.length} correct
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Renderer ──────────────────────────────────────────
 
 export function ViewerBlockRenderer({
@@ -726,6 +1251,45 @@ export function ViewerBlockRenderer({
           block={block}
           interactive={interactive}
           answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "order-items":
+      return (
+        <OrderItemsView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "inline-choices":
+      return (
+        <InlineChoicesView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "word-search":
+      return (
+        <WordSearchView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+        />
+      );
+    case "sorting-categories":
+      return (
+        <SortingCategoriesView
+          block={block}
+          interactive={interactive}
+          answer={answer ?? undefined}
           onAnswer={onAnswer || noop}
           showResults={showResults}
         />

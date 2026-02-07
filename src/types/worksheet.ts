@@ -18,7 +18,11 @@ export type BlockType =
   | "word-bank"
   | "number-line"
   | "columns"
-  | "true-false-matrix";
+  | "true-false-matrix"
+  | "order-items"
+  | "inline-choices"
+  | "word-search"
+  | "sorting-categories";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -135,6 +139,55 @@ export interface TrueFalseMatrixBlock extends BlockBase {
   }[];
 }
 
+// ─── Order Items block ───────────────────────────────────────
+export interface OrderItemsBlock extends BlockBase {
+  type: "order-items";
+  instruction: string;
+  items: {
+    id: string;
+    text: string;
+    correctPosition: number; // 1-based correct order
+  }[];
+}
+
+// ─── Inline Choices block ────────────────────────────────────
+// Text with inline choices marked as {{choice:option1|option2|*correctOption|option3}}
+// The correct option is prefixed with *
+export interface InlineChoicesBlock extends BlockBase {
+  type: "inline-choices";
+  content: string;
+}
+
+// ─── Word Search block ──────────────────────────────────────
+export interface WordSearchBlock extends BlockBase {
+  type: "word-search";
+  words: string[];
+  gridSize?: number; // deprecated, use gridCols/gridRows
+  gridCols: number;
+  gridRows: number;
+  grid: string[][]; // generated letter grid
+  showWordList: boolean;
+}
+
+// ─── Sorting Categories block ───────────────────────────────
+export interface SortingCategory {
+  id: string;
+  label: string;
+  correctItems: string[]; // item IDs that belong in this category
+}
+
+export interface SortingItem {
+  id: string;
+  text: string;
+}
+
+export interface SortingCategoriesBlock extends BlockBase {
+  type: "sorting-categories";
+  instruction: string;
+  categories: SortingCategory[];
+  items: SortingItem[];
+}
+
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
@@ -149,7 +202,11 @@ export type WorksheetBlock =
   | WordBankBlock
   | NumberLineBlock
   | ColumnsBlock
-  | TrueFalseMatrixBlock;
+  | TrueFalseMatrixBlock
+  | OrderItemsBlock
+  | InlineChoicesBlock
+  | WordSearchBlock
+  | SortingCategoriesBlock;
 
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
@@ -370,6 +427,74 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "s1", text: "Statement 1", correctAnswer: true },
         { id: "s2", text: "Statement 2", correctAnswer: false },
         { id: "s3", text: "Statement 3", correctAnswer: true },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "order-items",
+    label: "Order Items",
+    description: "Put items in the correct order",
+    icon: "ListOrdered",
+    category: "interactive",
+    defaultData: {
+      type: "order-items",
+      instruction: "Put the following items in the correct order.",
+      items: [
+        { id: "oi1", text: "First item", correctPosition: 1 },
+        { id: "oi2", text: "Second item", correctPosition: 2 },
+        { id: "oi3", text: "Third item", correctPosition: 3 },
+        { id: "oi4", text: "Fourth item", correctPosition: 4 },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "inline-choices",
+    label: "Inline Choices",
+    description: "Text with inline multiple choice options",
+    icon: "TextSelect",
+    category: "interactive",
+    defaultData: {
+      type: "inline-choices",
+      content: "In {{choice:1889|*1988|1898}} he was born in London.",
+      visibility: "both",
+    },
+  },
+  {
+    type: "word-search",
+    label: "Word Search",
+    description: "Word search puzzle grid",
+    icon: "Search",
+    category: "interactive",
+    defaultData: {
+      type: "word-search",
+      words: ["HELLO", "WORLD", "SEARCH", "FIND"],
+      gridCols: 24,
+      gridRows: 12,
+      grid: [],
+      showWordList: true,
+      visibility: "both",
+    },
+  },
+  {
+    type: "sorting-categories",
+    label: "Sorting Categories",
+    description: "Sort items into labeled categories",
+    icon: "Group",
+    category: "interactive",
+    defaultData: {
+      type: "sorting-categories",
+      instruction: "Sort the following items into the correct categories.",
+      categories: [
+        { id: "cat1", label: "Category A", correctItems: ["si1", "si2"] },
+        { id: "cat2", label: "Category B", correctItems: ["si3", "si4"] },
+      ],
+      items: [
+        { id: "si1", text: "Item 1" },
+        { id: "si2", text: "Item 2" },
+        { id: "si3", text: "Item 3" },
+        { id: "si4", text: "Item 4" },
       ],
       visibility: "both",
     },

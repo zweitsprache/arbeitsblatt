@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { WorksheetEditor } from "@/components/editor/worksheet-editor";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { WorksheetDocument, DEFAULT_SETTINGS, WorksheetBlock, WorksheetSettings } from "@/types/worksheet";
 import { notFound } from "next/navigation";
 
@@ -30,5 +31,9 @@ export default async function EditWorksheetPage({
     updatedAt: worksheet.updatedAt.toISOString(),
   };
 
-  return <WorksheetEditor initialData={doc} />;
+  return (
+    <DashboardLayout>
+      <WorksheetEditor initialData={doc} />
+    </DashboardLayout>
+  );
 }

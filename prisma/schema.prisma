@@ -12,6 +12,19 @@ datasource db {
   provider  = "postgresql"
 }
 
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[] @relation("FolderTree")
+  worksheets Worksheet[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
 model Worksheet {
   id          String   @id @default(cuid())
   title       String   @default("Untitled Worksheet")
@@ -20,8 +33,11 @@ model Worksheet {
   blocks      Json     @default("[]")
   settings    Json     @default("{}")
   published   Boolean  @default(false)
+  folderId    String?
+  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([slug])
+  @@index([folderId])
 }

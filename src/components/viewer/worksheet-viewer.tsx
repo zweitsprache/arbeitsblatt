@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { WorksheetBlock, WorksheetSettings, ViewMode } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 
 export function WorksheetViewer({
@@ -57,7 +58,15 @@ export function WorksheetViewer({
       >
         {mode === "online" && (
           <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <div className="flex items-center gap-3 mb-1">
+              <Image
+                src="/logo/arbeitsblatt_logo_icon.svg"
+                alt="Arbeitsblatt"
+                width={28}
+                height={28}
+              />
+              <h1 className="text-2xl font-bold">{title}</h1>
+            </div>
             {settings.showHeader && settings.headerText && (
               <p className="text-sm text-muted-foreground mt-2">{settings.headerText}</p>
             )}

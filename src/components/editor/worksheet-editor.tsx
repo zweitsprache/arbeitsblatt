@@ -219,9 +219,9 @@ function EditorInner({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-screen flex flex-col">
+      <div className="h-full flex flex-col">
         <EditorToolbar />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden bg-muted/30 px-3 gap-3">
           <BlockSidebar onAddBlock={(type) => addBlock(type)} />
           <WorksheetCanvas activeId={activeId} overId={overId} />
           <PropertiesPanel />

@@ -16,12 +16,16 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
+  OrderItemsBlock,
+  InlineChoicesBlock,
+  WordSearchBlock,
+  SortingCategoriesBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, Printer, Monitor, Sparkles } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, Printer, Monitor, Sparkles, ArrowUpDown } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -197,9 +201,12 @@ function MultipleChoiceRenderer({
       >
         {block.question}
       </p>
-      <div className="space-y-1.5 pl-1">
+      <div className="space-y-2">
         {block.options.map((opt, i) => (
-          <div key={opt.id} className="flex items-center gap-2 group">
+          <div key={opt.id} className="flex items-center gap-3 p-3 rounded-lg border border-border group">
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
             {interactive ? (
               block.allowMultiple ? (
                 <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300" />
@@ -220,12 +227,12 @@ function MultipleChoiceRenderer({
               </button>
             )}
             {interactive ? (
-              <span className="text-sm">{opt.text}</span>
+              <span className="text-base flex-1">{opt.text}</span>
             ) : (
               <span
                 contentEditable
                 suppressContentEditableWarning
-                className="text-sm outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+                className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
                 onBlur={(e) => {
                   const newOptions = [...block.options];
                   newOptions[i] = { ...opt, text: e.currentTarget.textContent || "" };
@@ -250,7 +257,7 @@ function MultipleChoiceRenderer({
         ))}
       </div>
       {!interactive && (
-        <div className="flex items-center gap-3 pl-1 mt-1">
+        <div className="flex items-center gap-3 mt-1">
           <button
             type="button"
             onClick={addOption}
@@ -321,18 +328,18 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{block.instruction}</p>
+      <p className="text-base text-muted-foreground">{block.instruction}</p>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           {block.pairs.map((pair, i) => (
             <div
               key={pair.id}
-              className="flex items-center gap-2 p-2 rounded border bg-card"
+              className="flex items-center gap-3 p-3 rounded-lg border border-border"
             >
-              <span className="text-xs font-bold text-muted-foreground w-5">
-                {i + 1}.
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="text-sm">{pair.left}</span>
+              <span className="text-base flex-1">{pair.left}</span>
             </div>
           ))}
         </div>
@@ -340,12 +347,12 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
           {shuffledRight.map((pair, i) => (
             <div
               key={`right-${pair.id}`}
-              className="flex items-center gap-2 p-2 rounded border bg-card"
+              className="flex items-center gap-3 p-3 rounded-lg border border-border"
             >
-              <span className="text-xs font-bold text-muted-foreground w-5">
-                {String.fromCharCode(65 + i)}.
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String.fromCharCode(65 + i)}
               </span>
-              <span className="text-sm">{pair.right}</span>
+              <span className="text-base flex-1">{pair.right}</span>
             </div>
           ))}
         </div>
@@ -364,10 +371,10 @@ function OpenResponseRenderer({
 }) {
   return (
     <div className="space-y-2">
-      <p className="font-medium text-sm">{block.question}</p>
+      <p className="font-medium">{block.question}</p>
       {interactive ? (
         <textarea
-          className="w-full border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full border rounded-md p-2 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary"
           rows={block.lines}
           placeholder="Write your answer here..."
         />
@@ -393,7 +400,7 @@ function WordBankRenderer({ block }: { block: WordBankBlock }) {
         {block.words.map((word, i) => (
           <span
             key={i}
-            className="px-3 py-1 bg-muted rounded-full text-sm font-medium"
+            className="px-3 py-1 bg-muted rounded-full text-base font-medium"
           >
             {word}
           </span>
@@ -499,7 +506,7 @@ function TrueFalseMatrixRenderer({
     <div className="space-y-2">
       {/* Instruction */}
       <div
-        className="text-sm font-medium outline-none"
+        className="font-medium outline-none"
         contentEditable
         suppressContentEditableWarning
         onBlur={(e) =>
@@ -513,7 +520,7 @@ function TrueFalseMatrixRenderer({
       </div>
 
       {/* Table */}
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse">
         <thead>
           <tr>
             <th className="text-left p-2 border-b font-medium text-muted-foreground">Statement</th>
@@ -523,11 +530,15 @@ function TrueFalseMatrixRenderer({
           </tr>
         </thead>
         <tbody>
-          {block.statements.map((stmt) => (
+          {block.statements.map((stmt, stmtIndex) => (
             <tr key={stmt.id} className="group/row border-b last:border-b-0">
               <td className="p-2">
+                <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(stmtIndex + 1).padStart(2, "0")}
+                </span>
                 <span
-                  className="outline-none block"
+                  className="outline-none block flex-1"
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={(e) =>
@@ -536,6 +547,7 @@ function TrueFalseMatrixRenderer({
                 >
                   {stmt.text}
                 </span>
+                </div>
               </td>
               <td className="p-2 text-center">
                 <button
@@ -598,6 +610,489 @@ function TrueFalseMatrixRenderer({
         </button>
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+// ─── Order Items ────────────────────────────────────────────
+function OrderItemsRenderer({
+  block,
+  interactive,
+}: {
+  block: OrderItemsBlock;
+  interactive: boolean;
+}) {
+  const { dispatch } = useEditor();
+
+  const updateItem = (id: string, updates: Partial<{ text: string; correctPosition: number }>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
+          ),
+        },
+      },
+    });
+  };
+
+  const addItem = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...block.items,
+            {
+              id: crypto.randomUUID(),
+              text: `Item ${block.items.length + 1}`,
+              correctPosition: block.items.length + 1,
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeItem = (id: string) => {
+    if (block.items.length <= 2) return;
+    const filtered = block.items.filter((item) => item.id !== id);
+    // Recompute correct positions
+    const reindexed = filtered.map((item, i) => ({
+      ...item,
+      correctPosition: i + 1,
+    }));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: reindexed } },
+    });
+  };
+
+  // In editor, show items in correct order
+  const sortedItems = [...block.items].sort(
+    (a, b) => a.correctPosition - b.correctPosition
+  );
+
+  return (
+    <div className="space-y-2">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: {
+              id: block.id,
+              updates: { instruction: e.currentTarget.textContent || "" },
+            },
+          })
+        }
+      >
+        {block.instruction}
+      </div>
+      <div className="space-y-2">
+        {sortedItems.map((item, i) => (
+          <div
+            key={item.id}
+            className="flex items-center gap-3 group/item p-3 rounded-lg border border-border"
+          >
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span
+              contentEditable
+              suppressContentEditableWarning
+              className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+              onBlur={(e) =>
+                updateItem(item.id, {
+                  text: e.currentTarget.textContent || "",
+                })
+              }
+            >
+              {item.text}
+            </span>
+            <button
+              className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                ${block.items.length <= 2 ? "invisible" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeItem(item.id);
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addItem();
+        }}
+      >
+        <Plus className="h-3 w-3" /> Add item
+      </button>
+    </div>
+  );
+}
+
+// ─── Inline Choices ─────────────────────────────────────────
+function InlineChoicesRenderer({
+  block,
+  interactive,
+}: {
+  block: InlineChoicesBlock;
+  interactive: boolean;
+}) {
+  const { dispatch } = useEditor();
+
+  // Parse {{choice:opt1|opt2|*correct|opt3}} patterns
+  const parts = block.content.split(/(\{\{choice:[^}]+\}\})/g);
+
+  return (
+    <div className="leading-relaxed">
+      {parts.map((part, i) => {
+        const match = part.match(/\{\{choice:(.+)\}\}/);
+        if (match) {
+          const options = match[1].split("|");
+          const correctOption = options.find((o) => o.startsWith("*"));
+          return (
+            <span key={i} className="inline-flex items-center gap-1 mx-0.5">
+              {options.map((opt, oi) => {
+                const isCorrect = opt.startsWith("*");
+                const label = isCorrect ? opt.slice(1) : opt;
+                return (
+                  <span key={oi} className="inline-flex items-center">
+                    {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
+                    <span
+                      className={`inline-flex items-center gap-0.5 ${
+                        isCorrect
+                          ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
+                          : ""
+                      }`}
+                    >
+                      <span
+                        className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                          isCorrect
+                            ? "border-green-500 bg-green-500"
+                            : "border-muted-foreground/40"
+                        }`}
+                      />
+                      <span>{label}</span>
+                    </span>
+                  </span>
+                );
+              })}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
+// ─── Word Search ────────────────────────────────────────────
+function generateWordSearchGrid(
+  words: string[],
+  cols: number,
+  rows: number
+): string[][] {
+  const grid: string[][] = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => "")
+  );
+
+  const directions = [
+    [0, 1],   // right
+    [1, 0],   // down
+    [1, 1],   // diagonal down-right
+    [-1, 1],  // diagonal up-right
+    [0, -1],  // left
+    [1, -1],  // diagonal down-left
+  ];
+
+  const upperWords = words.map((w) => w.toUpperCase().replace(/\s+/g, ""));
+
+  for (const word of upperWords) {
+    let placed = false;
+    let attempts = 0;
+    while (!placed && attempts < 100) {
+      attempts++;
+      const dir = directions[Math.floor(Math.random() * directions.length)];
+      const startRow = dir[0] < 0
+        ? Math.floor(Math.random() * (rows - word.length)) + word.length - 1
+        : Math.floor(Math.random() * (rows - (dir[0] > 0 ? word.length - 1 : 0)));
+      const startCol = dir[1] < 0
+        ? Math.floor(Math.random() * (cols - word.length)) + word.length - 1
+        : Math.floor(Math.random() * (cols - (dir[1] > 0 ? word.length - 1 : 0)));
+
+      let canPlace = true;
+      for (let k = 0; k < word.length; k++) {
+        const r = startRow + k * dir[0];
+        const c = startCol + k * dir[1];
+        if (r < 0 || r >= rows || c < 0 || c >= cols) {
+          canPlace = false;
+          break;
+        }
+        if (grid[r][c] !== "" && grid[r][c] !== word[k]) {
+          canPlace = false;
+          break;
+        }
+      }
+      if (canPlace) {
+        for (let k = 0; k < word.length; k++) {
+          grid[startRow + k * dir[0]][startCol + k * dir[1]] = word[k];
+        }
+        placed = true;
+      }
+    }
+  }
+
+  // Fill empty cells with random letters
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] === "") {
+        grid[r][c] = letters[Math.floor(Math.random() * letters.length)];
+      }
+    }
+  }
+
+  return grid;
+}
+
+function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
+  const { dispatch } = useEditor();
+
+  const cols = block.gridCols ?? block.gridSize ?? 24;
+  const rows = block.gridRows ?? block.gridSize ?? 12;
+
+  // Generate grid if empty
+  React.useEffect(() => {
+    if (block.grid.length === 0 && block.words.length > 0) {
+      const newGrid = generateWordSearchGrid(block.words, cols, rows);
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { grid: newGrid } },
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const regenerateGrid = () => {
+    const newGrid = generateWordSearchGrid(block.words, cols, rows);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { grid: newGrid } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Grid */}
+      {block.grid.length > 0 && (
+        <div className="w-full">
+          <table className="w-full border-separate border-spacing-0">
+            <tbody>
+              {block.grid.map((row, ri) => (
+                <tr key={ri}>
+                  {row.map((cell, ci) => {
+                    let cornerClass = "";
+                    if (ri === 0 && ci === 0) cornerClass = "rounded-tl-lg";
+                    if (ri === 0 && ci === row.length - 1) cornerClass = "rounded-tr-lg";
+                    if (ri === block.grid.length - 1 && ci === 0) cornerClass = "rounded-bl-lg";
+                    if (ri === block.grid.length - 1 && ci === row.length - 1) cornerClass = "rounded-br-lg";
+                    return (
+                      <td
+                        key={ci}
+                        className={`text-center text-base font-mono font-semibold select-none border border-border aspect-square ${cornerClass}`}
+                      >
+                        {cell}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Word list */}
+      {block.showWordList && (
+        <div className="flex flex-wrap gap-2">
+          {block.words.map((word, i) => (
+            <span
+              key={i}
+              className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Regenerate button */}
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          regenerateGrid();
+        }}
+      >
+        <ArrowUpDown className="h-3 w-3" /> Regenerate grid
+      </button>
+    </div>
+  );
+}
+
+// ─── Sorting Categories ─────────────────────────────────────
+function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
+  const { dispatch } = useEditor();
+
+  const updateItem = (id: string, text: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.map((item) =>
+            item.id === id ? { ...item, text } : item
+          ),
+        },
+      },
+    });
+  };
+
+  const addItem = () => {
+    const newId = crypto.randomUUID();
+    const firstCat = block.categories[0];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [...block.items, { id: newId, text: `Item ${block.items.length + 1}` }],
+          categories: block.categories.map((cat) =>
+            cat.id === firstCat.id
+              ? { ...cat, correctItems: [...cat.correctItems, newId] }
+              : cat
+          ),
+        },
+      },
+    });
+  };
+
+  const removeItem = (itemId: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.filter((item) => item.id !== itemId),
+          categories: block.categories.map((cat) => ({
+            ...cat,
+            correctItems: cat.correctItems.filter((id) => id !== itemId),
+          })),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: {
+              id: block.id,
+              updates: { instruction: e.currentTarget.textContent || "" },
+            },
+          })
+        }
+      >
+        {block.instruction}
+      </div>
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+        {block.categories.map((cat) => {
+          const catItems = block.items.filter((item) =>
+            cat.correctItems.includes(item.id)
+          );
+          return (
+            <div key={cat.id} className="rounded-lg border border-border overflow-hidden">
+              <div className="bg-muted px-3 py-2">
+                <span
+                  className="text-sm font-semibold outline-none block"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    dispatch({
+                      type: "UPDATE_BLOCK",
+                      payload: {
+                        id: block.id,
+                        updates: {
+                          categories: block.categories.map((c) =>
+                            c.id === cat.id
+                              ? { ...c, label: e.currentTarget.textContent || "" }
+                              : c
+                          ),
+                        },
+                      },
+                    })
+                  }
+                >
+                  {cat.label}
+                </span>
+              </div>
+              <div className="p-2 space-y-1.5 min-h-[60px]">
+                {catItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2 p-2 rounded border border-border bg-card group/item"
+                  >
+                    <span
+                      contentEditable
+                      suppressContentEditableWarning
+                      className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+                      onBlur={(e) =>
+                        updateItem(item.id, e.currentTarget.textContent || "")
+                      }
+                    >
+                      {item.text}
+                    </span>
+                    <button
+                      className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeItem(item.id);
+                      }}
+                    >
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addItem();
+        }}
+      >
+        <Plus className="h-3 w-3" /> Add item
+      </button>
     </div>
   );
 }
@@ -836,6 +1331,14 @@ export function BlockRenderer({
       return <NumberLineRenderer block={block} />;
     case "true-false-matrix":
       return <TrueFalseMatrixRenderer block={block} interactive={interactive} />;
+    case "order-items":
+      return <OrderItemsRenderer block={block} interactive={interactive} />;
+    case "inline-choices":
+      return <InlineChoicesRenderer block={block} interactive={interactive} />;
+    case "word-search":
+      return <WordSearchRenderer block={block} />;
+    case "sorting-categories":
+      return <SortingCategoriesRenderer block={block} />;
     case "columns":
       return <ColumnsRenderer block={block} mode={mode} />;
     default:

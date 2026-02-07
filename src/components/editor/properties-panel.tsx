@@ -28,10 +28,15 @@ import {
   WordBankBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
+  OrderItemsBlock,
+  InlineChoicesBlock,
+  WordSearchBlock,
+  SortingCategoriesBlock,
+  SortingCategory,
   WorksheetBlock,
   BlockVisibility,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
@@ -619,6 +624,459 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
   );
 }
 
+function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
+  const { dispatch } = useEditor();
+
+  const updateItem = (index: number, updates: Partial<{ text: string }>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      {
+        id: `oi${Date.now()}`,
+        text: `Item ${block.items.length + 1}`,
+        correctPosition: block.items.length + 1,
+      },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 2) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    // Reindex positions
+    const reindexed = newItems.map((item, i) => ({
+      ...item,
+      correctPosition: i + 1,
+    }));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: reindexed } },
+    });
+  };
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.items.length) return;
+    const newItems = [...block.items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    const reindexed = newItems.map((item, i) => ({
+      ...item,
+      correctPosition: i + 1,
+    }));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: reindexed } },
+    });
+  };
+
+  const sortedItems = [...block.items].sort(
+    (a, b) => a.correctPosition - b.correctPosition
+  );
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Instruction</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs">Items (in correct order)</Label>
+        {sortedItems.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
+            <Input
+              value={item.text}
+              onChange={(e) => updateItem(i, { text: e.target.value })}
+              className="flex-1 h-8 text-xs"
+            />
+            <div className="flex flex-col">
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, -1)}
+                disabled={i === 0}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+              </button>
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, 1)}
+                disabled={i === sortedItems.length - 1}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5" />
+              </button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeItem(i)}
+              disabled={block.items.length <= 2}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Item
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Content</Label>
+        <p className="text-[10px] text-muted-foreground mb-1">
+          Use {"{{choice:opt1|opt2|*correct|opt3}}"} for inline choices.
+          Prefix the correct answer with *
+        </p>
+        <textarea
+          value={block.content}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { content: e.target.value } },
+            })
+          }
+          className="w-full border rounded-md p-2 text-xs min-h-[120px] resize-y font-mono"
+        />
+      </div>
+    </div>
+  );
+}
+
+function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
+  const { dispatch } = useEditor();
+
+  const addCategory = () => {
+    const newCat: SortingCategory = {
+      id: `cat${Date.now()}`,
+      label: `Category ${block.categories.length + 1}`,
+      correctItems: [],
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { categories: [...block.categories, newCat] },
+      },
+    });
+  };
+
+  const removeCategory = (catId: string) => {
+    if (block.categories.length <= 2) return;
+    const removedCat = block.categories.find((c) => c.id === catId);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          categories: block.categories.filter((c) => c.id !== catId),
+          items: block.items.filter(
+            (item) => !removedCat?.correctItems.includes(item.id)
+          ),
+        },
+      },
+    });
+  };
+
+  const updateCategoryLabel = (catId: string, label: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          categories: block.categories.map((c) =>
+            c.id === catId ? { ...c, label } : c
+          ),
+        },
+      },
+    });
+  };
+
+  const addItemToCategory = (catId: string) => {
+    const newItem = {
+      id: `si${Date.now()}`,
+      text: `Item ${block.items.length + 1}`,
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [...block.items, newItem],
+          categories: block.categories.map((c) =>
+            c.id === catId
+              ? { ...c, correctItems: [...c.correctItems, newItem.id] }
+              : c
+          ),
+        },
+      },
+    });
+  };
+
+  const removeItem = (itemId: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.filter((item) => item.id !== itemId),
+          categories: block.categories.map((cat) => ({
+            ...cat,
+            correctItems: cat.correctItems.filter((id) => id !== itemId),
+          })),
+        },
+      },
+    });
+  };
+
+  const updateItemText = (itemId: string, text: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.map((item) =>
+            item.id === itemId ? { ...item, text } : item
+          ),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Instruction</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      {block.categories.map((cat) => {
+        const catItems = block.items.filter((item) =>
+          cat.correctItems.includes(item.id)
+        );
+        return (
+          <div key={cat.id} className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Input
+                value={cat.label}
+                onChange={(e) => updateCategoryLabel(cat.id, e.target.value)}
+                className="flex-1 h-8 text-xs font-semibold"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeCategory(cat.id)}
+                disabled={block.categories.length <= 2}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            {catItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-1 pl-3">
+                <span className="text-xs text-muted-foreground shrink-0">•</span>
+                <Input
+                  value={item.text}
+                  onChange={(e) => updateItemText(item.id, e.target.value)}
+                  className="flex-1 h-7 text-xs"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => removeItem(item.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => addItemToCategory(cat.id)}
+              className="w-full h-7 text-xs"
+            >
+              <Plus className="h-3 w-3 mr-1" /> Add Item
+            </Button>
+            <Separator />
+          </div>
+        );
+      })}
+      <Button variant="outline" size="sm" onClick={addCategory} className="w-full">
+        <Plus className="h-3.5 w-3.5 mr-1" /> Add Category
+      </Button>
+    </div>
+  );
+}
+
+function WordSearchProps({ block }: { block: WordSearchBlock }) {
+  const { dispatch } = useEditor();
+
+  const updateWord = (index: number, value: string) => {
+    const newWords = [...block.words];
+    newWords[index] = value;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: newWords } },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { words: [...block.words, "WORD"] },
+      },
+    });
+  };
+
+  const removeWord = (index: number) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: block.words.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  const regenerateGrid = () => {
+    // Import the generator from block-renderer would cause circular deps,
+    // so we trigger re-generation by clearing the grid.
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { grid: [] } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Columns</Label>
+          <Input
+            type="number"
+            min={4}
+            max={40}
+            value={block.gridCols ?? block.gridSize ?? 24}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: { gridCols: Number(e.target.value), grid: [] },
+                },
+              })
+            }
+            className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Rows</Label>
+          <Input
+            type="number"
+            min={4}
+            max={30}
+            value={block.gridRows ?? block.gridSize ?? 12}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: { gridRows: Number(e.target.value), grid: [] },
+                },
+              })
+            }
+            className="h-8 text-xs"
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showWordList}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordList: v } },
+            })
+          }
+        />
+        <Label className="text-xs">Show word list</Label>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs">Words</Label>
+        {block.words.map((word, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <Input
+              value={word}
+              onChange={(e) => updateWord(i, e.target.value.toUpperCase())}
+              className="flex-1 h-8 text-xs uppercase"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeWord(i)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addWord} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Word
+        </Button>
+      </div>
+      <Separator />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={regenerateGrid}
+        className="w-full"
+      >
+        <ArrowUpDown className="h-3.5 w-3.5 mr-1" /> Regenerate Grid
+      </Button>
+    </div>
+  );
+}
+
 // ─── Properties Panel ────────────────────────────────────────
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
@@ -629,10 +1087,12 @@ export function PropertiesPanel() {
 
   if (!selectedBlock) {
     return (
-      <div className="w-72 border-l border-border bg-background p-4">
-        <p className="text-sm text-muted-foreground text-center mt-8">
-          Select a block to edit its properties
-        </p>
+      <div className="w-72 pt-8 pb-8">
+        <div className="bg-amber-50 rounded-sm shadow-sm p-4 pt-12">
+          <p className="text-sm text-muted-foreground text-center mt-8">
+            Select a block to edit its properties
+          </p>
+        </div>
       </div>
     );
   }
@@ -661,6 +1121,14 @@ export function PropertiesPanel() {
         return <ColumnsProps block={selectedBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
+      case "order-items":
+        return <OrderItemsProps block={selectedBlock} />;
+      case "inline-choices":
+        return <InlineChoicesProps block={selectedBlock} />;
+      case "word-search":
+        return <WordSearchProps block={selectedBlock} />;
+      case "sorting-categories":
+        return <SortingCategoriesProps block={selectedBlock} />;
       case "text":
         return <TextProps block={selectedBlock} />;
       default:
@@ -669,14 +1137,15 @@ export function PropertiesPanel() {
   };
 
   return (
-    <div className="w-72 border-l border-border bg-background flex flex-col h-full">
+    <div className="w-72 flex flex-col h-full pt-8 pb-8">
+      <div className="flex flex-col h-full bg-amber-50 rounded-sm shadow-sm overflow-hidden">
       <div className="p-4 border-b border-border">
         <h3 className="text-sm font-semibold capitalize">
           {selectedBlock.type.replace("-", " ")} Properties
         </h3>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
           {/* Visibility */}
           <div>
             <Label className="text-xs mb-2 block">Visibility</Label>
@@ -740,6 +1209,7 @@ export function PropertiesPanel() {
           {renderBlockProps()}
         </div>
       </ScrollArea>
+      </div>
     </div>
   );
 }

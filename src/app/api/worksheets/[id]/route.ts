@@ -22,14 +22,16 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json();
 
+  const data: Record<string, unknown> = {};
+  if (body.title !== undefined) data.title = body.title;
+  if (body.blocks !== undefined) data.blocks = body.blocks;
+  if (body.settings !== undefined) data.settings = body.settings;
+  if (body.published !== undefined) data.published = body.published;
+  if (body.folderId !== undefined) data.folderId = body.folderId || null;
+
   const worksheet = await prisma.worksheet.update({
     where: { id },
-    data: {
-      title: body.title,
-      blocks: body.blocks,
-      settings: body.settings,
-      published: body.published,
-    },
+    data,
   });
 
   return NextResponse.json(worksheet);
