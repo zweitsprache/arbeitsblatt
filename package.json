@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently --raw \"next dev\" \"i18nexus listen -p src/messages\"",
     "dev:next": "next dev",
-    "build": "prisma generate && i18nexus pull -p src/messages && next build",
+    "build": "prisma generate && ([ -n \"$I18NEXUS_API_KEY\" ] && i18nexus pull -p src/messages || true) && next build",
     "start": "next start",
     "lint": "eslint",
     "i18n:pull": "i18nexus pull -p src/messages",
