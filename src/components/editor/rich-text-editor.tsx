@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -89,9 +90,11 @@ function ToolbarButton({
 export function RichTextEditor({
   content,
   onChange,
-  placeholder = "Start typing...",
+  placeholder,
   editable = true,
 }: RichTextEditorProps) {
+  const t = useTranslations("richtext");
+  const resolvedPlaceholder = placeholder ?? t("startTyping");
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -108,7 +111,7 @@ export function RichTextEditor({
         multicolor: true,
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: resolvedPlaceholder,
       }),
       TextStyle,
       Color,
@@ -147,7 +150,7 @@ export function RichTextEditor({
   const setLink = useCallback(() => {
     if (!editor) return;
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("URL", previousUrl);
+    const url = window.prompt(t("urlPrompt"), previousUrl);
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -173,13 +176,13 @@ export function RichTextEditor({
             <ToolbarButton
               onClick={() => editor.chain().focus().undo().run()}
               icon={Undo2}
-              label="Undo"
+              label={t("undo")}
               disabled={!editor.can().undo()}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().redo().run()}
               icon={Redo2}
-              label="Redo"
+              label={t("redo")}
               disabled={!editor.can().redo()}
             />
 
@@ -190,7 +193,7 @@ export function RichTextEditor({
               onClick={() => editor.chain().focus().setParagraph().run()}
               isActive={editor.isActive("paragraph")}
               icon={Pilcrow}
-              label="Paragraph"
+              label={t("paragraph")}
             />
             <ToolbarButton
               onClick={() =>
@@ -198,7 +201,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive("heading", { level: 1 })}
               icon={Heading1}
-              label="Heading 1"
+              label={t("heading1")}
             />
             <ToolbarButton
               onClick={() =>
@@ -206,7 +209,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive("heading", { level: 2 })}
               icon={Heading2}
-              label="Heading 2"
+              label={t("heading2")}
             />
             <ToolbarButton
               onClick={() =>
@@ -214,7 +217,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive("heading", { level: 3 })}
               icon={Heading3}
-              label="Heading 3"
+              label={t("heading3")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />
@@ -224,43 +227,43 @@ export function RichTextEditor({
               onClick={() => editor.chain().focus().toggleBold().run()}
               isActive={editor.isActive("bold")}
               icon={Bold}
-              label="Bold"
+              label={t("bold")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleItalic().run()}
               isActive={editor.isActive("italic")}
               icon={Italic}
-              label="Italic"
+              label={t("italic")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               isActive={editor.isActive("underline")}
               icon={UnderlineIcon}
-              label="Underline"
+              label={t("underline")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleStrike().run()}
               isActive={editor.isActive("strike")}
               icon={Strikethrough}
-              label="Strikethrough"
+              label={t("strikethrough")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleHighlight().run()}
               isActive={editor.isActive("highlight")}
               icon={Highlighter}
-              label="Highlight"
+              label={t("highlight")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleSubscript().run()}
               isActive={editor.isActive("subscript")}
               icon={SubscriptIcon}
-              label="Subscript"
+              label={t("subscript")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleSuperscript().run()}
               isActive={editor.isActive("superscript")}
               icon={SuperscriptIcon}
-              label="Superscript"
+              label={t("superscript")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />
@@ -272,7 +275,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive({ textAlign: "left" })}
               icon={AlignLeft}
-              label="Align left"
+              label={t("alignLeft")}
             />
             <ToolbarButton
               onClick={() =>
@@ -280,7 +283,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive({ textAlign: "center" })}
               icon={AlignCenter}
-              label="Align center"
+              label={t("alignCenter")}
             />
             <ToolbarButton
               onClick={() =>
@@ -288,7 +291,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive({ textAlign: "right" })}
               icon={AlignRight}
-              label="Align right"
+              label={t("alignRight")}
             />
             <ToolbarButton
               onClick={() =>
@@ -296,7 +299,7 @@ export function RichTextEditor({
               }
               isActive={editor.isActive({ textAlign: "justify" })}
               icon={AlignJustify}
-              label="Justify"
+              label={t("justify")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />
@@ -306,19 +309,19 @@ export function RichTextEditor({
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               isActive={editor.isActive("bulletList")}
               icon={List}
-              label="Bullet list"
+              label={t("bulletList")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               isActive={editor.isActive("orderedList")}
               icon={ListOrdered}
-              label="Numbered list"
+              label={t("numberedList")}
             />
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
               isActive={editor.isActive("blockquote")}
               icon={Quote}
-              label="Blockquote"
+              label={t("blockquote")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />
@@ -328,7 +331,7 @@ export function RichTextEditor({
               onClick={setLink}
               isActive={editor.isActive("link")}
               icon={LinkIcon}
-              label="Add link"
+              label={t("addLink")}
             />
             {editor.isActive("link") && (
               <ToolbarButton
@@ -336,7 +339,7 @@ export function RichTextEditor({
                   editor.chain().focus().unsetLink().run()
                 }
                 icon={Link2Off}
-                label="Remove link"
+                label={t("removeLink")}
               />
             )}
 
@@ -348,7 +351,7 @@ export function RichTextEditor({
                 editor.chain().focus().clearNodes().unsetAllMarks().run()
               }
               icon={RemoveFormatting}
-              label="Clear formatting"
+              label={t("clearFormatting")}
             />
           </div>
         )}

@@ -22,6 +22,7 @@ import {
   SortingCategoriesBlock,
   ViewMode,
 } from "@/types/worksheet";
+import { useTranslations } from "next-intl";
 
 // ─── Static blocks ──────────────────────────────────────────
 
@@ -83,6 +84,7 @@ function MultipleChoiceView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
 
   const handleSelect = (optId: string) => {
@@ -157,10 +159,10 @@ function MultipleChoiceView({
               )}
               <span className="text-base flex-1">{opt.text}</span>
               {showResults && isCorrect && (
-                <span className="text-xs font-medium text-green-600">✓ Correct</span>
+                <span className="text-xs font-medium text-green-600">{t("correctResult")}</span>
               )}
               {showResults && isSelected && !isCorrect && (
-                <span className="text-xs font-medium text-red-600">✗ Incorrect</span>
+                <span className="text-xs font-medium text-red-600">{t("incorrectResult")}</span>
               )}
             </div>
           );
@@ -183,6 +185,7 @@ function FillInBlankView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
   const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
   let blankIndex = 0;
@@ -218,7 +221,7 @@ function FillInBlankView({
                           ? "border-red-500 text-red-700"
                           : "border-muted-foreground/40"
                       : "border-muted-foreground/40 focus:border-primary"}`}
-                  placeholder="________"
+                  placeholder={tb("fillInBlankPlaceholder")}
                 />
                 {showResults && isWrong && (
                   <span className="block text-xs text-green-600 text-center mt-0.5">
@@ -256,6 +259,7 @@ function MatchingView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const t = useTranslations("viewer");
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
 
   // Stable shuffle based on block id (deterministic)
@@ -288,7 +292,7 @@ function MatchingView({
   const matchColors = [
     { bg: "bg-blue-100", border: "border-blue-400", badge: "bg-blue-500" },
     { bg: "bg-purple-100", border: "border-purple-400", badge: "bg-purple-500" },
-    { bg: "bg-amber-100", border: "border-amber-400", badge: "bg-amber-500" },
+    { bg: "bg-slate-100", border: "border-slate-400", badge: "bg-slate-500" },
     { bg: "bg-teal-100", border: "border-teal-400", badge: "bg-teal-500" },
     { bg: "bg-pink-100", border: "border-pink-400", badge: "bg-pink-500" },
     { bg: "bg-indigo-100", border: "border-indigo-400", badge: "bg-indigo-500" },
@@ -337,7 +341,7 @@ function MatchingView({
       )}
       {interactive && !showResults && (
         <p className="text-xs text-muted-foreground">
-          {activeLeftId ? "Now click an item on the right to match it." : "Click an item on the left, then click its match on the right."}
+          {activeLeftId ? t("matchingInstructionActive") : t("matchingInstructionDefault")}
         </p>
       )}
       <div className="grid grid-cols-2 gap-4">
@@ -431,7 +435,7 @@ function MatchingView({
       </div>
       {showResults && (
         <p className="text-xs text-muted-foreground">
-          {block.pairs.filter((p) => selections[p.id] === p.id).length} / {block.pairs.length} correct
+          {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
         </p>
       )}
     </div>
@@ -449,6 +453,8 @@ function OpenResponseView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
 }) {
+  const tb = useTranslations("blockRenderer");
+
   return (
     <div className="space-y-2">
       <p className="font-medium">{block.question}</p>
@@ -458,7 +464,7 @@ function OpenResponseView({
           rows={block.lines}
           value={(answer as string) || ""}
           onChange={(e) => onAnswer(e.target.value)}
-          placeholder="Write your answer here..."
+          placeholder={tb("writeAnswerHere")}
         />
       ) : (
         <div className="space-y-0">
@@ -472,10 +478,11 @@ function OpenResponseView({
 }
 
 function WordBankView({ block }: { block: WordBankBlock }) {
+  const tb = useTranslations("blockRenderer");
   return (
     <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4">
       <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-        Word Bank
+        {tb("wordBank")}
       </p>
       <div className="flex flex-wrap gap-2">
         {block.words.map((word, i) => (
@@ -537,6 +544,8 @@ function TrueFalseMatrixView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("viewer");
   const answers = (answer as Record<string, boolean | null> | undefined) || {};
 
   const handleSelect = (stmtId: string, value: boolean) => {
@@ -552,9 +561,9 @@ function TrueFalseMatrixView({
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="text-left p-2 border-b font-medium text-muted-foreground">Statement</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">True</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">False</th>
+            <th className="text-left p-2 border-b font-medium text-muted-foreground">{tc("statements")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
           </tr>
         </thead>
         <tbody>
@@ -619,7 +628,7 @@ function TrueFalseMatrixView({
       </table>
       {showResults && (
         <p className="text-xs text-muted-foreground">
-          {block.statements.filter((s) => answers[s.id] === s.correctAnswer).length} / {block.statements.length} correct
+          {t("resultCount", { correct: block.statements.filter((s) => answers[s.id] === s.correctAnswer).length, total: block.statements.length })}
         </p>
       )}
     </div>
@@ -679,6 +688,7 @@ function OrderItemsView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const t = useTranslations("viewer");
   // Answer is an array of item IDs in user-chosen order
   const userOrder = (answer as string[] | undefined) || [];
 
@@ -762,7 +772,7 @@ function OrderItemsView({
                     className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
                     onClick={() => moveItem(i, -1)}
                     disabled={i === 0}
-                    aria-label="Move up"
+                    aria-label={t("moveUp")}
                   >
                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
@@ -770,7 +780,7 @@ function OrderItemsView({
                     className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
                     onClick={() => moveItem(i, 1)}
                     disabled={i === displayItems.length - 1}
-                    aria-label="Move down"
+                    aria-label={t("moveDown")}
                   >
                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                   </button>
@@ -778,7 +788,7 @@ function OrderItemsView({
               )}
               {showResults && (
                 <span className={`text-xs font-medium ${isCorrectPosition ? "text-green-600" : "text-red-600"}`}>
-                  {isCorrectPosition ? "✓" : `→ ${item.correctPosition}`}
+                  {isCorrectPosition ? "✓" : t("correctPosition", { position: item.correctPosition })}
                 </span>
               )}
             </div>
@@ -787,10 +797,9 @@ function OrderItemsView({
       </div>
       {showResults && (
         <p className="text-xs text-muted-foreground">
-          {displayItems.filter(
+          {t("resultCount", { correct: displayItems.filter(
             (item, i) => item && item.correctPosition === i + 1
-          ).length}{" "}
-          / {block.items.length} correct
+          ).length, total: block.items.length })}
         </p>
       )}
     </div>
@@ -997,6 +1006,7 @@ function SortingCategoriesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
+  const t = useTranslations("viewer");
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
   const [dragItem, setDragItem] = useState<string | null>(null);
 
@@ -1141,7 +1151,7 @@ function SortingCategoriesView({
                         <button
                           className="p-0.5 hover:bg-muted rounded text-muted-foreground"
                           onClick={() => removeFromCategory(cat.id, item.id)}
-                          aria-label="Remove from category"
+                          aria-label={t("removeFromCategory")}
                         >
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
@@ -1161,12 +1171,11 @@ function SortingCategoriesView({
       </div>
       {showResults && (
         <p className="text-xs text-muted-foreground">
-          {Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
+          {t("resultCount", { correct: Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
             const cat = block.categories.find((c) => c.id === catId);
             if (!cat) return total;
             return total + itemIds.filter((id) => cat.correctItems.includes(id)).length;
-          }, 0)}{" "}
-          / {block.items.length} correct
+          }, 0), total: block.items.length })}
         </p>
       )}
     </div>

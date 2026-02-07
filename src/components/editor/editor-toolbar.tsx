@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useEditor } from "@/store/editor-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,12 +38,14 @@ import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 
 export function EditorToolbar() {
   const { state, dispatch, save } = useEditor();
+  const t = useTranslations("toolbar");
+  const tc = useTranslations("common");
   const [showOnlinePreview, setShowOnlinePreview] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleDownloadPdf = async () => {
     if (!state.worksheetId) {
-      alert("Please save the worksheet first");
+      alert(t("saveFirst"));
       return;
     }
     try {
@@ -51,7 +54,7 @@ export function EditorToolbar() {
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`PDF generation failed: ${err.error}`);
+        alert(t("pdfFailed", { error: err.error }));
         return;
       }
       const blob = await res.blob();
@@ -129,12 +132,12 @@ export function EditorToolbar() {
           value={state.title}
           onChange={(e) => dispatch({ type: "SET_TITLE", payload: e.target.value })}
           className="max-w-[280px] h-8 font-medium"
-          placeholder="Worksheet title..."
+          placeholder={t("titlePlaceholder")}
         />
 
         {state.isDirty && (
           <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
-            Unsaved
+            {tc("unsaved")}
           </Badge>
         )}
 
@@ -149,7 +152,7 @@ export function EditorToolbar() {
             onClick={() => dispatch({ type: "SET_VIEW_MODE", payload: "print" })}
           >
             <Printer className="h-3.5 w-3.5" />
-            Print
+            {tc("print")}
           </Button>
           <Button
             variant={state.viewMode === "online" ? "secondary" : "ghost"}
@@ -160,7 +163,7 @@ export function EditorToolbar() {
             }
           >
             <Monitor className="h-3.5 w-3.5" />
-            Online
+            {tc("online")}
           </Button>
         </div>
 
@@ -176,10 +179,10 @@ export function EditorToolbar() {
               onClick={() => setShowOnlinePreview(true)}
             >
               <Eye className="h-3.5 w-3.5" />
-              Preview
+              {tc("preview")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Preview online worksheet</TooltipContent>
+          <TooltipContent>{t("previewOnline")}</TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="h-6" />
@@ -195,10 +198,10 @@ export function EditorToolbar() {
               disabled={state.isSaving}
             >
               <Save className="h-3.5 w-3.5" />
-              {state.isSaving ? "Saving..." : "Save"}
+              {state.isSaving ? tc("saving") : tc("save")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Save worksheet (Ctrl+S)</TooltipContent>
+          <TooltipContent>{t("saveTooltip")}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -211,13 +214,13 @@ export function EditorToolbar() {
               disabled={state.isSaving}
             >
               <Globe className="h-3.5 w-3.5" />
-              {state.published ? "Published" : "Publish"}
+              {state.published ? tc("published") : tc("publish")}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             {state.published
-              ? "Click to unpublish"
-              : "Publish & create shareable link"}
+              ? t("clickToUnpublish")
+              : t("publishTooltip")}
           </TooltipContent>
         </Tooltip>
 
@@ -235,7 +238,7 @@ export function EditorToolbar() {
                 ) : (
                   <Link className="h-3.5 w-3.5" />
                 )}
-                {copied ? "Copied!" : "Copy Link"}
+                {copied ? t("copied") : t("copyLink")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{shareUrl}</TooltipContent>
@@ -253,7 +256,7 @@ export function EditorToolbar() {
               <Download className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Download PDF</TooltipContent>
+          <TooltipContent>{t("downloadPdf")}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -262,7 +265,7 @@ export function EditorToolbar() {
         <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle>Online Preview</DialogTitle>
+              <DialogTitle>{t("onlinePreview")}</DialogTitle>
               {state.published && shareUrl && (
                 <Button
                   variant="outline"
@@ -271,7 +274,7 @@ export function EditorToolbar() {
                   onClick={() => window.open(shareUrl, "_blank")}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Open in new tab
+                  {t("openInNewTab")}
                 </Button>
               )}
             </div>

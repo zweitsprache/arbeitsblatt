@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -70,12 +71,15 @@ interface BreadcrumbItem {
 }
 
 export function WorksheetDashboard() {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
+  const format = useFormatter();
   const router = useRouter();
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [worksheets, setWorksheets] = useState<WorksheetItem[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
-    { id: null, name: "Home" },
+    { id: null, name: "__HOME__" },
   ]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -187,7 +191,7 @@ export function WorksheetDashboard() {
   };
 
   const deleteFolder = async (folderId: string) => {
-    if (!confirm("Delete this folder? Worksheets inside will be moved to the root.")) return;
+    if (!confirm(t("deleteFolder"))) return;
     try {
       await fetch(`/api/folders/${folderId}`, { method: "DELETE" });
       fetchContents(currentFolderId);
@@ -197,7 +201,7 @@ export function WorksheetDashboard() {
   };
 
   const deleteWorksheet = async (worksheetId: string) => {
-    if (!confirm("Delete this worksheet permanently?")) return;
+    if (!confirm(t("deleteWorksheet"))) return;
     try {
       await fetch(`/api/worksheets/${worksheetId}`, { method: "DELETE" });
       if (searchResults) {
@@ -244,9 +248,9 @@ export function WorksheetDashboard() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Worksheets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage your worksheets
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -259,12 +263,12 @@ export function WorksheetDashboard() {
             }}
           >
             <FolderPlus className="h-4 w-4" />
-            New Folder
+            {t("newFolder")}
           </Button>
           <Link href="/editor">
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              New Worksheet
+              {t("newWorksheet")}
             </Button>
           </Link>
         </div>
@@ -274,7 +278,7 @@ export function WorksheetDashboard() {
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search worksheets..."
+          placeholder={t("searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10 pr-10"
@@ -310,7 +314,7 @@ export function WorksheetDashboard() {
                 ) : (
                   <Folder className="h-3.5 w-3.5" />
                 )}
-                {crumb.name}
+                {crumb.name === "__HOME__" ? tc("home") : crumb.name}
               </button>
             </React.Fragment>
           ))}
@@ -320,14 +324,14 @@ export function WorksheetDashboard() {
       {isSearching && (
         <p className="text-sm text-muted-foreground mb-4">
           {searchLoading
-            ? "Searching..."
-            : `${displayWorksheets.length} result${displayWorksheets.length !== 1 ? "s" : ""} for "${search}"`}
+            ? t("searching")
+            : t("searchResults", { count: displayWorksheets.length, query: search })}
         </p>
       )}
 
       {loading && !isSearching ? (
         <div className="text-center py-12 text-muted-foreground">
-          Loading...
+          {tc("loading")}
         </div>
       ) : (
         <>
@@ -347,15 +351,15 @@ export function WorksheetDashboard() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {folder._count.children > 0 &&
-                        `${folder._count.children} folder${folder._count.children !== 1 ? "s" : ""}`}
+                        t("folderCount", { count: folder._count.children })}
                       {folder._count.children > 0 &&
                         folder._count.worksheets > 0 &&
                         " · "}
                       {folder._count.worksheets > 0 &&
-                        `${folder._count.worksheets} worksheet${folder._count.worksheets !== 1 ? "s" : ""}`}
+                        t("worksheetCount", { count: folder._count.worksheets })}
                       {folder._count.children === 0 &&
                         folder._count.worksheets === 0 &&
-                        "Empty"}
+                        tc("empty")}
                     </p>
                   </div>
                   <DropdownMenu>
@@ -378,7 +382,7 @@ export function WorksheetDashboard() {
                         }}
                       >
                         <Pencil className="h-3.5 w-3.5 mr-2" />
-                        Rename
+                        {tc("rename")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -389,7 +393,7 @@ export function WorksheetDashboard() {
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Delete
+                        {tc("delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -404,18 +408,18 @@ export function WorksheetDashboard() {
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-medium text-muted-foreground">
-                  {isSearching ? "No worksheets found" : "No worksheets yet"}
+                  {isSearching ? t("noWorksheets") : t("noWorksheetsYet")}
                 </h3>
                 <p className="text-sm text-muted-foreground/70 mt-1 mb-4">
                   {isSearching
-                    ? "Try a different search term"
-                    : "Create your first worksheet to get started"}
+                    ? t("tryDifferentSearch")
+                    : t("createFirstWorksheet")}
                 </p>
                 {!isSearching && (
                   <Link href="/editor">
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Worksheet
+                      {t("createWorksheet")}
                     </Button>
                   </Link>
                 )}
@@ -437,13 +441,13 @@ export function WorksheetDashboard() {
                               variant="secondary"
                               className="text-xs shrink-0 ml-2"
                             >
-                              Published
+                              {tc("published")}
                             </Badge>
                           )}
                         </div>
                         <CardDescription className="flex items-center gap-1 text-xs">
                           <Clock className="h-3 w-3" />
-                          {new Date(ws.updatedAt).toLocaleDateString("de-CH", {
+                          {format.dateTime(new Date(ws.updatedAt), {
                             day: "numeric",
                             month: "short",
                             year: "numeric",
@@ -455,8 +459,8 @@ export function WorksheetDashboard() {
                       <CardContent>
                         <p className="text-xs text-muted-foreground">
                           {Array.isArray(ws.blocks)
-                            ? `${ws.blocks.length} blocks`
-                            : "Empty"}
+                            ? t("blockCount", { count: ws.blocks.length })
+                            : tc("empty")}
                         </p>
                       </CardContent>
                     </Card>
@@ -476,13 +480,13 @@ export function WorksheetDashboard() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => router.push(`/editor/${ws.id}`)}>
                           <Pencil className="h-3.5 w-3.5 mr-2" />
-                          Edit
+                          {tc("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => openMoveDialog(ws.id)}
                         >
                           <FolderInput className="h-3.5 w-3.5 mr-2" />
-                          Move to Folder
+                          {t("moveToFolder")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -490,7 +494,7 @@ export function WorksheetDashboard() {
                           onClick={() => deleteWorksheet(ws.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          Delete
+                          {tc("delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -506,11 +510,11 @@ export function WorksheetDashboard() {
       <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>New Folder</DialogTitle>
+            <DialogTitle>{t("newFolderTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
-              placeholder="Folder name"
+              placeholder={t("folderNamePlaceholder")}
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createFolder()}
@@ -521,10 +525,10 @@ export function WorksheetDashboard() {
                 variant="outline"
                 onClick={() => setNewFolderOpen(false)}
               >
-                Cancel
+                {tc("cancel")}
               </Button>
               <Button onClick={createFolder} disabled={!newFolderName.trim()}>
-                Create
+                {tc("create")}
               </Button>
             </div>
           </div>
@@ -540,11 +544,11 @@ export function WorksheetDashboard() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename Folder</DialogTitle>
+            <DialogTitle>{t("renameFolderTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
-              placeholder="Folder name"
+              placeholder={t("folderNamePlaceholder")}
               value={renameFolderName}
               onChange={(e) => setRenameFolderName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && renameFolder()}
@@ -555,13 +559,13 @@ export function WorksheetDashboard() {
                 variant="outline"
                 onClick={() => setRenameFolderId(null)}
               >
-                Cancel
+                {tc("cancel")}
               </Button>
               <Button
                 onClick={renameFolder}
                 disabled={!renameFolderName.trim()}
               >
-                Rename
+                {tc("rename")}
               </Button>
             </div>
           </div>
@@ -577,7 +581,7 @@ export function WorksheetDashboard() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Move to Folder</DialogTitle>
+            <DialogTitle>{t("moveToFolder")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <button
@@ -585,7 +589,7 @@ export function WorksheetDashboard() {
               onClick={() => moveWorksheetToFolder(null)}
             >
               <Home className="h-4 w-4 text-muted-foreground" />
-              Root (no folder)
+              {t("rootNoFolder")}
             </button>
             {moveTargetFolders.map((folder) => (
               <button
@@ -599,7 +603,7 @@ export function WorksheetDashboard() {
             ))}
             {moveTargetFolders.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No folders available. Create a folder first.
+                {t("noFoldersAvailable")}
               </p>
             )}
           </div>

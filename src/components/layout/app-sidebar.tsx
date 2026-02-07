@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import {
   LayoutDashboard,
   FileText,
@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -24,38 +23,39 @@ import React, { useState } from "react";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 interface NavSection {
-  title: string;
+  titleKey: string;
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
 }
 
 const topItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
 ];
 
 const sections: NavSection[] = [
   {
-    title: "Worksheet",
+    titleKey: "worksheet",
     icon: FileText,
     items: [
-      { href: "/editor", label: "New Worksheet", icon: Plus },
-      { href: "/", label: "Worksheet Library", icon: Library },
+      { href: "/editor", labelKey: "newWorksheet", icon: Plus },
+      { href: "/", labelKey: "worksheetLibrary", icon: Library },
     ],
   },
 ];
 
 const bottomItems: NavItem[] = [
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const t = useTranslations("sidebar");
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -88,12 +88,12 @@ export function AppSidebar() {
                       `}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && <span>{t(item.labelKey)}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && (
                     <TooltipContent side="right">
-                      {item.label}
+                      {t(item.labelKey)}
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -103,23 +103,23 @@ export function AppSidebar() {
 
           {/* Sections */}
           {sections.map((section) => (
-            <div key={section.title}>
+            <div key={section.titleKey}>
               <Separator className="my-1" />
               {!collapsed && (
                 <p className="flex items-center gap-3 px-5 pt-3 pb-1 text-sm font-medium text-sidebar-foreground/50 uppercase">
                   <section.icon className="h-4 w-4" />
-                  {section.title}
+                  {t(section.titleKey)}
                 </p>
               )}
               <nav className="p-2 space-y-1">
                 {section.items.map((item) => {
                   const isActive =
-                    item.label === "Worksheet Library"
+                    item.labelKey === "worksheetLibrary"
                       ? pathname === "/"
                       : pathname.startsWith(item.href);
 
                   return (
-                    <Tooltip key={item.label}>
+                    <Tooltip key={item.labelKey}>
                       <TooltipTrigger asChild>
                         <Link
                           href={item.href}
@@ -133,12 +133,12 @@ export function AppSidebar() {
                           `}
                         >
                           <item.icon className="h-4 w-4 shrink-0" />
-                          {!collapsed && <span>{item.label}</span>}
+                          {!collapsed && <span>{t(item.labelKey)}</span>}
                         </Link>
                       </TooltipTrigger>
                       {collapsed && (
                         <TooltipContent side="right">
-                          {item.label}
+                          {t(item.labelKey)}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -170,12 +170,12 @@ export function AppSidebar() {
                       `}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && <span>{t(item.labelKey)}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && (
                     <TooltipContent side="right">
-                      {item.label}
+                      {t(item.labelKey)}
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -195,7 +195,7 @@ export function AppSidebar() {
               ) : (
                 <>
                   <ChevronLeft className="h-4 w-4 shrink-0" />
-                  <span>Collapse</span>
+                  <span>{t("collapse")}</span>
                 </>
               )}
             </button>

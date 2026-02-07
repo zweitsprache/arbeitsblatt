@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import {
   useDroppable,
 } from "@dnd-kit/core";
@@ -29,6 +30,7 @@ function DropIndicator({ isActive }: { isActive: boolean }) {
 }
 
 function EmptyDropZone() {
+  const t = useTranslations("canvas");
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
 
   return (
@@ -39,10 +41,10 @@ function EmptyDropZone() {
     >
       <Plus className="h-12 w-12 mb-4 opacity-30" />
       <p className="text-lg font-medium opacity-50">
-        Drag blocks here to start building
+        {t("dragBlocksHere")}
       </p>
       <p className="text-sm opacity-30 mt-1">
-        Or double-click a block in the sidebar
+        {t("orDoubleClick")}
       </p>
     </div>
   );

@@ -1,17 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { setRequestLocale } from "next-intl/server";
 import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 
-export default async function PublicWorksheetPage({
+// This page is used by DocRaptor for PDF rendering
+export default async function PrintWorksheetPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const worksheet = await prisma.worksheet.findUnique({ where: { slug } });
 
-  if (!worksheet || !worksheet.published) {
+  if (!worksheet) {
     notFound();
   }
 
@@ -26,7 +29,7 @@ export default async function PublicWorksheetPage({
       title={worksheet.title}
       blocks={blocks}
       settings={settings}
-      mode="online"
+      mode="print"
     />
   );
 }

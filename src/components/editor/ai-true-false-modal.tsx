@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,8 @@ export function AiTrueFalseModal({
   blockId: string;
 }) {
   const { state, dispatch } = useEditor();
+  const t = useTranslations("aiTrueFalse");
+  const tc = useTranslations("common");
   const [step, setStep] = useState<Step>("source");
   const [useExisting, setUseExisting] = useState<boolean | null>(null);
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
@@ -146,12 +149,12 @@ export function AiTrueFalseModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Generation failed");
+        throw new Error(data.error || tc("generationFailed"));
       }
       setResults(data.statements);
       setStep("done");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Generation failed");
+      setError(err instanceof Error ? err.message : tc("generationFailed"));
       setStep("count"); // go back to count step so they can retry
     }
   };
@@ -191,24 +194,24 @@ export function AiTrueFalseModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            AI Generate Statements
+            {t("title")}
           </DialogTitle>
           <DialogDescription>
-            {step === "source" && "Choose the source for generating true/false statements."}
-            {step === "select-blocks" && "Select text blocks to base statements on."}
-            {step === "enter-context" && "Paste or type the context for generating statements."}
-            {step === "style" && "Should statements use wording from the text or be rephrased?"}
-            {step === "order" && "Should statements follow the order of the source text?"}
-            {step === "count" && "How many statements should be generated?"}
-            {step === "generating" && "Generating statements…"}
-            {step === "done" && "Review generated statements before applying."}
+            {step === "source" && t("stepSourceDesc")}
+            {step === "select-blocks" && t("stepBlocksDesc")}
+            {step === "enter-context" && t("stepContextDesc")}
+            {step === "style" && t("stepStyleDesc")}
+            {step === "order" && t("stepOrderDesc")}
+            {step === "count" && t("stepCountDesc")}
+            {step === "generating" && t("stepGeneratingDesc")}
+            {step === "done" && t("stepReviewDesc")}
           </DialogDescription>
         </DialogHeader>
 
         {/* Step indicator */}
         {step !== "generating" && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground px-1">
-            {["Source", useExisting ? "Blocks" : "Context", "Style", "Order", "Count", "Generate"].map((label, i) => {
+            {[t("stepSource"), useExisting ? t("stepBlocks") : t("stepContext"), t("stepStyle"), t("stepOrder"), t("stepCount"), t("stepGenerate")].map((label, i) => {
               const stepOrder: Step[] = ["source", useExisting ? "select-blocks" : "enter-context", "style", "order", "count", "done"];
               const currentIdx = stepOrder.indexOf(step);
               const isActive = i <= currentIdx;
@@ -234,9 +237,9 @@ export function AiTrueFalseModal({
               >
                 <FileText className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">From worksheet</p>
+                  <p className="font-medium text-sm">{t("fromWorksheet")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Use existing text blocks
+                    {t("useExistingBlocks")}
                   </p>
                 </div>
               </button>
@@ -248,9 +251,9 @@ export function AiTrueFalseModal({
               >
                 <PenTool className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Custom context</p>
+                  <p className="font-medium text-sm">{t("customContext")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Paste your own text
+                    {t("pasteYourText")}
                   </p>
                 </div>
               </button>
@@ -262,7 +265,7 @@ export function AiTrueFalseModal({
             <div className="space-y-2">
               {textBlocks.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No text blocks found on the worksheet. Go back and choose custom context.
+                  {t("noTextBlocks")}
                 </p>
               ) : (
                 <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
@@ -297,15 +300,15 @@ export function AiTrueFalseModal({
           {/* ─── Step 2b: Custom context ─── */}
           {step === "enter-context" && (
             <div className="space-y-2">
-              <Label className="text-xs">Context text</Label>
+              <Label className="text-xs">{t("contextText")}</Label>
               <textarea
                 className="w-full border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[180px]"
-                placeholder="Paste the text or topic that statements should be based on…"
+                placeholder={t("contextPlaceholder")}
                 value={customContext}
                 onChange={(e) => setCustomContext(e.target.value)}
               />
               <p className="text-[10px] text-muted-foreground">
-                {customContext.trim().length} characters — minimum 10 required
+                {t("characterCount", { count: customContext.trim().length })}
               </p>
             </div>
           )}
@@ -321,9 +324,9 @@ export function AiTrueFalseModal({
               >
                 <Quote className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Verbatim</p>
+                  <p className="font-medium text-sm">{t("verbatim")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Use wording directly from the text
+                    {t("verbatimDesc")}
                   </p>
                 </div>
               </button>
@@ -335,9 +338,9 @@ export function AiTrueFalseModal({
               >
                 <Repeat className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Paraphrased</p>
+                  <p className="font-medium text-sm">{t("paraphrased")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Rephrase in different words
+                    {t("paraphrasedDesc")}
                   </p>
                 </div>
               </button>
@@ -355,9 +358,9 @@ export function AiTrueFalseModal({
               >
                 <ArrowDownNarrowWide className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Chronological</p>
+                  <p className="font-medium text-sm">{t("chronological")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Follow the order of the source text
+                    {t("chronologicalDesc")}
                   </p>
                 </div>
               </button>
@@ -369,9 +372,9 @@ export function AiTrueFalseModal({
               >
                 <Shuffle className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Mixed</p>
+                  <p className="font-medium text-sm">{t("mixed")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Randomize the order
+                    {t("mixedDesc")}
                   </p>
                 </div>
               </button>
@@ -382,7 +385,7 @@ export function AiTrueFalseModal({
           {step === "count" && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="count" className="text-sm">Number of statements</Label>
+                <Label htmlFor="count" className="text-sm">{t("numberOfStatements")}</Label>
                 <Input
                   id="count"
                   type="number"
@@ -392,7 +395,7 @@ export function AiTrueFalseModal({
                   onChange={(e) => setCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
                   className="w-32"
                 />
-                <p className="text-[10px] text-muted-foreground">Between 1 and 20 statements</p>
+                <p className="text-[10px] text-muted-foreground">{t("betweenStatements")}</p>
               </div>
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">
@@ -401,7 +404,7 @@ export function AiTrueFalseModal({
               )}
               {contextText && (
                 <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Context preview</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">{t("contextPreview")}</p>
                   <p className="text-xs text-muted-foreground line-clamp-3">{contextText}</p>
                 </div>
               )}
@@ -412,7 +415,7 @@ export function AiTrueFalseModal({
           {step === "generating" && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
               <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
-              <p className="text-sm text-muted-foreground">Generating {count} statements…</p>
+              <p className="text-sm text-muted-foreground">{t("generatingStatements", { count })}</p>
             </div>
           )}
 
@@ -423,7 +426,7 @@ export function AiTrueFalseModal({
                 <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border border-border">
                   <span className={`mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0
                     ${s.correctAnswer ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {s.correctAnswer ? "T" : "F"}
+                    {s.correctAnswer ? t("trueLabel") : t("falseLabel")}
                   </span>
                   <span className="text-sm">{s.text}</span>
                 </div>
@@ -437,27 +440,27 @@ export function AiTrueFalseModal({
           <div>
             {(step === "select-blocks" || step === "enter-context") && (
               <Button variant="ghost" size="sm" onClick={() => setStep("source")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "style" && (
               <Button variant="ghost" size="sm" onClick={() => setStep(useExisting ? "select-blocks" : "enter-context")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "order" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("style")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "count" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("order")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "done" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("count")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Regenerate
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("regenerate")}
               </Button>
             )}
           </div>
@@ -465,7 +468,7 @@ export function AiTrueFalseModal({
           {/* Forward button */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleClose(false)}>
-              Cancel
+              {tc("cancel")}
             </Button>
 
             {step === "source" && (
@@ -474,7 +477,7 @@ export function AiTrueFalseModal({
                 disabled={!canProceedFromSource}
                 onClick={() => setStep(useExisting ? "select-blocks" : "enter-context")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -484,7 +487,7 @@ export function AiTrueFalseModal({
                 disabled={!canProceedFromBlocks}
                 onClick={() => setStep("style")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -494,7 +497,7 @@ export function AiTrueFalseModal({
                 disabled={!canProceedFromContext}
                 onClick={() => setStep("style")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -504,7 +507,7 @@ export function AiTrueFalseModal({
                 disabled={!canProceedFromStyle}
                 onClick={() => setStep("order")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -514,19 +517,19 @@ export function AiTrueFalseModal({
                 disabled={!canProceedFromOrder}
                 onClick={() => setStep("count")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
             {step === "count" && (
               <Button size="sm" onClick={handleGenerate} className="bg-purple-600 hover:bg-purple-700">
-                <Sparkles className="h-4 w-4 mr-1" /> Generate
+                <Sparkles className="h-4 w-4 mr-1" /> {tc("generate")}
               </Button>
             )}
 
             {step === "done" && (
               <Button size="sm" onClick={handleApply} className="bg-purple-600 hover:bg-purple-700">
-                <Check className="h-4 w-4 mr-1" /> Apply to block
+                <Check className="h-4 w-4 mr-1" /> {t("applyToBlock")}
               </Button>
             )}
           </div>

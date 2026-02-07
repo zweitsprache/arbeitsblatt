@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,10 +47,12 @@ import { AiTextModal } from "./ai-text-modal";
 
 function HeadingProps({ block }: { block: HeadingBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Content</Label>
+        <Label className="text-xs">{tc("content")}</Label>
         <Input
           value={block.content}
           onChange={(e) =>
@@ -61,7 +64,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">Level</Label>
+        <Label className="text-xs">{t("level")}</Label>
         <Select
           value={String(block.level)}
           onValueChange={(v) =>
@@ -75,9 +78,9 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Heading 1</SelectItem>
-            <SelectItem value="2">Heading 2</SelectItem>
-            <SelectItem value="3">Heading 3</SelectItem>
+            <SelectItem value="1">{t("heading1")}</SelectItem>
+            <SelectItem value="2">{t("heading2")}</SelectItem>
+            <SelectItem value="3">{t("heading3")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -87,13 +90,14 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
 
 function ImageProps({ block }: { block: ImageBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Image URL</Label>
+        <Label className="text-xs">{t("imageUrl")}</Label>
         <Input
           value={block.src}
-          placeholder="https://..."
+          placeholder={t("imageUrlPlaceholder")}
           onChange={(e) =>
             dispatch({
               type: "UPDATE_BLOCK",
@@ -103,7 +107,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">Alt Text</Label>
+        <Label className="text-xs">{t("altText")}</Label>
         <Input
           value={block.alt}
           onChange={(e) =>
@@ -115,11 +119,11 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">Width (px)</Label>
+        <Label className="text-xs">{t("widthPx")}</Label>
         <Input
           type="number"
           value={block.width || ""}
-          placeholder="Auto"
+          placeholder={t("auto")}
           onChange={(e) =>
             dispatch({
               type: "UPDATE_BLOCK",
@@ -132,7 +136,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">Caption</Label>
+        <Label className="text-xs">{t("caption")}</Label>
         <Input
           value={block.caption || ""}
           onChange={(e) =>
@@ -149,9 +153,10 @@ function ImageProps({ block }: { block: ImageBlock }) {
 
 function SpacerProps({ block }: { block: SpacerBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
   return (
     <div>
-      <Label className="text-xs">Height (px)</Label>
+      <Label className="text-xs">{t("heightPx")}</Label>
       <Input
         type="number"
         value={block.height}
@@ -168,9 +173,11 @@ function SpacerProps({ block }: { block: SpacerBlock }) {
 
 function DividerProps({ block }: { block: DividerBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   return (
     <div>
-      <Label className="text-xs">Style</Label>
+      <Label className="text-xs">{tc("style")}</Label>
       <Select
         value={block.style}
         onValueChange={(v) =>
@@ -184,9 +191,9 @@ function DividerProps({ block }: { block: DividerBlock }) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="solid">Solid</SelectItem>
-          <SelectItem value="dashed">Dashed</SelectItem>
-          <SelectItem value="dotted">Dotted</SelectItem>
+          <SelectItem value="solid">{t("solid")}</SelectItem>
+          <SelectItem value="dashed">{t("dashed")}</SelectItem>
+          <SelectItem value="dotted">{t("dotted")}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -195,6 +202,8 @@ function DividerProps({ block }: { block: DividerBlock }) {
 
 function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   const updateOption = (index: number, updates: Partial<{ text: string; isCorrect: boolean }>) => {
@@ -234,7 +243,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Question</Label>
+        <Label className="text-xs">{tc("question")}</Label>
         <Input
           value={block.question}
           onChange={(e) =>
@@ -255,11 +264,11 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
             })
           }
         />
-        <Label className="text-xs">Allow multiple answers</Label>
+        <Label className="text-xs">{t("allowMultiple")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">Options</Label>
+        <Label className="text-xs">{tc("options")}</Label>
         {block.options.map((opt, i) => (
           <div key={opt.id} className="flex items-center gap-2">
             <input
@@ -267,7 +276,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
               checked={opt.isCorrect}
               onChange={(e) => updateOption(i, { isCorrect: e.target.checked })}
               className="h-3.5 w-3.5"
-              title="Mark as correct"
+              title={t("markAsCorrect")}
             />
             <Input
               value={opt.text}
@@ -285,14 +294,14 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addOption} className="w-full">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Option
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addOption")}
         </Button>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs">AI Generation</Label>
+        <Label className="text-xs">{t("aiGeneration")}</Label>
         <p className="text-[10px] text-muted-foreground mb-2">
-          Auto-generate questions from context
+          {t("autoGenerate")}
         </p>
         <Button
           variant="outline"
@@ -301,7 +310,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
           onClick={() => setShowAiModal(true)}
         >
           <Sparkles className="h-4 w-4 mr-2" />
-          AI Generate
+          {t("aiGenerate")}
         </Button>
       </div>
       <AiMcqModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
@@ -311,10 +320,12 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
 
 function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Question</Label>
+        <Label className="text-xs">{tc("question")}</Label>
         <Input
           value={block.question}
           onChange={(e) =>
@@ -326,7 +337,7 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">Number of lines</Label>
+        <Label className="text-xs">{t("numberOfLines")}</Label>
         <Input
           type="number"
           min={1}
@@ -346,12 +357,14 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
 
 function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Content</Label>
+        <Label className="text-xs">{tc("content")}</Label>
         <p className="text-[10px] text-muted-foreground mb-1">
-          Use {"{{blank:answer}}"} for blanks
+          {t("fillInBlankHelp")}
         </p>
         <textarea
           value={block.content}
@@ -370,6 +383,8 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
 
 function MatchingProps({ block }: { block: MatchingBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const updatePair = (index: number, updates: Partial<{ left: string; right: string }>) => {
     const newPairs = [...block.pairs];
@@ -383,7 +398,7 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
   const addPair = () => {
     const newPairs = [
       ...block.pairs,
-      { id: `p${Date.now()}`, left: "New Item", right: "New Match" },
+      { id: `p${Date.now()}`, left: t("newItem"), right: t("newMatch") },
     ];
     dispatch({
       type: "UPDATE_BLOCK",
@@ -402,7 +417,7 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Instruction</Label>
+        <Label className="text-xs">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -415,21 +430,21 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">Pairs</Label>
+        <Label className="text-xs">{tc("pairs")}</Label>
         {block.pairs.map((pair, i) => (
           <div key={pair.id} className="flex items-center gap-1">
             <Input
               value={pair.left}
               onChange={(e) => updatePair(i, { left: e.target.value })}
               className="flex-1 h-8 text-xs"
-              placeholder="Left"
+              placeholder={t("left")}
             />
             <span className="text-xs text-muted-foreground">→</span>
             <Input
               value={pair.right}
               onChange={(e) => updatePair(i, { right: e.target.value })}
               className="flex-1 h-8 text-xs"
-              placeholder="Right"
+              placeholder={t("right")}
             />
             <Button
               variant="ghost"
@@ -442,7 +457,7 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addPair} className="w-full">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Pair
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
         </Button>
       </div>
     </div>
@@ -451,6 +466,8 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
 
 function WordBankProps({ block }: { block: WordBankBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const updateWord = (index: number, value: string) => {
     const newWords = [...block.words];
@@ -464,7 +481,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
   const addWord = () => {
     dispatch({
       type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { words: [...block.words, "new word"] } },
+      payload: { id: block.id, updates: { words: [...block.words, t("newWord")] } },
     });
   };
 
@@ -477,7 +494,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs">Words</Label>
+      <Label className="text-xs">{tc("words")}</Label>
       {block.words.map((word, i) => (
         <div key={i} className="flex items-center gap-1">
           <Input
@@ -496,7 +513,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addWord} className="w-full">
-        <Plus className="h-3.5 w-3.5 mr-1" /> Add Word
+        <Plus className="h-3.5 w-3.5 mr-1" /> {t("addWord")}
       </Button>
     </div>
   );
@@ -504,6 +521,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
 
 function ColumnsProps({ block }: { block: ColumnsBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
 
   const setColumnCount = (count: number) => {
     // Adjust the children array: keep existing columns, add empty ones or trim
@@ -538,7 +556,7 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Number of Columns</Label>
+        <Label className="text-xs">{t("numberOfColumns")}</Label>
         <div className="flex gap-1 mt-1.5">
           {[1, 2, 3, 4].map((n) => (
             <Button
@@ -558,14 +576,16 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
 }
 
 function TextProps({ block }: { block: TextBlock }) {
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Content</Label>
+        <Label className="text-xs">{tc("content")}</Label>
         <p className="text-[10px] text-muted-foreground">
-          Edit text directly on the canvas
+          {t("editOnCanvas")}
         </p>
       </div>
       <Button
@@ -575,7 +595,7 @@ function TextProps({ block }: { block: TextBlock }) {
         onClick={() => setShowAiModal(true)}
       >
         <Sparkles className="h-3.5 w-3.5" />
-        AI Generate Text
+        {t("aiGenerateText")}
       </Button>
       <AiTextModal
         open={showAiModal}
@@ -587,27 +607,29 @@ function TextProps({ block }: { block: TextBlock }) {
 }
 
 function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Instruction</Label>
+        <Label className="text-xs">{tc("instruction")}</Label>
         <p className="text-[10px] text-muted-foreground">
-          Edit instruction and statements directly on the canvas
+          {t("editInstructionOnCanvas")}
         </p>
       </div>
       <div>
-        <Label className="text-xs">Statements</Label>
+        <Label className="text-xs">{tc("statements")}</Label>
         <p className="text-[10px] text-muted-foreground">
-          {block.statements.length} statement{block.statements.length !== 1 ? "s" : ""}
+          {t("statementCount", { count: block.statements.length })}
         </p>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs">AI Generation</Label>
+        <Label className="text-xs">{t("aiGeneration")}</Label>
         <p className="text-[10px] text-muted-foreground mb-2">
-          Auto-generate statements from context
+          {t("autoGenerateStatements")}
         </p>
         <Button
           variant="outline"
@@ -616,7 +638,7 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
           onClick={() => setShowAiModal(true)}
         >
           <Sparkles className="h-4 w-4 mr-2" />
-          AI Generate
+          {t("aiGenerate")}
         </Button>
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
@@ -626,6 +648,8 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
 
 function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const updateItem = (index: number, updates: Partial<{ text: string }>) => {
     const newItems = [...block.items];
@@ -687,7 +711,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Instruction</Label>
+        <Label className="text-xs">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -700,7 +724,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">Items (in correct order)</Label>
+        <Label className="text-xs">{t("itemsInOrder")}</Label>
         {sortedItems.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
@@ -737,7 +761,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Item
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
         </Button>
       </div>
     </div>
@@ -746,13 +770,14 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
 
 function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Content</Label>
+        <Label className="text-xs">{tc("content")}</Label>
         <p className="text-[10px] text-muted-foreground mb-1">
-          Use {"{{choice:opt1|opt2|*correct|opt3}}"} for inline choices.
-          Prefix the correct answer with *
+          {t("inlineChoicesHelp")}
         </p>
         <textarea
           value={block.content}
@@ -771,6 +796,8 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
 
 function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const addCategory = () => {
     const newCat: SortingCategory = {
@@ -872,7 +899,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">Instruction</Label>
+        <Label className="text-xs">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -930,14 +957,14 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
               onClick={() => addItemToCategory(cat.id)}
               className="w-full h-7 text-xs"
             >
-              <Plus className="h-3 w-3 mr-1" /> Add Item
+              <Plus className="h-3 w-3 mr-1" /> {t("addItem")}
             </Button>
             <Separator />
           </div>
         );
       })}
       <Button variant="outline" size="sm" onClick={addCategory} className="w-full">
-        <Plus className="h-3.5 w-3.5 mr-1" /> Add Category
+        <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCategory")}
       </Button>
     </div>
   );
@@ -945,6 +972,8 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
 
 function WordSearchProps({ block }: { block: WordSearchBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const updateWord = (index: number, value: string) => {
     const newWords = [...block.words];
@@ -990,7 +1019,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-xs">Columns</Label>
+          <Label className="text-xs">{tc("columns")}</Label>
           <Input
             type="number"
             min={4}
@@ -1009,7 +1038,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
           />
         </div>
         <div>
-          <Label className="text-xs">Rows</Label>
+          <Label className="text-xs">{tc("rows")}</Label>
           <Input
             type="number"
             min={4}
@@ -1038,11 +1067,11 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
             })
           }
         />
-        <Label className="text-xs">Show word list</Label>
+        <Label className="text-xs">{t("showWordList")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">Words</Label>
+        <Label className="text-xs">{tc("words")}</Label>
         {block.words.map((word, i) => (
           <div key={i} className="flex items-center gap-1">
             <Input
@@ -1061,7 +1090,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addWord} className="w-full">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Word
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addWord")}
         </Button>
       </div>
       <Separator />
@@ -1071,7 +1100,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
         onClick={regenerateGrid}
         className="w-full"
       >
-        <ArrowUpDown className="h-3.5 w-3.5 mr-1" /> Regenerate Grid
+        <ArrowUpDown className="h-3.5 w-3.5 mr-1" /> {t("regenerateGrid")}
       </Button>
     </div>
   );
@@ -1080,6 +1109,8 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
 // ─── Properties Panel ────────────────────────────────────────
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const selectedBlock = state.blocks.find(
     (b) => b.id === state.selectedBlockId
@@ -1088,9 +1119,9 @@ export function PropertiesPanel() {
   if (!selectedBlock) {
     return (
       <div className="w-72 pt-8 pb-8">
-        <div className="bg-amber-50 rounded-sm shadow-sm p-4 pt-12">
+        <div className="bg-slate-50 rounded-sm shadow-sm p-4 pt-12">
           <p className="text-sm text-muted-foreground text-center mt-8">
-            Select a block to edit its properties
+            {t("selectBlock")}
           </p>
         </div>
       </div>
@@ -1138,17 +1169,17 @@ export function PropertiesPanel() {
 
   return (
     <div className="w-72 flex flex-col h-full pt-8 pb-8">
-      <div className="flex flex-col h-full bg-amber-50 rounded-sm shadow-sm overflow-hidden">
+      <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
       <div className="p-4 border-b border-border">
         <h3 className="text-sm font-semibold capitalize">
-          {selectedBlock.type.replace("-", " ")} Properties
+          {t("propertiesTitle", { type: selectedBlock.type.replace("-", " ") })}
         </h3>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
           {/* Visibility */}
           <div>
-            <Label className="text-xs mb-2 block">Visibility</Label>
+            <Label className="text-xs mb-2 block">{tc("visibility")}</Label>
             <div className="flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1173,7 +1204,7 @@ export function PropertiesPanel() {
                     <Printer className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Print</TooltipContent>
+                <TooltipContent side="bottom">{tc("print")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1198,7 +1229,7 @@ export function PropertiesPanel() {
                     <Globe className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Web</TooltipContent>
+                <TooltipContent side="bottom">{tc("web")}</TooltipContent>
               </Tooltip>
             </div>
           </div>

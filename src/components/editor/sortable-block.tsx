@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { WorksheetBlock, ViewMode } from "@/types/worksheet";
@@ -38,6 +39,8 @@ export function SortableBlock({
   block: WorksheetBlock;
   mode: ViewMode;
 }) {
+  const tc = useTranslations("common");
+  const tb = useTranslations("blockRenderer");
   const { state, dispatch, duplicateBlock } = useEditor();
   const isSelected = state.selectedBlockId === block.id;
 
@@ -80,7 +83,7 @@ export function SortableBlock({
       style={style}
       className={`group relative rounded-lg transition-all border border-transparent
         ${isDragging ? "opacity-30 z-50" : ""}
-        ${isSelected ? "ring-1 ring-amber-400 bg-amber-50" : "hover:border-border"}
+        ${isSelected ? "ring-1 ring-slate-400 bg-slate-50" : "hover:border-border"}
         ${!isVisibleInMode ? "opacity-40" : ""}
       `}
       onClick={() => dispatch({ type: "SELECT_BLOCK", payload: block.id })}
@@ -114,7 +117,7 @@ export function SortableBlock({
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">Visible: {block.visibility}</p>
+            <p className="text-xs">{tb("visibleLabel", { visibility: block.visibility })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -147,7 +150,7 @@ export function SortableBlock({
           variant="secondary"
           className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 z-10"
         >
-          {block.visibility === "print" ? "Print only" : "Online only"}
+          {block.visibility === "print" ? tc("printOnly") : tc("onlineOnly")}
         </Badge>
       )}
 

@@ -6,6 +6,7 @@ import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function WorksheetViewer({
   title,
@@ -18,6 +19,7 @@ export function WorksheetViewer({
   settings: WorksheetSettings;
   mode: ViewMode;
 }) {
+  const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [showResults, setShowResults] = useState(false);
 
@@ -116,12 +118,12 @@ export function WorksheetViewer({
             {!showResults ? (
               <Button size="lg" onClick={handleCheckAnswers} className="gap-2">
                 <CheckCircle2 className="h-5 w-5" />
-                Check Answers
+                {t("checkAnswers")}
               </Button>
             ) : (
               <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
                 <RotateCcw className="h-5 w-5" />
-                Try Again
+                {t("tryAgain")}
               </Button>
             )}
           </div>

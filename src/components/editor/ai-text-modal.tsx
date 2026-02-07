@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -22,24 +23,24 @@ type Step = "topic" | "text-type" | "level" | "address" | "generating" | "done";
 type ReaderAddress = "direkt-sie" | "neutral-man";
 
 const TEXT_TYPES = [
-  { value: "Sachtext", label: "Expository", desc: "Informational text" },
-  { value: "Nachricht", label: "News", desc: "Short news report" },
-  { value: "Bericht", label: "Report", desc: "Detailed account" },
-  { value: "Porträt", label: "Portrait", desc: "Person profile" },
-  { value: "Interview", label: "Interview", desc: "Q & A format" },
-  { value: "Kommentar", label: "Commentary", desc: "Opinion piece (B1+)" },
-  { value: "Blog", label: "Blog", desc: "Personal blog post" },
-  { value: "Erzählung", label: "Narrative", desc: "Storytelling" },
-  { value: "Dialog", label: "Dialogue", desc: "Conversation" },
+  { value: "Sachtext", labelKey: "expository" as const, descKey: "expositorySub" as const },
+  { value: "Nachricht", labelKey: "news" as const, descKey: "newsSub" as const },
+  { value: "Bericht", labelKey: "report" as const, descKey: "reportSub" as const },
+  { value: "Porträt", labelKey: "portrait" as const, descKey: "portraitSub" as const },
+  { value: "Interview", labelKey: "interview" as const, descKey: "interviewSub" as const },
+  { value: "Kommentar", labelKey: "commentary" as const, descKey: "commentarySub" as const },
+  { value: "Blog", labelKey: "blog" as const, descKey: "blogSub" as const },
+  { value: "Erzählung", labelKey: "narrative" as const, descKey: "narrativeSub" as const },
+  { value: "Dialog", labelKey: "dialogue" as const, descKey: "dialogueSub" as const },
 ];
 
 const LEVELS = [
-  { value: "A1.1", label: "A1.1", desc: "90–140 words, 3 paragraphs", color: "bg-green-100 text-green-800 border-green-300" },
-  { value: "A1.2", label: "A1.2", desc: "130–180 words, 3–4 paragraphs", color: "bg-green-100 text-green-800 border-green-300" },
-  { value: "A2.1", label: "A2.1", desc: "170–240 words, 4 paragraphs", color: "bg-blue-100 text-blue-800 border-blue-300" },
-  { value: "A2.2", label: "A2.2", desc: "220–320 words, 4–5 paragraphs", color: "bg-blue-100 text-blue-800 border-blue-300" },
-  { value: "B1.1", label: "B1.1", desc: "300–420 words, 5 paragraphs", color: "bg-amber-100 text-amber-800 border-amber-300" },
-  { value: "B1.2", label: "B1.2", desc: "380–520 words, 5–6 paragraphs", color: "bg-amber-100 text-amber-800 border-amber-300" },
+  { value: "A1.1", label: "A1.1", descKey: "levelA1_1" as const, color: "bg-green-100 text-green-800 border-green-300" },
+  { value: "A1.2", label: "A1.2", descKey: "levelA1_2" as const, color: "bg-green-100 text-green-800 border-green-300" },
+  { value: "A2.1", label: "A2.1", descKey: "levelA2_1" as const, color: "bg-blue-100 text-blue-800 border-blue-300" },
+  { value: "A2.2", label: "A2.2", descKey: "levelA2_2" as const, color: "bg-blue-100 text-blue-800 border-blue-300" },
+  { value: "B1.1", label: "B1.1", descKey: "levelB1_1" as const, color: "bg-slate-100 text-slate-800 border-slate-300" },
+  { value: "B1.2", label: "B1.2", descKey: "levelB1_2" as const, color: "bg-slate-100 text-slate-800 border-slate-300" },
 ];
 
 interface GeneratedText {
@@ -59,6 +60,8 @@ export function AiTextModal({
   blockId: string;
 }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("aiText");
+  const tc = useTranslations("common");
   const [step, setStep] = useState<Step>("topic");
   const [topic, setTopic] = useState("");
   const [textType, setTextType] = useState<string | null>(null);
@@ -98,12 +101,12 @@ export function AiTextModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Generation failed");
+        throw new Error(data.error || tc("generationFailed"));
       }
       setResult(data);
       setStep("done");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Generation failed");
+      setError(err instanceof Error ? err.message : tc("generationFailed"));
       setStep("address");
     }
   };
@@ -124,7 +127,7 @@ export function AiTextModal({
     // Glossar as a mini section
     if (result.glossar.length > 0) {
       parts.push(`<hr>`);
-      parts.push(`<p><strong>Glossar</strong></p>`);
+      parts.push(`<p><strong>${t("glossary")}</strong></p>`);
       const glossarItems = result.glossar
         .map((g) => `<strong>${g.lemma}</strong> – ${g.erklaerung}`)
         .join("<br>");
@@ -148,7 +151,7 @@ export function AiTextModal({
   const canProceedFromLevel = level !== null;
   const canProceedFromAddress = address !== null;
 
-  const stepLabels = ["Topic", "Text Type", "Level", "Address", "Result"];
+  const stepLabels = [t("stepTopic"), t("stepTextType"), t("stepLevel"), t("stepAddress"), t("stepResult")];
   const stepOrder: Step[] = ["topic", "text-type", "level", "address", "done"];
 
   return (
@@ -157,15 +160,15 @@ export function AiTextModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            AI Generate Reading Text
+            {t("title")}
           </DialogTitle>
           <DialogDescription>
-            {step === "topic" && "What topic should the text cover?"}
-            {step === "text-type" && "Which text type should be generated?"}
-            {step === "level" && "What language level should the text target?"}
-            {step === "address" && "How should the reader be addressed?"}
-            {step === "generating" && "Generating text…"}
-            {step === "done" && "Review and apply the generated text."}
+            {step === "topic" && t("stepTopicDesc")}
+            {step === "text-type" && t("stepTextTypeDesc")}
+            {step === "level" && t("stepLevelDesc")}
+            {step === "address" && t("stepAddressDesc")}
+            {step === "generating" && t("stepGeneratingDesc")}
+            {step === "done" && t("stepResultDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -190,16 +193,16 @@ export function AiTextModal({
           {step === "topic" && (
             <div className="space-y-3 py-2">
               <div className="space-y-2">
-                <Label htmlFor="topic" className="text-sm">Topic</Label>
+                <Label htmlFor="topic" className="text-sm">{t("topicLabel")}</Label>
                 <Input
                   id="topic"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. hospital admission, library, apartment search…"
+                  placeholder={t("topicPlaceholder")}
                   autoFocus
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Keyword or short description of the topic
+                  {t("topicHelp")}
                 </p>
               </div>
             </div>
@@ -216,8 +219,8 @@ export function AiTextModal({
                   className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all hover:shadow-sm text-center
                     ${textType === tt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
                 >
-                  <p className="font-medium text-xs">{tt.label}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{tt.desc}</p>
+                  <p className="font-medium text-xs">{t(tt.labelKey)}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{t(tt.descKey)}</p>
                 </button>
               ))}
             </div>
@@ -237,7 +240,7 @@ export function AiTextModal({
                   <span className={`px-2 py-1 rounded text-xs font-bold border ${lv.color}`}>
                     {lv.label}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">{lv.desc}</span>
+                  <span className="text-[10px] text-muted-foreground">{t(lv.descKey)}</span>
                 </button>
               ))}
             </div>
@@ -255,9 +258,9 @@ export function AiTextModal({
                 >
                   <User className="h-8 w-8 text-primary/70" />
                   <div className="text-center">
-                    <p className="font-medium text-sm">Direct (Sie)</p>
+                    <p className="font-medium text-sm">{t("directSie")}</p>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      «Sie können…», «Bringen Sie…»
+                      {t("directSieExample")}
                     </p>
                   </div>
                 </button>
@@ -269,9 +272,9 @@ export function AiTextModal({
                 >
                   <Users className="h-8 w-8 text-primary/70" />
                   <div className="text-center">
-                    <p className="font-medium text-sm">Neutral (man)</p>
+                    <p className="font-medium text-sm">{t("neutralMan")}</p>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      «Man kann…», «Man bringt…»
+                      {t("neutralManExample")}
                     </p>
                   </div>
                 </button>
@@ -283,11 +286,11 @@ export function AiTextModal({
               )}
               {/* Summary of choices */}
               <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                <p className="text-[10px] font-medium text-muted-foreground">Summary</p>
+                <p className="text-[10px] font-medium text-muted-foreground">{t("summary")}</p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">Topic: {topic}</span>
-                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">Type: {textType}</span>
-                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">Level: {level}</span>
+                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">{t("topicSummary", { topic })}</span>
+                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">{t("typeSummary", { type: textType ?? "" })}</span>
+                  <span className="text-[10px] bg-background border rounded px-2 py-0.5">{t("levelSummary", { level: level ?? "" })}</span>
                 </div>
               </div>
             </div>
@@ -297,8 +300,8 @@ export function AiTextModal({
           {step === "generating" && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
               <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
-              <p className="text-sm text-muted-foreground">Generating text at level {level}…</p>
-              <p className="text-[10px] text-muted-foreground">This may take a few seconds.</p>
+              <p className="text-sm text-muted-foreground">{t("generatingAtLevel", { level: level ?? "" })}</p>
+              <p className="text-[10px] text-muted-foreground">{t("mayTakeSeconds")}</p>
             </div>
           )}
 
@@ -319,7 +322,7 @@ export function AiTextModal({
               {/* Glossar */}
               {result.glossar.length > 0 && (
                 <div className="border-t pt-2 mt-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Glossary</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("glossary")}</p>
                   <div className="grid grid-cols-1 gap-1">
                     {result.glossar.map((g, i) => (
                       <p key={i} className="text-xs">
@@ -338,22 +341,22 @@ export function AiTextModal({
           <div>
             {step === "text-type" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("topic")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "level" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("text-type")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "address" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("level")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "done" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("address")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Regenerate
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("regenerate")}
               </Button>
             )}
           </div>
@@ -361,7 +364,7 @@ export function AiTextModal({
           {/* Forward button */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleClose(false)}>
-              Cancel
+              {tc("cancel")}
             </Button>
 
             {step === "topic" && (
@@ -370,7 +373,7 @@ export function AiTextModal({
                 disabled={!canProceedFromTopic}
                 onClick={() => setStep("text-type")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -380,7 +383,7 @@ export function AiTextModal({
                 disabled={!canProceedFromTextType}
                 onClick={() => setStep("level")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -390,7 +393,7 @@ export function AiTextModal({
                 disabled={!canProceedFromLevel}
                 onClick={() => setStep("address")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -401,13 +404,13 @@ export function AiTextModal({
                 onClick={handleGenerate}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                <Sparkles className="h-4 w-4 mr-1" /> Generate
+                <Sparkles className="h-4 w-4 mr-1" /> {tc("generate")}
               </Button>
             )}
 
             {step === "done" && (
               <Button size="sm" onClick={handleApply} className="bg-purple-600 hover:bg-purple-700">
-                <Check className="h-4 w-4 mr-1" /> Apply
+                <Check className="h-4 w-4 mr-1" /> {tc("apply")}
               </Button>
             )}
           </div>

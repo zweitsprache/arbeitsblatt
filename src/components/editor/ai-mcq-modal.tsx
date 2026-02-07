@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,9 @@ export function AiMcqModal({
   blockId: string;
 }) {
   const { state, dispatch } = useEditor();
+  const t = useTranslations("aiMcq");
+  const tc = useTranslations("common");
+  const tTf = useTranslations("aiTrueFalse");
   const [step, setStep] = useState<Step>("source");
   const [useExisting, setUseExisting] = useState<boolean | null>(null);
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
@@ -156,12 +160,12 @@ export function AiMcqModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Generation failed");
+        throw new Error(data.error || tc("generationFailed"));
       }
       setResults(data.questions);
       setStep("done");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Generation failed");
+      setError(err instanceof Error ? err.message : tc("generationFailed"));
       setStep("count");
     }
   };
@@ -231,24 +235,24 @@ export function AiMcqModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            AI Generate Questions
+            {t("title")}
           </DialogTitle>
           <DialogDescription>
-            {step === "source" && "Choose the source for generating multiple-choice questions."}
-            {step === "select-blocks" && "Select text blocks to base questions on."}
-            {step === "enter-context" && "Paste or type the context for generating questions."}
-            {step === "style" && "Should questions use wording from the text or be rephrased?"}
-            {step === "order" && "Should questions follow the order of the source text?"}
-            {step === "count" && "Configure the number of questions and options."}
-            {step === "generating" && "Generating questions…"}
-            {step === "done" && "Review generated questions before applying."}
+            {step === "source" && t("stepSourceDesc")}
+            {step === "select-blocks" && t("stepBlocksDesc")}
+            {step === "enter-context" && t("stepContextDesc")}
+            {step === "style" && t("stepStyleDesc")}
+            {step === "order" && t("stepOrderDesc")}
+            {step === "count" && t("stepCountDesc")}
+            {step === "generating" && t("stepGeneratingDesc")}
+            {step === "done" && t("stepReviewDesc")}
           </DialogDescription>
         </DialogHeader>
 
         {/* Step indicator */}
         {step !== "generating" && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground px-1">
-            {["Source", useExisting ? "Blocks" : "Context", "Style", "Order", "Count", "Generate"].map((label, i) => {
+            {[tTf("stepSource"), useExisting ? tTf("stepBlocks") : tTf("stepContext"), tTf("stepStyle"), tTf("stepOrder"), tTf("stepCount"), tTf("stepGenerate")].map((label, i) => {
               const stepOrder: Step[] = ["source", useExisting ? "select-blocks" : "enter-context", "style", "order", "count", "done"];
               const currentIdx = stepOrder.indexOf(step);
               const isActive = i <= currentIdx;
@@ -274,9 +278,9 @@ export function AiMcqModal({
               >
                 <FileText className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">From worksheet</p>
+                  <p className="font-medium text-sm">{tTf("fromWorksheet")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Use existing text blocks
+                    {tTf("useExistingBlocks")}
                   </p>
                 </div>
               </button>
@@ -288,9 +292,9 @@ export function AiMcqModal({
               >
                 <PenTool className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Custom context</p>
+                  <p className="font-medium text-sm">{tTf("customContext")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Paste your own text
+                    {tTf("pasteYourText")}
                   </p>
                 </div>
               </button>
@@ -302,7 +306,7 @@ export function AiMcqModal({
             <div className="space-y-2">
               {textBlocks.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No text blocks found on the worksheet. Go back and choose custom context.
+                  {tTf("noTextBlocks")}
                 </p>
               ) : (
                 <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
@@ -337,15 +341,15 @@ export function AiMcqModal({
           {/* ─── Step 2b: Custom context ─── */}
           {step === "enter-context" && (
             <div className="space-y-2">
-              <Label className="text-xs">Context text</Label>
+              <Label className="text-xs">{tTf("contextText")}</Label>
               <textarea
                 className="w-full border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[180px]"
-                placeholder="Paste the text or topic that questions should be based on…"
+                placeholder={t("contextPlaceholder")}
                 value={customContext}
                 onChange={(e) => setCustomContext(e.target.value)}
               />
               <p className="text-[10px] text-muted-foreground">
-                {customContext.trim().length} characters — minimum 10 required
+                {tTf("characterCount", { count: customContext.trim().length })}
               </p>
             </div>
           )}
@@ -361,9 +365,9 @@ export function AiMcqModal({
               >
                 <Quote className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Verbatim</p>
+                  <p className="font-medium text-sm">{tTf("verbatim")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Use wording directly from the text
+                    {tTf("verbatimDesc")}
                   </p>
                 </div>
               </button>
@@ -375,9 +379,9 @@ export function AiMcqModal({
               >
                 <Repeat className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Paraphrased</p>
+                  <p className="font-medium text-sm">{tTf("paraphrased")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Rephrase in different words
+                    {tTf("paraphrasedDesc")}
                   </p>
                 </div>
               </button>
@@ -395,9 +399,9 @@ export function AiMcqModal({
               >
                 <ArrowDownNarrowWide className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Chronological</p>
+                  <p className="font-medium text-sm">{tTf("chronological")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Follow the order of the source text
+                    {tTf("chronologicalDesc")}
                   </p>
                 </div>
               </button>
@@ -409,9 +413,9 @@ export function AiMcqModal({
               >
                 <Shuffle className="h-8 w-8 text-primary/70" />
                 <div className="text-center">
-                  <p className="font-medium text-sm">Mixed</p>
+                  <p className="font-medium text-sm">{tTf("mixed")}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Randomize the order
+                    {tTf("mixedDesc")}
                   </p>
                 </div>
               </button>
@@ -422,7 +426,7 @@ export function AiMcqModal({
           {step === "count" && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="mcq-count" className="text-sm">Number of questions</Label>
+                <Label htmlFor="mcq-count" className="text-sm">{t("numberOfQuestions")}</Label>
                 <Input
                   id="mcq-count"
                   type="number"
@@ -432,10 +436,10 @@ export function AiMcqModal({
                   onChange={(e) => setCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
                   className="w-32"
                 />
-                <p className="text-[10px] text-muted-foreground">Between 1 and 20 questions</p>
+                <p className="text-[10px] text-muted-foreground">{t("betweenQuestions")}</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mcq-options" className="text-sm">Options per question</Label>
+                <Label htmlFor="mcq-options" className="text-sm">{t("optionsPerQuestion")}</Label>
                 <div className="flex gap-1">
                   {[2, 3, 4, 5, 6].map((n) => (
                     <button
@@ -459,7 +463,7 @@ export function AiMcqModal({
               )}
               {contextText && (
                 <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Context preview</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">{tTf("contextPreview")}</p>
                   <p className="text-xs text-muted-foreground line-clamp-3">{contextText}</p>
                 </div>
               )}
@@ -470,7 +474,7 @@ export function AiMcqModal({
           {step === "generating" && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
               <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
-              <p className="text-sm text-muted-foreground">Generating {count} question{count !== 1 ? "s" : ""}…</p>
+              <p className="text-sm text-muted-foreground">{t("generatingQuestions", { count })}</p>
             </div>
           )}
 
@@ -495,7 +499,7 @@ export function AiMcqModal({
               ))}
               {results.length > 1 && (
                 <p className="text-[10px] text-muted-foreground">
-                  The first question will update the current block. {results.length - 1} additional block{results.length > 2 ? "s" : ""} will be added after it.
+                  {t("firstQuestionUpdate", { count: results.length - 1 })}
                 </p>
               )}
             </div>
@@ -507,27 +511,27 @@ export function AiMcqModal({
           <div>
             {(step === "select-blocks" || step === "enter-context") && (
               <Button variant="ghost" size="sm" onClick={() => setStep("source")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "style" && (
               <Button variant="ghost" size="sm" onClick={() => setStep(useExisting ? "select-blocks" : "enter-context")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "order" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("style")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "count" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("order")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("back")}
               </Button>
             )}
             {step === "done" && (
               <Button variant="ghost" size="sm" onClick={() => setStep("count")}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Regenerate
+                <ChevronLeft className="h-4 w-4 mr-1" /> {tc("regenerate")}
               </Button>
             )}
           </div>
@@ -535,7 +539,7 @@ export function AiMcqModal({
           {/* Forward button */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleClose(false)}>
-              Cancel
+              {tc("cancel")}
             </Button>
 
             {step === "source" && (
@@ -544,7 +548,7 @@ export function AiMcqModal({
                 disabled={!canProceedFromSource}
                 onClick={() => setStep(useExisting ? "select-blocks" : "enter-context")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -554,7 +558,7 @@ export function AiMcqModal({
                 disabled={!canProceedFromBlocks}
                 onClick={() => setStep("style")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -564,7 +568,7 @@ export function AiMcqModal({
                 disabled={!canProceedFromContext}
                 onClick={() => setStep("style")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -574,7 +578,7 @@ export function AiMcqModal({
                 disabled={!canProceedFromStyle}
                 onClick={() => setStep("order")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
@@ -584,19 +588,19 @@ export function AiMcqModal({
                 disabled={!canProceedFromOrder}
                 onClick={() => setStep("count")}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {tc("next")} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
 
             {step === "count" && (
               <Button size="sm" onClick={handleGenerate} className="bg-purple-600 hover:bg-purple-700">
-                <Sparkles className="h-4 w-4 mr-1" /> Generate
+                <Sparkles className="h-4 w-4 mr-1" /> {tc("generate")}
               </Button>
             )}
 
             {step === "done" && (
               <Button size="sm" onClick={handleApply} className="bg-purple-600 hover:bg-purple-700">
-                <Check className="h-4 w-4 mr-1" /> Apply to block
+                <Check className="h-4 w-4 mr-1" /> {tTf("applyToBlock")}
               </Button>
             )}
           </div>

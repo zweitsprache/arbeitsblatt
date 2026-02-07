@@ -257,6 +257,8 @@ export interface BlockDefinition {
   type: BlockType;
   label: string;
   description: string;
+  labelKey: string; // i18n key in "blocks" namespace
+  descriptionKey: string; // i18n key in "blocks" namespace
   icon: string; // lucide icon name
   category: "layout" | "content" | "interactive";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -269,6 +271,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "heading",
     label: "Heading",
     description: "Title or section heading",
+    labelKey: "heading",
+    descriptionKey: "headingDesc",
     icon: "Heading",
     category: "content",
     defaultData: {
@@ -282,6 +286,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "text",
     label: "Text",
     description: "Rich text paragraph",
+    labelKey: "text",
+    descriptionKey: "textDesc",
     icon: "Type",
     category: "content",
     defaultData: {
@@ -294,6 +300,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "image",
     label: "Image",
     description: "Insert an image",
+    labelKey: "image",
+    descriptionKey: "imageDesc",
     icon: "Image",
     category: "content",
     defaultData: {
@@ -307,6 +315,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "spacer",
     label: "Spacer",
     description: "Add vertical spacing",
+    labelKey: "spacer",
+    descriptionKey: "spacerDesc",
     icon: "Space",
     category: "layout",
     defaultData: {
@@ -319,6 +329,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "divider",
     label: "Divider",
     description: "Horizontal line separator",
+    labelKey: "divider",
+    descriptionKey: "dividerDesc",
     icon: "Minus",
     category: "layout",
     defaultData: {
@@ -331,6 +343,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "columns",
     label: "Columns",
     description: "Multi-column layout",
+    labelKey: "columnsLabel",
+    descriptionKey: "columnsDesc",
     icon: "Columns2",
     category: "layout",
     defaultData: {
@@ -345,6 +359,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "multiple-choice",
     label: "Multiple Choice",
     description: "Question with selectable answers",
+    labelKey: "multipleChoice",
+    descriptionKey: "multipleChoiceDesc",
     icon: "CircleDot",
     category: "interactive",
     defaultData: {
@@ -364,6 +380,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "fill-in-blank",
     label: "Fill in the Blank",
     description: "Text with blanks to fill in",
+    labelKey: "fillInBlank",
+    descriptionKey: "fillInBlankDesc",
     icon: "TextCursorInput",
     category: "interactive",
     defaultData: {
@@ -376,6 +394,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "matching",
     label: "Matching",
     description: "Match items from two columns",
+    labelKey: "matching",
+    descriptionKey: "matchingDesc",
     icon: "ArrowLeftRight",
     category: "interactive",
     defaultData: {
@@ -393,6 +413,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "open-response",
     label: "Open Response",
     description: "Free-form writing area",
+    labelKey: "openResponse",
+    descriptionKey: "openResponseDesc",
     icon: "PenLine",
     category: "interactive",
     defaultData: {
@@ -406,6 +428,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "word-bank",
     label: "Word Bank",
     description: "Bank of words for reference",
+    labelKey: "wordBank",
+    descriptionKey: "wordBankDesc",
     icon: "LayoutList",
     category: "interactive",
     defaultData: {
@@ -418,6 +442,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "true-false-matrix",
     label: "True/False Matrix",
     description: "Evaluate statements as true or false",
+    labelKey: "trueFalseMatrix",
+    descriptionKey: "trueFalseMatrixDesc",
     icon: "CheckSquare",
     category: "interactive",
     defaultData: {
@@ -435,6 +461,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "order-items",
     label: "Order Items",
     description: "Put items in the correct order",
+    labelKey: "orderItems",
+    descriptionKey: "orderItemsDesc",
     icon: "ListOrdered",
     category: "interactive",
     defaultData: {
@@ -453,6 +481,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "inline-choices",
     label: "Inline Choices",
     description: "Text with inline multiple choice options",
+    labelKey: "inlineChoices",
+    descriptionKey: "inlineChoicesDesc",
     icon: "TextSelect",
     category: "interactive",
     defaultData: {
@@ -465,6 +495,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "word-search",
     label: "Word Search",
     description: "Word search puzzle grid",
+    labelKey: "wordSearch",
+    descriptionKey: "wordSearchDesc",
     icon: "Search",
     category: "interactive",
     defaultData: {
@@ -481,6 +513,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "sorting-categories",
     label: "Sorting Categories",
     description: "Sort items into labeled categories",
+    labelKey: "sortingCategories",
+    descriptionKey: "sortingCategoriesDesc",
     icon: "Group",
     category: "interactive",
     defaultData: {

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import {
   WorksheetBlock,
   HeadingBlock,
@@ -59,6 +60,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
 // ─── Text ────────────────────────────────────────────────────
 function TextRenderer({ block }: { block: TextBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   return (
@@ -72,13 +74,13 @@ function TextRenderer({ block }: { block: TextBlock }) {
               payload: { id: block.id, updates: { content: html } },
             })
           }
-          placeholder="Start typing..."
+          placeholder={t("startTyping")}
         />
         <button
           type="button"
           onClick={() => setShowAiModal(true)}
           className="absolute -top-2 -right-2 opacity-0 group-hover/text:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white rounded-full p-1.5 shadow-md z-10"
-          title="AI Generate Reading Text"
+          title={t("aiGenerateReadingText")}
         >
           <Sparkles className="h-3.5 w-3.5" />
         </button>
@@ -94,10 +96,11 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
 // ─── Image ───────────────────────────────────────────────────
 function ImageRenderer({ block }: { block: ImageBlock }) {
+  const t = useTranslations("blockRenderer");
   if (!block.src) {
     return (
       <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center text-muted-foreground text-sm">
-        <p>Click to add image URL</p>
+        <p>{t("clickToAddImage")}</p>
       </div>
     );
   }
@@ -152,6 +155,7 @@ function MultipleChoiceRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   const updateOptions = (newOptions: typeof block.options) => {
@@ -221,7 +225,7 @@ function MultipleChoiceRenderer({
                   ${opt.isCorrect
                     ? "border-green-500 bg-green-500 text-white"
                     : "border-gray-300 hover:border-green-400"}`}
-                title={opt.isCorrect ? "Marked as correct" : "Mark as correct"}
+                title={opt.isCorrect ? t("markedAsCorrect") : t("markAsCorrect")}
               >
                 {opt.isCorrect && <Check className="h-3 w-3" />}
               </button>
@@ -248,7 +252,7 @@ function MultipleChoiceRenderer({
                 onClick={() => removeOption(i)}
                 className={`h-5 w-5 flex items-center justify-center rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0
                   ${block.options.length <= 2 ? "invisible" : "opacity-0 group-hover:opacity-100"}`}
-                title="Remove option"
+                title={t("removeOption")}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -264,7 +268,7 @@ function MultipleChoiceRenderer({
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add option
+            {t("addOption")}
           </button>
           <button
             type="button"
@@ -274,7 +278,7 @@ function MultipleChoiceRenderer({
               setShowAiModal(true);
             }}
           >
-            <Sparkles className="h-3 w-3" /> AI generate
+            <Sparkles className="h-3 w-3" /> {t("aiGenerate")}
           </button>
         </div>
       )}
@@ -291,6 +295,7 @@ function FillInBlankRenderer({
   block: FillInBlankBlock;
   interactive: boolean;
 }) {
+  const t = useTranslations("blockRenderer");
   // Parse {{blank:answer}} patterns
   const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
 
@@ -303,7 +308,7 @@ function FillInBlankRenderer({
             <input
               key={i}
               type="text"
-              placeholder="________"
+              placeholder={t("fillInBlankPlaceholder")}
               className="border-b-2 border-gray-400 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary w-28 inline"
             />
           ) : (
@@ -369,6 +374,7 @@ function OpenResponseRenderer({
   block: OpenResponseBlock;
   interactive: boolean;
 }) {
+  const t = useTranslations("blockRenderer");
   return (
     <div className="space-y-2">
       <p className="font-medium">{block.question}</p>
@@ -376,7 +382,7 @@ function OpenResponseRenderer({
         <textarea
           className="w-full border rounded-md p-2 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary"
           rows={block.lines}
-          placeholder="Write your answer here..."
+          placeholder={t("writeAnswerHere")}
         />
       ) : (
         <div className="space-y-0">
@@ -391,10 +397,11 @@ function OpenResponseRenderer({
 
 // ─── Word Bank ──────────────────────────────────────────────
 function WordBankRenderer({ block }: { block: WordBankBlock }) {
+  const t = useTranslations("blockRenderer");
   return (
     <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4">
       <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-        Word Bank
+        {t("wordBank")}
       </p>
       <div className="flex flex-wrap gap-2">
         {block.words.map((word, i) => (
@@ -458,6 +465,8 @@ function TrueFalseMatrixRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
   const updateStatement = (id: string, updates: Partial<{ text: string; correctAnswer: boolean }>) => {
@@ -482,7 +491,7 @@ function TrueFalseMatrixRenderer({
         updates: {
           statements: [
             ...block.statements,
-            { id: crypto.randomUUID(), text: "New statement", correctAnswer: true },
+            { id: crypto.randomUUID(), text: t("newStatement"), correctAnswer: true },
           ],
         },
       },
@@ -523,9 +532,9 @@ function TrueFalseMatrixRenderer({
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="text-left p-2 border-b font-medium text-muted-foreground">Statement</th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">True</th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">False</th>
+            <th className="text-left p-2 border-b font-medium text-muted-foreground">{t("statement")}</th>
+            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
+            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
             <th className="w-8 p-2 border-b"></th>
           </tr>
         </thead>
@@ -597,7 +606,7 @@ function TrueFalseMatrixRenderer({
             addStatement();
           }}
         >
-          <Plus className="h-3 w-3" /> Add statement
+          <Plus className="h-3 w-3" /> {t("addStatement")}
         </button>
         <button
           className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 transition-colors"
@@ -606,7 +615,7 @@ function TrueFalseMatrixRenderer({
             setShowAiModal(true);
           }}
         >
-          <Sparkles className="h-3 w-3" /> AI generate
+          <Sparkles className="h-3 w-3" /> {t("aiGenerate")}
         </button>
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
@@ -623,6 +632,7 @@ function OrderItemsRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
 
   const updateItem = (id: string, updates: Partial<{ text: string; correctPosition: number }>) => {
     dispatch({
@@ -735,7 +745,7 @@ function OrderItemsRenderer({
           addItem();
         }}
       >
-        <Plus className="h-3 w-3" /> Add item
+        <Plus className="h-3 w-3" /> {t("addItem")}
       </button>
     </div>
   );
@@ -868,6 +878,7 @@ function generateWordSearchGrid(
 
 function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
 
   const cols = block.gridCols ?? block.gridSize ?? 24;
   const rows = block.gridRows ?? block.gridSize ?? 12;
@@ -944,7 +955,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
           regenerateGrid();
         }}
       >
-        <ArrowUpDown className="h-3 w-3" /> Regenerate grid
+        <ArrowUpDown className="h-3 w-3" /> {t("regenerateGrid")}
       </button>
     </div>
   );
@@ -953,6 +964,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
 // ─── Sorting Categories ─────────────────────────────────────
 function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
 
   const updateItem = (id: string, text: string) => {
     dispatch({
@@ -1091,7 +1103,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
           addItem();
         }}
       >
-        <Plus className="h-3 w-3" /> Add item
+        <Plus className="h-3 w-3" /> {t("addItem")}
       </button>
     </div>
   );
@@ -1117,6 +1129,8 @@ function ColumnChildBlock({
   colIndex: number;
 }) {
   const { state, dispatch, duplicateBlock } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const tc = useTranslations("common");
   const isSelected = state.selectedBlockId === block.id;
   const isVisibleInMode = block.visibility === "both" || block.visibility === mode;
   const VisIcon = colChildVisibilityIcons[block.visibility];
@@ -1182,7 +1196,7 @@ function ColumnChildBlock({
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">Visible: {block.visibility}</p>
+            <p className="text-xs">{t("visibleLabel", { visibility: block.visibility })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -1215,7 +1229,7 @@ function ColumnChildBlock({
           variant="secondary"
           className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 z-20"
         >
-          {block.visibility === "print" ? "Print" : "Online"}
+          {block.visibility === "print" ? tc("print") : tc("online")}
         </Badge>
       )}
 
@@ -1239,6 +1253,7 @@ function DroppableColumn({
   children: React.ReactNode;
   isEmpty: boolean;
 }) {
+  const t = useTranslations("blockRenderer");
   const { setNodeRef, isOver } = useDroppable({
     id: `column-${blockId}-${colIndex}`,
     data: { type: "column-drop", blockId, colIndex },
@@ -1253,7 +1268,7 @@ function DroppableColumn({
     >
       {isEmpty ? (
         <p className={`text-xs text-center py-4 transition-colors ${isOver ? "text-primary opacity-70" : "text-muted-foreground opacity-50"}`}>
-          {isOver ? "Drop here" : `Column ${colIndex + 1}`}
+          {isOver ? t("dropHere") : t("columnLabel", { index: colIndex + 1 })}
         </p>
       ) : (
         children
@@ -1304,6 +1319,8 @@ export function BlockRenderer({
   block: WorksheetBlock;
   mode: ViewMode;
 }) {
+  const t = useTranslations("blockRenderer");
+  const tc = useTranslations("common");
   const interactive = mode === "online";
 
   switch (block.type) {
@@ -1344,7 +1361,7 @@ export function BlockRenderer({
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">
-          Unknown block type: {(block as WorksheetBlock).type}
+          {t("unknownBlockType", { type: (block as WorksheetBlock).type })}
         </div>
       );
   }
