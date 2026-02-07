@@ -1,0 +1,745 @@
+"use client";
+
+import React from "react";
+import { useEditor } from "@/store/editor-store";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  HeadingBlock,
+  TextBlock,
+  ImageBlock,
+  SpacerBlock,
+  DividerBlock,
+  MultipleChoiceBlock,
+  OpenResponseBlock,
+  FillInBlankBlock,
+  MatchingBlock,
+  WordBankBlock,
+  ColumnsBlock,
+  TrueFalseMatrixBlock,
+  WorksheetBlock,
+  BlockVisibility,
+} from "@/types/worksheet";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { AiTrueFalseModal } from "./ai-true-false-modal";
+import { AiMcqModal } from "./ai-mcq-modal";
+import { AiTextModal } from "./ai-text-modal";
+
+// ─── Block-specific property editors ────────────────────────
+
+function HeadingProps({ block }: { block: HeadingBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Content</Label>
+        <Input
+          value={block.content}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { content: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Level</Label>
+        <Select
+          value={String(block.level)}
+          onValueChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { level: Number(v) as 1 | 2 | 3 } },
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">Heading 1</SelectItem>
+            <SelectItem value="2">Heading 2</SelectItem>
+            <SelectItem value="3">Heading 3</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
+function ImageProps({ block }: { block: ImageBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Image URL</Label>
+        <Input
+          value={block.src}
+          placeholder="https://..."
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { src: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Alt Text</Label>
+        <Input
+          value={block.alt}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { alt: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Width (px)</Label>
+        <Input
+          type="number"
+          value={block.width || ""}
+          placeholder="Auto"
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: {
+                id: block.id,
+                updates: { width: e.target.value ? Number(e.target.value) : undefined },
+              },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Caption</Label>
+        <Input
+          value={block.caption || ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { caption: e.target.value } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function SpacerProps({ block }: { block: SpacerBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div>
+      <Label className="text-xs">Height (px)</Label>
+      <Input
+        type="number"
+        value={block.height}
+        onChange={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { height: Number(e.target.value) } },
+          })
+        }
+      />
+    </div>
+  );
+}
+
+function DividerProps({ block }: { block: DividerBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div>
+      <Label className="text-xs">Style</Label>
+      <Select
+        value={block.style}
+        onValueChange={(v) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { style: v as "solid" | "dashed" | "dotted" } },
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="solid">Solid</SelectItem>
+          <SelectItem value="dashed">Dashed</SelectItem>
+          <SelectItem value="dotted">Dotted</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
+  const { dispatch } = useEditor();
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  const updateOption = (index: number, updates: Partial<{ text: string; isCorrect: boolean }>) => {
+    const newOptions = [...block.options];
+    newOptions[index] = { ...newOptions[index], ...updates };
+    // If setting as correct and not allowMultiple, unset others
+    if (updates.isCorrect && !block.allowMultiple) {
+      newOptions.forEach((opt, i) => {
+        if (i !== index) opt.isCorrect = false;
+      });
+    }
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { options: newOptions } },
+    });
+  };
+
+  const addOption = () => {
+    const newOptions = [
+      ...block.options,
+      { id: `opt${Date.now()}`, text: `Option ${String.fromCharCode(65 + block.options.length)}`, isCorrect: false },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { options: newOptions } },
+    });
+  };
+
+  const removeOption = (index: number) => {
+    const newOptions = block.options.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { options: newOptions } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Question</Label>
+        <Input
+          value={block.question}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { question: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.allowMultiple}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { allowMultiple: v } },
+            })
+          }
+        />
+        <Label className="text-xs">Allow multiple answers</Label>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs">Options</Label>
+        {block.options.map((opt, i) => (
+          <div key={opt.id} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={opt.isCorrect}
+              onChange={(e) => updateOption(i, { isCorrect: e.target.checked })}
+              className="h-3.5 w-3.5"
+              title="Mark as correct"
+            />
+            <Input
+              value={opt.text}
+              onChange={(e) => updateOption(i, { text: e.target.value })}
+              className="flex-1 h-8 text-xs"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeOption(i)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addOption} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Option
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs">AI Generation</Label>
+        <p className="text-[10px] text-muted-foreground mb-2">
+          Auto-generate questions from context
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+          onClick={() => setShowAiModal(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          AI Generate
+        </Button>
+      </div>
+      <AiMcqModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Question</Label>
+        <Input
+          value={block.question}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { question: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Number of lines</Label>
+        <Input
+          type="number"
+          min={1}
+          max={20}
+          value={block.lines}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { lines: Number(e.target.value) } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
+  const { dispatch } = useEditor();
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Content</Label>
+        <p className="text-[10px] text-muted-foreground mb-1">
+          Use {"{{blank:answer}}"} for blanks
+        </p>
+        <textarea
+          value={block.content}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { content: e.target.value } },
+            })
+          }
+          className="w-full border rounded-md p-2 text-xs min-h-[80px] resize-y"
+        />
+      </div>
+    </div>
+  );
+}
+
+function MatchingProps({ block }: { block: MatchingBlock }) {
+  const { dispatch } = useEditor();
+
+  const updatePair = (index: number, updates: Partial<{ left: string; right: string }>) => {
+    const newPairs = [...block.pairs];
+    newPairs[index] = { ...newPairs[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  const addPair = () => {
+    const newPairs = [
+      ...block.pairs,
+      { id: `p${Date.now()}`, left: "New Item", right: "New Match" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  const removePair = (index: number) => {
+    const newPairs = block.pairs.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Instruction</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs">Pairs</Label>
+        {block.pairs.map((pair, i) => (
+          <div key={pair.id} className="flex items-center gap-1">
+            <Input
+              value={pair.left}
+              onChange={(e) => updatePair(i, { left: e.target.value })}
+              className="flex-1 h-8 text-xs"
+              placeholder="Left"
+            />
+            <span className="text-xs text-muted-foreground">→</span>
+            <Input
+              value={pair.right}
+              onChange={(e) => updatePair(i, { right: e.target.value })}
+              className="flex-1 h-8 text-xs"
+              placeholder="Right"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removePair(i)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addPair} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Pair
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function WordBankProps({ block }: { block: WordBankBlock }) {
+  const { dispatch } = useEditor();
+
+  const updateWord = (index: number, value: string) => {
+    const newWords = [...block.words];
+    newWords[index] = value;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: newWords } },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: [...block.words, "new word"] } },
+    });
+  };
+
+  const removeWord = (index: number) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: block.words.filter((_, i) => i !== index) } },
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">Words</Label>
+      {block.words.map((word, i) => (
+        <div key={i} className="flex items-center gap-1">
+          <Input
+            value={word}
+            onChange={(e) => updateWord(i, e.target.value)}
+            className="flex-1 h-8 text-xs"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => removeWord(i)}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addWord} className="w-full">
+        <Plus className="h-3.5 w-3.5 mr-1" /> Add Word
+      </Button>
+    </div>
+  );
+}
+
+function ColumnsProps({ block }: { block: ColumnsBlock }) {
+  const { dispatch } = useEditor();
+
+  const setColumnCount = (count: number) => {
+    // Adjust the children array: keep existing columns, add empty ones or trim
+    const newChildren = [...block.children];
+    while (newChildren.length < count) {
+      newChildren.push([]);
+    }
+    // Only trim empty trailing columns — keep content
+    while (newChildren.length > count) {
+      const last = newChildren[newChildren.length - 1];
+      if (last.length === 0) {
+        newChildren.pop();
+      } else {
+        // Move orphaned blocks into the last kept column
+        const overflow = newChildren.splice(count);
+        newChildren[count - 1] = [
+          ...newChildren[count - 1],
+          ...overflow.flat(),
+        ];
+        break;
+      }
+    }
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { columns: count, children: newChildren },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Number of Columns</Label>
+        <div className="flex gap-1 mt-1.5">
+          {[1, 2, 3, 4].map((n) => (
+            <Button
+              key={n}
+              variant={block.columns === n ? "default" : "outline"}
+              size="sm"
+              className="flex-1 h-8"
+              onClick={() => setColumnCount(n)}
+            >
+              {n}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TextProps({ block }: { block: TextBlock }) {
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Content</Label>
+        <p className="text-[10px] text-muted-foreground">
+          Edit text directly on the canvas
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+        onClick={() => setShowAiModal(true)}
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        AI Generate Text
+      </Button>
+      <AiTextModal
+        open={showAiModal}
+        onOpenChange={setShowAiModal}
+        blockId={block.id}
+      />
+    </div>
+  );
+}
+
+function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Instruction</Label>
+        <p className="text-[10px] text-muted-foreground">
+          Edit instruction and statements directly on the canvas
+        </p>
+      </div>
+      <div>
+        <Label className="text-xs">Statements</Label>
+        <p className="text-[10px] text-muted-foreground">
+          {block.statements.length} statement{block.statements.length !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs">AI Generation</Label>
+        <p className="text-[10px] text-muted-foreground mb-2">
+          Auto-generate statements from context
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+          onClick={() => setShowAiModal(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          AI Generate
+        </Button>
+      </div>
+      <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+// ─── Properties Panel ────────────────────────────────────────
+export function PropertiesPanel() {
+  const { state, dispatch } = useEditor();
+
+  const selectedBlock = state.blocks.find(
+    (b) => b.id === state.selectedBlockId
+  );
+
+  if (!selectedBlock) {
+    return (
+      <div className="w-72 border-l border-border bg-background p-4">
+        <p className="text-sm text-muted-foreground text-center mt-8">
+          Select a block to edit its properties
+        </p>
+      </div>
+    );
+  }
+
+  const renderBlockProps = () => {
+    switch (selectedBlock.type) {
+      case "heading":
+        return <HeadingProps block={selectedBlock} />;
+      case "image":
+        return <ImageProps block={selectedBlock} />;
+      case "spacer":
+        return <SpacerProps block={selectedBlock} />;
+      case "divider":
+        return <DividerProps block={selectedBlock} />;
+      case "multiple-choice":
+        return <MultipleChoiceProps block={selectedBlock} />;
+      case "open-response":
+        return <OpenResponseProps block={selectedBlock} />;
+      case "fill-in-blank":
+        return <FillInBlankProps block={selectedBlock} />;
+      case "matching":
+        return <MatchingProps block={selectedBlock} />;
+      case "word-bank":
+        return <WordBankProps block={selectedBlock} />;
+      case "columns":
+        return <ColumnsProps block={selectedBlock} />;
+      case "true-false-matrix":
+        return <TrueFalseMatrixProps block={selectedBlock} />;
+      case "text":
+        return <TextProps block={selectedBlock} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="w-72 border-l border-border bg-background flex flex-col h-full">
+      <div className="p-4 border-b border-border">
+        <h3 className="text-sm font-semibold capitalize">
+          {selectedBlock.type.replace("-", " ")} Properties
+        </h3>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-4">
+          {/* Visibility */}
+          <div>
+            <Label className="text-xs mb-2 block">Visibility</Label>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const v = selectedBlock.visibility;
+                      const showPrint = v === "both" || v === "print";
+                      const showOnline = v === "both" || v === "online";
+                      // Toggle print: if currently shown, hide it (unless it would hide both)
+                      if (showPrint) {
+                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showOnline ? "online" : "both" } });
+                      } else {
+                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showOnline ? "both" : "print" } });
+                      }
+                    }}
+                    className={`flex items-center justify-center h-9 w-9 rounded-md border transition-colors
+                      ${selectedBlock.visibility === "both" || selectedBlock.visibility === "print"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"}`}
+                  >
+                    <Printer className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Print</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const v = selectedBlock.visibility;
+                      const showPrint = v === "both" || v === "print";
+                      const showOnline = v === "both" || v === "online";
+                      // Toggle online: if currently shown, hide it (unless it would hide both)
+                      if (showOnline) {
+                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showPrint ? "print" : "both" } });
+                      } else {
+                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showPrint ? "both" : "online" } });
+                      }
+                    }}
+                    className={`flex items-center justify-center h-9 w-9 rounded-md border transition-colors
+                      ${selectedBlock.visibility === "both" || selectedBlock.visibility === "online"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"}`}
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Web</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Block-specific properties */}
+          {renderBlockProps()}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
