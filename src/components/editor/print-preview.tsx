@@ -357,7 +357,7 @@ p { widows: 2; orphans: 2; }
                   {brandSettings.logo && (
                     <img
                       src={brandSettings.logo}
-                      alt=""
+                      alt="Logo"
                       style={{
                         position: "absolute",
                         top: `${10 * MM_TO_PX}px`,
@@ -414,29 +414,54 @@ p { widows: 2; orphans: 2; }
                     )}
                   </div>
 
-                  {/* Footer */}
-                  {hasFooter && (
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mt-auto pt-3 shrink-0">
-                      <div>
-                        {brandSettings.footerLeft ? (
-                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />
-                        ) : null}
-                      </div>
-                      <div>
-                        {brandSettings.footerCenter ? (
-                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                        ) : state.settings.footerText ? (
-                          <span>{state.settings.footerText}</span>
-                        ) : null}
-                      </div>
-                      <div>
-                        {brandSettings.footerRight ? (
-                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }} />
-                        ) : null}
-                      </div>
+                  </div>{/* End content area */}
+
+                  {/* Footer Left - 10mm from left/bottom */}
+                  {brandSettings.footerLeft && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: `${10 * MM_TO_PX}px`,
+                        left: `${10 * MM_TO_PX}px`,
+                      }}
+                      className="text-[10px] text-gray-400"
+                      dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
+                    />
+                  )}
+
+                  {/* Footer Center - centered, 10mm from bottom */}
+                  {(brandSettings.footerCenter || state.settings.footerText) && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: `${10 * MM_TO_PX}px`,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        textAlign: "center",
+                      }}
+                      className="text-[10px] text-gray-400"
+                    >
+                      {brandSettings.footerCenter ? (
+                        <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                      ) : state.settings.footerText ? (
+                        <span>{state.settings.footerText}</span>
+                      ) : null}
                     </div>
                   )}
-                  </div>{/* End content area */}
+
+                  {/* Footer Right - 10mm from right/bottom */}
+                  {brandSettings.footerRight && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: `${10 * MM_TO_PX}px`,
+                        right: `${10 * MM_TO_PX}px`,
+                        textAlign: "right",
+                      }}
+                      className="text-[10px] text-gray-400"
+                      dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}
+                    />
+                  )}
                 </div>
 
                 {/* Page break indicator between pages */}
