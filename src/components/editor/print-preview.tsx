@@ -59,6 +59,10 @@ export function PrintPreview({
   const pageHeightPx = effectiveHeightMM * MM_TO_PX;
 
   const { margins, fontSize, fontFamily } = state.settings;
+  const isLingostar = state.settings.brand === "lingostar";
+  const effectiveFontFamily = isLingostar
+    ? "'Encode Sans', sans-serif"
+    : "var(--font-asap-condensed), " + fontFamily;
 
   const paddingTopPx = margins.top * MM_TO_PX;
   const paddingBottomPx = margins.bottom * MM_TO_PX;
@@ -90,7 +94,7 @@ export function PrintPreview({
     if (open) {
       setMeasureKey((k) => k + 1);
     }
-  }, [open, visibleBlocks, margins, fontSize, fontFamily, state.settings.pageSize, state.settings.orientation]);
+  }, [open, visibleBlocks, margins, fontSize, fontFamily, state.settings.pageSize, state.settings.orientation, state.settings.brand]);
 
   // Measure block heights and paginate
   const paginate = useCallback(() => {
@@ -286,7 +290,7 @@ p { widows: 2; orphans: 2; }
             top: -9999,
             left: -9999,
             width: pageWidthPx - paddingLeftPx - paddingRightPx,
-            fontFamily: "var(--font-asap-condensed), " + fontFamily,
+            fontFamily: effectiveFontFamily,
             fontSize: `${fontSize}px`,
             lineHeight: 1.5,
             visibility: "hidden",
@@ -320,7 +324,7 @@ p { widows: 2; orphans: 2; }
                     width: pageWidthPx,
                     height: pageHeightPx,
                     padding: `${paddingTopPx}px ${paddingRightPx}px ${paddingBottomPx}px ${paddingLeftPx}px`,
-                    fontFamily: "var(--font-asap-condensed), " + fontFamily,
+                    fontFamily: effectiveFontFamily,
                     fontSize: `${fontSize}px`,
                     lineHeight: 1.5,
                     overflow: "hidden",

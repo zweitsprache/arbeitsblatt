@@ -29,6 +29,13 @@ export function WorksheetViewer({
   );
 
   const pageWidth = settings.pageSize === "a4" ? 794 : 816;
+  const isLingostar = settings.brand === "lingostar";
+  const fontFamily = isLingostar
+    ? "'Encode Sans', sans-serif"
+    : "'Asap Condensed', var(--font-asap-condensed), sans-serif";
+  const fontUrl = isLingostar
+    ? "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@200;300;400;500;600;700;800;900&display=swap"
+    : "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap";
 
   const hasInteractiveBlocks = visibleBlocks.some(
     (b) =>
@@ -60,7 +67,7 @@ export function WorksheetViewer({
           {/* eslint-disable-next-line @next/next/no-page-custom-font */}
           <link
             rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap"
+            href={fontUrl}
           />
           <style
             dangerouslySetInnerHTML={{
@@ -97,7 +104,7 @@ export function WorksheetViewer({
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Asap Condensed', var(--font-asap-condensed), sans-serif; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
               `,
             }}
           />
@@ -136,7 +143,7 @@ export function WorksheetViewer({
             mode === "print"
               ? {
                   fontSize: settings.fontSize,
-                  fontFamily: "'Asap Condensed', var(--font-asap-condensed), sans-serif",
+                  fontFamily: fontFamily,
                 }
               : undefined
           }

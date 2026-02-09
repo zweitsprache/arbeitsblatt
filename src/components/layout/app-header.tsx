@@ -34,8 +34,8 @@ export function AppHeader() {
         <Image
           src="/logo/arbeitsblatt_logo_full_brand.svg"
           alt="Arbeitsblatt"
-          width={160}
-          height={32}
+          width={140}
+          height={28}
         />
       </Link>
 

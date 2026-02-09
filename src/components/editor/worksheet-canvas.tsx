@@ -66,7 +66,10 @@ export function WorksheetCanvas({
   const pageWidth = state.settings.pageSize === "a4" ? 794 : 816;
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div 
+      className="flex-1 overflow-auto canvas-scroll"
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+    >
       <div className="flex justify-center py-8 px-4">
         <div
           ref={state.blocks.length === 0 ? setCanvasRef : undefined}

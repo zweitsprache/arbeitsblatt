@@ -30,7 +30,7 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, Printer, Monitor, Sparkles, ArrowUpDown } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -1431,7 +1431,24 @@ function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
   };
 
   const isSplit = block.splitConjugation ?? false;
+  const showGlobal = block.showConjugations ?? false;
   const colCount = isSplit ? 5 : 4;
+
+  const cycleOverride = (section: "singularRows" | "pluralRows", id: string, field: "showOverride" | "showOverride2") => {
+    const row = block[section].find(r => r.id === id);
+    if (!row) return;
+    const current = row[field];
+    // Cycle: null → show → hide → null
+    const next = current === null || current === undefined ? "show" : current === "show" ? "hide" : null;
+    updateRow(section, id, { [field]: next });
+  };
+
+  const getVisibilityIcon = (override: "show" | "hide" | null | undefined, globalShow: boolean) => {
+    if (override === "show") return <Eye className="h-3 w-3 text-green-600" />;
+    if (override === "hide") return <EyeOff className="h-3 w-3 text-red-600" />;
+    // null/undefined = use global
+    return globalShow ? <Eye className="h-3 w-3 text-muted-foreground/50" /> : <EyeOff className="h-3 w-3 text-muted-foreground/50" />;
+  };
 
   const renderRows = (section: "singularRows" | "pluralRows", isLast: boolean) => (
     <>
@@ -1470,27 +1487,47 @@ function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
             />
           </td>
           <td className={`${borderB} border-border px-3 py-2${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? " rounded-br-lg" : ""}`}>
-            <input
-              type="text"
-              value={row.conjugation}
-              onChange={(e) =>
-                updateRow(section, row.id, { conjugation: e.target.value })
-              }
-              className="w-full font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
-              placeholder={t("verbTableConjugation")}
-            />
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={row.conjugation}
+                onChange={(e) =>
+                  updateRow(section, row.id, { conjugation: e.target.value })
+                }
+                className="flex-1 font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
+                placeholder={t("verbTableConjugation")}
+              />
+              <button
+                type="button"
+                onClick={() => cycleOverride(section, row.id, "showOverride")}
+                className="p-1 rounded hover:bg-muted/50 transition-colors opacity-50 hover:opacity-100"
+                title={row.showOverride === "show" ? "Shown (click to hide)" : row.showOverride === "hide" ? "Hidden (click to use global)" : "Using global (click to show)"}
+              >
+                {getVisibilityIcon(row.showOverride, showGlobal)}
+              </button>
+            </div>
           </td>
           {isSplit && (
             <td className={`${borderB} border-border px-3 py-2${isLastRow ? " rounded-br-lg" : ""}`}>
-              <input
-                type="text"
-                value={row.conjugation2 || ""}
-                onChange={(e) =>
-                  updateRow(section, row.id, { conjugation2: e.target.value || undefined })
-                }
-                className="w-full font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
-                placeholder={t("verbTableConjugation")}
-              />
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={row.conjugation2 || ""}
+                  onChange={(e) =>
+                    updateRow(section, row.id, { conjugation2: e.target.value || undefined })
+                  }
+                  className="flex-1 font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
+                  placeholder={t("verbTableConjugation")}
+                />
+                <button
+                  type="button"
+                  onClick={() => cycleOverride(section, row.id, "showOverride2")}
+                  className="p-1 rounded hover:bg-muted/50 transition-colors opacity-50 hover:opacity-100"
+                  title={row.showOverride2 === "show" ? "Shown (click to hide)" : row.showOverride2 === "hide" ? "Hidden (click to use global)" : "Using global (click to show)"}
+                >
+                  {getVisibilityIcon(row.showOverride2, showGlobal)}
+                </button>
+              </div>
             </td>
           )}
         </tr>

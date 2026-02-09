@@ -19,6 +19,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Brand } from "@/types/worksheet";
+import {
   Save,
   Printer,
   Monitor,
@@ -144,6 +152,22 @@ export function EditorToolbar() {
         )}
 
         <div className="flex-1" />
+
+        {/* Brand selector */}
+        <Select
+          value={state.settings.brand || "edoomio"}
+          onValueChange={(value: Brand) =>
+            dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value } })
+          }
+        >
+          <SelectTrigger className="h-8 w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="edoomio">edoomio</SelectItem>
+            <SelectItem value="lingostar">lingostar</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Mode toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">

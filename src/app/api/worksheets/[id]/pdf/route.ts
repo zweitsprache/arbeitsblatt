@@ -22,6 +22,13 @@ export async function POST(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
+  // Determine font based on brand
+  const worksheetSettings = worksheet.settings as Record<string, unknown> | null;
+  const brand = (worksheetSettings?.brand as string) || "edoomio";
+  const defaultFont = brand === "lingostar" 
+    ? "Encode Sans, sans-serif" 
+    : "Asap Condensed, sans-serif";
+
   // Resolve settings with defaults
   const settings = {
     pageSize: "a4",
@@ -32,8 +39,8 @@ export async function POST(
     headerText: "",
     footerText: "",
     fontSize: 14,
-    fontFamily: "Asap Condensed, sans-serif",
-    ...(worksheet.settings as Record<string, unknown> | null),
+    fontFamily: defaultFont,
+    ...worksheetSettings,
   };
 
   const margins =
@@ -95,8 +102,9 @@ export async function POST(
     });
   } catch (error) {
     console.error("PDF generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "PDF generation failed" },
+      { error: `PDF generation failed: ${message}` },
       { status: 500 }
     );
   }

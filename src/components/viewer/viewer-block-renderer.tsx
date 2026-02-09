@@ -1527,8 +1527,16 @@ function VerbTableView({
   // answer: Record<rowId, string> — user-entered conjugation per row
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isSplit = block.splitConjugation ?? false;
+  const showGlobal = block.showConjugations ?? false;
   const colCount = isSplit ? 5 : 4;
   const isPrint = mode === "print";
+
+  // Helper to determine if a cell should show the answer or be a gap
+  const shouldShowAnswer = (override: "show" | "hide" | null | undefined): boolean => {
+    if (override === "show") return true;
+    if (override === "hide") return false;
+    return showGlobal;
+  };
 
   const handleChange = (rowId: string, field: string, value: string) => {
     if (!interactive || showResults) return;
@@ -1573,6 +1581,10 @@ function VerbTableView({
           showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
 
         const borderB = isLastRow ? "" : "border-b";
+        
+        // Check visibility for each conjugation cell
+        const showConj1 = shouldShowAnswer(row.showOverride);
+        const showConj2 = shouldShowAnswer(row.showOverride2);
 
         return (
           <tr key={row.id}>
@@ -1586,7 +1598,9 @@ function VerbTableView({
               {row.pronoun}
             </td>
             <td className={`${borderB} border-border ${cellPadding} font-bold${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? " rounded-br-lg" : ""}`}>
-              {interactive ? (
+              {showConj1 ? (
+                <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation}</span>
+              ) : interactive ? (
                 <input
                   type="text"
                   value={userVal}
@@ -1607,7 +1621,7 @@ function VerbTableView({
               ) : (
                 <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
               )}
-              {showResults && isWrong && (
+              {showResults && isWrong && !showConj1 && (
                 <span className="text-xs text-green-600 mt-0.5 block">
                   {row.conjugation}
                 </span>
@@ -1615,7 +1629,9 @@ function VerbTableView({
             </td>
             {isSplit && (
               <td className={`${borderB} border-border ${cellPadding} font-bold${isLastRow ? " rounded-br-lg" : ""}`}>
-                {interactive ? (
+                {showConj2 ? (
+                  <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation2}</span>
+                ) : interactive ? (
                   <input
                     type="text"
                     value={userVal2}
@@ -1636,7 +1652,7 @@ function VerbTableView({
                 ) : (
                   <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
                 )}
-                {showResults && isWrong2 && (
+                {showResults && isWrong2 && !showConj2 && (
                   <span className="text-xs text-green-600 mt-0.5 block">
                     {row.conjugation2}
                   </span>

@@ -7,9 +7,10 @@ import {
   FileText,
   Plus,
   Library,
-  Settings,
   ChevronLeft,
   ChevronRight,
+  User,
+  Shield,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -46,10 +47,14 @@ const sections: NavSection[] = [
       { href: "/", labelKey: "worksheetLibrary", icon: Library },
     ],
   },
-];
-
-const bottomItems: NavItem[] = [
-  { href: "/settings", labelKey: "settings", icon: Settings },
+  {
+    titleKey: "account",
+    icon: User,
+    items: [
+      { href: "/account/settings", labelKey: "accountSettings", icon: User },
+      { href: "/account/security", labelKey: "security", icon: Shield },
+    ],
+  },
 ];
 
 function SectionTitle({ icon: Icon, children, collapsed }: { icon: React.ComponentType<{ className?: string }>, children: React.ReactNode, collapsed: boolean }) {
@@ -164,35 +169,6 @@ export function AppSidebar() {
         <div className="mt-auto">
           <Separator className="border-white/10" />
           <nav className="p-3 space-y-1">
-            {bottomItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
-                        ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-white/50 hover:text-white/80 hover:bg-white/5"
-                        }
-                        ${collapsed ? "justify-center px-0" : ""}
-                      `}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{t(item.labelKey)}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right">
-                      {t(item.labelKey)}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
-
             {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}

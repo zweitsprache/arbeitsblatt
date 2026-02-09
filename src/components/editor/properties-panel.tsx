@@ -1433,6 +1433,18 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
         />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("splitConjugation")}</Label>
       </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showConjugations ?? false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showConjugations: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showConjugations")}</Label>
+      </div>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>

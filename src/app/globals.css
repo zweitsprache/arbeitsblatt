@@ -294,6 +294,19 @@
   }
 }
 /* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Canvas scrollbar hide */
+.canvas-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .scrollbar-hide [data-slot="scroll-area-viewport"] {
   scrollbar-width: none;
   -ms-overflow-style: none;

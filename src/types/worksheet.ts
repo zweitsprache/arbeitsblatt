@@ -226,12 +226,15 @@ export interface VerbTableRow {
   pronoun: string; // e.g. "ich", "du", "Sie"
   conjugation: string; // correct conjugated form
   conjugation2?: string; // second conjugation (when splitConjugation is true)
+  showOverride?: "show" | "hide" | null; // per-cell override: null=use global, show=reveal, hide=gap
+  showOverride2?: "show" | "hide" | null; // override for second conjugation column
 }
 
 export interface VerbTableBlock extends BlockBase {
   type: "verb-table";
   verb: string; // infinitive form
   splitConjugation?: boolean; // split col 4 into two columns
+  showConjugations?: boolean; // global toggle: true=show answers, false=hide (gaps)
   singularRows: VerbTableRow[];
   pluralRows: VerbTableRow[];
 }
@@ -259,8 +262,12 @@ export type WorksheetBlock =
   | FixSentencesBlock
   | VerbTableBlock;
 
+// ─── Brand types ────────────────────────────────────────────
+export type Brand = "edoomio" | "lingostar";
+
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
+  brand: Brand;
   pageSize: "a4" | "letter";
   orientation: "portrait" | "landscape";
   margins: {
@@ -292,6 +299,7 @@ export interface WorksheetDocument {
 
 // ─── Default settings ───────────────────────────────────────
 export const DEFAULT_SETTINGS: WorksheetSettings = {
+  brand: "edoomio",
   pageSize: "a4",
   orientation: "portrait",
   margins: { top: 20, right: 20, bottom: 20, left: 20 },

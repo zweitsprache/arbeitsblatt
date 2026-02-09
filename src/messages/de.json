@@ -284,7 +284,7 @@
     "auto": "Auto",
     "autoGenerate": "Automatisch generieren",
     "autoGenerateStatements": "Aussagen automatisch generieren",
-    "autoGenerateVerbs": "Verben automatisch mit KI generieren",
+    "autoGenerateVerbs": "Verben automatisch generieren",
     "caption": "Bildunterschrift",
     "csvAppend": "An bestehende anfügen",
     "csvImport": "CSV-Import",
@@ -324,6 +324,7 @@
     "selectBlock": "Block auswählen",
     "sentences": "Sätze",
     "showWordList": "Wortliste anzeigen",
+    "showConjugations": "Konjugationen anzeigen",
     "solid": "Durchgezogen",
     "splitConjugation": "Konjugation aufteilen",
     "statementCount": "{count} Aussagen",
@@ -359,10 +360,12 @@
     "urlPrompt": "URL eingeben:"
   },
   "sidebar": {
+    "account": "Konto",
+    "accountSettings": "Einstellungen",
     "collapse": "Einklappen",
     "dashboard": "Dashboard",
     "newWorksheet": "Neues Arbeitsblatt",
-    "settings": "Einstellungen",
+    "security": "Sicherheit",
     "worksheet": "Arbeitsblätter",
     "worksheetLibrary": "Arbeitsblatt-Bibliothek"
   },

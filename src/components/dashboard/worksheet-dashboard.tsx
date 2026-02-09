@@ -246,7 +246,7 @@ export function WorksheetDashboard() {
   const isSearching = searchResults !== null;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 overflow-y-auto flex-1">
+    <div className="px-6 py-10 overflow-y-auto flex-1">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
