@@ -144,28 +144,22 @@ export function WorksheetViewer({
         )}
 
         <div
-          className={`${mode === "online" ? "bg-background rounded-xl shadow-sm border p-8" : "relative"}`}
+          className={`${mode === "online" ? "bg-background rounded-xl shadow-sm border p-8" : ""}`}
           style={
             mode === "print"
               ? {
                   fontSize: settings.fontSize,
                   fontFamily: fontFamily,
                   minHeight: "100vh",
+                  display: "flex",
+                  flexDirection: "column",
                 }
               : undefined
           }
         >
-          {/* Brand header for print mode - positioned in top margin */}
+          {/* Brand header for print mode */}
           {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerRight) && (
-            <div 
-              className="flex items-center justify-between text-xs text-gray-500"
-              style={{
-                position: "absolute",
-                top: `-${settings.margins.top * 0.75}mm`,
-                left: 0,
-                right: 0,
-              }}
-            >
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-4 pb-2 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 {brandSettings.logo && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -181,13 +175,13 @@ export function WorksheetViewer({
             </div>
           )}
           {/* Legacy header text fallback */}
-          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerLeft && !brandSettings.headerRight && (
+          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerLeft && !brandSettings.headerRight && !brandSettings.logo && (
             <div className="text-center text-sm text-gray-500 mb-4 pb-2 border-b">
               {settings.headerText}
             </div>
           )}
 
-          <div className="space-y-6">
+          <div className="space-y-6 flex-1">
             {visibleBlocks.map((block) => (
               <div
                 key={block.id}
@@ -204,17 +198,9 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Brand footer for print mode - positioned in bottom margin */}
+          {/* Brand footer for print mode */}
           {mode === "print" && settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight) && (
-            <div 
-              className="flex items-center justify-between text-xs text-gray-500"
-              style={{
-                position: "absolute",
-                bottom: `-${settings.margins.bottom * 0.75}mm`,
-                left: 0,
-                right: 0,
-              }}
-            >
+            <div className="flex items-center justify-between text-xs text-gray-500 mt-auto pt-4 border-t border-gray-200">
               <div>
                 {brandSettings.footerLeft && (
                   <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />

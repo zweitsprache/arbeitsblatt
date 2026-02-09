@@ -380,6 +380,7 @@
     "footerCenter": "Fusszeile (Mitte)",
     "footerLeft": "Fusszeile (links)",
     "footerRight": "Fusszeile (rechts)",
+    "generatingPdf": "PDF wird erstellt...",
     "headerLeft": "Kopfzeile (links)",
     "headerRight": "Kopfzeile (rechts)",
     "onlinePreview": "Online-Vorschau",

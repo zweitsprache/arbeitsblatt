@@ -42,6 +42,7 @@ import {
   Check,
   ExternalLink,
   X,
+  Loader2,
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
@@ -54,6 +55,7 @@ export function EditorToolbar() {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showBrandSettings, setShowBrandSettings] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Get current brand settings with fallbacks
   const currentBrandSettings: BrandSettings = {
@@ -75,6 +77,7 @@ export function EditorToolbar() {
       alert(t("saveFirst"));
       return;
     }
+    setIsGeneratingPdf(true);
     try {
       const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf`, {
         method: "POST",
@@ -93,6 +96,8 @@ export function EditorToolbar() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF download error:", err);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -324,11 +329,16 @@ export function EditorToolbar() {
               size="sm"
               className="h-8"
               onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
             >
-              <Download className="h-3.5 w-3.5" />
+              {isGeneratingPdf ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t("downloadPdf")}</TooltipContent>
+          <TooltipContent>{isGeneratingPdf ? t("generatingPdf") : t("downloadPdf")}</TooltipContent>
         </Tooltip>
       </div>
 

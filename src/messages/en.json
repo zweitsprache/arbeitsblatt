@@ -380,6 +380,7 @@
     "footerCenter": "Footer (center)",
     "footerLeft": "Footer (left)",
     "footerRight": "Footer (right)",
+    "generatingPdf": "Generating PDF...",
     "headerLeft": "Header (left)",
     "headerRight": "Header (right)",
     "onlinePreview": "Online preview",
