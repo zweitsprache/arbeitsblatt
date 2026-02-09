@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 // GET /api/folders/[id]
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const result = await requireAuth();
+  if (result instanceof NextResponse) return result;
+  const { userId } = result;
+
   const { id } = await params;
   const folder = await prisma.folder.findUnique({
-    where: { id },
+    where: { id, userId },
     include: {
       children: {
         orderBy: { name: "asc" },
@@ -46,7 +51,20 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const result = await requireAuth();
+  if (result instanceof NextResponse) return result;
+  const { userId } = result;
+
   const { id } = await params;
+
+  // Verify ownership
+  const existing = await prisma.folder.findUnique({
+    where: { id, userId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const body = await req.json();
 
   const data: { name?: string; parentId?: string | null } = {};
@@ -69,10 +87,20 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const result = await requireAuth();
+  if (result instanceof NextResponse) return result;
+  const { userId } = result;
+
   const { id } = await params;
 
-  // Move worksheets in this folder (and subfolders) to root before deleting
-  // Actually, our schema uses onDelete: SetNull for worksheets, so they'll just become root-level
+  // Verify ownership
+  const existing = await prisma.folder.findUnique({
+    where: { id, userId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   await prisma.folder.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

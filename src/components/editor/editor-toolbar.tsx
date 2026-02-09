@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -35,12 +35,14 @@ import {
   X,
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
+import { PrintPreview } from "./print-preview";
 
 export function EditorToolbar() {
   const { state, dispatch, save } = useEditor();
   const t = useTranslations("toolbar");
   const tc = useTranslations("common");
   const [showOnlinePreview, setShowOnlinePreview] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleDownloadPdf = async () => {
@@ -49,7 +51,7 @@ export function EditorToolbar() {
       return;
     }
     try {
-      const res = await fetch(`/api/worksheets/${state.worksheetId}/pdf`, {
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf`, {
         method: "POST",
       });
       if (!res.ok) {
@@ -126,12 +128,12 @@ export function EditorToolbar() {
 
   return (
     <>
-      <div className="h-14 border-b border-border bg-background flex items-center px-4 gap-2 shrink-0">
+      <div className="h-14 bg-background flex items-center px-4 gap-2 shrink-0">
         {/* Title */}
         <Input
           value={state.title}
           onChange={(e) => dispatch({ type: "SET_TITLE", payload: e.target.value })}
-          className="max-w-[280px] h-8 font-medium"
+          className="max-w-[560px] h-8 font-medium"
           placeholder={t("titlePlaceholder")}
         />
 
@@ -167,7 +169,22 @@ export function EditorToolbar() {
           </Button>
         </div>
 
-        <Separator orientation="vertical" className="h-6" />
+
+        {/* Print Preview */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setShowPrintPreview(true)}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              {t("printPreview")}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("printPreviewTooltip")}</TooltipContent>
+        </Tooltip>
 
         {/* Online Preview */}
         <Tooltip>
@@ -185,7 +202,6 @@ export function EditorToolbar() {
           <TooltipContent>{t("previewOnline")}</TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="h-6" />
 
         {/* Actions */}
         <Tooltip>
@@ -259,6 +275,9 @@ export function EditorToolbar() {
           <TooltipContent>{t("downloadPdf")}</TooltipContent>
         </Tooltip>
       </div>
+
+      {/* Print Preview Dialog */}
+      <PrintPreview open={showPrintPreview} onOpenChange={setShowPrintPreview} />
 
       {/* Online Preview Dialog */}
       <Dialog open={showOnlinePreview} onOpenChange={setShowOnlinePreview}>

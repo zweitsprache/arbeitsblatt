@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@neondatabase/auth/ui/tailwind";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -233,4 +234,73 @@
   background: none;
   padding: 0;
   font-size: 0.875em;
+}
+
+/* ─── Print / PDF styles (Prince XML compliant) ──────────── */
+
+/* Block-level page break control */
+.worksheet-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Text blocks can be long — allow splitting across pages */
+.worksheet-block-text {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+/* Headings should never be orphaned at bottom of page */
+.worksheet-block-heading {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Interactive blocks must stay together */
+.worksheet-block-multiple-choice,
+.worksheet-block-matching,
+.worksheet-block-true-false-matrix,
+.worksheet-block-order-items,
+.worksheet-block-sorting-categories,
+.worksheet-block-word-search,
+.worksheet-block-inline-choices,
+.worksheet-block-fill-in-blank,
+.worksheet-block-word-bank {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Images with captions — keep together */
+.worksheet-block-image {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Columns — avoid breaking mid-column layout */
+.worksheet-block-columns {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure block spacing is preserved */
+  .worksheet-block + .worksheet-block {
+    margin-top: 1.5rem;
+  }
+}
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide [data-slot="scroll-area-viewport"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide [data-slot="scroll-area-viewport"]::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide [data-slot="scroll-area-scrollbar"] {
+  display: none !important;
 }

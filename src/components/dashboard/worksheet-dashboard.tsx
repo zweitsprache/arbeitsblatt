@@ -43,6 +43,8 @@ import {
   X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
+import { useLocale } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface FolderItem {
   id: string;
@@ -101,8 +103,8 @@ export function WorksheetDashboard() {
     try {
       const folderParam = folderId || "root";
       const [foldersRes, worksheetsRes] = await Promise.all([
-        fetch(`/api/folders?parentId=${folderId || ""}`),
-        fetch(`/api/worksheets?folderId=${folderParam}`),
+        authFetch(`/api/folders?parentId=${folderId || ""}`),
+        authFetch(`/api/worksheets?folderId=${folderParam}`),
       ]);
       const foldersData = await foldersRes.json();
       const worksheetsData = await worksheetsRes.json();
@@ -129,7 +131,7 @@ export function WorksheetDashboard() {
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `/api/worksheets?search=${encodeURIComponent(search.trim())}`
         );
         const data = await res.json();
@@ -158,7 +160,7 @@ export function WorksheetDashboard() {
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
-      await fetch("/api/folders", {
+      await authFetch("/api/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -177,7 +179,7 @@ export function WorksheetDashboard() {
   const renameFolder = async () => {
     if (!renameFolderId || !renameFolderName.trim()) return;
     try {
-      await fetch(`/api/folders/${renameFolderId}`, {
+      await authFetch(`/api/folders/${renameFolderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: renameFolderName.trim() }),
@@ -193,7 +195,7 @@ export function WorksheetDashboard() {
   const deleteFolder = async (folderId: string) => {
     if (!confirm(t("deleteFolder"))) return;
     try {
-      await fetch(`/api/folders/${folderId}`, { method: "DELETE" });
+      await authFetch(`/api/folders/${folderId}`, { method: "DELETE" });
       fetchContents(currentFolderId);
     } catch (err) {
       console.error("Failed to delete folder:", err);
@@ -203,7 +205,7 @@ export function WorksheetDashboard() {
   const deleteWorksheet = async (worksheetId: string) => {
     if (!confirm(t("deleteWorksheet"))) return;
     try {
-      await fetch(`/api/worksheets/${worksheetId}`, { method: "DELETE" });
+      await authFetch(`/api/worksheets/${worksheetId}`, { method: "DELETE" });
       if (searchResults) {
         setSearchResults(searchResults.filter((ws) => ws.id !== worksheetId));
       }
@@ -216,7 +218,7 @@ export function WorksheetDashboard() {
   const moveWorksheetToFolder = async (targetFolderId: string | null) => {
     if (!moveWorksheetId) return;
     try {
-      await fetch(`/api/worksheets/${moveWorksheetId}`, {
+      await authFetch(`/api/worksheets/${moveWorksheetId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folderId: targetFolderId }),
@@ -232,7 +234,7 @@ export function WorksheetDashboard() {
     setMoveWorksheetId(worksheetId);
     try {
       // Fetch all root folders for move target selection
-      const res = await fetch("/api/folders?parentId=");
+      const res = await authFetch("/api/folders?parentId=");
       const data = await res.json();
       setMoveTargetFolders(data);
     } catch {
@@ -244,7 +246,7 @@ export function WorksheetDashboard() {
   const isSearching = searchResults !== null;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-6 py-10 overflow-y-auto flex-1">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>

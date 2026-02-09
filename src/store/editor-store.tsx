@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   WorksheetBlock,
   WorksheetSettings,
@@ -46,7 +47,7 @@ type EditorAction =
   | { type: "ADD_BLOCK"; payload: { block: WorksheetBlock; index?: number } }
   | { type: "UPDATE_BLOCK"; payload: { id: string; updates: Partial<WorksheetBlock> } }
   | { type: "REMOVE_BLOCK"; payload: string }
-  | { type: "MOVE_BLOCK"; payload: { activeId: string; overId: string } }
+  | { type: "MOVE_BLOCK"; payload: { activeId: string; overId: string; position?: "above" | "below" } }
   | { type: "REORDER_BLOCKS"; payload: WorksheetBlock[] }
   | { type: "SELECT_BLOCK"; payload: string | null }
   | { type: "SET_VIEW_MODE"; payload: ViewMode }
@@ -164,13 +165,22 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       };
 
     case "MOVE_BLOCK": {
-      const { activeId, overId } = action.payload;
+      const { activeId, overId, position } = action.payload;
       const oldIndex = state.blocks.findIndex((b) => b.id === activeId);
       const newIndex = state.blocks.findIndex((b) => b.id === overId);
       if (oldIndex === -1 || newIndex === -1) return state;
       const newBlocks = [...state.blocks];
       const [moved] = newBlocks.splice(oldIndex, 1);
-      newBlocks.splice(newIndex, 0, moved);
+      // When position is "above", insert before the target; "below" means after
+      let insertIndex = newIndex;
+      if (position === "below") {
+        // After removing the active item, adjust index if it was before the target
+        insertIndex = oldIndex < newIndex ? newIndex : newIndex + 1;
+      } else {
+        // "above" or default: insert at the target position
+        insertIndex = oldIndex < newIndex ? newIndex : newIndex;
+      }
+      newBlocks.splice(insertIndex, 0, moved);
       return { ...state, blocks: newBlocks, isDirty: true };
     }
 
@@ -382,7 +392,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       const url = state.worksheetId
         ? `/api/worksheets/${state.worksheetId}`
         : "/api/worksheets";
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -6,6 +6,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routing } from "@/i18n/routing";
+import { UserButton } from "@neondatabase/auth/react";
 
 const localeLabels: Record<string, string> = {
   de: "DE",
@@ -31,9 +32,9 @@ export function AppHeader() {
         className="flex items-center hover:opacity-80 transition-opacity"
       >
         <Image
-          src="/logo/arbeitsblatt_logo_icon.svg"
+          src="/logo/arbeitsblatt_logo_full_brand.svg"
           alt="Arbeitsblatt"
-          width={32}
+          width={160}
           height={32}
         />
       </Link>
@@ -65,6 +66,9 @@ export function AppHeader() {
             </button>
           ))}
         </div>
+
+        {/* User menu */}
+        <UserButton size="icon" />
       </div>
     </header>
   );

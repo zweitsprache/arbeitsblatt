@@ -34,12 +34,16 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   SortingCategory,
+  UnscrambleWordsBlock,
+  FixSentencesBlock,
+  VerbTableBlock,
   WorksheetBlock,
   BlockVisibility,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
+import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 
@@ -52,7 +56,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("content")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
         <Input
           value={block.content}
           onChange={(e) =>
@@ -64,7 +68,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">{t("level")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("level")}</Label>
         <Select
           value={String(block.level)}
           onValueChange={(v) =>
@@ -94,7 +98,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{t("imageUrl")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageUrl")}</Label>
         <Input
           value={block.src}
           placeholder={t("imageUrlPlaceholder")}
@@ -107,7 +111,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">{t("altText")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("altText")}</Label>
         <Input
           value={block.alt}
           onChange={(e) =>
@@ -119,7 +123,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">{t("widthPx")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("widthPx")}</Label>
         <Input
           type="number"
           value={block.width || ""}
@@ -136,7 +140,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">{t("caption")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("caption")}</Label>
         <Input
           value={block.caption || ""}
           onChange={(e) =>
@@ -156,7 +160,7 @@ function SpacerProps({ block }: { block: SpacerBlock }) {
   const t = useTranslations("properties");
   return (
     <div>
-      <Label className="text-xs">{t("heightPx")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("heightPx")}</Label>
       <Input
         type="number"
         value={block.height}
@@ -177,7 +181,7 @@ function DividerProps({ block }: { block: DividerBlock }) {
   const tc = useTranslations("common");
   return (
     <div>
-      <Label className="text-xs">{tc("style")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("style")}</Label>
       <Select
         value={block.style}
         onValueChange={(v) =>
@@ -243,7 +247,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("question")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
         <Input
           value={block.question}
           onChange={(e) =>
@@ -264,11 +268,11 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
             })
           }
         />
-        <Label className="text-xs">{t("allowMultiple")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("allowMultiple")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">{tc("options")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("options")}</Label>
         {block.options.map((opt, i) => (
           <div key={opt.id} className="flex items-center gap-2">
             <input
@@ -299,14 +303,14 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs">{t("aiGeneration")}</Label>
-        <p className="text-[10px] text-muted-foreground mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">
           {t("autoGenerate")}
         </p>
         <Button
           variant="outline"
           size="sm"
-          className="w-full text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+          className="w-full text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
           onClick={() => setShowAiModal(true)}
         >
           <Sparkles className="h-4 w-4 mr-2" />
@@ -325,7 +329,7 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("question")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
         <Input
           value={block.question}
           onChange={(e) =>
@@ -337,7 +341,7 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs">{t("numberOfLines")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfLines")}</Label>
         <Input
           type="number"
           min={1}
@@ -362,8 +366,8 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("content")}</Label>
-        <p className="text-[10px] text-muted-foreground mb-1">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
           {t("fillInBlankHelp")}
         </p>
         <textarea
@@ -417,7 +421,7 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -430,7 +434,7 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">{tc("pairs")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("pairs")}</Label>
         {block.pairs.map((pair, i) => (
           <div key={pair.id} className="flex items-center gap-1">
             <Input
@@ -494,7 +498,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs">{tc("words")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
       {block.words.map((word, i) => (
         <div key={i} className="flex items-center gap-1">
           <Input
@@ -556,7 +560,7 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{t("numberOfColumns")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
         <div className="flex gap-1 mt-1.5">
           {[1, 2, 3, 4].map((n) => (
             <Button
@@ -583,15 +587,15 @@ function TextProps({ block }: { block: TextBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("content")}</Label>
-        <p className="text-[10px] text-muted-foreground">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <p className="text-xs text-muted-foreground">
           {t("editOnCanvas")}
         </p>
       </div>
       <Button
         variant="outline"
         size="sm"
-        className="w-full gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+        className="w-full gap-2 text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
         onClick={() => setShowAiModal(true)}
       >
         <Sparkles className="h-3.5 w-3.5" />
@@ -607,34 +611,132 @@ function TextProps({ block }: { block: TextBlock }) {
 }
 
 function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
+  const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const parsed: { text: string; correctAnswer: boolean }[] = [];
+
+    for (const line of lines) {
+      // Support both comma and tab (Excel paste) as delimiter
+      const sep = line.includes("\t") ? "\t" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+
+      if (parts.length >= 2) {
+        const answer = parts[parts.length - 1].toUpperCase();
+        const itemText = parts.slice(0, parts.length - 1).join(sep === "\t" ? " " : ", ").trim();
+        // R/W = German (Richtig/Falsch), T/F = English (True/False)
+        if (["R", "T", "W", "F"].includes(answer)) {
+          parsed.push({
+            text: itemText,
+            correctAnswer: answer === "R" || answer === "T",
+          });
+        } else {
+          // No valid answer column — treat entire line as text
+          parsed.push({ text: line.trim(), correctAnswer: true });
+        }
+      } else {
+        // Single column — just the text, default to true
+        parsed.push({ text: parts[0], correctAnswer: true });
+      }
+    }
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newStatements = parsed.map((p, i) => ({
+      id: `tf${Date.now()}-${i}`,
+      text: p.text,
+      correctAnswer: p.correctAnswer,
+    }));
+
+    const statements = csvMode === "append"
+      ? [...block.statements, ...newStatements]
+      : newStatements;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { statements },
+      },
+    });
+    setCsvText("");
+  };
 
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("instruction")}</Label>
-        <p className="text-[10px] text-muted-foreground">
-          {t("editInstructionOnCanvas")}
-        </p>
-      </div>
-      <div>
-        <Label className="text-xs">{tc("statements")}</Label>
-        <p className="text-[10px] text-muted-foreground">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("statements")}</Label>
+        <p className="text-xs text-muted-foreground">
           {t("statementCount", { count: block.statements.length })}
         </p>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs">{t("aiGeneration")}</Label>
-        <p className="text-[10px] text-muted-foreground mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">
           {t("autoGenerateStatements")}
         </p>
         <Button
           variant="outline"
           size="sm"
-          className="w-full text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+          className="w-full text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
           onClick={() => setShowAiModal(true)}
         >
           <Sparkles className="h-4 w-4 mr-2" />
@@ -711,7 +813,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -724,7 +826,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">{t("itemsInOrder")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("itemsInOrder")}</Label>
         {sortedItems.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
@@ -775,8 +877,8 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("content")}</Label>
-        <p className="text-[10px] text-muted-foreground mb-1">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
           {t("inlineChoicesHelp")}
         </p>
         <textarea
@@ -899,7 +1001,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
         <Input
           value={block.instruction}
           onChange={(e) =>
@@ -1019,7 +1121,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-xs">{tc("columns")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
           <Input
             type="number"
             min={4}
@@ -1038,7 +1140,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
           />
         </div>
         <div>
-          <Label className="text-xs">{tc("rows")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("rows")}</Label>
           <Input
             type="number"
             min={4}
@@ -1067,11 +1169,11 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
             })
           }
         />
-        <Label className="text-xs">{t("showWordList")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showWordList")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs">{tc("words")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
         {block.words.map((word, i) => (
           <div key={i} className="flex items-center gap-1">
             <Input
@@ -1106,6 +1208,252 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
   );
 }
 
+function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const updateWord = (index: number, word: string) => {
+    const newWords = [...block.words];
+    newWords[index] = { ...newWords[index], word };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: newWords } },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: [...block.words, { id: `uw${Date.now()}`, word: "word" }],
+        },
+      },
+    });
+  };
+
+  const removeWord = (index: number) => {
+    if (block.words.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { words: block.words.filter((_, i) => i !== index) },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.keepFirstLetter}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { keepFirstLetter: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepFirstLetter")}</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.lowercaseAll}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { lowercaseAll: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("lowercaseAll")}</Label>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+        {block.words.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1">
+            <Input
+              value={item.word}
+              onChange={(e) => updateWord(i, e.target.value)}
+              className="flex-1 h-8 text-xs"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeWord(i)}
+              disabled={block.words.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addWord} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addWord")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const updateSentence = (index: number, sentence: string) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], sentence };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: `fs${Date.now()}`, sentence: "Part A | Part B | Part C" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (index: number) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("fixSentencesHelp")}
+        </p>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1">
+            <Input
+              value={item.sentence}
+              onChange={(e) => updateSentence(i, e.target.value)}
+              className="flex-1 h-8 text-xs font-mono"
+              placeholder={t("fixSentencePlaceholder")}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeSentence(i)}
+              disabled={block.sentences.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addSentence} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function VerbTableProps({ block }: { block: VerbTableBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("verbTableVerb")}</Label>
+        <Input
+          value={block.verb}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { verb: e.target.value } },
+            })
+          }
+          placeholder={t("verbTableVerbPlaceholder")}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.splitConjugation ?? false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { splitConjugation: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("splitConjugation")}</Label>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t("autoGenerateVerbs")}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
+          onClick={() => setShowAiModal(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          {t("aiGenerate")}
+        </Button>
+      </div>
+      <AiVerbTableModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
 // ─── Properties Panel ────────────────────────────────────────
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
@@ -1118,7 +1466,7 @@ export function PropertiesPanel() {
 
   if (!selectedBlock) {
     return (
-      <div className="w-72 pt-8 pb-8">
+      <div className="w-80 pt-8 pb-8">
         <div className="bg-slate-50 rounded-sm shadow-sm p-4 pt-12">
           <p className="text-sm text-muted-foreground text-center mt-8">
             {t("selectBlock")}
@@ -1160,6 +1508,12 @@ export function PropertiesPanel() {
         return <WordSearchProps block={selectedBlock} />;
       case "sorting-categories":
         return <SortingCategoriesProps block={selectedBlock} />;
+      case "unscramble-words":
+        return <UnscrambleWordsProps block={selectedBlock} />;
+      case "fix-sentences":
+        return <FixSentencesProps block={selectedBlock} />;
+      case "verb-table":
+        return <VerbTableProps block={selectedBlock} />;
       case "text":
         return <TextProps block={selectedBlock} />;
       default:
@@ -1168,18 +1522,13 @@ export function PropertiesPanel() {
   };
 
   return (
-    <div className="w-72 flex flex-col h-full pt-8 pb-8">
+    <div className="w-80 flex flex-col h-full pt-8 pb-8">
       <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-border">
-        <h3 className="text-sm font-semibold capitalize">
-          {t("propertiesTitle", { type: selectedBlock.type.replace("-", " ") })}
-        </h3>
-      </div>
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
           {/* Visibility */}
           <div>
-            <Label className="text-xs mb-2 block">{tc("visibility")}</Label>
+            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{tc("visibility")}</div>
             <div className="flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1196,10 +1545,10 @@ export function PropertiesPanel() {
                         dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showOnline ? "both" : "print" } });
                       }
                     }}
-                    className={`flex items-center justify-center h-9 w-9 rounded-md border transition-colors
+                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
                       ${selectedBlock.visibility === "both" || selectedBlock.visibility === "print"
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"}`}
+                        ? "bg-white text-slate-700 border-slate-300"
+                        : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
                   >
                     <Printer className="h-4 w-4" />
                   </button>
@@ -1221,10 +1570,10 @@ export function PropertiesPanel() {
                         dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showPrint ? "both" : "online" } });
                       }
                     }}
-                    className={`flex items-center justify-center h-9 w-9 rounded-md border transition-colors
+                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
                       ${selectedBlock.visibility === "both" || selectedBlock.visibility === "online"
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"}`}
+                        ? "bg-white text-slate-700 border-slate-300"
+                        : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
                   >
                     <Globe className="h-4 w-4" />
                   </button>
@@ -1233,8 +1582,6 @@ export function PropertiesPanel() {
               </Tooltip>
             </div>
           </div>
-
-          <Separator />
 
           {/* Block-specific properties */}
           {renderBlockProps()}

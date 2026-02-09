@@ -54,6 +54,61 @@ export function WorksheetViewer({
 
   return (
     <div className={`min-h-screen ${mode === "print" ? "bg-white" : "bg-muted/30"}`}>
+      {/* Print/PDF styles + Google Fonts link for reliable font loading */}
+      {mode === "print" && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap"
+          />
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                @page {
+                  size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
+                  margin: ${settings.margins.top}mm ${settings.margins.right}mm ${settings.margins.bottom}mm ${settings.margins.left}mm;
+                }
+                @page:first {
+                  @top-center { content: normal; }
+                }
+                @page {
+                  @top-center {
+                    content: string(header-text);
+                    font-size: 9pt;
+                    color: #888;
+                  }
+                  @bottom-center {
+                    content: string(footer-text);
+                    font-size: 9pt;
+                    color: #888;
+                  }
+                  @bottom-right {
+                    content: counter(page) " / " counter(pages);
+                    font-size: 8pt;
+                    color: #aaa;
+                  }
+                }
+                .print-running-header { string-set: header-text content(); display: none; }
+                .print-running-footer { string-set: footer-text content(); display: none; }
+                .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
+                .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
+                p { widows: 2; orphans: 2; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Asap Condensed', var(--font-asap-condensed), sans-serif; }
+              `,
+            }}
+          />
+          {settings.showHeader && settings.headerText && (
+            <div className="print-running-header">{settings.headerText}</div>
+          )}
+          {settings.showFooter && settings.footerText && (
+            <div className="print-running-footer">{settings.footerText}</div>
+          )}
+        </>
+      )}
       <div
         className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
         style={{ maxWidth: pageWidth }}
@@ -80,9 +135,8 @@ export function WorksheetViewer({
           style={
             mode === "print"
               ? {
-                  padding: `${settings.margins.top}mm ${settings.margins.right}mm ${settings.margins.bottom}mm ${settings.margins.left}mm`,
                   fontSize: settings.fontSize,
-                  fontFamily: settings.fontFamily,
+                  fontFamily: "'Asap Condensed', var(--font-asap-condensed), sans-serif",
                 }
               : undefined
           }
@@ -95,14 +149,18 @@ export function WorksheetViewer({
 
           <div className="space-y-6">
             {visibleBlocks.map((block) => (
-              <ViewerBlockRenderer
+              <div
                 key={block.id}
-                block={block}
-                mode={mode}
-                answer={answers[block.id]}
-                onAnswer={(value) => updateAnswer(block.id, value)}
-                showResults={showResults}
-              />
+                className={`worksheet-block worksheet-block-${block.type}`}
+              >
+                <ViewerBlockRenderer
+                  block={block}
+                  mode={mode}
+                  answer={answers[block.id]}
+                  onAnswer={(value) => updateAnswer(block.id, value)}
+                  showResults={showResults}
+                />
+              </div>
             ))}
           </div>
 

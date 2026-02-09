@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   Dialog,
   DialogContent,
@@ -147,7 +148,7 @@ export function AiMcqModal({
     setStep("generating");
     setError(null);
     try {
-      const res = await fetch("/api/ai/generate-mcq", {
+      const res = await authFetch("/api/ai/generate-mcq", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

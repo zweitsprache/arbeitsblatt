@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   Dialog,
   DialogContent,
@@ -89,7 +90,7 @@ export function AiTextModal({
     setStep("generating");
     setError(null);
     try {
-      const res = await fetch("/api/ai/generate-text", {
+      const res = await authFetch("/api/ai/generate-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

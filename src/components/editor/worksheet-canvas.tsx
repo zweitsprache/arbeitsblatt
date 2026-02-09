@@ -53,9 +53,11 @@ function EmptyDropZone() {
 export function WorksheetCanvas({
   activeId,
   overId,
+  overPosition,
 }: {
   activeId: string | null;
   overId: string | null;
+  overPosition: "above" | "below";
 }) {
   const { state, dispatch } = useEditor();
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({ id: "canvas-drop-zone" });
@@ -98,17 +100,31 @@ export function WorksheetCanvas({
             >
               <div>
                 {state.blocks.map((block, index) => {
-                  // Show drop indicator before/after blocks based on overId
+                  // Show drop indicator before/after blocks based on overId + pointer position
                   const isDragging = !!activeId;
                   const isOverThis = overId === block.id;
-                  // Don't show indicator on the block being dragged
                   const isActiveBlock = activeId === block.id;
+
+                  // Show above indicator: only on the first block when pointer is in top half
+                  const showAbove =
+                    index === 0 &&
+                    isDragging &&
+                    isOverThis &&
+                    !isActiveBlock &&
+                    overPosition === "above";
+
+                  // Show below indicator: when pointer is in bottom half (or for non-first blocks)
+                  const showBelow =
+                    isDragging &&
+                    isOverThis &&
+                    !isActiveBlock &&
+                    (index > 0 || overPosition === "below");
 
                   return (
                     <React.Fragment key={block.id}>
                       {/* Drop indicator before first block */}
                       {index === 0 && isDragging && (
-                        <DropIndicator isActive={isOverThis && !isActiveBlock} />
+                        <DropIndicator isActive={showAbove} />
                       )}
                       <div className={index > 0 ? "mt-2" : ""}>
                         <SortableBlock
@@ -118,7 +134,7 @@ export function WorksheetCanvas({
                       </div>
                       {/* Drop indicator after each block */}
                       {isDragging && !isActiveBlock && (
-                        <DropIndicator isActive={isOverThis} />
+                        <DropIndicator isActive={showBelow} />
                       )}
                     </React.Fragment>
                   );

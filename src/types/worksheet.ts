@@ -22,7 +22,10 @@ export type BlockType =
   | "order-items"
   | "inline-choices"
   | "word-search"
-  | "sorting-categories";
+  | "sorting-categories"
+  | "unscramble-words"
+  | "fix-sentences"
+  | "verb-table";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -132,6 +135,7 @@ export interface ColumnsBlock extends BlockBase {
 export interface TrueFalseMatrixBlock extends BlockBase {
   type: "true-false-matrix";
   instruction: string;
+  statementColumnHeader?: string;
   statements: {
     id: string;
     text: string;
@@ -188,6 +192,50 @@ export interface SortingCategoriesBlock extends BlockBase {
   items: SortingItem[];
 }
 
+// ─── Unscramble Words block ─────────────────────────────────
+export interface UnscrambleWordItem {
+  id: string;
+  word: string; // the correct word
+}
+
+export interface UnscrambleWordsBlock extends BlockBase {
+  type: "unscramble-words";
+  instruction: string;
+  words: UnscrambleWordItem[];
+  keepFirstLetter: boolean; // keep first letter at correct position
+  lowercaseAll: boolean; // show all letters in lowercase
+}
+
+// ─── Fix Sentences block ────────────────────────────────────
+export interface FixSentenceItem {
+  id: string;
+  sentence: string; // correct sentence with " | " as separators between parts
+}
+
+export interface FixSentencesBlock extends BlockBase {
+  type: "fix-sentences";
+  instruction: string;
+  sentences: FixSentenceItem[];
+}
+
+// ─── Verb Table block ───────────────────────────────────────
+export interface VerbTableRow {
+  id: string;
+  person: string; // e.g. "1. Person"
+  detail?: string; // e.g. "informell" | "formell"
+  pronoun: string; // e.g. "ich", "du", "Sie"
+  conjugation: string; // correct conjugated form
+  conjugation2?: string; // second conjugation (when splitConjugation is true)
+}
+
+export interface VerbTableBlock extends BlockBase {
+  type: "verb-table";
+  verb: string; // infinitive form
+  splitConjugation?: boolean; // split col 4 into two columns
+  singularRows: VerbTableRow[];
+  pluralRows: VerbTableRow[];
+}
+
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
@@ -206,7 +254,10 @@ export type WorksheetBlock =
   | OrderItemsBlock
   | InlineChoicesBlock
   | WordSearchBlock
-  | SortingCategoriesBlock;
+  | SortingCategoriesBlock
+  | UnscrambleWordsBlock
+  | FixSentencesBlock
+  | VerbTableBlock;
 
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
@@ -249,7 +300,7 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   headerText: "",
   footerText: "",
   fontSize: 14,
-  fontFamily: "Inter, sans-serif",
+  fontFamily: "Asap Condensed, sans-serif",
 };
 
 // ─── Block library definitions ──────────────────────────────
@@ -261,6 +312,8 @@ export interface BlockDefinition {
   descriptionKey: string; // i18n key in "blocks" namespace
   icon: string; // lucide icon name
   category: "layout" | "content" | "interactive";
+  /** Per-locale fallback translations (label + description). English uses label/description fields. */
+  translations?: Record<string, { label: string; description: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultData: Record<string, any> & { type: BlockType; visibility: BlockVisibility };
 }
@@ -275,6 +328,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "headingDesc",
     icon: "Heading",
     category: "content",
+    translations: { de: { label: "Überschrift", description: "Titel und Überschriften hinzufügen" } },
     defaultData: {
       type: "heading",
       content: "Heading",
@@ -290,6 +344,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "textDesc",
     icon: "Type",
     category: "content",
+    translations: { de: { label: "Text", description: "Absätze mit formatiertem Text" } },
     defaultData: {
       type: "text",
       content: "<p>Enter text here...</p>",
@@ -304,6 +359,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "imageDesc",
     icon: "Image",
     category: "content",
+    translations: { de: { label: "Bild", description: "Bilder und Abbildungen einfügen" } },
     defaultData: {
       type: "image",
       src: "",
@@ -319,6 +375,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "spacerDesc",
     icon: "Space",
     category: "layout",
+    translations: { de: { label: "Abstand", description: "Vertikalen Abstand hinzufügen" } },
     defaultData: {
       type: "spacer",
       height: 40,
@@ -333,6 +390,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "dividerDesc",
     icon: "Minus",
     category: "layout",
+    translations: { de: { label: "Trennlinie", description: "Horizontale Trennlinie einfügen" } },
     defaultData: {
       type: "divider",
       style: "solid",
@@ -347,6 +405,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "columnsDesc",
     icon: "Columns2",
     category: "layout",
+    translations: { de: { label: "Spalten", description: "Inhalt in Spalten anordnen" } },
     defaultData: {
       type: "columns",
       columns: 2,
@@ -363,6 +422,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "multipleChoiceDesc",
     icon: "CircleDot",
     category: "interactive",
+    translations: { de: { label: "Multiple Choice", description: "Fragen mit Antwortoptionen" } },
     defaultData: {
       type: "multiple-choice",
       question: "Enter your question here",
@@ -384,6 +444,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "fillInBlankDesc",
     icon: "TextCursorInput",
     category: "interactive",
+    translations: { de: { label: "Lückentext", description: "Sätze mit Lücken zum Ausfüllen" } },
     defaultData: {
       type: "fill-in-blank",
       content: "The {{blank:answer}} is the correct word.",
@@ -398,6 +459,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "matchingDesc",
     icon: "ArrowLeftRight",
     category: "interactive",
+    translations: { de: { label: "Zuordnung XXX", description: "Zusammengehörige Paare verbinden" } },
     defaultData: {
       type: "matching",
       instruction: "Match the items on the left with the items on the right.",
@@ -417,6 +479,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "openResponseDesc",
     icon: "PenLine",
     category: "interactive",
+    translations: { de: { label: "Offene Antwort", description: "Freitext-Antwortfeld" } },
     defaultData: {
       type: "open-response",
       question: "Write your answer below:",
@@ -432,6 +495,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "wordBankDesc",
     icon: "LayoutList",
     category: "interactive",
+    translations: { de: { label: "Wortbank", description: "Wortsammlung als Hilfestellung" } },
     defaultData: {
       type: "word-bank",
       words: ["word1", "word2", "word3", "word4"],
@@ -446,6 +510,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "trueFalseMatrixDesc",
     icon: "CheckSquare",
     category: "interactive",
+    translations: { de: { label: "Richtig/Falsch", description: "Aussagen als richtig oder falsch bewerten" } },
     defaultData: {
       type: "true-false-matrix",
       instruction: "Mark each statement as True or False.",
@@ -465,6 +530,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "orderItemsDesc",
     icon: "ListOrdered",
     category: "interactive",
+    translations: { de: { label: "Reihenfolge", description: "Elemente in die richtige Reihenfolge bringen" } },
     defaultData: {
       type: "order-items",
       instruction: "Put the following items in the correct order.",
@@ -485,6 +551,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "inlineChoicesDesc",
     icon: "TextSelect",
     category: "interactive",
+    translations: { de: { label: "Inline-Auswahl", description: "Auswahlmöglichkeiten im Text" } },
     defaultData: {
       type: "inline-choices",
       content: "In {{choice:1889|*1988|1898}} he was born in London.",
@@ -499,6 +566,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "wordSearchDesc",
     icon: "Search",
     category: "interactive",
+    translations: { de: { label: "Wörterrätsel", description: "Versteckte Wörter im Buchstabengitter finden" } },
     defaultData: {
       type: "word-search",
       words: ["HELLO", "WORLD", "SEARCH", "FIND"],
@@ -517,6 +585,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     descriptionKey: "sortingCategoriesDesc",
     icon: "Group",
     category: "interactive",
+    translations: { de: { label: "Sortieren", description: "Begriffe in Kategorien einordnen" } },
     defaultData: {
       type: "sorting-categories",
       instruction: "Sort the following items into the correct categories.",
@@ -529,6 +598,74 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "si2", text: "Item 2" },
         { id: "si3", text: "Item 3" },
         { id: "si4", text: "Item 4" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "unscramble-words",
+    label: "Unscramble Words",
+    description: "Unscramble jumbled letters to form words",
+    labelKey: "unscrambleWords",
+    descriptionKey: "unscrambleWordsDesc",
+    icon: "Shuffle",
+    category: "interactive",
+    translations: { de: { label: "Wörter entwirren", description: "Buchstaben in die richtige Reihenfolge bringen" } },
+    defaultData: {
+      type: "unscramble-words",
+      instruction: "Unscramble the letters to form the correct word.",
+      words: [
+        { id: "uw1", word: "school" },
+        { id: "uw2", word: "teacher" },
+        { id: "uw3", word: "garden" },
+      ],
+      keepFirstLetter: false,
+      lowercaseAll: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "fix-sentences",
+    label: "Fix Sentences",
+    description: "Reorder sentence parts into correct order",
+    labelKey: "fixSentences",
+    descriptionKey: "fixSentencesDesc",
+    icon: "WrapText",
+    category: "interactive",
+    translations: { de: { label: "Sätze korrigieren", description: "Fehlerhafte Sätze berichtigen" } },
+    defaultData: {
+      type: "fix-sentences",
+      instruction: "Put the sentence parts in the correct order.",
+      sentences: [
+        { id: "fs1", sentence: "The cat | sat on | the mat" },
+        { id: "fs2", sentence: "I like | to eat | ice cream" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "verb-table",
+    label: "Verb Table",
+    description: "Conjugation table for verbs",
+    labelKey: "verbTable",
+    descriptionKey: "verbTableDesc",
+    icon: "TableProperties",
+    category: "interactive",
+    translations: { de: { label: "Verbtabelle", description: "Verbkonjugationen üben" } },
+    defaultData: {
+      type: "verb-table",
+      verb: "machen",
+      singularRows: [
+        { id: "s1", person: "1. Person", pronoun: "ich", conjugation: "mache" },
+        { id: "s2", person: "2. Person", detail: "informell", pronoun: "du", conjugation: "machst" },
+        { id: "s3", person: "2. Person", detail: "formell", pronoun: "Sie", conjugation: "machen" },
+        { id: "s4", person: "3. Person", pronoun: "er / sie / es", conjugation: "macht" },
+      ],
+      pluralRows: [
+        { id: "p1", person: "1. Person", pronoun: "wir", conjugation: "machen" },
+        { id: "p2", person: "2. Person", detail: "informell", pronoun: "ihr", conjugation: "macht" },
+        { id: "p3", person: "2. Person", detail: "formell", pronoun: "Sie", conjugation: "machen" },
+        { id: "p4", person: "3. Person", pronoun: "sie", conjugation: "machen" },
       ],
       visibility: "both",
     },

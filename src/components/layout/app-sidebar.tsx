@@ -52,6 +52,16 @@ const bottomItems: NavItem[] = [
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
+function SectionTitle({ icon: Icon, children, collapsed }: { icon: React.ComponentType<{ className?: string }>, children: React.ReactNode, collapsed: boolean }) {
+  if (collapsed) return null;
+  return (
+    <div className="flex items-center gap-2 mx-3 mt-4 mb-1.5 px-2.5 py-1 text-[10px] font-bold text-white/40 uppercase tracking-[0.1em]">
+      <Icon className="h-3.5 w-3.5" />
+      {children}
+    </div>
+  );
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -60,13 +70,18 @@ export function AppSidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <aside
-        className={`border-r border-border bg-sidebar text-sidebar-foreground flex flex-col shrink-0 transition-all duration-200 ${
-          collapsed ? "w-14" : "w-56"
+        className={`shrink-0 transition-all duration-200 pt-3 pb-8 pl-4 ${
+          collapsed ? "w-[calc(3.5rem+0.75rem)]" : "w-[calc(20rem+0.75rem)]"
         }`}
       >
+        <div className="bg-pink-950 text-white flex flex-col h-full rounded-sm border border-border shadow-sm">
         {/* Nav items */}
         <ScrollArea className="flex-1">
-          <nav className="p-2 space-y-1">
+          {/* Dashboard section */}
+          <SectionTitle icon={LayoutDashboard} collapsed={collapsed}>
+            {t("dashboard")}
+          </SectionTitle>
+          <nav className="px-3 pb-1 space-y-1">
             {topItems.map((item) => {
               const isActive =
                 item.href === "/"
@@ -78,11 +93,11 @@ export function AppSidebar() {
                   <TooltipTrigger asChild>
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
                         ${
                           isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
                         }
                         ${collapsed ? "justify-center px-0" : ""}
                       `}
@@ -104,14 +119,10 @@ export function AppSidebar() {
           {/* Sections */}
           {sections.map((section) => (
             <div key={section.titleKey}>
-              <Separator className="my-1" />
-              {!collapsed && (
-                <p className="flex items-center gap-3 px-5 pt-3 pb-1 text-sm font-medium text-sidebar-foreground/50 uppercase">
-                  <section.icon className="h-4 w-4" />
-                  {t(section.titleKey)}
-                </p>
-              )}
-              <nav className="p-2 space-y-1">
+              <SectionTitle icon={section.icon} collapsed={collapsed}>
+                {t(section.titleKey)}
+              </SectionTitle>
+              <nav className="px-3 pb-1 space-y-1">
                 {section.items.map((item) => {
                   const isActive =
                     item.labelKey === "worksheetLibrary"
@@ -123,11 +134,11 @@ export function AppSidebar() {
                       <TooltipTrigger asChild>
                         <Link
                           href={item.href}
-                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
                             ${
                               isActive
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
                             }
                             ${collapsed ? "justify-center px-0" : ""}
                           `}
@@ -151,8 +162,8 @@ export function AppSidebar() {
 
         {/* Bottom items */}
         <div className="mt-auto">
-          <Separator />
-          <nav className="p-2 space-y-1">
+          <Separator className="border-white/10" />
+          <nav className="p-3 space-y-1">
             {bottomItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -160,11 +171,11 @@ export function AppSidebar() {
                   <TooltipTrigger asChild>
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
                         ${
                           isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-white/50 hover:text-white/80 hover:bg-white/5"
                         }
                         ${collapsed ? "justify-center px-0" : ""}
                       `}
@@ -185,8 +196,7 @@ export function AppSidebar() {
             {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full
-                text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all w-full text-white/50 hover:text-white/80 hover:bg-white/5
                 ${collapsed ? "justify-center px-0" : ""}
               `}
             >
@@ -200,6 +210,7 @@ export function AppSidebar() {
               )}
             </button>
           </nav>
+        </div>
         </div>
       </aside>
     </TooltipProvider>

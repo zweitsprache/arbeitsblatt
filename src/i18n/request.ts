@@ -1,6 +1,7 @@
 import { getRequestConfig } from "next-intl/server";
 import { routing } from "./routing";
 import { hasLocale } from "next-intl";
+import { mergeCodeTranslations } from "./code-translations";
 
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
@@ -8,8 +9,10 @@ export default getRequestConfig(async ({ requestLocale }) => {
     ? requested
     : routing.defaultLocale;
 
+  const raw = (await import(`../messages/${locale}.json`)).default;
+
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: mergeCodeTranslations(raw, locale),
   };
 });

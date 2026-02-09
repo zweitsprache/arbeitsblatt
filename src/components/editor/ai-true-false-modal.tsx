@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   Dialog,
   DialogContent,
@@ -142,7 +143,7 @@ export function AiTrueFalseModal({
     setStep("generating");
     setError(null);
     try {
-      const res = await fetch("/api/ai/generate-true-false", {
+      const res = await authFetch("/api/ai/generate-true-false", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context: contextText, count, style: style || "paraphrased", order: order || "mixed" }),

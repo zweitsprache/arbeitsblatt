@@ -35,6 +35,7 @@ function EditorInner({
   const dndId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [overPosition, setOverPosition] = useState<"above" | "below">("below");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -90,7 +91,17 @@ function EditorInner({
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    setOverId(event.over?.id as string | null);
+    const overId = event.over?.id as string | null;
+    setOverId(overId);
+
+    // Determine if pointer is in the top or bottom half of the over element
+    if (event.over && event.activatorEvent && 'clientY' in event.activatorEvent) {
+      const overRect = event.over.rect;
+      // Use the current delta to compute the pointer position
+      const pointerY = (event.activatorEvent as PointerEvent).clientY + (event.delta?.y ?? 0);
+      const midY = overRect.top + overRect.height / 2;
+      setOverPosition(pointerY < midY ? "above" : "below");
+    }
   }, []);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -125,7 +136,11 @@ function EditorInner({
 
       if (over) {
         const overIndex = state.blocks.findIndex((b) => b.id === over.id);
-        addBlock(blockType, overIndex >= 0 ? overIndex + 1 : undefined);
+        if (overIndex >= 0) {
+          addBlock(blockType, overPosition === "above" ? overIndex : overIndex + 1);
+        } else {
+          addBlock(blockType);
+        }
       } else {
         addBlock(blockType);
       }
@@ -193,7 +208,7 @@ function EditorInner({
       // Normal top-level reorder
       dispatch({
         type: "MOVE_BLOCK",
-        payload: { activeId: active.id as string, overId: over.id as string },
+        payload: { activeId: active.id as string, overId: over.id as string, position: overPosition },
       });
     }
   };
@@ -221,9 +236,9 @@ function EditorInner({
     >
       <div className="h-full flex flex-col">
         <EditorToolbar />
-        <div className="flex flex-1 overflow-hidden bg-muted/30 px-3 gap-3">
+        <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
           <BlockSidebar onAddBlock={(type) => addBlock(type)} />
-          <WorksheetCanvas activeId={activeId} overId={overId} />
+          <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
           <PropertiesPanel />
         </div>
       </div>

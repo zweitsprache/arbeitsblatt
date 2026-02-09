@@ -21,6 +21,10 @@ import {
   InlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
+  UnscrambleWordsBlock,
+  FixSentencesBlock,
+  VerbTableBlock,
+  VerbTableRow,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -30,6 +34,7 @@ import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, Printer, Monitor, Spar
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
+import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { BlockVisibility } from "@/types/worksheet";
@@ -513,26 +518,25 @@ function TrueFalseMatrixRenderer({
 
   return (
     <div className="space-y-2">
-      {/* Instruction */}
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) =>
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: { id: block.id, updates: { instruction: e.currentTarget.textContent || "" } },
-          })
-        }
-      >
-        {block.instruction}
-      </div>
-
       {/* Table */}
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="text-left p-2 border-b font-medium text-muted-foreground">{t("statement")}</th>
+            <th className="text-left py-2 pr-2 border-b font-bold text-foreground">
+              <span
+                className="outline-none block"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { statementColumnHeader: e.currentTarget.textContent || "" } },
+                  })
+                }
+              >
+                {block.statementColumnHeader || ""}
+              </span>
+            </th>
             <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
             <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
             <th className="w-8 p-2 border-b"></th>
@@ -541,7 +545,7 @@ function TrueFalseMatrixRenderer({
         <tbody>
           {block.statements.map((stmt, stmtIndex) => (
             <tr key={stmt.id} className="group/row border-b last:border-b-0">
-              <td className="p-2">
+              <td className="py-2 pr-2">
                 <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(stmtIndex + 1).padStart(2, "0")}
@@ -1109,6 +1113,494 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
   );
 }
 
+// ─── Unscramble Words ───────────────────────────────────────
+function scrambleWord(word: string, keepFirst: boolean, lowercase: boolean): string {
+  let letters = word.split("");
+  let firstLetter = "";
+  if (keepFirst && letters.length > 1) {
+    firstLetter = letters[0];
+    letters = letters.slice(1);
+  }
+  // Simple Fisher-Yates shuffle
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  let result = keepFirst ? firstLetter + letters.join("") : letters.join("");
+  if (lowercase) result = result.toLowerCase();
+  return result;
+}
+
+function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+
+  const updateWord = (id: string, word: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: block.words.map((w) =>
+            w.id === id ? { ...w, word } : w
+          ),
+        },
+      },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: [
+            ...block.words,
+            { id: crypto.randomUUID(), word: "word" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeWord = (id: string) => {
+    if (block.words.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: block.words.filter((w) => w.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: {
+              id: block.id,
+              updates: { instruction: e.currentTarget.textContent || "" },
+            },
+          })
+        }
+      >
+        {block.instruction}
+      </div>
+
+      <div className="space-y-2">
+        {block.words.map((item, i) => {
+          const scrambled = scrambleWord(item.word, block.keepFirstLetter, block.lowercaseAll);
+          return (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 group/item p-3 rounded-lg border border-border"
+            >
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="font-mono text-base tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                {scrambled}
+              </span>
+              <span className="text-muted-foreground text-xs">→</span>
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors font-medium text-green-700"
+                onBlur={(e) =>
+                  updateWord(item.id, e.currentTarget.textContent || "")
+                }
+              >
+                {item.word}
+              </span>
+              <button
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                  ${block.words.length <= 1 ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeWord(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addWord();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addWord")}
+      </button>
+    </div>
+  );
+}
+
+// ─── Fix Sentences ──────────────────────────────────────────
+function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+
+  const updateSentence = (id: string, sentence: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.map((s) =>
+            s.id === id ? { ...s, sentence } : s
+          ),
+        },
+      },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: crypto.randomUUID(), sentence: "Part A | Part B | Part C" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (id: string) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((s) => s.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: {
+              id: block.id,
+              updates: { instruction: e.currentTarget.textContent || "" },
+            },
+          })
+        }
+      >
+        {block.instruction}
+      </div>
+
+      <div className="space-y-3">
+        {block.sentences.map((item, i) => {
+          const parts = item.sentence.split(" | ");
+          return (
+            <div
+              key={item.id}
+              className="group/item rounded-lg border border-border overflow-hidden"
+            >
+              <div className="flex items-center gap-3 p-3 bg-muted/30">
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="flex-1 flex flex-wrap gap-1.5">
+                  {parts.map((part, pi) => (
+                    <span
+                      key={pi}
+                      className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 font-medium"
+                    >
+                      {part.trim()}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                    ${block.sentences.length <= 1 ? "invisible" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeSentence(item.id);
+                  }}
+                >
+                  <X className="h-3 w-3 text-destructive" />
+                </button>
+              </div>
+              <div className="px-3 py-2">
+                <input
+                  type="text"
+                  value={item.sentence}
+                  onChange={(e) => updateSentence(item.id, e.target.value)}
+                  className="w-full text-xs text-muted-foreground bg-transparent border-0 outline-none font-mono"
+                  placeholder={t("fixSentencePlaceholder")}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addSentence();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addSentence")}
+      </button>
+    </div>
+  );
+}
+
+// ─── Verb Table ─────────────────────────────────────────────
+function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  const updateRow = (
+    section: "singularRows" | "pluralRows",
+    id: string,
+    updates: Partial<VerbTableRow>
+  ) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          [section]: (block[section] as VerbTableRow[]).map((r) =>
+            r.id === id ? { ...r, ...updates } : r
+          ),
+        },
+      },
+    });
+  };
+
+  const addRow = (section: "singularRows" | "pluralRows") => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          [section]: [
+            ...block[section],
+            {
+              id: crypto.randomUUID(),
+              person: "Person",
+              pronoun: "",
+              conjugation: "",
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeRow = (section: "singularRows" | "pluralRows", id: string) => {
+    if (block[section].length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          [section]: block[section].filter((r) => r.id !== id),
+        },
+      },
+    });
+  };
+
+  const isSplit = block.splitConjugation ?? false;
+  const colCount = isSplit ? 5 : 4;
+
+  const renderRows = (section: "singularRows" | "pluralRows", isLast: boolean) => (
+    <>
+      {block[section].map((row, rowIdx) => {
+        const isLastRow = isLast && rowIdx === block[section].length - 1;
+        const borderB = isLastRow ? "" : "border-b";
+        return (
+        <tr key={row.id} className="group/row">
+          <td className={`border-r ${borderB} border-border px-3 py-2${isLastRow ? " rounded-bl-lg" : ""}`}>
+            <input
+              type="text"
+              value={row.person}
+              onChange={(e) => updateRow(section, row.id, { person: e.target.value })}
+              className="w-full text-muted-foreground bg-transparent border-0 outline-none uppercase" style={{ fontSize: 14 }}
+              placeholder={t("verbTablePerson")}
+            />
+          </td>
+          <td className={`border-r ${borderB} border-border px-3 py-2`}>
+            <input
+              type="text"
+              value={row.detail || ""}
+              onChange={(e) =>
+                updateRow(section, row.id, { detail: e.target.value || undefined })
+              }
+              className="w-full text-muted-foreground bg-transparent border-0 outline-none uppercase" style={{ fontSize: 14 }}
+              placeholder="—"
+            />
+          </td>
+          <td className={`border-r ${borderB} border-border px-3 py-2`}>
+            <input
+              type="text"
+              value={row.pronoun}
+              onChange={(e) => updateRow(section, row.id, { pronoun: e.target.value })}
+              className="w-full font-bold bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
+              placeholder={t("verbTablePronoun")}
+            />
+          </td>
+          <td className={`${borderB} border-border px-3 py-2${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? " rounded-br-lg" : ""}`}>
+            <input
+              type="text"
+              value={row.conjugation}
+              onChange={(e) =>
+                updateRow(section, row.id, { conjugation: e.target.value })
+              }
+              className="w-full font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
+              placeholder={t("verbTableConjugation")}
+            />
+          </td>
+          {isSplit && (
+            <td className={`${borderB} border-border px-3 py-2${isLastRow ? " rounded-br-lg" : ""}`}>
+              <input
+                type="text"
+                value={row.conjugation2 || ""}
+                onChange={(e) =>
+                  updateRow(section, row.id, { conjugation2: e.target.value || undefined })
+                }
+                className="w-full font-bold text-red-500 bg-transparent border-0 outline-none" style={{ fontSize: 16 }}
+                placeholder={t("verbTableConjugation")}
+              />
+            </td>
+          )}
+        </tr>
+        );
+      })}
+    </>
+  );
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="font-medium text-muted-foreground" style={{ fontSize: 16 }}>{t("verbTableVerb")}:</span>
+        <input
+          type="text"
+          value={block.verb}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { verb: e.target.value } },
+            })
+          }
+          className="font-bold bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-1 outline-none" style={{ fontSize: 18 }}
+          placeholder={t("verbTableVerbPlaceholder")}
+        />
+      </div>
+
+      <div className="flex">
+        <table className="flex-1 border-separate border-spacing-0 border-2 border-border rounded-lg overflow-hidden" style={{ fontSize: 16 }}>
+          <colgroup>
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "15%" }} />
+            {isSplit ? (
+              <>
+                <col style={{ width: "27.5%" }} />
+                <col style={{ width: "27.5%" }} />
+              </>
+            ) : (
+              <col style={{ width: "55%" }} />
+            )}
+          </colgroup>
+          <tbody>
+            <tr className="bg-muted/50">
+              <td colSpan={colCount} className="border-b border-border px-3 py-2 font-bold uppercase tracking-wider text-muted-foreground rounded-tl-lg rounded-tr-lg" style={{ fontSize: 16 }}>
+                Singular
+              </td>
+            </tr>
+            {renderRows("singularRows", false)}
+            <tr className="bg-muted/50">
+              <td colSpan={colCount} className="border-b border-border px-3 py-2 font-bold uppercase tracking-wider text-muted-foreground" style={{ fontSize: 16 }}>
+                Plural
+              </td>
+            </tr>
+            {renderRows("pluralRows", true)}
+          </tbody>
+        </table>
+        <div className="flex flex-col">
+          {/* Singular header spacer */}
+          <div style={{ height: 41 }} />
+          {block.singularRows.map((row) => (
+            <div key={row.id} className="group/del flex items-center" style={{ height: 41 }}>
+              <button
+                className={`opacity-0 group-hover/del:opacity-100 ml-1 p-0.5 hover:bg-destructive/10 rounded transition-opacity ${
+                  block.singularRows.length <= 1 ? "invisible" : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeRow("singularRows", row.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+          ))}
+          {/* Plural header spacer */}
+          <div style={{ height: 41 }} />
+          {block.pluralRows.map((row) => (
+            <div key={row.id} className="group/del flex items-center" style={{ height: 41 }}>
+              <button
+                className={`opacity-0 group-hover/del:opacity-100 ml-1 p-0.5 hover:bg-destructive/10 rounded transition-opacity ${
+                  block.pluralRows.length <= 1 ? "invisible" : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeRow("pluralRows", row.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mt-2">
+        <button
+          className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowAiModal(true);
+          }}
+        >
+          <Sparkles className="h-3 w-3" /> {t("aiGenerate")}
+        </button>
+      </div>
+      <AiVerbTableModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
 // ─── Column Child Block (with toolbar) ──────────────────────
 const colChildVisibilityIcons = {
   both: Eye,
@@ -1356,6 +1848,12 @@ export function BlockRenderer({
       return <WordSearchRenderer block={block} />;
     case "sorting-categories":
       return <SortingCategoriesRenderer block={block} />;
+    case "unscramble-words":
+      return <UnscrambleWordsRenderer block={block} />;
+    case "fix-sentences":
+      return <FixSentencesRenderer block={block} />;
+    case "verb-table":
+      return <VerbTableRenderer block={block} />;
     case "columns":
       return <ColumnsRenderer block={block} mode={mode} />;
     default:

@@ -2,8 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { WorksheetEditor } from "@/components/editor/worksheet-editor";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { WorksheetDocument, DEFAULT_SETTINGS, WorksheetBlock, WorksheetSettings } from "@/types/worksheet";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { auth } from "@/lib/auth/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function EditWorksheetPage({
   params,
@@ -12,7 +15,15 @@ export default async function EditWorksheetPage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  const worksheet = await prisma.worksheet.findUnique({ where: { id } });
+
+  const { data: session } = await auth.getSession();
+  if (!session?.user) {
+    redirect(`/${locale}/auth/sign-in`);
+  }
+
+  const worksheet = await prisma.worksheet.findUnique({
+    where: { id, userId: session.user.id },
+  });
 
   if (!worksheet) {
     notFound();

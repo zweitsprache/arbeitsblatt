@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import { DEFAULT_SETTINGS } from "@/types/worksheet";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 // GET /api/worksheets — list worksheets (optionally filtered by folderId or search)
 export async function GET(req: NextRequest) {
+  const result = await requireAuth();
+  if (result instanceof NextResponse) return result;
+  const { userId } = result;
+
   const folderId = req.nextUrl.searchParams.get("folderId");
   const search = req.nextUrl.searchParams.get("search");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {};
+  const where: any = { userId };
 
   if (search) {
     where.title = { contains: search, mode: "insensitive" };
@@ -38,6 +43,10 @@ export async function GET(req: NextRequest) {
 
 // POST /api/worksheets — create a new worksheet
 export async function POST(req: NextRequest) {
+  const result = await requireAuth();
+  if (result instanceof NextResponse) return result;
+  const { userId } = result;
+
   const body = await req.json();
   const slug = nanoid(10);
 
@@ -49,6 +58,7 @@ export async function POST(req: NextRequest) {
       settings: body.settings || DEFAULT_SETTINGS,
       published: body.published || false,
       folderId: body.folderId || null,
+      userId,
     },
   });
 

@@ -23,6 +23,9 @@ import {
   TextSelect,
   Search,
   Group,
+  Shuffle,
+  WrapText,
+  TableProperties,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -42,6 +45,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   TextSelect,
   Search,
   Group,
+  Shuffle,
+  WrapText,
+  TableProperties,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
@@ -92,7 +98,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
   }, [search, tb]);
 
   return (
-    <div className="w-64 flex flex-col h-full pt-8 pb-8">
+    <div className="w-80 shrink-0 flex flex-col h-full min-h-0 pt-8 pb-8">
       <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
       <div className="p-3">
         <div className="relative">
@@ -105,8 +111,8 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-3">
+      <ScrollArea className="flex-1 min-h-0 overflow-hidden scrollbar-hide [&_[data-slot=scroll-area-viewport]>div]:!block">
+        <div className="px-3 pb-3 space-y-3">
           {/* Content blocks */}
           {categories.content.length > 0 && (
             <div>

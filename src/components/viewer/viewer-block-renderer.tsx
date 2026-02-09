@@ -20,6 +20,9 @@ import {
   InlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
+  UnscrambleWordsBlock,
+  FixSentencesBlock,
+  VerbTableBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useTranslations } from "next-intl";
@@ -555,13 +558,10 @@ function TrueFalseMatrixView({
 
   return (
     <div className="space-y-2">
-      {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
-      )}
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="text-left p-2 border-b font-medium text-muted-foreground">{tc("statements")}</th>
+            <th className="text-left py-2 pr-2 border-b font-bold text-foreground">{block.statementColumnHeader || ""}</th>
             <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
             <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
           </tr>
@@ -573,7 +573,7 @@ function TrueFalseMatrixView({
 
             return (
               <tr key={stmt.id} className="border-b last:border-b-0">
-                <td className="p-2">
+                <td className="py-2 pr-2">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                       {String(stmtIndex + 1).padStart(2, "0")}
@@ -993,6 +993,7 @@ function WordSearchView({
 }
 
 // ─── Sorting Categories View ────────────────────────────────
+// ─── Sorting Categories View ──────────────────────────────
 function SortingCategoriesView({
   block,
   interactive,
@@ -1182,6 +1183,525 @@ function SortingCategoriesView({
   );
 }
 
+// ─── Unscramble Words View ───────────────────────────────
+function scrambleWordDeterministic(
+  word: string,
+  keepFirst: boolean,
+  lowercase: boolean,
+  seed: number
+): string {
+  let letters = word.split("");
+  let firstLetter = "";
+  if (keepFirst && letters.length > 1) {
+    firstLetter = letters[0];
+    letters = letters.slice(1);
+  }
+  // Deterministic Fisher-Yates shuffle
+  let s = seed;
+  for (let i = letters.length - 1; i > 0; i--) {
+    s = (s * 16807 + 0) % 2147483647;
+    const j = Math.abs(s) % (i + 1);
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  let result = keepFirst ? firstLetter + letters.join("") : letters.join("");
+  if (lowercase) result = result.toLowerCase();
+  return result;
+}
+
+function UnscrambleWordsView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: UnscrambleWordsBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const t = useTranslations("viewer");
+  const tb = useTranslations("blockRenderer");
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+
+  // Compute a seed per word based on block id + word id
+  const getSeed = (wordId: string) => {
+    let seed = 0;
+    const combined = block.id + wordId;
+    for (let i = 0; i < combined.length; i++) {
+      seed = ((seed << 5) - seed + combined.charCodeAt(i)) | 0;
+    }
+    return Math.abs(seed);
+  };
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      <div className="space-y-3">
+        {block.words.map((item, i) => {
+          const scrambled = scrambleWordDeterministic(
+            item.word,
+            block.keepFirstLetter,
+            block.lowercaseAll,
+            getSeed(item.id)
+          );
+          const userValue = userAnswers[item.id] || "";
+          const isCorrect =
+            showResults &&
+            userValue.trim().toLowerCase() === item.word.toLowerCase();
+          const isWrong = showResults && userValue.trim() !== "" && !isCorrect;
+
+          return (
+            <div
+              key={item.id}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                showResults
+                  ? isCorrect
+                    ? "border-green-500 bg-green-50"
+                    : isWrong
+                      ? "border-red-500 bg-red-50"
+                      : "border-border"
+                  : "border-border"
+              }`}
+            >
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="font-mono text-base tracking-widest font-semibold select-none">
+                {scrambled}
+              </span>
+              <span className="text-muted-foreground">→</span>
+              {interactive ? (
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={userValue}
+                    disabled={showResults}
+                    onChange={(e) =>
+                      onAnswer({ ...userAnswers, [item.id]: e.target.value })
+                    }
+                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors text-base ${
+                      showResults
+                        ? isCorrect
+                          ? "border-green-500 text-green-700"
+                          : isWrong
+                            ? "border-red-500 text-red-700"
+                            : "border-muted-foreground/40"
+                        : "border-muted-foreground/40 focus:border-primary"
+                    }`}
+                    placeholder="..."
+                  />
+                  {showResults && isWrong && (
+                    <span className="text-xs text-green-600 mt-0.5 block">
+                      {item.word}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="flex-1 border-b-2 border-gray-300 min-w-[80px] inline-block">
+                  &nbsp;
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {showResults && (
+        <p className="text-xs text-muted-foreground">
+          {t("resultCount", {
+            correct: block.words.filter(
+              (w) =>
+                (userAnswers[w.id] || "").trim().toLowerCase() ===
+                w.word.toLowerCase()
+            ).length,
+            total: block.words.length,
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Fix Sentences View ─────────────────────────────────
+function FixSentencesView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: FixSentencesBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const t = useTranslations("viewer");
+  // answer: Record<sentenceId, string[]> where string[] is user-ordered parts
+  const userOrders = (answer as Record<string, string[]> | undefined) || {};
+
+  // Deterministic shuffle based on block id + sentence id
+  const getShuffledParts = (sentenceId: string, parts: string[]): string[] => {
+    const arr = [...parts];
+    let seed = 0;
+    const combined = block.id + sentenceId;
+    for (let i = 0; i < combined.length; i++) {
+      seed = ((seed << 5) - seed + combined.charCodeAt(i)) | 0;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 16807 + 0) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // Initialize user orders if empty
+  React.useEffect(() => {
+    if (interactive) {
+      const needsInit = block.sentences.some((s) => !userOrders[s.id]);
+      if (needsInit) {
+        const newOrders: Record<string, string[]> = { ...userOrders };
+        for (const s of block.sentences) {
+          if (!newOrders[s.id]) {
+            const parts = s.sentence.split(" | ").map((p) => p.trim());
+            newOrders[s.id] = getShuffledParts(s.id, parts);
+          }
+        }
+        onAnswer(newOrders);
+      }
+    }
+  }, [interactive, block.sentences.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const movePart = (
+    sentenceId: string,
+    currentIndex: number,
+    direction: -1 | 1
+  ) => {
+    if (showResults) return;
+    const order = [...(userOrders[sentenceId] || [])];
+    const newIndex = currentIndex + direction;
+    if (newIndex < 0 || newIndex >= order.length) return;
+    [order[currentIndex], order[newIndex]] = [
+      order[newIndex],
+      order[currentIndex],
+    ];
+    onAnswer({ ...userOrders, [sentenceId]: order });
+  };
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      <div className="space-y-4">
+        {block.sentences.map((item, i) => {
+          const correctParts = item.sentence.split(" | ").map((p) => p.trim());
+          const displayParts = interactive
+            ? userOrders[item.id] || getShuffledParts(item.id, correctParts)
+            : getShuffledParts(item.id, correctParts);
+          const isFullyCorrect =
+            showResults &&
+            displayParts.length === correctParts.length &&
+            displayParts.every((p, idx) => p === correctParts[idx]);
+
+          return (
+            <div
+              key={item.id}
+              className={`rounded-lg border p-3 transition-colors ${
+                showResults
+                  ? isFullyCorrect
+                    ? "border-green-500 bg-green-50"
+                    : "border-red-500 bg-red-50"
+                  : "border-border"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0 mt-1">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-1.5">
+                    {displayParts.map((part, pi) => (
+                      <div key={pi} className="flex items-center gap-0.5">
+                        {interactive && !showResults && (
+                          <div className="flex flex-col gap-0">
+                            <button
+                              className="p-0 hover:bg-muted rounded disabled:opacity-30"
+                              onClick={() => movePart(item.id, pi, -1)}
+                              disabled={pi === 0}
+                              aria-label={t("moveUp")}
+                            >
+                              <svg
+                                className="h-3 w-3"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M15 18l-6-6 6-6" />
+                              </svg>
+                            </button>
+                            <button
+                              className="p-0 hover:bg-muted rounded disabled:opacity-30"
+                              onClick={() => movePart(item.id, pi, 1)}
+                              disabled={pi === displayParts.length - 1}
+                              aria-label={t("moveDown")}
+                            >
+                              <svg
+                                className="h-3 w-3"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M9 6l6 6-6 6" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                        <span
+                          className={`px-2.5 py-1 rounded border text-sm font-medium ${
+                            showResults
+                              ? part === correctParts[pi]
+                                ? "bg-green-100 border-green-300 text-green-800"
+                                : "bg-red-100 border-red-300 text-red-800"
+                              : "bg-muted border-border"
+                          }`}
+                        >
+                          {part}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {showResults && !isFullyCorrect && (
+                    <p className="text-xs text-green-600 mt-2">
+                      {correctParts.join(" ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {showResults && (
+        <p className="text-xs text-muted-foreground">
+          {t("resultCount", {
+            correct: block.sentences.filter((s) => {
+              const correctParts = s.sentence.split(" | ").map((p) => p.trim());
+              const userParts = userOrders[s.id] || [];
+              return (
+                userParts.length === correctParts.length &&
+                userParts.every((p, idx) => p === correctParts[idx])
+              );
+            }).length,
+            total: block.sentences.length,
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Verb Table View ────────────────────────────────────────
+function VerbTableView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: VerbTableBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const t = useTranslations("viewer");
+  // answer: Record<rowId, string> — user-entered conjugation per row
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const isSplit = block.splitConjugation ?? false;
+  const colCount = isSplit ? 5 : 4;
+  const isPrint = mode === "print";
+
+  const handleChange = (rowId: string, field: string, value: string) => {
+    if (!interactive || showResults) return;
+    onAnswer({ ...userAnswers, [`${rowId}_${field}`]: value });
+  };
+
+  const cellPadding = isPrint ? "px-1.5 py-0.5" : "px-3 py-2";
+  const personFontSize = isPrint ? 11 : 14;
+  const pronFontSize = isPrint ? 13 : 16;
+  const sectionFontSize = isPrint ? 12 : 16;
+  const inputFontSize = isPrint ? 13 : 16;
+
+  const renderSection = (
+    label: string,
+    rows: VerbTableBlock["singularRows"],
+    isFirst: boolean,
+    isLast: boolean,
+  ) => (
+    <>
+      <tr className="bg-muted/50">
+        <td colSpan={colCount} className={`border-b border-border ${cellPadding} font-bold uppercase tracking-wider${isFirst ? " rounded-tl-lg rounded-tr-lg" : ""}`} style={{ fontSize: sectionFontSize }}>
+          {label}
+        </td>
+      </tr>
+      {rows.map((row, rowIdx) => {
+        const isLastRow = isLast && rowIdx === rows.length - 1;
+        const userVal = isSplit
+          ? userAnswers[`${row.id}_conjugation`] || ""
+          : userAnswers[row.id] || userAnswers[`${row.id}_conjugation`] || "";
+        const userVal2 = userAnswers[`${row.id}_conjugation2`] || "";
+        const isCorrect =
+          showResults &&
+          userVal.trim().toLowerCase() ===
+            row.conjugation.trim().toLowerCase();
+        const isWrong = showResults && userVal.trim() !== "" && !isCorrect;
+        const isCorrect2 =
+          showResults &&
+          isSplit &&
+          userVal2.trim().toLowerCase() ===
+            (row.conjugation2 || "").trim().toLowerCase();
+        const isWrong2 =
+          showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
+
+        const borderB = isLastRow ? "" : "border-b";
+
+        return (
+          <tr key={row.id}>
+            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase${isLastRow ? " rounded-bl-lg" : ""}`} style={{ fontSize: personFontSize }}>
+              {row.person}
+            </td>
+            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase`} style={{ fontSize: personFontSize }}>
+              {row.detail || ""}
+            </td>
+            <td className={`border-r ${borderB} border-border ${cellPadding} font-bold`} style={{ fontSize: pronFontSize }}>
+              {row.pronoun}
+            </td>
+            <td className={`${borderB} border-border ${cellPadding} font-bold${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? " rounded-br-lg" : ""}`}>
+              {interactive ? (
+                <input
+                  type="text"
+                  value={userVal}
+                  onChange={(e) => handleChange(row.id, "conjugation", e.target.value)}
+                  disabled={showResults}
+                  className={`w-full border rounded px-2 py-1 outline-none ${
+                    showResults
+                      ? isCorrect
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : isWrong
+                          ? "border-red-500 bg-red-50 text-red-700"
+                          : "border-border"
+                      : "border-border focus:border-primary"
+                  }`}
+                  style={{ fontSize: inputFontSize }}
+                  placeholder="…"
+                />
+              ) : (
+                <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
+              )}
+              {showResults && isWrong && (
+                <span className="text-xs text-green-600 mt-0.5 block">
+                  {row.conjugation}
+                </span>
+              )}
+            </td>
+            {isSplit && (
+              <td className={`${borderB} border-border ${cellPadding} font-bold${isLastRow ? " rounded-br-lg" : ""}`}>
+                {interactive ? (
+                  <input
+                    type="text"
+                    value={userVal2}
+                    onChange={(e) => handleChange(row.id, "conjugation2", e.target.value)}
+                    disabled={showResults}
+                    className={`w-full border rounded px-2 py-1 outline-none ${
+                      showResults
+                        ? isCorrect2
+                          ? "border-green-500 bg-green-50 text-green-700"
+                          : isWrong2
+                            ? "border-red-500 bg-red-50 text-red-700"
+                            : "border-border"
+                        : "border-border focus:border-primary"
+                    }`}
+                    style={{ fontSize: inputFontSize }}
+                    placeholder="…"
+                  />
+                ) : (
+                  <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
+                )}
+                {showResults && isWrong2 && (
+                  <span className="text-xs text-green-600 mt-0.5 block">
+                    {row.conjugation2}
+                  </span>
+                )}
+              </td>
+            )}
+          </tr>
+        );
+      })}
+    </>
+  );
+
+  const allRows = [...block.singularRows, ...block.pluralRows];
+  const correctCount = showResults
+    ? allRows.reduce((count, r) => {
+        const key1 = isSplit ? `${r.id}_conjugation` : r.id;
+        const val1 = (userAnswers[key1] || userAnswers[`${r.id}_conjugation`] || "").trim().toLowerCase();
+        let c = val1 === r.conjugation.trim().toLowerCase() ? 1 : 0;
+        if (isSplit) {
+          const val2 = (userAnswers[`${r.id}_conjugation2`] || "").trim().toLowerCase();
+          if (val2 === (r.conjugation2 || "").trim().toLowerCase()) c += 1;
+        }
+        return count + c;
+      }, 0)
+    : 0;
+  const totalCount = isSplit ? allRows.length * 2 : allRows.length;
+
+  return (
+    <div>
+      {block.verb && (
+        <p className={`font-bold ${isPrint ? "text-sm mb-1" : "text-base mb-2"}`}>
+          {block.verb}
+        </p>
+      )}
+      <table className={`w-full border-separate border-spacing-0 ${isPrint ? "border border-border" : "border-2 border-border"} rounded-lg overflow-hidden`} style={{ fontSize: isPrint ? 13 : 16 }}>
+        <colgroup>
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          {isSplit ? (
+            <>
+              <col style={{ width: "27.5%" }} />
+              <col style={{ width: "27.5%" }} />
+            </>
+          ) : (
+            <col style={{ width: "55%" }} />
+          )}
+        </colgroup>
+        <tbody>
+          {renderSection("Singular", block.singularRows, true, false)}
+          {renderSection("Plural", block.pluralRows, false, true)}
+        </tbody>
+      </table>
+      {showResults && (
+        <p className="text-xs text-muted-foreground mt-2">
+          {t("resultCount", {
+            correct: correctCount,
+            total: totalCount,
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Renderer ──────────────────────────────────────────
 
 export function ViewerBlockRenderer({
@@ -1299,6 +1819,37 @@ export function ViewerBlockRenderer({
           block={block}
           interactive={interactive}
           answer={answer ?? undefined}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "unscramble-words":
+      return (
+        <UnscrambleWordsView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "fix-sentences":
+      return (
+        <FixSentencesView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "verb-table":
+      return (
+        <VerbTableView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
         />

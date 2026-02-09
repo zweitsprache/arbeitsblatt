@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -13,6 +14,9 @@ interface GenerateRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await req.json()) as GenerateRequest;
     const { thema, textsorte, niveau, leseransprache } = body;
