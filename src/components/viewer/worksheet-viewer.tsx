@@ -87,6 +87,7 @@ export function WorksheetViewer({
           <style
             dangerouslySetInnerHTML={{
               __html: `
+                @page { margin: 0; size: A4; }
                 html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
@@ -95,50 +96,114 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                .print-header { position: fixed; top: -15mm; left: -10mm; right: -10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
-                .print-header img { height: 8mm; width: auto; }
-                .print-footer { position: fixed; bottom: -15mm; left: -10mm; right: -10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
+
+                /* Table-based repeating header/footer */
+                .print-table { width: 100%; border-collapse: collapse; }
+                .print-table thead { display: table-header-group; }
+                .print-table tfoot { display: table-footer-group; }
+                .print-table thead td, .print-table tfoot td { padding: 0; }
+
+                .print-header-content {
+                  height: 25mm;
+                  padding: 10mm 10mm 0 10mm;
+                  box-sizing: border-box;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  font-size: 10pt;
+                  color: #666;
+                }
+                .print-header-content img { height: 8mm; width: auto; }
+
+                .print-footer-content {
+                  height: 25mm;
+                  padding: 0 10mm 10mm 10mm;
+                  box-sizing: border-box;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-end;
+                  font-size: 10pt;
+                  color: #666;
+                }
+
+                .print-body-content {
+                  padding: 0 20mm;
+                }
               `,
             }}
           />
-
-          {/* Fixed header for all print pages */}
-          {showPrintHeader && (
-            <div className="print-header">
-              <div>
-                {hasLogo && <img src={brandSettings.logo} alt="" />}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.headerRight || "" }} />}
-              </div>
-            </div>
-          )}
-
-          {/* Fixed footer for all print pages */}
-          {showPrintFooter && (
-            <div className="print-footer">
-              <div>
-                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft || "" }} />}
-              </div>
-              <div style={{ textAlign: "center" }}>
-                {brandSettings.footerCenter ? (
-                  <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                ) : settings.footerText ? (
-                  <span>{settings.footerText}</span>
-                ) : null}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerRight || "" }} />}
-              </div>
-            </div>
-          )}
         </>
       )}
-      <div
-        className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
-        style={{ maxWidth: mode === "print" ? undefined : pageWidth }}
-      >
-        {mode === "online" && (
+
+      {mode === "print" ? (
+        /* Print mode: table-based layout for repeating header/footer on every page */
+        <table className="print-table">
+          {showPrintHeader && (
+            <thead>
+              <tr>
+                <td>
+                  <div className="print-header-content">
+                    <div>
+                      {hasLogo && <img src={brandSettings.logo} alt="" />}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.headerRight || "" }} />}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </thead>
+          )}
+          {showPrintFooter && (
+            <tfoot>
+              <tr>
+                <td>
+                  <div className="print-footer-content">
+                    <div>
+                      {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft || "" }} />}
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      {brandSettings.footerCenter ? (
+                        <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                      ) : settings.footerText ? (
+                        <span>{settings.footerText}</span>
+                      ) : null}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerRight || "" }} />}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          )}
+          <tbody>
+            <tr>
+              <td>
+                <div className="print-body-content"
+                  style={{ fontSize: settings.fontSize, fontFamily: fontFamily }}
+                >
+                  <div className="space-y-6">
+                    {visibleBlocks.map((block) => (
+                      <div
+                        key={block.id}
+                        className={`worksheet-block worksheet-block-${block.type}`}
+                      >
+                        <ViewerBlockRenderer block={block} mode={mode} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
+        /* Online mode */
+        <div
+          className="mx-auto py-8 px-4"
+          style={{ maxWidth: pageWidth }}
+        >
           <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">
             <div className="flex items-center gap-3 mb-1">
               <Image
@@ -153,61 +218,51 @@ export function WorksheetViewer({
               <p className="text-sm text-muted-foreground mt-2">{settings.headerText}</p>
             )}
           </div>
-        )}
 
-        <div
-          className={`${mode === "online" ? "bg-background rounded-xl shadow-sm border p-8" : ""}`}
-          style={
-            mode === "print"
-              ? {
-                  fontSize: settings.fontSize,
-                  fontFamily: fontFamily,
-                }
-              : undefined
-          }
-        >
-          {/* Blocks */}
-          <div className="space-y-6">
-            {visibleBlocks.map((block) => (
-              <div
-                key={block.id}
-                className={`worksheet-block worksheet-block-${block.type}`}
-              >
-                <ViewerBlockRenderer
-                  block={block}
-                  mode={mode}
-                  answer={answers[block.id]}
-                  onAnswer={(value) => updateAnswer(block.id, value)}
-                  showResults={showResults}
-                />
+          <div className="bg-background rounded-xl shadow-sm border p-8">
+            {/* Blocks */}
+            <div className="space-y-6">
+              {visibleBlocks.map((block) => (
+                <div
+                  key={block.id}
+                  className={`worksheet-block worksheet-block-${block.type}`}
+                >
+                  <ViewerBlockRenderer
+                    block={block}
+                    mode={mode}
+                    answer={answers[block.id]}
+                    onAnswer={(value) => updateAnswer(block.id, value)}
+                    showResults={showResults}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Legacy footer text fallback */}
+            {settings.showFooter && settings.footerText && (
+              <div className="text-center text-sm text-muted-foreground mt-8">
+                {settings.footerText}
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Legacy footer text fallback - online only */}
-          {mode === "online" && settings.showFooter && settings.footerText && (
-            <div className="text-center text-sm text-muted-foreground mt-8">
-              {settings.footerText}
+          {hasInteractiveBlocks && (
+            <div className="flex items-center justify-center gap-3 mt-6 mb-8">
+              {!showResults ? (
+                <Button size="lg" onClick={handleCheckAnswers} className="gap-2">
+                  <CheckCircle2 className="h-5 w-5" />
+                  {t("checkAnswers")}
+                </Button>
+              ) : (
+                <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
+                  <RotateCcw className="h-5 w-5" />
+                  {t("tryAgain")}
+                </Button>
+              )}
             </div>
           )}
         </div>
-
-        {mode === "online" && hasInteractiveBlocks && (
-          <div className="flex items-center justify-center gap-3 mt-6 mb-8">
-            {!showResults ? (
-              <Button size="lg" onClick={handleCheckAnswers} className="gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                {t("checkAnswers")}
-              </Button>
-            ) : (
-              <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
-                <RotateCcw className="h-5 w-5" />
-                {t("tryAgain")}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

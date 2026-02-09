@@ -76,12 +76,12 @@ export async function POST(
 
     console.log(`[PDF] Generating with brand=${brand}`);
     
-    // Header/footer are now rendered as fixed elements within the page content
-    // Using @page { margin: 0 } and position:fixed in the page CSS
+    // Header/footer rendered via table thead/tfoot in page content
+    // @page { margin: 0 } gives full page control, table handles per-page repetition
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
-      margin: { top: "25mm", right: "20mm", bottom: "25mm", left: "20mm" },
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
       displayHeaderFooter: false,
       preferCSSPageSize: false,
