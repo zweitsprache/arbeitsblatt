@@ -176,8 +176,9 @@ export function WorksheetViewer({
                 top: "10mm",
                 right: "10mm",
                 textAlign: "right",
+                fontSize: "10pt",
+                color: "#666",
               }}
-              className="text-xs text-gray-500"
               dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
             />
           )}
@@ -188,7 +189,8 @@ export function WorksheetViewer({
             </div>
           )}
 
-          <div className="space-y-6">
+          {/* Content wrapper - starts at 25mm from top in print mode */}
+          <div style={mode === "print" ? { paddingTop: "25mm" } : undefined} className="space-y-6">
             {visibleBlocks.map((block) => (
               <div
                 key={block.id}
@@ -205,25 +207,52 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Brand footer for print mode */}
-          {mode === "print" && settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight) && (
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-8">
-              <div>
-                {brandSettings.footerLeft && (
-                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />
-                )}
-              </div>
-              <div>
-                {brandSettings.footerCenter && (
-                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                )}
-              </div>
-              <div>
-                {brandSettings.footerRight && (
-                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }} />
-                )}
-              </div>
+          {/* Footer Left - fixed at 10mm from left/bottom */}
+          {mode === "print" && settings.showFooter && brandSettings.footerLeft && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "10mm",
+                left: "10mm",
+                fontSize: "10pt",
+                color: "#666",
+              }}
+              dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
+            />
+          )}
+          {/* Footer Center - fixed centered at 10mm from bottom */}
+          {mode === "print" && settings.showFooter && (brandSettings.footerCenter || settings.footerText) && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "10mm",
+                left: "50%",
+                transform: "translateX(-50%)",
+                fontSize: "10pt",
+                color: "#666",
+                textAlign: "center",
+              }}
+            >
+              {brandSettings.footerCenter ? (
+                <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+              ) : settings.footerText ? (
+                <span>{settings.footerText}</span>
+              ) : null}
             </div>
+          )}
+          {/* Footer Right - fixed at 10mm from right/bottom */}
+          {mode === "print" && settings.showFooter && brandSettings.footerRight && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "10mm",
+                right: "10mm",
+                fontSize: "10pt",
+                color: "#666",
+                textAlign: "right",
+              }}
+              dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}
+            />
           )}
           {/* Legacy footer text fallback */}
           {settings.showFooter && settings.footerText && !brandSettings.footerLeft && !brandSettings.footerCenter && !brandSettings.footerRight && (
