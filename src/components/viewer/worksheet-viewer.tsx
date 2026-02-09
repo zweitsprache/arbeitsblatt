@@ -95,9 +95,9 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                .print-header { position: fixed; top: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
+                .print-header { position: fixed; top: -15mm; left: -10mm; right: -10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
                 .print-header img { height: 8mm; width: auto; }
-                .print-footer { position: fixed; bottom: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
+                .print-footer { position: fixed; bottom: -15mm; left: -10mm; right: -10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
               `,
             }}
           />
