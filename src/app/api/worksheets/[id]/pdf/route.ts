@@ -75,19 +75,19 @@ export async function POST(
     // Extra wait to ensure Google Fonts CDN stylesheet is fully processed
     await new Promise((r) => setTimeout(r, 500));
 
-    // Generate the PDF
+    // Generate the PDF - margins are handled by CSS @page rule, not Puppeteer
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
       margin: {
-        top: `${margins.top}mm`,
-        right: `${margins.right}mm`,
-        bottom: `${margins.bottom}mm`,
-        left: `${margins.left}mm`,
+        top: "0mm",
+        right: "0mm",
+        bottom: "0mm",
+        left: "0mm",
       },
       printBackground: true,
       displayHeaderFooter: false,
-      preferCSSPageSize: false,
+      preferCSSPageSize: true,
     });
 
     await browser.close();
