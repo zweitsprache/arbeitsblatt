@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
+import { BrandSettings, DEFAULT_BRAND_SETTINGS, Brand } from "@/types/worksheet";
 
 // POST /api/worksheets/[id]/pdf — generate PDF via Puppeteer (headless Chrome)
 export async function POST(
@@ -24,7 +25,7 @@ export async function POST(
 
   // Determine font based on brand
   const worksheetSettings = worksheet.settings as Record<string, unknown> | null;
-  const brand = (worksheetSettings?.brand as string) || "edoomio";
+  const brand = ((worksheetSettings?.brand as string) || "edoomio") as Brand;
   const defaultFont = brand === "lingostar" 
     ? "Encode Sans, sans-serif" 
     : "Asap Condensed, sans-serif";
@@ -43,10 +44,38 @@ export async function POST(
     ...worksheetSettings,
   };
 
+  // Get brand settings
+  const brandSettings: BrandSettings = {
+    ...DEFAULT_BRAND_SETTINGS[brand],
+    ...(worksheetSettings?.brandSettings as Partial<BrandSettings> | undefined),
+  };
+
   const margins =
     typeof settings.margins === "object" && settings.margins !== null
       ? (settings.margins as { top: number; right: number; bottom: number; left: number })
       : { top: 20, right: 20, bottom: 20, left: 20 };
+
+  // Build Puppeteer header/footer templates
+  const logoUrl = brandSettings.logo ? `${baseUrl}${brandSettings.logo}` : "";
+  
+  const headerTemplate = `
+    <div style="width: 100%; font-size: 10pt; color: #666; padding: 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        ${logoUrl ? `<img src="${logoUrl}" style="height: 8mm; width: auto;" />` : ""}
+      </div>
+      <div style="text-align: right;">
+        ${brandSettings.headerRight || ""}
+      </div>
+    </div>
+  `;
+
+  const footerTemplate = `
+    <div style="width: 100%; font-size: 10pt; color: #666; padding: 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;">
+      <div>${brandSettings.footerLeft || ""}</div>
+      <div style="text-align: center;">${brandSettings.footerCenter || settings.footerText || ""}</div>
+      <div style="text-align: right;">${brandSettings.footerRight || ""}</div>
+    </div>
+  `;
 
   try {
     const printUrl = `${baseUrl}/de/worksheet/${worksheet.slug}/print`;
@@ -75,19 +104,24 @@ export async function POST(
     // Extra wait to ensure Google Fonts CDN stylesheet is fully processed
     await new Promise((r) => setTimeout(r, 500));
 
-    // Generate the PDF - margins are handled by CSS @page rule, not Puppeteer
+    // Generate the PDF with Puppeteer header/footer templates
+    const hasHeader = settings.showHeader && (logoUrl || brandSettings.headerRight);
+    const hasFooter = settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText);
+    
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
       margin: {
-        top: "0mm",
-        right: "0mm",
-        bottom: "0mm",
-        left: "0mm",
+        top: hasHeader ? "25mm" : `${margins.top}mm`,
+        right: `${margins.right}mm`,
+        bottom: hasFooter ? "25mm" : `${margins.bottom}mm`,
+        left: `${margins.left}mm`,
       },
       printBackground: true,
-      displayHeaderFooter: false,
-      preferCSSPageSize: true,
+      displayHeaderFooter: hasHeader || hasFooter,
+      headerTemplate: hasHeader ? headerTemplate : "<span></span>",
+      footerTemplate: hasFooter ? footerTemplate : "<span></span>",
+      preferCSSPageSize: false,
     });
 
     await browser.close();

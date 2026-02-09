@@ -80,9 +80,9 @@ export function WorksheetViewer({
               __html: `
                 @page {
                   size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
-                  margin: 25mm ${settings.margins.right}mm 25mm ${settings.margins.left}mm;
+                  margin: 0;
                 }
-                html, body { margin: 0; padding: 0; overflow: visible; }
+                html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
@@ -90,11 +90,7 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                .print-header-logo { position: fixed; top: -15mm; left: ${10 - settings.margins.left}mm; }
-                .print-header-right { position: fixed; top: -15mm; right: ${10 - settings.margins.right}mm; }
-                .print-footer-left { position: fixed; bottom: -15mm; left: ${10 - settings.margins.left}mm; }
-                .print-footer-center { position: fixed; bottom: -15mm; left: 50%; transform: translateX(-50%); }
-                .print-footer-right { position: fixed; bottom: -15mm; right: ${10 - settings.margins.right}mm; }
+                .print-header-footer { display: none; }
               `,
             }}
           />
@@ -132,30 +128,7 @@ export function WorksheetViewer({
               : undefined
           }
         >
-          {/* Print running elements - use CSS classes for fixed positioning */}
-          {mode === "print" && settings.showHeader && brandSettings.logo && (
-            <img
-              src={brandSettings.logo}
-              alt=""
-              className="print-header-logo"
-              style={{ height: "8mm", width: "auto" }}
-            />
-          )}
-          {mode === "print" && settings.showHeader && brandSettings.headerRight && (
-            <div
-              className="print-header-right"
-              style={{ fontSize: "10pt", color: "#666", textAlign: "right" }}
-              dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
-            />
-          )}
-          {/* Legacy header text fallback */}
-          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerRight && !brandSettings.logo && (
-            <div className="text-center text-sm text-gray-500 mb-4">
-              {settings.headerText}
-            </div>
-          )}
-
-          {/* Content wrapper - no extra padding needed, @page margins handle it */}
+          {/* Blocks */}
           <div className="space-y-6">
             {visibleBlocks.map((block) => (
               <div
@@ -173,35 +146,8 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Print running footer elements */}
-          {mode === "print" && settings.showFooter && brandSettings.footerLeft && (
-            <div
-              className="print-footer-left"
-              style={{ fontSize: "10pt", color: "#666" }}
-              dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
-            />
-          )}
-          {mode === "print" && settings.showFooter && (brandSettings.footerCenter || settings.footerText) && (
-            <div
-              className="print-footer-center"
-              style={{ fontSize: "10pt", color: "#666", textAlign: "center" }}
-            >
-              {brandSettings.footerCenter ? (
-                <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-              ) : settings.footerText ? (
-                <span>{settings.footerText}</span>
-              ) : null}
-            </div>
-          )}
-          {mode === "print" && settings.showFooter && brandSettings.footerRight && (
-            <div
-              className="print-footer-right"
-              style={{ fontSize: "10pt", color: "#666", textAlign: "right" }}
-              dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}
-            />
-          )}
-          {/* Legacy footer text fallback */}
-          {settings.showFooter && settings.footerText && !brandSettings.footerLeft && !brandSettings.footerCenter && !brandSettings.footerRight && (
+          {/* Legacy footer text fallback - online only */}
+          {mode === "online" && settings.showFooter && settings.footerText && (
             <div className="text-center text-sm text-muted-foreground mt-8">
               {settings.footerText}
             </div>
