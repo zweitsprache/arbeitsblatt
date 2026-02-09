@@ -82,18 +82,19 @@ export function WorksheetViewer({
                   size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
                   margin: 25mm ${settings.margins.right}mm 25mm ${settings.margins.left}mm;
                 }
+                html, body { margin: 0; padding: 0; overflow: visible; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; margin: 0; padding: 0; }
-                .print-header-logo { position: fixed; top: 10mm; left: 10mm; }
-                .print-header-right { position: fixed; top: 10mm; right: 10mm; }
-                .print-footer-left { position: fixed; bottom: 10mm; left: 10mm; }
-                .print-footer-center { position: fixed; bottom: 10mm; left: 50%; transform: translateX(-50%); }
-                .print-footer-right { position: fixed; bottom: 10mm; right: 10mm; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
+                .print-header-logo { position: fixed; top: -15mm; left: ${10 - settings.margins.left}mm; }
+                .print-header-right { position: fixed; top: -15mm; right: ${10 - settings.margins.right}mm; }
+                .print-footer-left { position: fixed; bottom: -15mm; left: ${10 - settings.margins.left}mm; }
+                .print-footer-center { position: fixed; bottom: -15mm; left: 50%; transform: translateX(-50%); }
+                .print-footer-right { position: fixed; bottom: -15mm; right: ${10 - settings.margins.right}mm; }
               `,
             }}
           />
