@@ -87,7 +87,6 @@ export function WorksheetViewer({
           <style
             dangerouslySetInnerHTML={{
               __html: `
-                @page { margin: 0; }
                 html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
