@@ -80,51 +80,26 @@ export function WorksheetViewer({
               __html: `
                 @page {
                   size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
-                  margin: ${settings.margins.top}mm ${settings.margins.right}mm ${settings.margins.bottom}mm ${settings.margins.left}mm;
+                  margin: 0;
                 }
-                @page:first {
-                  @top-center { content: normal; }
-                }
-                @page {
-                  @top-center {
-                    content: string(header-text);
-                    font-size: 9pt;
-                    color: #888;
-                  }
-                  @bottom-center {
-                    content: string(footer-text);
-                    font-size: 9pt;
-                    color: #888;
-                  }
-                  @bottom-right {
-                    content: counter(page) " / " counter(pages);
-                    font-size: 8pt;
-                    color: #aaa;
-                  }
-                }
-                .print-running-header { string-set: header-text content(); display: none; }
-                .print-running-footer { string-set: footer-text content(); display: none; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; margin: 0; padding: 0; }
               `,
             }}
           />
-          {settings.showHeader && settings.headerText && (
-            <div className="print-running-header">{settings.headerText}</div>
-          )}
-          {settings.showFooter && settings.footerText && (
-            <div className="print-running-footer">{settings.footerText}</div>
-          )}
         </>
       )}
       <div
         className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
-        style={{ maxWidth: pageWidth }}
+        style={{ 
+          maxWidth: pageWidth,
+          ...(mode === "print" ? { paddingLeft: `${settings.margins.left}mm`, paddingRight: `${settings.margins.right}mm` } : {}),
+        }}
       >
         {mode === "online" && (
           <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">
@@ -189,8 +164,8 @@ export function WorksheetViewer({
             </div>
           )}
 
-          {/* Content wrapper - starts at 25mm from top in print mode */}
-          <div style={mode === "print" ? { paddingTop: "25mm" } : undefined} className="space-y-6">
+          {/* Content wrapper - starts at 25mm from top, ends at 25mm from bottom in print mode */}
+          <div style={mode === "print" ? { paddingTop: "25mm", paddingBottom: "25mm" } : undefined} className="space-y-6">
             {visibleBlocks.map((block) => (
               <div
                 key={block.id}
