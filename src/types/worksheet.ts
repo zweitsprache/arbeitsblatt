@@ -266,24 +266,30 @@ export type WorksheetBlock =
 export type Brand = "edoomio" | "lingostar";
 
 export interface BrandSettings {
-  logo: string; // URL or data URI
+  logo: string; // URL (relative or absolute) or data URI
   headerLeft: string; // HTML
-  headerCenter: string; // HTML
+  headerRight: string; // HTML
+  footerLeft: string; // HTML
   footerCenter: string; // HTML
+  footerRight: string; // HTML
 }
 
 export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
   edoomio: {
     logo: "",
     headerLeft: "",
-    headerCenter: "",
+    headerRight: "",
+    footerLeft: "",
     footerCenter: "",
+    footerRight: "",
   },
   lingostar: {
     logo: "",
     headerLeft: "",
-    headerCenter: "",
+    headerRight: "",
+    footerLeft: "",
     footerCenter: "",
+    footerRight: "",
   },
 };
 

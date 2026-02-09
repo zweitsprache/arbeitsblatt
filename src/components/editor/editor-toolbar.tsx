@@ -367,7 +367,7 @@ export function EditorToolbar() {
 
       {/* Brand Settings Dialog */}
       <Dialog open={showBrandSettings} onOpenChange={setShowBrandSettings}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("brandSettings")} – {state.settings.brand || "edoomio"}</DialogTitle>
           </DialogHeader>
@@ -377,7 +377,7 @@ export function EditorToolbar() {
               <Input
                 value={currentBrandSettings.logo}
                 onChange={(e) => updateBrandSettings({ logo: e.target.value })}
-                placeholder="https://..."
+                placeholder="/logo/my-logo.svg"
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">{t("brandLogoHelp")}</p>
@@ -392,10 +392,19 @@ export function EditorToolbar() {
               />
             </div>
             <div>
-              <Label className="text-sm font-medium">{t("headerCenter")}</Label>
+              <Label className="text-sm font-medium">{t("headerRight")}</Label>
               <textarea
-                value={currentBrandSettings.headerCenter}
-                onChange={(e) => updateBrandSettings({ headerCenter: e.target.value })}
+                value={currentBrandSettings.headerRight}
+                onChange={(e) => updateBrandSettings({ headerRight: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("footerLeft")}</Label>
+              <textarea
+                value={currentBrandSettings.footerLeft}
+                onChange={(e) => updateBrandSettings({ footerLeft: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -405,6 +414,15 @@ export function EditorToolbar() {
               <textarea
                 value={currentBrandSettings.footerCenter}
                 onChange={(e) => updateBrandSettings({ footerCenter: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("footerRight")}</Label>
+              <textarea
+                value={currentBrandSettings.footerRight}
+                onChange={(e) => updateBrandSettings({ footerRight: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />

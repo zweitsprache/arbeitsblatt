@@ -75,16 +75,14 @@ export function PrintPreview({
   const paddingLeftPx = margins.left * MM_TO_PX;
   const paddingRightPx = margins.right * MM_TO_PX;
 
-  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.logo || !!brandSettings.headerLeft || !!brandSettings.headerCenter);
-  const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerCenter);
+  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.logo || !!brandSettings.headerLeft || !!brandSettings.headerRight);
+  const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerLeft || !!brandSettings.footerCenter || !!brandSettings.footerRight);
 
-  // Available content height per page
+  // Available content height per page (header/footer are now in margins, don't reduce content)
   const contentHeight =
     pageHeightPx -
     paddingTopPx -
-    paddingBottomPx -
-    (hasHeader ? HEADER_HEIGHT : 0) -
-    (hasFooter ? FOOTER_HEIGHT : 0);
+    paddingBottomPx;
 
   // Filter blocks by print visibility
   const visibleBlocks = useMemo(
@@ -357,26 +355,30 @@ p { widows: 2; orphans: 2; }
                     }}
                   />
 
-                  {/* Header (on every page or first only — shown for preview) */}
+                  {/* Header - positioned in top margin area */}
                   {hasHeader && (
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 text-sm text-gray-400">
-                      <div className="flex items-center gap-2 flex-1">
+                    <div 
+                      className="absolute flex items-center justify-between text-[10px] text-gray-400"
+                      style={{
+                        top: paddingTopPx * 0.25,
+                        left: paddingLeftPx,
+                        right: paddingRightPx,
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
                         {brandSettings.logo && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={brandSettings.logo} alt="" className="h-6 w-auto" />
+                          <img src={brandSettings.logo} alt="" className="h-5 w-auto" />
                         )}
                         {brandSettings.headerLeft && (
                           <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
                         )}
                       </div>
-                      <div className="flex-1 text-center">
-                        {brandSettings.headerCenter ? (
-                          <div dangerouslySetInnerHTML={{ __html: brandSettings.headerCenter }} />
-                        ) : (
-                          state.settings.headerText
-                        )}
-                      </div>
-                      <div className="flex-1" />
+                      {brandSettings.headerRight ? (
+                        <div dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }} />
+                      ) : state.settings.headerText ? (
+                        <span>{state.settings.headerText}</span>
+                      ) : null}
                     </div>
                   )}
 
@@ -402,21 +404,33 @@ p { widows: 2; orphans: 2; }
                     )}
                   </div>
 
-                  {/* Footer */}
+                  {/* Footer - positioned in bottom margin area */}
                   {hasFooter && (
                     <div
-                      className="absolute text-center text-sm text-gray-400 pt-2 border-t border-gray-200"
+                      className="absolute flex items-center justify-between text-[10px] text-gray-400"
                       style={{
                         left: paddingLeftPx,
                         right: paddingRightPx,
-                        bottom: paddingBottomPx,
+                        bottom: paddingBottomPx * 0.25,
                       }}
                     >
-                      {brandSettings.footerCenter ? (
-                        <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                      ) : (
-                        state.settings.footerText
-                      )}
+                      <div>
+                        {brandSettings.footerLeft ? (
+                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />
+                        ) : null}
+                      </div>
+                      <div>
+                        {brandSettings.footerCenter ? (
+                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                        ) : state.settings.footerText ? (
+                          <span>{state.settings.footerText}</span>
+                        ) : null}
+                      </div>
+                      <div>
+                        {brandSettings.footerRight ? (
+                          <div dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }} />
+                        ) : null}
+                      </div>
                     </div>
                   )}
                 </div>

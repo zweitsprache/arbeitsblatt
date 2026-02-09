@@ -144,36 +144,44 @@ export function WorksheetViewer({
         )}
 
         <div
-          className={`${mode === "online" ? "bg-background rounded-xl shadow-sm border p-8" : ""}`}
+          className={`${mode === "online" ? "bg-background rounded-xl shadow-sm border p-8" : "relative"}`}
           style={
             mode === "print"
               ? {
                   fontSize: settings.fontSize,
                   fontFamily: fontFamily,
+                  minHeight: "100vh",
                 }
               : undefined
           }
         >
-          {/* Brand header for print mode */}
-          {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerCenter) && (
-            <div className="flex items-center justify-between mb-4 pb-2 border-b text-sm text-gray-600">
-              <div className="flex items-center gap-2 flex-1">
+          {/* Brand header for print mode - positioned in top margin */}
+          {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerRight) && (
+            <div 
+              className="flex items-center justify-between text-xs text-gray-500"
+              style={{
+                position: "absolute",
+                top: `-${settings.margins.top * 0.75}mm`,
+                left: 0,
+                right: 0,
+              }}
+            >
+              <div className="flex items-center gap-2">
                 {brandSettings.logo && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={brandSettings.logo} alt="" className="h-8 w-auto" />
+                  <img src={brandSettings.logo} alt="" style={{ height: "8mm", width: "auto" }} />
                 )}
                 {brandSettings.headerLeft && (
                   <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
                 )}
               </div>
-              {brandSettings.headerCenter && (
-                <div className="flex-1 text-center" dangerouslySetInnerHTML={{ __html: brandSettings.headerCenter }} />
+              {brandSettings.headerRight && (
+                <div dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }} />
               )}
-              <div className="flex-1" />
             </div>
           )}
           {/* Legacy header text fallback */}
-          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerCenter && (
+          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerLeft && !brandSettings.headerRight && (
             <div className="text-center text-sm text-gray-500 mb-4 pb-2 border-b">
               {settings.headerText}
             </div>
@@ -196,12 +204,36 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Brand footer for print mode */}
-          {mode === "print" && settings.showFooter && brandSettings.footerCenter && (
-            <div className="text-center text-sm text-muted-foreground mt-8 pt-2 border-t" dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+          {/* Brand footer for print mode - positioned in bottom margin */}
+          {mode === "print" && settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight) && (
+            <div 
+              className="flex items-center justify-between text-xs text-gray-500"
+              style={{
+                position: "absolute",
+                bottom: `-${settings.margins.bottom * 0.75}mm`,
+                left: 0,
+                right: 0,
+              }}
+            >
+              <div>
+                {brandSettings.footerLeft && (
+                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />
+                )}
+              </div>
+              <div>
+                {brandSettings.footerCenter && (
+                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                )}
+              </div>
+              <div>
+                {brandSettings.footerRight && (
+                  <div dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }} />
+                )}
+              </div>
+            </div>
           )}
           {/* Legacy footer text fallback */}
-          {settings.showFooter && settings.footerText && !brandSettings.footerCenter && (
+          {settings.showFooter && settings.footerText && !brandSettings.footerLeft && !brandSettings.footerCenter && !brandSettings.footerRight && (
             <div className="text-center text-sm text-muted-foreground mt-8 pt-2 border-t">
               {settings.footerText}
             </div>
