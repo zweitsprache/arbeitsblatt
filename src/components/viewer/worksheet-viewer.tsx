@@ -154,13 +154,13 @@ export function WorksheetViewer({
               : undefined
           }
         >
-          {/* Logo - absolute positioned at 10mm from page edges */}
+          {/* Logo - fixed positioned at 10mm from page edges (prints on every page) */}
           {mode === "print" && settings.showHeader && brandSettings.logo && (
             <img
               src={brandSettings.logo}
               alt=""
               style={{
-                position: "absolute",
+                position: "fixed",
                 top: "10mm",
                 left: "10mm",
                 height: "8mm",
@@ -168,11 +168,11 @@ export function WorksheetViewer({
               }}
             />
           )}
-          {/* Header Right - absolute positioned at 10mm from top/right */}
+          {/* Header Right - fixed positioned at 10mm from top/right (prints on every page) */}
           {mode === "print" && settings.showHeader && brandSettings.headerRight && (
             <div
               style={{
-                position: "absolute",
+                position: "fixed",
                 top: "10mm",
                 right: "10mm",
                 textAlign: "right",

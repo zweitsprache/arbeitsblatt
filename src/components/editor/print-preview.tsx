@@ -362,8 +362,8 @@ p { widows: 2; orphans: 2; }
                       alt=""
                       style={{
                         position: "absolute",
-                        top: `${10 * MM_TO_PX}px`,
-                        left: `${10 * MM_TO_PX}px`,
+                        top: `${10 * MM_TO_PX - paddingTopPx}px`,
+                        left: `${10 * MM_TO_PX - paddingLeftPx}px`,
                         height: `${8 * MM_TO_PX}px`,
                         width: "auto",
                       }}
@@ -375,8 +375,8 @@ p { widows: 2; orphans: 2; }
                     <div
                       style={{
                         position: "absolute",
-                        top: `${10 * MM_TO_PX}px`,
-                        right: `${10 * MM_TO_PX}px`,
+                        top: `${10 * MM_TO_PX - paddingTopPx}px`,
+                        right: `${10 * MM_TO_PX - paddingRightPx}px`,
                         textAlign: "right",
                       }}
                       className="text-[10px] text-gray-400"
