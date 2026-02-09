@@ -65,6 +65,15 @@ export function WorksheetViewer({
     setShowResults(false);
   };
 
+  // For print mode, determine if we have header/footer content
+  const hasLogo = !!brandSettings.logo;
+  const hasHeaderRight = !!brandSettings.headerRight;
+  const hasFooterLeft = !!brandSettings.footerLeft;
+  const hasFooterCenter = !!brandSettings.footerCenter || !!settings.footerText;
+  const hasFooterRight = !!brandSettings.footerRight;
+  const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderRight);
+  const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
+
   return (
     <div className={`min-h-screen ${mode === "print" ? "bg-white" : "bg-muted/30"}`}>
       {/* Print/PDF styles + Google Fonts link for reliable font loading */}
@@ -78,6 +87,7 @@ export function WorksheetViewer({
           <style
             dangerouslySetInnerHTML={{
               __html: `
+                @page { margin: 0; }
                 html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
@@ -86,14 +96,49 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
+                .print-header { position: fixed; top: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
+                .print-header img { height: 8mm; width: auto; }
+                .print-footer { position: fixed; bottom: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
+                .print-content { padding-top: ${showPrintHeader ? "25mm" : "20mm"}; padding-bottom: ${showPrintFooter ? "25mm" : "20mm"}; padding-left: 20mm; padding-right: 20mm; }
               `,
             }}
           />
+
+          {/* Fixed header for all print pages */}
+          {showPrintHeader && (
+            <div className="print-header">
+              <div>
+                {hasLogo && <img src={brandSettings.logo} alt="" />}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.headerRight || "" }} />}
+              </div>
+            </div>
+          )}
+
+          {/* Fixed footer for all print pages */}
+          {showPrintFooter && (
+            <div className="print-footer">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft || "" }} />}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                {brandSettings.footerCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerRight || "" }} />}
+              </div>
+            </div>
+          )}
         </>
       )}
       <div
-        className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
-        style={{ maxWidth: pageWidth }}
+        className={`mx-auto ${mode === "print" ? "print-content" : "py-8 px-4"}`}
+        style={{ maxWidth: mode === "print" ? undefined : pageWidth }}
       >
         {mode === "online" && (
           <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">

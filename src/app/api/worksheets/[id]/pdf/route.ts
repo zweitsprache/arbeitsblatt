@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
-import { BrandSettings, DEFAULT_BRAND_SETTINGS, Brand } from "@/types/worksheet";
-import fs from "fs";
-import path from "path";
+import { Brand } from "@/types/worksheet";
 
 // POST /api/worksheets/[id]/pdf — generate PDF via Puppeteer (headless Chrome)
 export async function POST(
@@ -46,87 +44,8 @@ export async function POST(
     ...worksheetSettings,
   };
 
-  // Get brand settings
-  const brandSettings: BrandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[brand],
-    ...(worksheetSettings?.brandSettings as Partial<BrandSettings> | undefined),
-  };
-
-  const margins =
-    typeof settings.margins === "object" && settings.margins !== null
-      ? (settings.margins as { top: number; right: number; bottom: number; left: number })
-      : { top: 20, right: 20, bottom: 20, left: 20 };
-
-  // Build Puppeteer header/footer templates - they need explicit width/height and margin
-  // Logo must be base64-encoded for Puppeteer header templates (isolated context)
-  let logoDataUri = "";
-  if (brandSettings.logo) {
-    try {
-      const logoPath = path.join(process.cwd(), "public", brandSettings.logo.replace(/^\//, ""));
-      const logoContent = fs.readFileSync(logoPath);
-      const ext = path.extname(logoPath).toLowerCase();
-      const mimeType = ext === ".svg" ? "image/svg+xml" : ext === ".png" ? "image/png" : "image/jpeg";
-      logoDataUri = `data:${mimeType};base64,${logoContent.toString("base64")}`;
-    } catch (e) {
-      console.error("[PDF] Failed to load logo:", e);
-    }
-  }
-
-  // Embed fonts as base64 TTF for Puppeteer header/footer templates
-  const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
-  let fontFaceRules = "";
-  
-  try {
-    let fontRegularPath: string;
-    let fontBoldPath: string;
-    
-    if (brand === "lingostar") {
-      fontRegularPath = path.join(process.cwd(), "public", "fonts", "EncodeSans-Regular.ttf");
-      fontBoldPath = path.join(process.cwd(), "public", "fonts", "EncodeSans-Bold.ttf");
-    } else {
-      fontRegularPath = path.join(process.cwd(), "public", "fonts", "asap-condensed-400.ttf");
-      fontBoldPath = path.join(process.cwd(), "public", "fonts", "asap-condensed-600.ttf");
-    }
-    
-    const fontRegularContent = fs.readFileSync(fontRegularPath);
-    const fontBoldContent = fs.readFileSync(fontBoldPath);
-    const fontRegularUri = `data:font/ttf;base64,${fontRegularContent.toString("base64")}`;
-    const fontBoldUri = `data:font/ttf;base64,${fontBoldContent.toString("base64")}`;
-    fontFaceRules = `
-      @font-face { font-family: '${fontFamily}'; src: url('${fontRegularUri}') format('truetype'); font-weight: 400; font-style: normal; }
-      @font-face { font-family: '${fontFamily}'; src: url('${fontBoldUri}') format('truetype'); font-weight: 700; font-style: normal; }
-    `;
-  } catch (e) {
-    console.error("[PDF] Failed to load fonts:", e);
-  }
-  
-  const headerTemplate = `
-    <style>
-      ${fontFaceRules}
-      .header { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
-      .header img { height: 8mm; width: auto; }
-    </style>
-    <div class="header">
-      <div>
-        ${logoDataUri ? `<img src="${logoDataUri}" />` : ""}
-      </div>
-      <div style="text-align: right;">
-        ${brandSettings.headerRight || ""}
-      </div>
-    </div>
-  `;
-
-  const footerTemplate = `
-    <style>
-      ${fontFaceRules}
-      .footer { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
-    </style>
-    <div class="footer">
-      <div>${brandSettings.footerLeft || ""}</div>
-      <div style="text-align: center;">${brandSettings.footerCenter || settings.footerText || ""}</div>
-      <div style="text-align: right;">${brandSettings.footerRight || ""}</div>
-    </div>
-  `;
+  // Header/footer are now rendered as fixed CSS elements within the page content
+  // The page loads Google Fonts directly and uses position:fixed for header/footer
 
   try {
     const printUrl = `${baseUrl}/de/worksheet/${worksheet.slug}/print`;
@@ -155,27 +74,16 @@ export async function POST(
     // Extra wait to ensure Google Fonts CDN stylesheet is fully processed
     await new Promise((r) => setTimeout(r, 500));
 
-    // Generate the PDF with Puppeteer header/footer templates
-    const hasHeader = Boolean(settings.showHeader && (logoDataUri || brandSettings.headerRight));
-    const hasFooter = Boolean(settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText));
-    const showHeaderFooter = hasHeader || hasFooter;
+    console.log(`[PDF] Generating with brand=${brand}`);
     
-    console.log(`[PDF] hasHeader=${hasHeader}, hasFooter=${hasFooter}, logoDataUri=${logoDataUri ? "(base64)" : ""}, brand=${brand}`);
-    console.log(`[PDF] brandSettings:`, JSON.stringify(brandSettings));
-    
+    // Header/footer are now rendered as fixed elements within the page content
+    // Using @page { margin: 0 } and position:fixed in the page CSS
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
-      margin: {
-        top: hasHeader ? "25mm" : `${margins.top}mm`,
-        right: `${margins.right}mm`,
-        bottom: hasFooter ? "25mm" : `${margins.bottom}mm`,
-        left: `${margins.left}mm`,
-      },
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
-      displayHeaderFooter: showHeaderFooter,
-      headerTemplate: hasHeader ? headerTemplate : "<span></span>",
-      footerTemplate: hasFooter ? footerTemplate : "<span></span>",
+      displayHeaderFooter: false,
       preferCSSPageSize: false,
     });
 
