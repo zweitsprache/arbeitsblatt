@@ -99,7 +99,6 @@ export function WorksheetViewer({
                 .print-header { position: fixed; top: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
                 .print-header img { height: 8mm; width: auto; }
                 .print-footer { position: fixed; bottom: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
-                .print-content { padding-top: ${showPrintHeader ? "25mm" : "20mm"}; padding-bottom: ${showPrintFooter ? "25mm" : "20mm"}; padding-left: 20mm; padding-right: 20mm; }
               `,
             }}
           />
@@ -137,7 +136,7 @@ export function WorksheetViewer({
         </>
       )}
       <div
-        className={`mx-auto ${mode === "print" ? "print-content" : "py-8 px-4"}`}
+        className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
         style={{ maxWidth: mode === "print" ? undefined : pageWidth }}
       >
         {mode === "online" && (

@@ -81,7 +81,7 @@ export async function POST(
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      margin: { top: "25mm", right: "20mm", bottom: "25mm", left: "20mm" },
       printBackground: true,
       displayHeaderFooter: false,
       preferCSSPageSize: false,
