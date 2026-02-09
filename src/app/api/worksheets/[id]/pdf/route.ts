@@ -72,15 +72,26 @@ export async function POST(
     }
   }
 
-  // Puppeteer header/footer templates can't load external fonts - use system fallbacks
-  // Encode Sans → sans-serif, Asap Condensed → Arial Narrow/sans-serif
-  const fontStack = brand === "lingostar" 
-    ? "system-ui, -apple-system, sans-serif" 
-    : "'Arial Narrow', Arial, sans-serif";
+  // Embed Google Fonts as base64 for Puppeteer header/footer templates
+  let fontDataUri = "";
+  const fontFileName = brand === "lingostar" ? "encode-sans.woff2" : "asap-condensed.woff2";
+  const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  try {
+    const fontPath = path.join(process.cwd(), "public", "fonts", fontFileName);
+    const fontContent = fs.readFileSync(fontPath);
+    fontDataUri = `data:font/woff2;base64,${fontContent.toString("base64")}`;
+  } catch (e) {
+    console.error("[PDF] Failed to load font:", e);
+  }
+
+  const fontFaceRule = fontDataUri 
+    ? `@font-face { font-family: '${fontFamily}'; src: url('${fontDataUri}') format('woff2'); font-weight: 400 600; font-style: normal; }`
+    : "";
   
   const headerTemplate = `
     <style>
-      .header { width: 100%; height: 20mm; font-family: ${fontStack}; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
+      ${fontFaceRule}
+      .header { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
       .header img { height: 8mm; width: auto; }
     </style>
     <div class="header">
@@ -95,7 +106,8 @@ export async function POST(
 
   const footerTemplate = `
     <style>
-      .footer { width: 100%; height: 20mm; font-family: ${fontStack}; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
+      ${fontFaceRule}
+      .footer { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
     </style>
     <div class="footer">
       <div>${brandSettings.footerLeft || ""}</div>
