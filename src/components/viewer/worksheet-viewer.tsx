@@ -87,7 +87,9 @@ export function WorksheetViewer({
           <style
             dangerouslySetInnerHTML={{
               __html: `
-                @page { margin: 0; }
+                @page { 
+                  margin: ${showPrintHeader ? "25mm" : "20mm"} 20mm ${showPrintFooter ? "25mm" : "20mm"} 20mm;
+                }
                 html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
@@ -96,10 +98,9 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                .print-header { position: fixed; top: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
+                .print-header { position: fixed; top: 0; left: 0; right: 0; padding: 10mm 10mm 0 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10pt; color: #666; z-index: 1000; }
                 .print-header img { height: 8mm; width: auto; }
-                .print-footer { position: fixed; bottom: 10mm; left: 10mm; right: 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
-                .print-content { padding-top: ${showPrintHeader ? "25mm" : "20mm"}; padding-bottom: ${showPrintFooter ? "25mm" : "20mm"}; padding-left: 20mm; padding-right: 20mm; }
+                .print-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 10mm 10mm 10mm; height: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; color: #666; z-index: 1000; }
               `,
             }}
           />
@@ -137,7 +138,7 @@ export function WorksheetViewer({
         </>
       )}
       <div
-        className={`mx-auto ${mode === "print" ? "print-content" : "py-8 px-4"}`}
+        className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
         style={{ maxWidth: mode === "print" ? undefined : pageWidth }}
       >
         {mode === "online" && (

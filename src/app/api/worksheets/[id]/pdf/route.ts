@@ -76,15 +76,14 @@ export async function POST(
 
     console.log(`[PDF] Generating with brand=${brand}`);
     
-    // Header/footer are now rendered as fixed elements within the page content
-    // Using @page { margin: 0 } and position:fixed in the page CSS
+    // Header/footer are rendered as fixed elements within the page content
+    // @page margins in the CSS control content area on each page
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
       landscape: settings.orientation === "landscape",
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
       displayHeaderFooter: false,
-      preferCSSPageSize: false,
+      preferCSSPageSize: true,
     });
 
     await browser.close();
