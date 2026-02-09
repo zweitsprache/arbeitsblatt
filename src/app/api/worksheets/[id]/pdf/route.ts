@@ -72,14 +72,15 @@ export async function POST(
     }
   }
 
-  // Google Fonts import for header/footer
-  const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
-  const googleFontsImport = `@import url('https://fonts.googleapis.com/css2?family=${fontFamily.replace(/ /g, "+")}:wght@400;500;600;700&display=swap');`;
+  // Puppeteer header/footer templates can't load external fonts - use system fallbacks
+  // Encode Sans → sans-serif, Asap Condensed → Arial Narrow/sans-serif
+  const fontStack = brand === "lingostar" 
+    ? "system-ui, -apple-system, sans-serif" 
+    : "'Arial Narrow', Arial, sans-serif";
   
   const headerTemplate = `
     <style>
-      ${googleFontsImport}
-      .header { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
+      .header { width: 100%; height: 20mm; font-family: ${fontStack}; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
       .header img { height: 8mm; width: auto; }
     </style>
     <div class="header">
@@ -94,8 +95,7 @@ export async function POST(
 
   const footerTemplate = `
     <style>
-      ${googleFontsImport}
-      .footer { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
+      .footer { width: 100%; height: 20mm; font-family: ${fontStack}; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
     </style>
     <div class="footer">
       <div>${brandSettings.footerLeft || ""}</div>
