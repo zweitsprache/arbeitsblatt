@@ -111,6 +111,7 @@ export function WorksheetViewer({
                   justify-content: space-between;
                   align-items: flex-start;
                   font-size: 10pt;
+                  line-height: 1.2;
                   color: #666;
                 }
                 .print-header-content img { height: 8mm; width: auto; }
@@ -118,6 +119,7 @@ export function WorksheetViewer({
                 .print-footer-content {
                   height: 25mm;
                   padding: 0 10mm 10mm 10mm;
+                  line-height: 1.2;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
