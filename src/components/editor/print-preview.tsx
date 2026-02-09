@@ -75,7 +75,7 @@ export function PrintPreview({
   const paddingLeftPx = margins.left * MM_TO_PX;
   const paddingRightPx = margins.right * MM_TO_PX;
 
-  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.headerLeft || !!brandSettings.headerRight);
+  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.headerRight);
   const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerLeft || !!brandSettings.footerCenter || !!brandSettings.footerRight);
 
   // Available content height per page (header/footer are now in margins, don't reduce content)
@@ -370,20 +370,18 @@ p { widows: 2; orphans: 2; }
                     />
                   )}
 
-                  {/* Header */}
-                  {hasHeader && (brandSettings.headerLeft || brandSettings.headerRight || state.settings.headerText) && (
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-3 shrink-0">
-                      <div className="flex items-center gap-2">
-                        {brandSettings.headerLeft && (
-                          <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
-                        )}
-                      </div>
-                      {brandSettings.headerRight ? (
-                        <div dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }} />
-                      ) : state.settings.headerText ? (
-                        <span>{state.settings.headerText}</span>
-                      ) : null}
-                    </div>
+                  {/* Header Right - absolute positioned at 10mm from top/right */}
+                  {brandSettings.headerRight && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: `${10 * MM_TO_PX}px`,
+                        right: `${10 * MM_TO_PX}px`,
+                        textAlign: "right",
+                      }}
+                      className="text-[10px] text-gray-400"
+                      dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
+                    />
                   )}
 
                   {/* Blocks for this page */}

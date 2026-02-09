@@ -393,15 +393,6 @@ export function EditorToolbar() {
               <p className="text-xs text-muted-foreground mt-1">{t("brandLogoHelp")}</p>
             </div>
             <div>
-              <Label className="text-sm font-medium">{t("headerLeft")}</Label>
-              <textarea
-                value={currentBrandSettings.headerLeft}
-                onChange={(e) => updateBrandSettings({ headerLeft: e.target.value })}
-                placeholder="HTML..."
-                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
               <Label className="text-sm font-medium">{t("headerRight")}</Label>
               <textarea
                 value={currentBrandSettings.headerRight}

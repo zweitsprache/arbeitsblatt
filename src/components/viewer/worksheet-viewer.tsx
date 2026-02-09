@@ -168,21 +168,21 @@ export function WorksheetViewer({
               }}
             />
           )}
-          {/* Brand header for print mode */}
-          {mode === "print" && settings.showHeader && (brandSettings.headerLeft || brandSettings.headerRight) && (
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-              <div className="flex items-center gap-2">
-                {brandSettings.headerLeft && (
-                  <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
-                )}
-              </div>
-              {brandSettings.headerRight && (
-                <div dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }} />
-              )}
-            </div>
+          {/* Header Right - absolute positioned at 10mm from top/right */}
+          {mode === "print" && settings.showHeader && brandSettings.headerRight && (
+            <div
+              style={{
+                position: "absolute",
+                top: "10mm",
+                right: "10mm",
+                textAlign: "right",
+              }}
+              className="text-xs text-gray-500"
+              dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
+            />
           )}
           {/* Legacy header text fallback */}
-          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerLeft && !brandSettings.headerRight && !brandSettings.logo && (
+          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerRight && !brandSettings.logo && (
             <div className="text-center text-sm text-gray-500 mb-4">
               {settings.headerText}
             </div>
