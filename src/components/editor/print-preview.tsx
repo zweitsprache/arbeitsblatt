@@ -323,7 +323,7 @@ p { widows: 2; orphans: 2; }
               <React.Fragment key={pageIndex}>
                 {/* Single A4 page */}
                 <div
-                  className="bg-white shadow-2xl border border-border/50 relative shrink-0"
+                  className="bg-white shadow-2xl border border-border/50 relative shrink-0 flex flex-col"
                   style={{
                     width: pageWidthPx,
                     height: pageHeightPx,
@@ -355,16 +355,9 @@ p { widows: 2; orphans: 2; }
                     }}
                   />
 
-                  {/* Header - positioned in top margin area */}
+                  {/* Header */}
                   {hasHeader && (
-                    <div 
-                      className="absolute flex items-center justify-between text-[10px] text-gray-400"
-                      style={{
-                        top: paddingTopPx * 0.25,
-                        left: paddingLeftPx,
-                        right: paddingRightPx,
-                      }}
-                    >
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-3 shrink-0">
                       <div className="flex items-center gap-2">
                         {brandSettings.logo && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -383,7 +376,7 @@ p { widows: 2; orphans: 2; }
                   )}
 
                   {/* Blocks for this page */}
-                  <div className="space-y-6">
+                  <div className="space-y-6 flex-1">
                     {page.blockIndices.length === 0 && pageIndex === 0 ? (
                       <div className="flex items-center justify-center py-20 text-muted-foreground/50">
                         <p className="text-sm">{t("noBlocks")}</p>
@@ -404,16 +397,9 @@ p { widows: 2; orphans: 2; }
                     )}
                   </div>
 
-                  {/* Footer - positioned in bottom margin area */}
+                  {/* Footer */}
                   {hasFooter && (
-                    <div
-                      className="absolute flex items-center justify-between text-[10px] text-gray-400"
-                      style={{
-                        left: paddingLeftPx,
-                        right: paddingRightPx,
-                        bottom: paddingBottomPx * 0.25,
-                      }}
-                    >
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mt-auto pt-3 shrink-0">
                       <div>
                         {brandSettings.footerLeft ? (
                           <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />

@@ -150,16 +150,13 @@ export function WorksheetViewer({
               ? {
                   fontSize: settings.fontSize,
                   fontFamily: fontFamily,
-                  minHeight: "100vh",
-                  display: "flex",
-                  flexDirection: "column",
                 }
               : undefined
           }
         >
           {/* Brand header for print mode */}
           {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerRight) && (
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-4 pb-2 border-b border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
               <div className="flex items-center gap-2">
                 {brandSettings.logo && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -176,12 +173,12 @@ export function WorksheetViewer({
           )}
           {/* Legacy header text fallback */}
           {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerLeft && !brandSettings.headerRight && !brandSettings.logo && (
-            <div className="text-center text-sm text-gray-500 mb-4 pb-2 border-b">
+            <div className="text-center text-sm text-gray-500 mb-4">
               {settings.headerText}
             </div>
           )}
 
-          <div className="space-y-6 flex-1">
+          <div className="space-y-6">
             {visibleBlocks.map((block) => (
               <div
                 key={block.id}
@@ -200,7 +197,7 @@ export function WorksheetViewer({
 
           {/* Brand footer for print mode */}
           {mode === "print" && settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight) && (
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-auto pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500 mt-8">
               <div>
                 {brandSettings.footerLeft && (
                   <div dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }} />
@@ -220,7 +217,7 @@ export function WorksheetViewer({
           )}
           {/* Legacy footer text fallback */}
           {settings.showFooter && settings.footerText && !brandSettings.footerLeft && !brandSettings.footerCenter && !brandSettings.footerRight && (
-            <div className="text-center text-sm text-muted-foreground mt-8 pt-2 border-t">
+            <div className="text-center text-sm text-muted-foreground mt-8">
               {settings.footerText}
             </div>
           )}
