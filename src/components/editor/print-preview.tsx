@@ -355,16 +355,16 @@ p { widows: 2; orphans: 2; }
                     }}
                   />
 
-                  {/* Logo - absolute positioned at 10mm from page edges (scaled) */}
+                  {/* Logo - absolute positioned at 10mm from page edges */}
                   {brandSettings.logo && (
                     <img
                       src={brandSettings.logo}
                       alt=""
                       style={{
                         position: "absolute",
-                        top: `${10 * MM_TO_PX * scale}px`,
-                        left: `${10 * MM_TO_PX * scale}px`,
-                        height: `${8 * MM_TO_PX * scale}px`,
+                        top: `${10 * MM_TO_PX}px`,
+                        left: `${10 * MM_TO_PX}px`,
+                        height: `${8 * MM_TO_PX}px`,
                         width: "auto",
                       }}
                     />
