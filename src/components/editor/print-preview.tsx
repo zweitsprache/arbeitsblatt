@@ -97,7 +97,7 @@ export function PrintPreview({
     if (open) {
       setMeasureKey((k) => k + 1);
     }
-  }, [open, visibleBlocks, margins, fontSize, fontFamily, state.settings.pageSize, state.settings.orientation, state.settings.brand]);
+  }, [open, visibleBlocks, margins, fontSize, effectiveFontFamily, state.settings.pageSize, state.settings.orientation, state.settings.brand]);
 
   // Measure block heights and paginate
   const paginate = useCallback(() => {

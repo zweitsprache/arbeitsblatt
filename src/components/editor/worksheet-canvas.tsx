@@ -12,7 +12,7 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
-import { BRAND_FONTS } from "@/types/worksheet";
+
 
 function DropIndicator({ isActive }: { isActive: boolean }) {
   return (
@@ -65,21 +65,12 @@ export function WorksheetCanvas({
 
   // Page dimensions (A4 at 96 DPI = 794 x 1123)
   const pageWidth = state.settings.pageSize === "a4" ? 794 : 816;
-  const brandFonts = BRAND_FONTS[state.settings.brand || "edoomio"];
 
   return (
     <div 
       className="flex-1 overflow-auto canvas-scroll"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      {/* Headline font style for editor */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .editor-canvas h1, .editor-canvas h2, .editor-canvas h3,
-        .editor-canvas h4, .editor-canvas h5, .editor-canvas h6 {
-          font-family: ${brandFonts.headlineFont};
-          font-weight: ${brandFonts.headlineWeight};
-        }
-      ` }} />
       <div className="flex justify-center py-8 px-4">
         <div
           ref={state.blocks.length === 0 ? setCanvasRef : undefined}
@@ -89,7 +80,7 @@ export function WorksheetCanvas({
             width: pageWidth,
             minHeight: 1123,
             padding: `${state.settings.margins.top}px ${state.settings.margins.right}px ${state.settings.margins.bottom}px ${state.settings.margins.left}px`,
-            fontFamily: brandFonts.bodyFont,
+            fontFamily: "'Asap Condensed', sans-serif",
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {

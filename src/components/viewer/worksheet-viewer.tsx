@@ -212,7 +212,7 @@ export function WorksheetViewer({
                 width={28}
                 height={28}
               />
-              <h1 className="text-2xl font-bold">{title}</h1>
+              <h1 className="font-bold" style={{ fontSize: 18 }}>{title}</h1>
             </div>
             {settings.showHeader && settings.headerText && (
               <p className="text-sm text-muted-foreground mt-2">{settings.headerText}</p>
