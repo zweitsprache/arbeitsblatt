@@ -323,15 +323,13 @@ p { widows: 2; orphans: 2; }
               <React.Fragment key={pageIndex}>
                 {/* Single A4 page */}
                 <div
-                  className="bg-white shadow-2xl border border-border/50 relative shrink-0 flex flex-col"
+                  className="bg-white shadow-2xl border border-border/50 relative shrink-0"
                   style={{
                     width: pageWidthPx,
                     height: pageHeightPx,
-                    padding: `${paddingTopPx}px ${paddingRightPx}px ${paddingBottomPx}px ${paddingLeftPx}px`,
                     fontFamily: effectiveFontFamily,
                     fontSize: `${fontSize}px`,
                     lineHeight: 1.5,
-                    overflow: "hidden",
                   }}
                 >
                   {/* Page number label */}
@@ -355,28 +353,28 @@ p { widows: 2; orphans: 2; }
                     }}
                   />
 
-                  {/* Logo - absolute positioned at 10mm from page edges */}
+                  {/* Logo - positioned at 10mm from page edges */}
                   {brandSettings.logo && (
                     <img
                       src={brandSettings.logo}
                       alt=""
                       style={{
                         position: "absolute",
-                        top: `${10 * MM_TO_PX - paddingTopPx}px`,
-                        left: `${10 * MM_TO_PX - paddingLeftPx}px`,
+                        top: `${10 * MM_TO_PX}px`,
+                        left: `${10 * MM_TO_PX}px`,
                         height: `${8 * MM_TO_PX}px`,
                         width: "auto",
                       }}
                     />
                   )}
 
-                  {/* Header Right - absolute positioned at 10mm from top/right */}
+                  {/* Header Right - positioned at 10mm from top/right */}
                   {brandSettings.headerRight && (
                     <div
                       style={{
                         position: "absolute",
-                        top: `${10 * MM_TO_PX - paddingTopPx}px`,
-                        right: `${10 * MM_TO_PX - paddingRightPx}px`,
+                        top: `${10 * MM_TO_PX}px`,
+                        right: `${10 * MM_TO_PX}px`,
                         textAlign: "right",
                       }}
                       className="text-[10px] text-gray-400"
@@ -384,8 +382,18 @@ p { widows: 2; orphans: 2; }
                     />
                   )}
 
-                  {/* Blocks for this page */}
-                  <div className="space-y-6 flex-1">
+                  {/* Content area with margins */}
+                  <div
+                    className="absolute flex flex-col overflow-hidden"
+                    style={{
+                      top: paddingTopPx,
+                      left: paddingLeftPx,
+                      right: paddingRightPx,
+                      bottom: paddingBottomPx,
+                    }}
+                  >
+                    {/* Blocks for this page */}
+                    <div className="space-y-6 flex-1">
                     {page.blockIndices.length === 0 && pageIndex === 0 ? (
                       <div className="flex items-center justify-center py-20 text-muted-foreground/50">
                         <p className="text-sm">{t("noBlocks")}</p>
@@ -428,6 +436,7 @@ p { widows: 2; orphans: 2; }
                       </div>
                     </div>
                   )}
+                  </div>{/* End content area */}
                 </div>
 
                 {/* Page break indicator between pages */}
