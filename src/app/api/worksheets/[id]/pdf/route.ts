@@ -72,25 +72,29 @@ export async function POST(
     }
   }
 
-  // Embed Google Fonts as base64 for Puppeteer header/footer templates
-  let fontDataUri = "";
-  const fontFileName = brand === "lingostar" ? "encode-sans.woff2" : "asap-condensed.woff2";
+  // Embed Google Fonts as base64 TTF for Puppeteer header/footer templates
   const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  const fontPrefix = brand === "lingostar" ? "encode-sans" : "asap-condensed";
+  let fontFaceRules = "";
+  
   try {
-    const fontPath = path.join(process.cwd(), "public", "fonts", fontFileName);
-    const fontContent = fs.readFileSync(fontPath);
-    fontDataUri = `data:font/woff2;base64,${fontContent.toString("base64")}`;
+    const font400Path = path.join(process.cwd(), "public", "fonts", `${fontPrefix}-400.ttf`);
+    const font600Path = path.join(process.cwd(), "public", "fonts", `${fontPrefix}-600.ttf`);
+    const font400Content = fs.readFileSync(font400Path);
+    const font600Content = fs.readFileSync(font600Path);
+    const font400Uri = `data:font/ttf;base64,${font400Content.toString("base64")}`;
+    const font600Uri = `data:font/ttf;base64,${font600Content.toString("base64")}`;
+    fontFaceRules = `
+      @font-face { font-family: '${fontFamily}'; src: url('${font400Uri}') format('truetype'); font-weight: 400; font-style: normal; }
+      @font-face { font-family: '${fontFamily}'; src: url('${font600Uri}') format('truetype'); font-weight: 600; font-style: normal; }
+    `;
   } catch (e) {
-    console.error("[PDF] Failed to load font:", e);
+    console.error("[PDF] Failed to load fonts:", e);
   }
-
-  const fontFaceRule = fontDataUri 
-    ? `@font-face { font-family: '${fontFamily}'; src: url('${fontDataUri}') format('woff2'); font-weight: 400 600; font-style: normal; }`
-    : "";
   
   const headerTemplate = `
     <style>
-      ${fontFaceRule}
+      ${fontFaceRules}
       .header { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
       .header img { height: 8mm; width: auto; }
     </style>
@@ -106,7 +110,7 @@ export async function POST(
 
   const footerTemplate = `
     <style>
-      ${fontFaceRule}
+      ${fontFaceRules}
       .footer { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
     </style>
     <div class="footer">
