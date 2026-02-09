@@ -89,6 +89,11 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; margin: 0; padding: 0; }
+                .print-header-logo { position: fixed; top: 10mm; left: 10mm; }
+                .print-header-right { position: fixed; top: 10mm; right: 10mm; }
+                .print-footer-left { position: fixed; bottom: 10mm; left: 10mm; }
+                .print-footer-center { position: fixed; bottom: 10mm; left: 50%; transform: translateX(-50%); }
+                .print-footer-right { position: fixed; bottom: 10mm; right: 10mm; }
               `,
             }}
           />
@@ -126,31 +131,19 @@ export function WorksheetViewer({
               : undefined
           }
         >
-          {/* Logo - fixed positioned at 10mm from page edges (need -15mm to reach into 25mm margin) */}
+          {/* Print running elements - use CSS classes for fixed positioning */}
           {mode === "print" && settings.showHeader && brandSettings.logo && (
             <img
               src={brandSettings.logo}
               alt=""
-              style={{
-                position: "fixed",
-                top: "-15mm",
-                left: `${10 - settings.margins.left}mm`,
-                height: "8mm",
-                width: "auto",
-              }}
+              className="print-header-logo"
+              style={{ height: "8mm", width: "auto" }}
             />
           )}
-          {/* Header Right - fixed positioned at 10mm from top/right */}
           {mode === "print" && settings.showHeader && brandSettings.headerRight && (
             <div
-              style={{
-                position: "fixed",
-                top: "-15mm",
-                right: `${10 - settings.margins.right}mm`,
-                textAlign: "right",
-                fontSize: "10pt",
-                color: "#666",
-              }}
+              className="print-header-right"
+              style={{ fontSize: "10pt", color: "#666", textAlign: "right" }}
               dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
             />
           )}
@@ -179,31 +172,18 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Footer Left - fixed at 10mm from left/bottom (need -15mm to reach into 25mm margin) */}
+          {/* Print running footer elements */}
           {mode === "print" && settings.showFooter && brandSettings.footerLeft && (
             <div
-              style={{
-                position: "fixed",
-                bottom: "-15mm",
-                left: `${10 - settings.margins.left}mm`,
-                fontSize: "10pt",
-                color: "#666",
-              }}
+              className="print-footer-left"
+              style={{ fontSize: "10pt", color: "#666" }}
               dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
             />
           )}
-          {/* Footer Center - fixed centered at 10mm from bottom */}
           {mode === "print" && settings.showFooter && (brandSettings.footerCenter || settings.footerText) && (
             <div
-              style={{
-                position: "fixed",
-                bottom: "-15mm",
-                left: "50%",
-                transform: "translateX(-50%)",
-                fontSize: "10pt",
-                color: "#666",
-                textAlign: "center",
-              }}
+              className="print-footer-center"
+              style={{ fontSize: "10pt", color: "#666", textAlign: "center" }}
             >
               {brandSettings.footerCenter ? (
                 <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
@@ -212,17 +192,10 @@ export function WorksheetViewer({
               ) : null}
             </div>
           )}
-          {/* Footer Right - fixed at 10mm from right/bottom */}
           {mode === "print" && settings.showFooter && brandSettings.footerRight && (
             <div
-              style={{
-                position: "fixed",
-                bottom: "-15mm",
-                right: `${10 - settings.margins.right}mm`,
-                fontSize: "10pt",
-                color: "#666",
-                textAlign: "right",
-              }}
+              className="print-footer-right"
+              style={{ fontSize: "10pt", color: "#666", textAlign: "right" }}
               dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}
             />
           )}
