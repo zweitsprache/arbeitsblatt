@@ -80,7 +80,7 @@ export function WorksheetViewer({
               __html: `
                 @page {
                   size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
-                  margin: 0;
+                  margin: 25mm ${settings.margins.right}mm 25mm ${settings.margins.left}mm;
                 }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
@@ -96,10 +96,7 @@ export function WorksheetViewer({
       )}
       <div
         className={`mx-auto ${mode === "print" ? "" : "py-8 px-4"}`}
-        style={{ 
-          maxWidth: pageWidth,
-          ...(mode === "print" ? { paddingLeft: `${settings.margins.left}mm`, paddingRight: `${settings.margins.right}mm` } : {}),
-        }}
+        style={{ maxWidth: pageWidth }}
       >
         {mode === "online" && (
           <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">
@@ -129,27 +126,27 @@ export function WorksheetViewer({
               : undefined
           }
         >
-          {/* Logo - fixed positioned at 10mm from page edges (prints on every page) */}
+          {/* Logo - fixed positioned at 10mm from page edges (need -15mm to reach into 25mm margin) */}
           {mode === "print" && settings.showHeader && brandSettings.logo && (
             <img
               src={brandSettings.logo}
               alt=""
               style={{
                 position: "fixed",
-                top: "10mm",
-                left: "10mm",
+                top: "-15mm",
+                left: `${10 - settings.margins.left}mm`,
                 height: "8mm",
                 width: "auto",
               }}
             />
           )}
-          {/* Header Right - fixed positioned at 10mm from top/right (prints on every page) */}
+          {/* Header Right - fixed positioned at 10mm from top/right */}
           {mode === "print" && settings.showHeader && brandSettings.headerRight && (
             <div
               style={{
                 position: "fixed",
-                top: "10mm",
-                right: "10mm",
+                top: "-15mm",
+                right: `${10 - settings.margins.right}mm`,
                 textAlign: "right",
                 fontSize: "10pt",
                 color: "#666",
@@ -164,8 +161,8 @@ export function WorksheetViewer({
             </div>
           )}
 
-          {/* Content wrapper - starts at 25mm from top, ends at 25mm from bottom in print mode */}
-          <div style={mode === "print" ? { paddingTop: "25mm", paddingBottom: "25mm" } : undefined} className="space-y-6">
+          {/* Content wrapper - no extra padding needed, @page margins handle it */}
+          <div className="space-y-6">
             {visibleBlocks.map((block) => (
               <div
                 key={block.id}
@@ -182,13 +179,13 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {/* Footer Left - fixed at 10mm from left/bottom */}
+          {/* Footer Left - fixed at 10mm from left/bottom (need -15mm to reach into 25mm margin) */}
           {mode === "print" && settings.showFooter && brandSettings.footerLeft && (
             <div
               style={{
                 position: "fixed",
-                bottom: "10mm",
-                left: "10mm",
+                bottom: "-15mm",
+                left: `${10 - settings.margins.left}mm`,
                 fontSize: "10pt",
                 color: "#666",
               }}
@@ -200,7 +197,7 @@ export function WorksheetViewer({
             <div
               style={{
                 position: "fixed",
-                bottom: "10mm",
+                bottom: "-15mm",
                 left: "50%",
                 transform: "translateX(-50%)",
                 fontSize: "10pt",
@@ -220,8 +217,8 @@ export function WorksheetViewer({
             <div
               style={{
                 position: "fixed",
-                bottom: "10mm",
-                right: "10mm",
+                bottom: "-15mm",
+                right: `${10 - settings.margins.right}mm`,
                 fontSize: "10pt",
                 color: "#666",
                 textAlign: "right",
