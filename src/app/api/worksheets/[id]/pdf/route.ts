@@ -55,13 +55,17 @@ export async function POST(
       ? (settings.margins as { top: number; right: number; bottom: number; left: number })
       : { top: 20, right: 20, bottom: 20, left: 20 };
 
-  // Build Puppeteer header/footer templates
+  // Build Puppeteer header/footer templates - they need explicit width/height and margin
   const logoUrl = brandSettings.logo ? `${baseUrl}${brandSettings.logo}` : "";
   
   const headerTemplate = `
-    <div style="width: 100%; font-size: 10pt; color: #666; padding: 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;">
+    <style>
+      .header { width: 100%; height: 20mm; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
+      .header img { height: 8mm; width: auto; }
+    </style>
+    <div class="header">
       <div>
-        ${logoUrl ? `<img src="${logoUrl}" style="height: 8mm; width: auto;" />` : ""}
+        ${logoUrl ? `<img src="${logoUrl}" />` : ""}
       </div>
       <div style="text-align: right;">
         ${brandSettings.headerRight || ""}
@@ -70,7 +74,10 @@ export async function POST(
   `;
 
   const footerTemplate = `
-    <div style="width: 100%; font-size: 10pt; color: #666; padding: 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;">
+    <style>
+      .footer { width: 100%; height: 20mm; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
+    </style>
+    <div class="footer">
       <div>${brandSettings.footerLeft || ""}</div>
       <div style="text-align: center;">${brandSettings.footerCenter || settings.footerText || ""}</div>
       <div style="text-align: right;">${brandSettings.footerRight || ""}</div>
@@ -108,6 +115,9 @@ export async function POST(
     const hasHeader = Boolean(settings.showHeader && (logoUrl || brandSettings.headerRight));
     const hasFooter = Boolean(settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText));
     const showHeaderFooter = hasHeader || hasFooter;
+    
+    console.log(`[PDF] hasHeader=${hasHeader}, hasFooter=${hasFooter}, logoUrl=${logoUrl}`);
+    console.log(`[PDF] brandSettings:`, JSON.stringify(brandSettings));
     
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",

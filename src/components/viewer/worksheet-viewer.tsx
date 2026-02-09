@@ -78,10 +78,6 @@ export function WorksheetViewer({
           <style
             dangerouslySetInnerHTML={{
               __html: `
-                @page {
-                  size: ${settings.pageSize === "a4" ? "A4" : "letter"} ${settings.orientation || "portrait"};
-                  margin: 0;
-                }
                 html, body { margin: 0; padding: 0; }
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
@@ -90,7 +86,6 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                .print-header-footer { display: none; }
               `,
             }}
           />
