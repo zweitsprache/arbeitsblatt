@@ -265,9 +265,32 @@ export type WorksheetBlock =
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
 
+export interface BrandSettings {
+  logo: string; // URL or data URI
+  headerLeft: string; // HTML
+  headerCenter: string; // HTML
+  footerCenter: string; // HTML
+}
+
+export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
+  edoomio: {
+    logo: "",
+    headerLeft: "",
+    headerCenter: "",
+    footerCenter: "",
+  },
+  lingostar: {
+    logo: "",
+    headerLeft: "",
+    headerCenter: "",
+    footerCenter: "",
+  },
+};
+
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
   brand: Brand;
+  brandSettings: BrandSettings;
   pageSize: "a4" | "letter";
   orientation: "portrait" | "landscape";
   margins: {
@@ -300,6 +323,7 @@ export interface WorksheetDocument {
 // ─── Default settings ───────────────────────────────────────
 export const DEFAULT_SETTINGS: WorksheetSettings = {
   brand: "edoomio",
+  brandSettings: DEFAULT_BRAND_SETTINGS.edoomio,
   pageSize: "a4",
   orientation: "portrait",
   margins: { top: 20, right: 20, bottom: 20, left: 20 },

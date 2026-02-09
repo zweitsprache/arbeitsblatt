@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -36,6 +36,12 @@ export function WorksheetViewer({
   const fontUrl = isLingostar
     ? "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@200;300;400;500;600;700;800;900&display=swap"
     : "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap";
+
+  // Get brand settings with fallbacks
+  const brandSettings = {
+    ...DEFAULT_BRAND_SETTINGS[settings.brand || "edoomio"],
+    ...settings.brandSettings,
+  };
 
   const hasInteractiveBlocks = visibleBlocks.some(
     (b) =>
@@ -148,7 +154,26 @@ export function WorksheetViewer({
               : undefined
           }
         >
-          {mode === "print" && settings.showHeader && settings.headerText && (
+          {/* Brand header for print mode */}
+          {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerCenter) && (
+            <div className="flex items-center justify-between mb-4 pb-2 border-b text-sm text-gray-600">
+              <div className="flex items-center gap-2 flex-1">
+                {brandSettings.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={brandSettings.logo} alt="" className="h-8 w-auto" />
+                )}
+                {brandSettings.headerLeft && (
+                  <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
+                )}
+              </div>
+              {brandSettings.headerCenter && (
+                <div className="flex-1 text-center" dangerouslySetInnerHTML={{ __html: brandSettings.headerCenter }} />
+              )}
+              <div className="flex-1" />
+            </div>
+          )}
+          {/* Legacy header text fallback */}
+          {mode === "print" && settings.showHeader && settings.headerText && !brandSettings.headerCenter && (
             <div className="text-center text-sm text-gray-500 mb-4 pb-2 border-b">
               {settings.headerText}
             </div>
@@ -171,7 +196,12 @@ export function WorksheetViewer({
             ))}
           </div>
 
-          {settings.showFooter && settings.footerText && (
+          {/* Brand footer for print mode */}
+          {mode === "print" && settings.showFooter && brandSettings.footerCenter && (
+            <div className="text-center text-sm text-muted-foreground mt-8 pt-2 border-t" dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+          )}
+          {/* Legacy footer text fallback */}
+          {settings.showFooter && settings.footerText && !brandSettings.footerCenter && (
             <div className="text-center text-sm text-muted-foreground mt-8 pt-2 border-t">
               {settings.footerText}
             </div>

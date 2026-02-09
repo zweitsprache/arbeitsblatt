@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Brand } from "@/types/worksheet";
+import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Label } from "@/components/ui/label";
 import {
   Save,
   Printer,
@@ -51,7 +52,23 @@ export function EditorToolbar() {
   const tc = useTranslations("common");
   const [showOnlinePreview, setShowOnlinePreview] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [showBrandSettings, setShowBrandSettings] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Get current brand settings with fallbacks
+  const currentBrandSettings: BrandSettings = {
+    ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
+    ...state.settings.brandSettings,
+  };
+
+  const updateBrandSettings = (updates: Partial<BrandSettings>) => {
+    dispatch({
+      type: "UPDATE_SETTINGS",
+      payload: {
+        brandSettings: { ...currentBrandSettings, ...updates },
+      },
+    });
+  };
 
   const handleDownloadPdf = async () => {
     if (!state.worksheetId) {
@@ -154,20 +171,35 @@ export function EditorToolbar() {
         <div className="flex-1" />
 
         {/* Brand selector */}
-        <Select
-          value={state.settings.brand || "edoomio"}
-          onValueChange={(value: Brand) =>
-            dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value } })
-          }
-        >
-          <SelectTrigger className="h-8 w-[130px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="edoomio">edoomio</SelectItem>
-            <SelectItem value="lingostar">lingostar</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1">
+          <Select
+            value={state.settings.brand || "edoomio"}
+            onValueChange={(value: Brand) =>
+              dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value } })
+            }
+          >
+            <SelectTrigger className="h-8 w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="edoomio">edoomio</SelectItem>
+              <SelectItem value="lingostar">lingostar</SelectItem>
+            </SelectContent>
+          </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setShowBrandSettings(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("brandSettings")}</TooltipContent>
+          </Tooltip>
+        </div>
 
         {/* Mode toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
@@ -329,6 +361,54 @@ export function EditorToolbar() {
               settings={state.settings}
               mode="online"
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Brand Settings Dialog */}
+      <Dialog open={showBrandSettings} onOpenChange={setShowBrandSettings}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("brandSettings")} – {state.settings.brand || "edoomio"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium">{t("brandLogo")}</Label>
+              <Input
+                value={currentBrandSettings.logo}
+                onChange={(e) => updateBrandSettings({ logo: e.target.value })}
+                placeholder="https://..."
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">{t("brandLogoHelp")}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("headerLeft")}</Label>
+              <textarea
+                value={currentBrandSettings.headerLeft}
+                onChange={(e) => updateBrandSettings({ headerLeft: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("headerCenter")}</Label>
+              <textarea
+                value={currentBrandSettings.headerCenter}
+                onChange={(e) => updateBrandSettings({ headerCenter: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("footerCenter")}</Label>
+              <textarea
+                value={currentBrandSettings.footerCenter}
+                onChange={(e) => updateBrandSettings({ footerCenter: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

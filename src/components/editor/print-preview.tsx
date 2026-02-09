@@ -4,7 +4,7 @@ import React, { useMemo, useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor } from "@/store/editor-store";
 import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
-import { WorksheetBlock } from "@/types/worksheet";
+import { WorksheetBlock, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,13 +64,19 @@ export function PrintPreview({
     ? "'Encode Sans', sans-serif"
     : "var(--font-asap-condensed), " + fontFamily;
 
+  // Get brand settings with fallbacks
+  const brandSettings = {
+    ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
+    ...state.settings.brandSettings,
+  };
+
   const paddingTopPx = margins.top * MM_TO_PX;
   const paddingBottomPx = margins.bottom * MM_TO_PX;
   const paddingLeftPx = margins.left * MM_TO_PX;
   const paddingRightPx = margins.right * MM_TO_PX;
 
-  const hasHeader = state.settings.showHeader && !!state.settings.headerText;
-  const hasFooter = state.settings.showFooter && !!state.settings.footerText;
+  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.logo || !!brandSettings.headerLeft || !!brandSettings.headerCenter);
+  const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerCenter);
 
   // Available content height per page
   const contentHeight =
@@ -353,8 +359,24 @@ p { widows: 2; orphans: 2; }
 
                   {/* Header (on every page or first only — shown for preview) */}
                   {hasHeader && (
-                    <div className="text-center text-sm text-gray-400 mb-3 pb-2 border-b border-gray-200">
-                      {state.settings.headerText}
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 text-sm text-gray-400">
+                      <div className="flex items-center gap-2 flex-1">
+                        {brandSettings.logo && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={brandSettings.logo} alt="" className="h-6 w-auto" />
+                        )}
+                        {brandSettings.headerLeft && (
+                          <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
+                        )}
+                      </div>
+                      <div className="flex-1 text-center">
+                        {brandSettings.headerCenter ? (
+                          <div dangerouslySetInnerHTML={{ __html: brandSettings.headerCenter }} />
+                        ) : (
+                          state.settings.headerText
+                        )}
+                      </div>
+                      <div className="flex-1" />
                     </div>
                   )}
 
@@ -390,7 +412,11 @@ p { widows: 2; orphans: 2; }
                         bottom: paddingBottomPx,
                       }}
                     >
-                      {state.settings.footerText}
+                      {brandSettings.footerCenter ? (
+                        <div dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
+                      ) : (
+                        state.settings.footerText
+                      )}
                     </div>
                   )}
                 </div>

@@ -370,10 +370,16 @@
     "worksheetLibrary": "Arbeitsblatt-Bibliothek"
   },
   "toolbar": {
+    "brandLogo": "Logo-URL",
+    "brandLogoHelp": "URL oder Data-URI für das Logo eingeben",
+    "brandSettings": "Marken-Einstellungen",
     "clickToUnpublish": "Klicken zum Zurückziehen",
     "copied": "Kopiert!",
     "copyLink": "Link kopieren",
     "downloadPdf": "PDF herunterladen",
+    "footerCenter": "Fusszeile (Mitte)",
+    "headerCenter": "Kopfzeile (Mitte)",
+    "headerLeft": "Kopfzeile (links)",
     "onlinePreview": "Online-Vorschau",
     "openInNewTab": "In neuem Tab öffnen",
     "pdfFailed": "PDF-Erstellung fehlgeschlagen: {error}",
