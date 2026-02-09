@@ -265,6 +265,31 @@ export type WorksheetBlock =
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
 
+export interface BrandFontConfig {
+  bodyFont: string;
+  headlineFont: string;
+  headlineWeight: number;
+  bodyWeight: number;
+  googleFontsUrl: string;
+}
+
+export const BRAND_FONTS: Record<Brand, BrandFontConfig> = {
+  edoomio: {
+    bodyFont: "'Asap Condensed', sans-serif",
+    headlineFont: "'Asap Condensed', sans-serif",
+    headlineWeight: 700,
+    bodyWeight: 400,
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap",
+  },
+  lingostar: {
+    bodyFont: "'Encode Sans', sans-serif",
+    headlineFont: "'Merriweather', serif",
+    headlineWeight: 400,
+    bodyWeight: 400,
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@200;300;400;500;600;700;800;900&family=Merriweather:wght@300;400;700&display=swap",
+  },
+};
+
 export interface BrandSettings {
   logo: string; // URL (relative or absolute) or data URI
   headerLeft: string; // HTML

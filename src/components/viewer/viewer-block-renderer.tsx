@@ -32,7 +32,7 @@ import { useTranslations } from "next-intl";
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl" };
-  return <Tag className={`${sizes[block.level]} font-bold`}>{block.content}</Tag>;
+  return <Tag className={`${sizes[block.level]}`}>{block.content}</Tag>;
 }
 
 function TextView({ block }: { block: TextBlock }) {

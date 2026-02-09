@@ -4,7 +4,7 @@ import React, { useMemo, useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor } from "@/store/editor-store";
 import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
-import { WorksheetBlock, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { WorksheetBlock, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,11 +58,9 @@ export function PrintPreview({
   const pageWidthPx = effectiveWidthMM * MM_TO_PX;
   const pageHeightPx = effectiveHeightMM * MM_TO_PX;
 
-  const { margins, fontSize, fontFamily } = state.settings;
-  const isLingostar = state.settings.brand === "lingostar";
-  const effectiveFontFamily = isLingostar
-    ? "'Encode Sans', sans-serif"
-    : "var(--font-asap-condensed), " + fontFamily;
+  const { margins, fontSize } = state.settings;
+  const brandFonts = BRAND_FONTS[state.settings.brand || "edoomio"];
+  const effectiveFontFamily = brandFonts.bodyFont;
 
   // Get brand settings with fallbacks
   const brandSettings = {
@@ -285,6 +283,15 @@ p { widows: 2; orphans: 2; }
           </div>
         </DialogHeader>
 
+        {/* Headline font styles for preview */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .preview-page h1, .preview-page h2, .preview-page h3,
+          .preview-page h4, .preview-page h5, .preview-page h6 {
+            font-family: var(--headline-font);
+            font-weight: var(--headline-weight);
+          }
+        ` }} />
+
         {/* Hidden measurement container — render all blocks here to measure their heights */}
         <div
           ref={measureRef}
@@ -324,13 +331,16 @@ p { widows: 2; orphans: 2; }
               <React.Fragment key={pageIndex}>
                 {/* Single A4 page */}
                 <div
-                  className="bg-white shadow-2xl border border-border/50 relative shrink-0"
+                  className="bg-white shadow-2xl border border-border/50 relative shrink-0 preview-page"
                   style={{
                     width: pageWidthPx,
                     height: pageHeightPx,
                     fontFamily: effectiveFontFamily,
                     fontSize: `${fontSize}px`,
                     lineHeight: 1.5,
+                    // CSS custom properties for headline font
+                    ["--headline-font" as string]: brandFonts.headlineFont,
+                    ["--headline-weight" as string]: brandFonts.headlineWeight,
                   }}
                 >
                   {/* Page number label */}

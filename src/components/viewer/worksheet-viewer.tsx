@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -29,13 +29,10 @@ export function WorksheetViewer({
   );
 
   const pageWidth = settings.pageSize === "a4" ? 794 : 816;
-  const isLingostar = settings.brand === "lingostar";
-  const fontFamily = isLingostar
-    ? "'Encode Sans', sans-serif"
-    : "'Asap Condensed', var(--font-asap-condensed), sans-serif";
-  const fontUrl = isLingostar
-    ? "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@200;300;400;500;600;700;800;900&display=swap"
-    : "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap";
+  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"];
+  const fontFamily = brandFonts.bodyFont;
+  const headlineFont = brandFonts.headlineFont;
+  const fontUrl = brandFonts.googleFontsUrl;
 
   // Get brand settings with fallbacks
   const brandSettings = {
@@ -96,6 +93,7 @@ export function WorksheetViewer({
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
+                h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
 
                 /* Table-based repeating header/footer */
                 .print-table { width: 100%; border-collapse: collapse; }
