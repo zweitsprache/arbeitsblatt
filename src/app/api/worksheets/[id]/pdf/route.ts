@@ -105,8 +105,9 @@ export async function POST(
     await new Promise((r) => setTimeout(r, 500));
 
     // Generate the PDF with Puppeteer header/footer templates
-    const hasHeader = settings.showHeader && (logoUrl || brandSettings.headerRight);
-    const hasFooter = settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText);
+    const hasHeader = Boolean(settings.showHeader && (logoUrl || brandSettings.headerRight));
+    const hasFooter = Boolean(settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText));
+    const showHeaderFooter = hasHeader || hasFooter;
     
     const pdfBuffer = await page.pdf({
       format: settings.pageSize === "a4" ? "A4" : "Letter",
@@ -118,7 +119,7 @@ export async function POST(
         left: `${margins.left}mm`,
       },
       printBackground: true,
-      displayHeaderFooter: hasHeader || hasFooter,
+      displayHeaderFooter: showHeaderFooter,
       headerTemplate: hasHeader ? headerTemplate : "<span></span>",
       footerTemplate: hasFooter ? footerTemplate : "<span></span>",
       preferCSSPageSize: false,
