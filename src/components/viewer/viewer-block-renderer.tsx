@@ -1548,6 +1548,11 @@ function VerbTableView({
   const pronFontSize = isPrint ? 13 : 16;
   const sectionFontSize = isPrint ? 12 : 16;
   const inputFontSize = isPrint ? 13 : 16;
+  const cornerRadius = isPrint ? "rounded-sm" : "rounded-lg";
+  const cornerTL = isPrint ? "rounded-tl-sm" : "rounded-tl-lg";
+  const cornerTR = isPrint ? "rounded-tr-sm" : "rounded-tr-lg";
+  const cornerBL = isPrint ? "rounded-bl-sm" : "rounded-bl-lg";
+  const cornerBR = isPrint ? "rounded-br-sm" : "rounded-br-lg";
 
   const renderSection = (
     label: string,
@@ -1557,7 +1562,7 @@ function VerbTableView({
   ) => (
     <>
       <tr className="bg-muted/50">
-        <td colSpan={colCount} className={`border-b border-border ${cellPadding} font-bold uppercase tracking-wider${isFirst ? " rounded-tl-lg rounded-tr-lg" : ""}`} style={{ fontSize: sectionFontSize }}>
+        <td colSpan={colCount} className={`border-b border-border ${cellPadding} font-bold uppercase tracking-wider${isFirst ? ` ${cornerTL} ${cornerTR}` : ""}`} style={{ fontSize: sectionFontSize }}>
           {label}
         </td>
       </tr>
@@ -1588,7 +1593,7 @@ function VerbTableView({
 
         return (
           <tr key={row.id}>
-            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase${isLastRow ? " rounded-bl-lg" : ""}`} style={{ fontSize: personFontSize }}>
+            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase${isLastRow ? ` ${cornerBL}` : ""}`} style={{ fontSize: personFontSize }}>
               {row.person}
             </td>
             <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase`} style={{ fontSize: personFontSize }}>
@@ -1597,7 +1602,7 @@ function VerbTableView({
             <td className={`border-r ${borderB} border-border ${cellPadding} font-bold`} style={{ fontSize: pronFontSize }}>
               {row.pronoun}
             </td>
-            <td className={`${borderB} border-border ${cellPadding} font-bold${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? " rounded-br-lg" : ""}`}>
+            <td className={`${borderB} border-border ${cellPadding} font-bold${isSplit ? " border-r" : ""}${isLastRow && !isSplit ? ` ${cornerBR}` : ""}`}>
               {showConj1 ? (
                 <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation}</span>
               ) : interactive ? (
@@ -1628,7 +1633,7 @@ function VerbTableView({
               )}
             </td>
             {isSplit && (
-              <td className={`${borderB} border-border ${cellPadding} font-bold${isLastRow ? " rounded-br-lg" : ""}`}>
+              <td className={`${borderB} border-border ${cellPadding} font-bold${isLastRow ? ` ${cornerBR}` : ""}`}>
                 {showConj2 ? (
                   <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation2}</span>
                 ) : interactive ? (
@@ -1687,7 +1692,7 @@ function VerbTableView({
           {block.verb}
         </p>
       )}
-      <table className={`w-full border-separate border-spacing-0 ${isPrint ? "border border-border" : "border-2 border-border"} rounded-lg overflow-hidden`} style={{ fontSize: isPrint ? 13 : 16 }}>
+      <table className={`w-full border-separate border-spacing-0 ${isPrint ? "border border-border" : "border-2 border-border"} ${cornerRadius} overflow-hidden`} style={{ fontSize: isPrint ? 13 : 16 }}>
         <colgroup>
           <col style={{ width: "15%" }} />
           <col style={{ width: "15%" }} />
