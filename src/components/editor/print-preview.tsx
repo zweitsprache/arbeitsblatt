@@ -75,7 +75,7 @@ export function PrintPreview({
   const paddingLeftPx = margins.left * MM_TO_PX;
   const paddingRightPx = margins.right * MM_TO_PX;
 
-  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.logo || !!brandSettings.headerLeft || !!brandSettings.headerRight);
+  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.headerLeft || !!brandSettings.headerRight);
   const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerLeft || !!brandSettings.footerCenter || !!brandSettings.footerRight);
 
   // Available content height per page (header/footer are now in margins, don't reduce content)
@@ -355,14 +355,25 @@ p { widows: 2; orphans: 2; }
                     }}
                   />
 
+                  {/* Logo - absolute positioned at 10mm from page edges (scaled) */}
+                  {brandSettings.logo && (
+                    <img
+                      src={brandSettings.logo}
+                      alt=""
+                      style={{
+                        position: "absolute",
+                        top: `${10 * MM_TO_PX * scale}px`,
+                        left: `${10 * MM_TO_PX * scale}px`,
+                        height: `${8 * MM_TO_PX * scale}px`,
+                        width: "auto",
+                      }}
+                    />
+                  )}
+
                   {/* Header */}
-                  {hasHeader && (
+                  {hasHeader && (brandSettings.headerLeft || brandSettings.headerRight || state.settings.headerText) && (
                     <div className="flex items-center justify-between text-[10px] text-gray-400 mb-3 shrink-0">
                       <div className="flex items-center gap-2">
-                        {brandSettings.logo && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={brandSettings.logo} alt="" className="h-5 w-auto" />
-                        )}
                         {brandSettings.headerLeft && (
                           <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
                         )}

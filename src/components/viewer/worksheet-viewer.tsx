@@ -154,14 +154,24 @@ export function WorksheetViewer({
               : undefined
           }
         >
+          {/* Logo - absolute positioned at 10mm from page edges */}
+          {mode === "print" && settings.showHeader && brandSettings.logo && (
+            <img
+              src={brandSettings.logo}
+              alt=""
+              style={{
+                position: "absolute",
+                top: "10mm",
+                left: "10mm",
+                height: "8mm",
+                width: "auto",
+              }}
+            />
+          )}
           {/* Brand header for print mode */}
-          {mode === "print" && settings.showHeader && (brandSettings.logo || brandSettings.headerLeft || brandSettings.headerRight) && (
+          {mode === "print" && settings.showHeader && (brandSettings.headerLeft || brandSettings.headerRight) && (
             <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
               <div className="flex items-center gap-2">
-                {brandSettings.logo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={brandSettings.logo} alt="" style={{ height: "8mm", width: "auto" }} />
-                )}
                 {brandSettings.headerLeft && (
                   <div dangerouslySetInnerHTML={{ __html: brandSettings.headerLeft }} />
                 )}
