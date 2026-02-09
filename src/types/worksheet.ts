@@ -276,18 +276,18 @@ export interface BrandSettings {
 
 export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
   edoomio: {
-    logo: "",
+    logo: "/logo/arbeitsblatt_logo_icon.svg",
     headerLeft: "",
-    headerRight: "",
-    footerLeft: "",
+    headerRight: "edoomio",
+    footerLeft: "edoomio.com",
     footerCenter: "",
     footerRight: "",
   },
   lingostar: {
-    logo: "",
+    logo: "/logo/lingostar_logo_icon_flat.svg",
     headerLeft: "",
-    headerRight: "",
-    footerLeft: "",
+    headerRight: "lingostar",
+    footerLeft: "lingostar.com",
     footerCenter: "",
     footerRight: "",
   },

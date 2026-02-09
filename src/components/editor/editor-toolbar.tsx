@@ -180,7 +180,7 @@ export function EditorToolbar() {
           <Select
             value={state.settings.brand || "edoomio"}
             onValueChange={(value: Brand) =>
-              dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value } })
+              dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value, brandSettings: DEFAULT_BRAND_SETTINGS[value] } })
             }
           >
             <SelectTrigger className="h-8 w-[130px]">
