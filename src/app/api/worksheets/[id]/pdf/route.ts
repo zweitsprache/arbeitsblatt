@@ -72,21 +72,29 @@ export async function POST(
     }
   }
 
-  // Embed Google Fonts as base64 TTF for Puppeteer header/footer templates
+  // Embed fonts as base64 TTF for Puppeteer header/footer templates
   const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
-  const fontPrefix = brand === "lingostar" ? "encode-sans" : "asap-condensed";
   let fontFaceRules = "";
   
   try {
-    const font400Path = path.join(process.cwd(), "public", "fonts", `${fontPrefix}-400.ttf`);
-    const font600Path = path.join(process.cwd(), "public", "fonts", `${fontPrefix}-600.ttf`);
-    const font400Content = fs.readFileSync(font400Path);
-    const font600Content = fs.readFileSync(font600Path);
-    const font400Uri = `data:font/ttf;base64,${font400Content.toString("base64")}`;
-    const font600Uri = `data:font/ttf;base64,${font600Content.toString("base64")}`;
+    let fontRegularPath: string;
+    let fontBoldPath: string;
+    
+    if (brand === "lingostar") {
+      fontRegularPath = path.join(process.cwd(), "public", "fonts", "EncodeSans-Regular.ttf");
+      fontBoldPath = path.join(process.cwd(), "public", "fonts", "EncodeSans-Bold.ttf");
+    } else {
+      fontRegularPath = path.join(process.cwd(), "public", "fonts", "asap-condensed-400.ttf");
+      fontBoldPath = path.join(process.cwd(), "public", "fonts", "asap-condensed-600.ttf");
+    }
+    
+    const fontRegularContent = fs.readFileSync(fontRegularPath);
+    const fontBoldContent = fs.readFileSync(fontBoldPath);
+    const fontRegularUri = `data:font/ttf;base64,${fontRegularContent.toString("base64")}`;
+    const fontBoldUri = `data:font/ttf;base64,${fontBoldContent.toString("base64")}`;
     fontFaceRules = `
-      @font-face { font-family: '${fontFamily}'; src: url('${font400Uri}') format('truetype'); font-weight: 400; font-style: normal; }
-      @font-face { font-family: '${fontFamily}'; src: url('${font600Uri}') format('truetype'); font-weight: 600; font-style: normal; }
+      @font-face { font-family: '${fontFamily}'; src: url('${fontRegularUri}') format('truetype'); font-weight: 400; font-style: normal; }
+      @font-face { font-family: '${fontFamily}'; src: url('${fontBoldUri}') format('truetype'); font-weight: 700; font-style: normal; }
     `;
   } catch (e) {
     console.error("[PDF] Failed to load fonts:", e);
