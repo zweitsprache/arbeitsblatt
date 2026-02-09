@@ -78,10 +78,11 @@ export function PrintPreview({
   const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.headerRight);
   const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerLeft || !!brandSettings.footerCenter || !!brandSettings.footerRight);
 
-  // Available content height per page (header/footer are now in margins, don't reduce content)
+  // Available content height per page (content starts at 30mm from top for header space)
+  const contentTopPx = 30 * MM_TO_PX;
   const contentHeight =
     pageHeightPx -
-    paddingTopPx -
+    contentTopPx -
     paddingBottomPx;
 
   // Filter blocks by print visibility
@@ -382,11 +383,11 @@ p { widows: 2; orphans: 2; }
                     />
                   )}
 
-                  {/* Content area with margins */}
+                  {/* Content area - starts at 30mm from top to leave room for header */}
                   <div
                     className="absolute flex flex-col overflow-hidden"
                     style={{
-                      top: paddingTopPx,
+                      top: contentTopPx,
                       left: paddingLeftPx,
                       right: paddingRightPx,
                       bottom: paddingBottomPx,
