@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
 import { BrandSettings, DEFAULT_BRAND_SETTINGS, Brand } from "@/types/worksheet";
+import fs from "fs";
+import path from "path";
 
 // POST /api/worksheets/[id]/pdf — generate PDF via Puppeteer (headless Chrome)
 export async function POST(
@@ -56,16 +58,33 @@ export async function POST(
       : { top: 20, right: 20, bottom: 20, left: 20 };
 
   // Build Puppeteer header/footer templates - they need explicit width/height and margin
-  const logoUrl = brandSettings.logo ? `${baseUrl}${brandSettings.logo}` : "";
+  // Logo must be base64-encoded for Puppeteer header templates (isolated context)
+  let logoDataUri = "";
+  if (brandSettings.logo) {
+    try {
+      const logoPath = path.join(process.cwd(), "public", brandSettings.logo.replace(/^\//, ""));
+      const logoContent = fs.readFileSync(logoPath);
+      const ext = path.extname(logoPath).toLowerCase();
+      const mimeType = ext === ".svg" ? "image/svg+xml" : ext === ".png" ? "image/png" : "image/jpeg";
+      logoDataUri = `data:${mimeType};base64,${logoContent.toString("base64")}`;
+    } catch (e) {
+      console.error("[PDF] Failed to load logo:", e);
+    }
+  }
+
+  // Google Fonts import for header/footer
+  const fontFamily = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  const googleFontsImport = `@import url('https://fonts.googleapis.com/css2?family=${fontFamily.replace(/ /g, "+")}:wght@400;500;600;700&display=swap');`;
   
   const headerTemplate = `
     <style>
-      .header { width: 100%; height: 20mm; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
+      ${googleFontsImport}
+      .header { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 5mm 10mm 0 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; }
       .header img { height: 8mm; width: auto; }
     </style>
     <div class="header">
       <div>
-        ${logoUrl ? `<img src="${logoUrl}" />` : ""}
+        ${logoDataUri ? `<img src="${logoDataUri}" />` : ""}
       </div>
       <div style="text-align: right;">
         ${brandSettings.headerRight || ""}
@@ -75,7 +94,8 @@ export async function POST(
 
   const footerTemplate = `
     <style>
-      .footer { width: 100%; height: 20mm; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
+      ${googleFontsImport}
+      .footer { width: 100%; height: 20mm; font-family: '${fontFamily}', sans-serif; font-size: 10pt; color: #666; padding: 0 10mm 5mm 10mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-end; }
     </style>
     <div class="footer">
       <div>${brandSettings.footerLeft || ""}</div>
@@ -112,11 +132,11 @@ export async function POST(
     await new Promise((r) => setTimeout(r, 500));
 
     // Generate the PDF with Puppeteer header/footer templates
-    const hasHeader = Boolean(settings.showHeader && (logoUrl || brandSettings.headerRight));
+    const hasHeader = Boolean(settings.showHeader && (logoDataUri || brandSettings.headerRight));
     const hasFooter = Boolean(settings.showFooter && (brandSettings.footerLeft || brandSettings.footerCenter || brandSettings.footerRight || settings.footerText));
     const showHeaderFooter = hasHeader || hasFooter;
     
-    console.log(`[PDF] hasHeader=${hasHeader}, hasFooter=${hasFooter}, logoUrl=${logoUrl}`);
+    console.log(`[PDF] hasHeader=${hasHeader}, hasFooter=${hasFooter}, logoDataUri=${logoDataUri ? "(base64)" : ""}, brand=${brand}`);
     console.log(`[PDF] brandSettings:`, JSON.stringify(brandSettings));
     
     const pdfBuffer = await page.pdf({
