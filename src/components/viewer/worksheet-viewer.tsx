@@ -139,8 +139,8 @@ export function WorksheetViewer({
                   justify-content: space-between;
                   align-items: flex-start;
                   font-family: ${brandFonts.headerFooterFont};
-                  font-size: 9pt;
-                  line-height: 1.35;
+                  font-size: 7pt;
+                  line-height: 1.5;
                   color: #666;
                 }
                 .print-header-content img { height: 8mm; width: auto; }
@@ -153,13 +153,13 @@ export function WorksheetViewer({
                   right: 0;
                   height: 25mm;
                   padding: 0 10mm 8mm 10mm;
-                  line-height: 1.35;
+                  line-height: 1.5;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-end;
                   font-family: ${brandFonts.headerFooterFont};
-                  font-size: 9pt;
+                  font-size: 7pt;
                   color: #666;
                 }
 

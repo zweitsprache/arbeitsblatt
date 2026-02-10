@@ -575,7 +575,7 @@ function TrueFalseMatrixView({
               <tr key={stmt.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-2">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                    <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
                     <span className="flex-1">{stmt.text}</span>
@@ -738,34 +738,29 @@ function OrderItemsView({
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
-      <div className="space-y-2">
+      <div>
         {displayItems.map((item, i) => {
           if (!item) return null;
           const isCorrectPosition = item.correctPosition === i + 1;
-          let borderClass = "border-border";
+          let borderClass = "";
           let bgClass = "";
           if (showResults) {
-            borderClass = isCorrectPosition
-              ? "border-green-500"
-              : "border-red-500";
             bgClass = isCorrectPosition ? "bg-green-50" : "bg-red-50";
           }
 
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${borderClass} ${bgClass}`}
+              className={`flex items-center gap-3 py-2 border-b last:border-b-0 transition-colors ${borderClass} ${bgClass}`}
             >
               {interactive ? (
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground w-6 h-6 border rounded flex items-center justify-center shrink-0">
-                  &nbsp;
-                </span>
+                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
               )}
-              <span className="text-base flex-1">{item.text}</span>
+              <span className="flex-1">{item.text}</span>
               {interactive && !showResults && (
                 <div className="flex flex-col gap-0.5">
                   <button

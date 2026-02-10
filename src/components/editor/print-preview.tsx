@@ -169,13 +169,13 @@ export function PrintPreview({
 
   @top-center {
     content: string(header-text);
-    font-size: 9pt;
+    font-size: 7pt;
     color: #888;
   }
 
   @bottom-center {
     content: string(footer-text);
-    font-size: 9pt;
+    font-size: 7pt;
     color: #888;
   }
 
