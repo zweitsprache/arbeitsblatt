@@ -138,6 +138,7 @@ export function WorksheetViewer({
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-start;
+                  font-family: ${brandFonts.headerFooterFont};
                   font-size: 9pt;
                   line-height: 1.35;
                   color: #666;
@@ -157,6 +158,7 @@ export function WorksheetViewer({
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-end;
+                  font-family: ${brandFonts.headerFooterFont};
                   font-size: 9pt;
                   color: #666;
                 }

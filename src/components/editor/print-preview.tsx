@@ -387,6 +387,7 @@ p { widows: 2; orphans: 2; }
                         top: `${10 * MM_TO_PX}px`,
                         right: `${10 * MM_TO_PX}px`,
                         textAlign: "right",
+                        fontFamily: brandFonts.headerFooterFont,
                       }}
                       className="text-[10px] text-gray-400"
                       dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
@@ -434,6 +435,7 @@ p { widows: 2; orphans: 2; }
                         position: "absolute",
                         bottom: `${10 * MM_TO_PX}px`,
                         left: `${10 * MM_TO_PX}px`,
+                        fontFamily: brandFonts.headerFooterFont,
                       }}
                       className="text-[10px] text-gray-400"
                       dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
@@ -449,6 +451,7 @@ p { widows: 2; orphans: 2; }
                         left: "50%",
                         transform: "translateX(-50%)",
                         textAlign: "center",
+                        fontFamily: brandFonts.headerFooterFont,
                       }}
                       className="text-[10px] text-gray-400"
                     >
@@ -468,6 +471,7 @@ p { widows: 2; orphans: 2; }
                         bottom: `${10 * MM_TO_PX}px`,
                         right: `${10 * MM_TO_PX}px`,
                         textAlign: "right",
+                        fontFamily: brandFonts.headerFooterFont,
                       }}
                       className="text-[10px] text-gray-400"
                       dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}

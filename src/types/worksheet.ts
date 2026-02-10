@@ -279,6 +279,7 @@ export interface BrandFonts {
   bodyFont: string;
   headlineFont: string;
   headlineWeight: number;
+  headerFooterFont: string;
   googleFontsUrl: string;
 }
 
@@ -308,13 +309,15 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
     bodyFont: "Asap Condensed, sans-serif",
     headlineFont: "Asap Condensed, sans-serif",
     headlineWeight: 700,
+    headerFooterFont: "Asap Condensed, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
   },
   lingostar: {
     bodyFont: "Nunito, sans-serif",
     headlineFont: "Merriweather, serif",
     headlineWeight: 400,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
+    headerFooterFont: "Encode Sans, sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
   },
 };
 
