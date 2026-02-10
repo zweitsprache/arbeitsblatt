@@ -232,6 +232,7 @@ export interface VerbTableBlock extends BlockBase {
   type: "verb-table";
   verb: string; // infinitive form
   splitConjugation?: boolean; // split col 4 into two columns
+  showConjugations?: boolean; // show conjugation answers globally
   singularRows: VerbTableRow[];
   pluralRows: VerbTableRow[];
 }
