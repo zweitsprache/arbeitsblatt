@@ -358,12 +358,9 @@
     "urlPrompt": "Enter URL:"
   },
   "sidebar": {
-    "account": "Account",
-    "accountSettings": "Account settings",
     "collapse": "Collapse",
     "dashboard": "Dashboard",
     "newWorksheet": "New worksheet",
-    "security": "Security",
     "settings": "Settings",
     "worksheet": "Worksheets",
     "worksheetLibrary": "Worksheet library"

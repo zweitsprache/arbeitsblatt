@@ -194,7 +194,7 @@ function FillInBlankView({
   let blankIndex = 0;
 
   return (
-    <div className="leading-loose text-base">
+    <div className="leading-loose">
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank:(.+)\}\}/);
         if (match) {
@@ -237,9 +237,12 @@ function FillInBlankView({
           return (
             <span
               key={i}
-              className="inline-block border-b-2 border-gray-400 min-w-[80px] px-2 py-0.5 mx-1"
+              className="bg-gray-100 rounded min-w-[80px] px-2 mx-1"
+              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em' }}
             >
-              &nbsp;
+              <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
+                {String(blankIndex).padStart(2, "0")}
+              </span>
             </span>
           );
         }
@@ -337,10 +340,60 @@ function MatchingView({
     onAnswer(newSelections);
   };
 
+  // ── Print / non-interactive mode: row-based layout like T/F and Order ──
+  if (!interactive) {
+    return (
+      <div className="space-y-2">
+        {block.instruction && (
+          <p className="text-muted-foreground">{block.instruction}</p>
+        )}
+        <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
+          {/* Left column */}
+          <div>
+            {block.pairs.map((pair, i) => (
+              <div
+                key={pair.id}
+                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              >
+                <span
+                  style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  className="font-bold text-muted-foreground bg-muted"
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{pair.left}</span>
+                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+              </div>
+            ))}
+          </div>
+          {/* Right column — shuffled */}
+          <div>
+            {shuffledRight.map((pair, i) => (
+              <div
+                key={`r-${pair.id}`}
+                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              >
+                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                <span className="flex-1">{pair.right}</span>
+                <span
+                  style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  className="font-bold text-muted-foreground bg-muted"
+                >
+                  {String.fromCharCode(65 + i)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Online / interactive mode ──
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <p className="text-base text-muted-foreground">{block.instruction}</p>
+        <p className="text-muted-foreground">{block.instruction}</p>
       )}
       {interactive && !showResults && (
         <p className="text-xs text-muted-foreground">
@@ -383,7 +436,7 @@ function MatchingView({
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="text-base flex-1">{pair.left}</span>
+                <span className="flex-1">{pair.left}</span>
                 {color && !showResults && (
                   <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
@@ -425,7 +478,7 @@ function MatchingView({
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String.fromCharCode(65 + i)}
                 </span>
-                <span className="text-base flex-1">{pair.right}</span>
+                <span className="flex-1">{pair.right}</span>
                 {color && !showResults && (
                   <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
@@ -820,7 +873,7 @@ function InlineChoicesView({
   let choiceIndex = 0;
 
   return (
-    <div className="leading-loose text-base">
+    <div className="leading-loose">
       {parts.map((part, i) => {
         const match = part.match(/\{\{choice:(.+)\}\}/);
         if (match) {

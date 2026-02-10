@@ -358,12 +358,9 @@
     "urlPrompt": "URL eingeben:"
   },
   "sidebar": {
-    "account": "Konto",
-    "accountSettings": "Kontoeinstellungen",
     "collapse": "Einklappen",
     "dashboard": "Dashboard",
     "newWorksheet": "Neues Arbeitsblatt",
-    "security": "Sicherheit",
     "settings": "Einstellungen",
     "worksheet": "Arbeitsblätter",
     "worksheetLibrary": "Arbeitsblatt-Bibliothek"

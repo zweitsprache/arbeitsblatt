@@ -106,10 +106,26 @@ const aiVerbTable: LocaleTranslations = {
   },
 };
 
+// ─── Sidebar (account section) ──────────────────────────────
+
+const sidebar: LocaleTranslations = {
+  en: {
+    account: "Account",
+    accountSettings: "Account settings",
+    security: "Security",
+  },
+  de: {
+    account: "Konto",
+    accountSettings: "Kontoeinstellungen",
+    security: "Sicherheit",
+  },
+};
+
 // ─── Registry of all code-defined namespaces ────────────────
 
 const CODE_NAMESPACES: Record<string, LocaleTranslations> = {
   aiVerbTable,
+  sidebar,
 };
 
 /**

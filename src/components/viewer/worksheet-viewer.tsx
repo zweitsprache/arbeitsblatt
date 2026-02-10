@@ -145,7 +145,12 @@ export function WorksheetViewer({
                 }
                 .print-header-content img { height: 8mm; width: auto; }
 
-                /* Fixed footer - repeats on every page via position:fixed in print */
+                /* Invisible tfoot spacer — reserves space on every page so content doesn't overlap the fixed footer */
+                .print-table tfoot { display: table-footer-group; }
+                .print-table tfoot td { padding: 0; }
+                .print-footer-spacer { height: 25mm; }
+
+                /* Fixed footer — rendered at the very bottom of every physical page */
                 .print-footer-fixed {
                   position: fixed;
                   bottom: 0;
@@ -153,18 +158,18 @@ export function WorksheetViewer({
                   right: 0;
                   height: 25mm;
                   padding: 0 10mm 8mm 10mm;
-                  line-height: 1.5;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-end;
                   font-family: ${brandFonts.headerFooterFont};
                   font-size: 7pt;
+                  line-height: 1.5;
                   color: #666;
                 }
 
                 .print-body-content {
-                  padding: 0 20mm 25mm 20mm;
+                  padding: 0 20mm 0 20mm;
                 }
               `,
             }}
@@ -173,7 +178,7 @@ export function WorksheetViewer({
       )}
 
       {mode === "print" ? (
-        /* Print mode: table thead for repeating header, position:fixed for footer */
+        /* Print mode: table thead/tfoot for repeating header & footer */
         <>
           {showPrintFooter && (
             <div className="print-footer-fixed">
@@ -208,6 +213,15 @@ export function WorksheetViewer({
                   </td>
                 </tr>
               </thead>
+            )}
+            {showPrintFooter && (
+              <tfoot>
+                <tr>
+                  <td>
+                    <div className="print-footer-spacer" />
+                  </td>
+                </tr>
+              </tfoot>
             )}
             <tbody>
               <tr>
