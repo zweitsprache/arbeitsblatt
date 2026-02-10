@@ -226,6 +226,8 @@ export interface VerbTableRow {
   pronoun: string; // e.g. "ich", "du", "Sie"
   conjugation: string; // correct conjugated form
   conjugation2?: string; // second conjugation (when splitConjugation is true)
+  showOverride?: "show" | "hide" | null; // per-row override for conjugation visibility
+  showOverride2?: "show" | "hide" | null; // per-row override for conjugation2 visibility
 }
 
 export interface VerbTableBlock extends BlockBase {
