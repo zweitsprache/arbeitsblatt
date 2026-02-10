@@ -226,15 +226,12 @@ export interface VerbTableRow {
   pronoun: string; // e.g. "ich", "du", "Sie"
   conjugation: string; // correct conjugated form
   conjugation2?: string; // second conjugation (when splitConjugation is true)
-  showOverride?: "show" | "hide" | null; // per-cell override: null=use global, show=reveal, hide=gap
-  showOverride2?: "show" | "hide" | null; // override for second conjugation column
 }
 
 export interface VerbTableBlock extends BlockBase {
   type: "verb-table";
   verb: string; // infinitive form
   splitConjugation?: boolean; // split col 4 into two columns
-  showConjugations?: boolean; // global toggle: true=show answers, false=hide (gaps)
   singularRows: VerbTableRow[];
   pluralRows: VerbTableRow[];
 }
@@ -265,63 +262,61 @@ export type WorksheetBlock =
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
 
-export interface BrandFontConfig {
+export interface BrandSettings {
+  logo: string;
+  organization: string;
+  teacher: string;
+  headerRight: string;
+  footerLeft: string;
+  footerCenter: string;
+  footerRight: string;
+}
+
+export interface BrandFonts {
   bodyFont: string;
   headlineFont: string;
   headlineWeight: number;
-  bodyWeight: number;
   googleFontsUrl: string;
-}
-
-export const BRAND_FONTS: Record<Brand, BrandFontConfig> = {
-  edoomio: {
-    bodyFont: "'Asap Condensed', sans-serif",
-    headlineFont: "'Asap Condensed', sans-serif",
-    headlineWeight: 700,
-    bodyWeight: 400,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@200;300;400;500;600;700;800;900&display=swap",
-  },
-  lingostar: {
-    bodyFont: "'Encode Sans', sans-serif",
-    headlineFont: "'Merriweather', serif",
-    headlineWeight: 400,
-    bodyWeight: 400,
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@200;300;400;500;600;700;800;900&family=Merriweather:wght@300;400;700&display=swap",
-  },
-};
-
-export interface BrandSettings {
-  logo: string; // URL (relative or absolute) or data URI
-  headerLeft: string; // HTML
-  headerRight: string; // HTML
-  footerLeft: string; // HTML
-  footerCenter: string; // HTML
-  footerRight: string; // HTML
 }
 
 export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
   edoomio: {
-    logo: "/logo/arbeitsblatt_logo_icon.svg",
-    headerLeft: "",
-    headerRight: "edoomio",
-    footerLeft: "edoomio.com",
+    logo: "/logo/arbeitsblatt_logo_full_brand.svg",
+    organization: "",
+    teacher: "",
+    headerRight: "",
+    footerLeft: "",
     footerCenter: "",
     footerRight: "",
   },
   lingostar: {
     logo: "/logo/lingostar_logo_icon_flat.svg",
-    headerLeft: "",
-    headerRight: "lingostar",
-    footerLeft: "lingostar.com",
+    organization: "",
+    teacher: "",
+    headerRight: "",
+    footerLeft: "",
     footerCenter: "",
     footerRight: "",
   },
 };
 
+export const BRAND_FONTS: Record<Brand, BrandFonts> = {
+  edoomio: {
+    bodyFont: "Asap Condensed, sans-serif",
+    headlineFont: "Asap Condensed, sans-serif",
+    headlineWeight: 700,
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
+  },
+  lingostar: {
+    bodyFont: "Nunito, sans-serif",
+    headlineFont: "Merriweather, serif",
+    headlineWeight: 400,
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
+  },
+};
+
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
-  brand: Brand;
-  brandSettings: BrandSettings;
   pageSize: "a4" | "letter";
   orientation: "portrait" | "landscape";
   margins: {
@@ -336,6 +331,8 @@ export interface WorksheetSettings {
   footerText: string;
   fontSize: number;
   fontFamily: string;
+  brand: Brand;
+  brandSettings: BrandSettings;
 }
 
 // ─── Worksheet document ─────────────────────────────────────
@@ -353,8 +350,6 @@ export interface WorksheetDocument {
 
 // ─── Default settings ───────────────────────────────────────
 export const DEFAULT_SETTINGS: WorksheetSettings = {
-  brand: "edoomio",
-  brandSettings: DEFAULT_BRAND_SETTINGS.edoomio,
   pageSize: "a4",
   orientation: "portrait",
   margins: { top: 20, right: 20, bottom: 20, left: 20 },
@@ -364,6 +359,8 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   footerText: "",
   fontSize: 14,
   fontFamily: "Asap Condensed, sans-serif",
+  brand: "edoomio",
+  brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
 };
 
 // ─── Block library definitions ──────────────────────────────

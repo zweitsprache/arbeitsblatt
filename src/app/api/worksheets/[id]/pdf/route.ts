@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
+import { PDFDocument } from "pdf-lib";
 import { Brand } from "@/types/worksheet";
 
 // POST /api/worksheets/[id]/pdf — generate PDF via Puppeteer (headless Chrome)
@@ -44,8 +45,14 @@ export async function POST(
     ...worksheetSettings,
   };
 
-  // Header/footer are now rendered as fixed CSS elements within the page content
-  // The page loads Google Fonts directly and uses position:fixed for header/footer
+  const pdfOptions = {
+    format: (settings.pageSize === "a4" ? "A4" : "Letter") as "A4" | "Letter",
+    landscape: settings.orientation === "landscape",
+    margin: { top: 0, right: 0, bottom: 0, left: 0 } as const,
+    printBackground: true,
+    displayHeaderFooter: false,
+    preferCSSPageSize: false,
+  };
 
   try {
     const printUrl = `${baseUrl}/de/worksheet/${worksheet.slug}/print`;
@@ -71,27 +78,69 @@ export async function POST(
 
     // Wait for web fonts to be fully loaded
     await page.evaluateHandle("document.fonts.ready");
-    // Extra wait to ensure Google Fonts CDN stylesheet is fully processed
     await new Promise((r) => setTimeout(r, 500));
 
-    console.log(`[PDF] Generating with brand=${brand}`);
-    
-    // Header/footer rendered via table thead/tfoot in page content
-    // @page { margin: 0 } gives full page control, table handles per-page repetition
-    const pdfBuffer = await page.pdf({
-      format: settings.pageSize === "a4" ? "A4" : "Letter",
-      landscape: settings.orientation === "landscape",
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-      printBackground: true,
-      displayHeaderFooter: false,
-      preferCSSPageSize: false,
+    // Check if page variables ({current_page} / {no_of_pages}) are used
+    const hasPageVars = await page.evaluate(() => {
+      return document.querySelectorAll('.var-current-page, .var-total-pages').length > 0;
     });
+
+    console.log(`[PDF] brand=${brand}, hasPageVars=${hasPageVars}`);
+
+    let finalPdfBytes: Uint8Array;
+
+    if (!hasPageVars) {
+      // Simple: no page variables, single-pass PDF
+      const pdfBuffer = await page.pdf(pdfOptions);
+      finalPdfBytes = new Uint8Array(pdfBuffer);
+    } else {
+      // Two-pass: first count pages, then generate per-page with correct page numbers
+
+      // Pass 1: count pages
+      const firstPassBuffer = await page.pdf(pdfOptions);
+      const firstPassText = Buffer.from(firstPassBuffer).toString("latin1");
+      const totalPages = (firstPassText.match(/\/Type\s*\/Page[^s]/g) || []).length;
+      console.log(`[PDF] Detected ${totalPages} pages`);
+
+      // Inject total pages into all .var-total-pages spans
+      await page.evaluate((total) => {
+        document.querySelectorAll('.var-total-pages').forEach((el) => {
+          el.textContent = String(total);
+        });
+      }, totalPages);
+
+      // Generate per-page PDFs with correct current page number
+      const mergedPdf = await PDFDocument.create();
+
+      for (let i = 1; i <= totalPages; i++) {
+        // Set current page number
+        await page.evaluate((pageNum) => {
+          document.querySelectorAll('.var-current-page').forEach((el) => {
+            el.textContent = String(pageNum);
+          });
+        }, i);
+
+        // Generate single-page PDF
+        const singlePageBuffer = await page.pdf({
+          ...pdfOptions,
+          pageRanges: String(i),
+        });
+
+        // Copy this page into the merged document
+        const singlePageDoc = await PDFDocument.load(singlePageBuffer);
+        const [copiedPage] = await mergedPdf.copyPages(singlePageDoc, [0]);
+        mergedPdf.addPage(copiedPage);
+      }
+
+      finalPdfBytes = await mergedPdf.save();
+      console.log(`[PDF] Merged ${totalPages} pages`);
+    }
 
     await browser.close();
 
-    console.log(`[PDF] Generated ${pdfBuffer.length} bytes`);
+    console.log(`[PDF] Generated ${finalPdfBytes.length} bytes`);
 
-    return new NextResponse(Buffer.from(pdfBuffer), {
+    return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${worksheet.title}.pdf"`,

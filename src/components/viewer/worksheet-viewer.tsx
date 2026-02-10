@@ -13,11 +13,13 @@ export function WorksheetViewer({
   blocks,
   settings,
   mode,
+  worksheetId,
 }: {
   title: string;
   blocks: WorksheetBlock[];
   settings: WorksheetSettings;
   mode: ViewMode;
+  worksheetId?: string;
 }) {
   const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -64,10 +66,39 @@ export function WorksheetViewer({
 
   // For print mode, determine if we have header/footer content
   const hasLogo = !!brandSettings.logo;
-  const hasHeaderRight = !!brandSettings.headerRight;
-  const hasFooterLeft = !!brandSettings.footerLeft;
-  const hasFooterCenter = !!brandSettings.footerCenter || !!settings.footerText;
-  const hasFooterRight = !!brandSettings.footerRight;
+
+  // Replace template variables in header/footer HTML strings
+  // In print mode, use span placeholders for page vars so Puppeteer can inject per-page values
+  const replaceVariables = (html: string): string => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+    let result = html
+      .replace(/\{current_date\}/g, dateStr)
+      .replace(/\{current_year\}/g, String(now.getFullYear()))
+      .replace(/\{organization\}/g, brandSettings.organization || "")
+      .replace(/\{teacher\}/g, brandSettings.teacher || "")
+      .replace(/\{worksheet_uuid\}/g, (worksheetId || "").toUpperCase());
+    if (mode === "print") {
+      result = result
+        .replace(/\{current_page\}/g, '<span class="var-current-page"></span>')
+        .replace(/\{no_of_pages\}/g, '<span class="var-total-pages"></span>');
+    } else {
+      result = result
+        .replace(/\{current_page\}/g, '')
+        .replace(/\{no_of_pages\}/g, '');
+    }
+    return result;
+  };
+
+  const processedHeaderRight = replaceVariables(brandSettings.headerRight || "");
+  const processedFooterLeft = replaceVariables(brandSettings.footerLeft || "");
+  const processedFooterCenter = replaceVariables(brandSettings.footerCenter || "");
+  const processedFooterRight = replaceVariables(brandSettings.footerRight || "");
+
+  const hasHeaderRight = !!processedHeaderRight;
+  const hasFooterLeft = !!processedFooterLeft;
+  const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
+  const hasFooterRight = !!processedFooterRight;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
 
@@ -95,11 +126,10 @@ export function WorksheetViewer({
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
                 h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
 
-                /* Table-based repeating header/footer */
+                /* Table-based repeating header */
                 .print-table { width: 100%; border-collapse: collapse; }
                 .print-table thead { display: table-header-group; }
-                .print-table tfoot { display: table-footer-group; }
-                .print-table thead td, .print-table tfoot td { padding: 0; }
+                .print-table thead td { padding: 0; }
 
                 .print-header-content {
                   height: 25mm;
@@ -108,26 +138,31 @@ export function WorksheetViewer({
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-start;
-                  font-size: 10pt;
-                  line-height: 1.2;
+                  font-size: 9pt;
+                  line-height: 1.35;
                   color: #666;
                 }
                 .print-header-content img { height: 8mm; width: auto; }
 
-                .print-footer-content {
+                /* Fixed footer - repeats on every page via position:fixed in print */
+                .print-footer-fixed {
+                  position: fixed;
+                  bottom: 0;
+                  left: 0;
+                  right: 0;
                   height: 25mm;
-                  padding: 0 10mm 10mm 10mm;
-                  line-height: 1.2;
+                  padding: 0 10mm 8mm 10mm;
+                  line-height: 1.35;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-end;
-                  font-size: 10pt;
+                  font-size: 9pt;
                   color: #666;
                 }
 
                 .print-body-content {
-                  padding: 0 20mm;
+                  padding: 0 20mm 25mm 20mm;
                 }
               `,
             }}
@@ -136,68 +171,64 @@ export function WorksheetViewer({
       )}
 
       {mode === "print" ? (
-        /* Print mode: table-based layout for repeating header/footer on every page */
-        <table className="print-table">
-          {showPrintHeader && (
-            <thead>
-              <tr>
-                <td>
-                  <div className="print-header-content">
-                    <div>
-                      {hasLogo && <img src={brandSettings.logo} alt="" />}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.headerRight || "" }} />}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </thead>
-          )}
+        /* Print mode: table thead for repeating header, position:fixed for footer */
+        <>
           {showPrintFooter && (
-            <tfoot>
+            <div className="print-footer-fixed">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                {processedFooterCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+              </div>
+            </div>
+          )}
+          <table className="print-table">
+            {showPrintHeader && (
+              <thead>
+                <tr>
+                  <td>
+                    <div className="print-header-content">
+                      <div>
+                        {hasLogo && <img src={brandSettings.logo} alt="" />}
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </thead>
+            )}
+            <tbody>
               <tr>
                 <td>
-                  <div className="print-footer-content">
-                    <div>
-                      {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft || "" }} />}
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      {brandSettings.footerCenter ? (
-                        <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                      ) : settings.footerText ? (
-                        <span>{settings.footerText}</span>
-                      ) : null}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: brandSettings.footerRight || "" }} />}
+                  <div className="print-body-content"
+                    style={{ fontSize: settings.fontSize, fontFamily: fontFamily }}
+                  >
+                    <div className="space-y-6">
+                      {visibleBlocks.map((block) => (
+                        <div
+                          key={block.id}
+                          className={`worksheet-block worksheet-block-${block.type}`}
+                        >
+                          <ViewerBlockRenderer block={block} mode={mode} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </td>
               </tr>
-            </tfoot>
-          )}
-          <tbody>
-            <tr>
-              <td>
-                <div className="print-body-content"
-                  style={{ fontSize: settings.fontSize, fontFamily: fontFamily }}
-                >
-                  <div className="space-y-6">
-                    {visibleBlocks.map((block) => (
-                      <div
-                        key={block.id}
-                        className={`worksheet-block worksheet-block-${block.type}`}
-                      >
-                        <ViewerBlockRenderer block={block} mode={mode} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </>
       ) : (
         /* Online mode */
         <div

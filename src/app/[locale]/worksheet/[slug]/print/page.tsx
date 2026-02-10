@@ -30,6 +30,7 @@ export default async function PrintWorksheetPage({
       blocks={blocks}
       settings={settings}
       mode="print"
+      worksheetId={worksheet.id}
     />
   );
 }

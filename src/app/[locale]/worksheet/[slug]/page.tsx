@@ -29,6 +29,7 @@ export default async function PublicWorksheetPage({
       blocks={blocks}
       settings={settings}
       mode="online"
+      worksheetId={worksheet.id}
     />
   );
 }

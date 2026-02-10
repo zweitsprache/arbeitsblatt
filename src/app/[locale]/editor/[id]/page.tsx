@@ -16,7 +16,15 @@ export default async function EditWorksheetPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  const { data: session } = await auth.getSession();
+  let session;
+  try {
+    const result = await auth.getSession();
+    session = result.data;
+  } catch {
+    // auth.getSession() may try to refresh cookies which is not allowed
+    // in Server Components (Next.js 16+). Redirect to sign-in instead.
+    redirect(`/${locale}/auth/sign-in`);
+  }
   if (!session?.user) {
     redirect(`/${locale}/auth/sign-in`);
   }

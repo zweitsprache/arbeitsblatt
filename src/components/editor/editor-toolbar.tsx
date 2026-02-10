@@ -393,6 +393,24 @@ export function EditorToolbar() {
               <p className="text-xs text-muted-foreground mt-1">{t("brandLogoHelp")}</p>
             </div>
             <div>
+              <Label className="text-sm font-medium">{t("organization")}</Label>
+              <Input
+                value={currentBrandSettings.organization}
+                onChange={(e) => updateBrandSettings({ organization: e.target.value })}
+                placeholder={t("organizationPlaceholder")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{t("teacher")}</Label>
+              <Input
+                value={currentBrandSettings.teacher}
+                onChange={(e) => updateBrandSettings({ teacher: e.target.value })}
+                placeholder={t("teacherPlaceholder")}
+                className="mt-1"
+              />
+            </div>
+            <div>
               <Label className="text-sm font-medium">{t("headerRight")}</Label>
               <textarea
                 value={currentBrandSettings.headerRight}
@@ -400,6 +418,12 @@ export function EditorToolbar() {
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
+            </div>
+            <div className="rounded-md bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-1">{t("availableVariables")}</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {"{current_date}"} · {"{current_year}"} · {"{current_page}"} · {"{no_of_pages}"} · {"{organization}"} · {"{teacher}"} · {"{worksheet_uuid}"}
+              </p>
             </div>
             <div>
               <Label className="text-sm font-medium">{t("footerLeft")}</Label>
