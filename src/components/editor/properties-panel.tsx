@@ -370,6 +370,50 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const parsed: { text: string; caption: string }[] = [];
+
+    for (const line of lines) {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+
+      if (parts.length >= 2) {
+        parsed.push({ text: parts[0], caption: parts.slice(1).join(sep === "\t" ? " " : ", ").trim() });
+      } else {
+        parsed.push({ text: parts[0], caption: "" });
+      }
+    }
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newItems = parsed.map((p) => ({
+      id: crypto.randomUUID(),
+      text: p.text,
+      caption: p.caption,
+    }));
+
+    const items = csvMode === "append"
+      ? [...block.items, ...newItems]
+      : newItems;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items } },
+    });
+    setCsvText("");
+  };
 
   const moveItem = (index: number, direction: -1 | 1) => {
     const newIndex = index + direction;
@@ -487,6 +531,49 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCard")}
         </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
       </div>
       <Separator />
       <div>
@@ -854,6 +941,50 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const parsed: { left: string; right: string }[] = [];
+
+    for (const line of lines) {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+
+      if (parts.length >= 2) {
+        parsed.push({ left: parts[0], right: parts.slice(1).join(sep === "\t" ? " " : ", ").trim() });
+      } else if (parts[0]) {
+        parsed.push({ left: parts[0], right: "" });
+      }
+    }
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newPairs = parsed.map((p) => ({
+      id: `p${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      left: p.left,
+      right: p.right,
+    }));
+
+    const pairs = csvMode === "append"
+      ? [...block.pairs, ...newPairs]
+      : newPairs;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs } },
+    });
+    setCsvText("");
+  };
 
   const updatePair = (index: number, updates: Partial<{ left: string; right: string }>) => {
     const newPairs = [...block.pairs];
@@ -928,6 +1059,49 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
         <Button variant="outline" size="sm" onClick={addPair} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
         </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
       </div>
     </div>
   );

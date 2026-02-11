@@ -79,7 +79,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank */}
       {block.showWordBank && shuffledItems.length > 0 && (
-        <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
               <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
@@ -158,7 +158,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank */}
       {block.showWordBank && shuffledItems.length > 0 && (
-        <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
               <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">

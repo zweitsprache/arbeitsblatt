@@ -140,10 +140,15 @@ export async function POST(
 
     console.log(`[PDF] Generated ${finalPdfBytes.length} bytes`);
 
+    // Sanitize filename for Content-Disposition header (ASCII-safe)
+    const safeTitle = worksheet.title
+      .replace(/[\u2013\u2014]/g, "-")  // en-dash, em-dash → hyphen
+      .replace(/[^\x20-\x7E]/g, "_");  // any other non-ASCII → underscore
+
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${worksheet.title}.pdf"`,
+        "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
       },
     });
   } catch (error) {

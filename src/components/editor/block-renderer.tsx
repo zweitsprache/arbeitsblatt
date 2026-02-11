@@ -219,7 +219,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank Preview */}
       {block.showWordBank && block.items.some(item => item.text) && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
             {block.items
@@ -416,7 +416,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank Preview */}
       {block.showWordBank && block.items.some(item => item.caption) && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
             {block.items
