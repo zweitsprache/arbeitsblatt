@@ -56,6 +56,7 @@ export function EditorToolbar() {
   const [showBrandSettings, setShowBrandSettings] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
 
   // Get current brand settings with fallbacks
   const currentBrandSettings: BrandSettings = {
@@ -72,15 +73,18 @@ export function EditorToolbar() {
     });
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (preview = false) => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
     }
-    setIsGeneratingPdf(true);
+    const setLoading = preview ? setIsGeneratingPreview : setIsGeneratingPdf;
+    setLoading(true);
     try {
       const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preview }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -91,13 +95,14 @@ export function EditorToolbar() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${state.title}.pdf`;
+      a.download = `${state.title}${preview ? ' (Preview)' : ''}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF download error:", err);
     } finally {
-      setIsGeneratingPdf(false);
+      const setLoading = preview ? setIsGeneratingPreview : setIsGeneratingPdf;
+      setLoading(false);
     }
   };
 
@@ -328,8 +333,27 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
+              onClick={() => handleDownloadPdf(true)}
+              disabled={isGeneratingPreview || isGeneratingPdf}
+            >
+              {isGeneratingPreview ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isGeneratingPreview ? t("generatingPdf") : t("downloadPreviewPdf")}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => handleDownloadPdf(false)}
+              disabled={isGeneratingPdf || isGeneratingPreview}
             >
               {isGeneratingPdf ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

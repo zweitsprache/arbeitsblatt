@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
 import { PDFDocument } from "pdf-lib";
+import sharp from "sharp";
 import { Brand } from "@/types/worksheet";
 
 // POST /api/worksheets/[id]/pdf — generate PDF via Puppeteer (headless Chrome)
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await requireAuth();
@@ -20,6 +21,15 @@ export async function POST(
   });
   if (!worksheet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Check if preview mode is requested
+  let isPreview = false;
+  try {
+    const body = await req.json();
+    isPreview = body?.preview === true;
+  } catch {
+    // No body or invalid JSON — not a preview
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -136,6 +146,100 @@ export async function POST(
       console.log(`[PDF] Merged ${totalPages} pages`);
     }
 
+    // For preview mode: rasterize each page, blur the bottom-right triangle, reassemble as image-based PDF
+    if (isPreview) {
+      console.log(`[PDF] Applying preview blur...`);
+
+      const sourcePdf = await PDFDocument.load(finalPdfBytes);
+      const pageCount = sourcePdf.getPageCount();
+      const previewPdf = await PDFDocument.create();
+
+      // Get page dimensions from the source PDF
+      const firstPage = sourcePdf.getPage(0);
+      const { width: pdfW, height: pdfH } = firstPage.getSize();
+
+      // Use a proper viewport width for the print page (matching CSS expectations)
+      // A4 at 96 DPI = 794px wide. Use 2x device scale for crisp images.
+      const viewportW = 794;
+      const viewportH = Math.round(viewportW * (pdfH / pdfW));
+      const deviceScale = 2;
+
+      await page.setViewport({ width: viewportW, height: viewportH, deviceScaleFactor: deviceScale });
+
+      // Navigate to the print page fresh for screenshot
+      await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 30000 });
+      await page.evaluateHandle("document.fonts.ready");
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Hide Next.js dev overlays (error toast, build indicator, etc.)
+      await page.evaluate(() => {
+        document.querySelectorAll('nextjs-portal, [id^="__next-build"], [id^="__nextjs"]').forEach(el => el.remove());
+        const style = document.createElement('style');
+        style.textContent = 'nextjs-portal, [data-nextjs-dialog-overlay], [data-nextjs-toast] { display: none !important; }';
+        document.head.appendChild(style);
+      });
+
+      // Take a full-page screenshot of the entire scrollable content
+      const fullScreenshot = await page.screenshot({ type: "png", fullPage: true });
+
+      const fullMeta = await sharp(fullScreenshot).metadata();
+      const fullW = fullMeta.width!;
+      const fullH = fullMeta.height!;
+
+      console.log(`[PDF] Screenshot: ${fullW}x${fullH}, pages=${pageCount}`);
+
+      // Each page slice height in pixels
+      const pagePixelH = Math.round(fullH / pageCount);
+
+      // Triangle top offset: 30mm from top of each page
+      // At our resolution: 1mm = fullW / 210 pixels (A4 = 210mm wide)
+      const mmToPx = fullW / 210;
+      const triangleTopOffset = Math.round(30 * mmToPx);
+      const blurRadius = 14;
+
+      for (let i = 0; i < pageCount; i++) {
+        const pageTop = i * pagePixelH;
+        const extractH = Math.min(pagePixelH, fullH - pageTop);
+        if (extractH <= 0) continue;
+
+        // Extract this page's slice
+        const pageImg = await sharp(fullScreenshot)
+          .extract({ left: 0, top: pageTop, width: fullW, height: extractH })
+          .toBuffer();
+
+        // Create blurred version
+        const blurredImg = await sharp(pageImg).blur(blurRadius).toBuffer();
+
+        // Triangle mask SVG (white = blur visible area)
+        const maskSvg = Buffer.from(
+          `<svg width="${fullW}" height="${extractH}" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="${fullW},${triangleTopOffset} 0,${extractH} ${fullW},${extractH}" fill="white"/>
+          </svg>`
+        );
+        const maskPng = await sharp(maskSvg).png().toBuffer();
+
+        // Apply mask to blurred image
+        const maskedBlur = await sharp(blurredImg)
+          .composite([{ input: maskPng, blend: "dest-in" }])
+          .png()
+          .toBuffer();
+
+        // Composite original + blurred triangle
+        const composited = await sharp(pageImg)
+          .composite([{ input: maskedBlur, blend: "over" }])
+          .png()
+          .toBuffer();
+
+        // Embed into PDF
+        const pngEmbed = await previewPdf.embedPng(composited);
+        const pdfPage = previewPdf.addPage([pdfW, pdfH]);
+        pdfPage.drawImage(pngEmbed, { x: 0, y: 0, width: pdfW, height: pdfH });
+      }
+
+      finalPdfBytes = await previewPdf.save();
+      console.log(`[PDF] Preview PDF: ${pageCount} rasterized pages`);
+    }
+
     await browser.close();
 
     console.log(`[PDF] Generated ${finalPdfBytes.length} bytes`);
@@ -148,7 +252,8 @@ export async function POST(
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
+        "Content-Disposition": `attachment; filename="${safeTitle}${isPreview ? ' (Preview)' : ''}.pdf"`,
+        "X-Preview": isPreview ? "true" : "false",
       },
     });
   } catch (error) {

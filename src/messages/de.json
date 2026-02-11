@@ -370,6 +370,7 @@
     "copied": "Kopiert!",
     "copyLink": "Link kopieren",
     "downloadPdf": "PDF herunterladen",
+    "downloadPreviewPdf": "Vorschau-PDF herunterladen",
     "onlinePreview": "Online-Vorschau",
     "openInNewTab": "In neuem Tab öffnen",
     "pdfFailed": "PDF-Erstellung fehlgeschlagen: {error}",
