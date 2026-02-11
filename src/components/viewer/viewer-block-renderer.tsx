@@ -237,8 +237,8 @@ function FillInBlankView({
           return (
             <span
               key={i}
-              className="bg-gray-100 rounded min-w-[80px] px-2 mx-1"
-              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em' }}
+              className="bg-gray-100 min-w-[80px] px-2 mx-1"
+              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 2 }}
             >
               <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
                 {String(blankIndex).padStart(2, "0")}
@@ -694,12 +694,14 @@ function ColumnsView({
   answer,
   onAnswer,
   showResults,
+  primaryColor,
 }: {
   block: ColumnsBlock;
   mode: ViewMode;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  primaryColor?: string;
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
   return (
@@ -719,6 +721,7 @@ function ColumnsView({
                 onAnswer({ ...answers, [childBlock.id]: value })
               }
               showResults={showResults}
+              primaryColor={primaryColor}
             />
           ))}
         </div>
@@ -942,20 +945,15 @@ function InlineChoicesView({
             );
           }
 
-          // Print mode: show circles only
+          // Print mode: show squares (matching T/F style)
           return (
-            <span key={i} className="inline-flex items-center gap-1 mx-0.5">
+            <span key={i} className="mx-0.5">
               {options.map((opt, oi) => {
                 const label = opt.startsWith("*") ? opt.slice(1) : opt;
                 return (
-                  <span key={oi} className="inline-flex items-center">
-                    {oi > 0 && (
-                      <span className="mx-0.5 text-muted-foreground">/</span>
-                    )}
-                    <span className="inline-flex items-center gap-0.5">
-                      <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-muted-foreground/40 shrink-0" />
-                      <span>{label}</span>
-                    </span>
+                  <span key={oi} style={{ marginRight: oi < options.length - 1 ? 6 : 0 }}>
+                    <span className="inline-block border-2 border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-1px', borderRadius: 2 }} />
+                    <span className="ml-1">{label}</span>
                   </span>
                 );
               })}
@@ -971,16 +969,19 @@ function InlineChoicesView({
 // ─── Word Search View ────────────────────────────────────────
 function WordSearchView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
 }: {
   block: WordSearchBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
 }) {
   const selectedCells = (answer as string[] | undefined) || [];
+  const isPrint = mode === "print";
 
   const toggleCell = (key: string) => {
     if (!interactive) return;
@@ -994,6 +995,18 @@ function WordSearchView({
 
   return (
     <div className="space-y-3">
+      {block.showWordList && (
+        <div className="flex flex-wrap gap-2">
+          {block.words.map((word, i) => (
+            <span
+              key={i}
+              className="px-2 py-0.5 bg-muted rounded font-medium uppercase"
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="w-full">
         <table className="w-full border-separate border-spacing-0">
           <tbody>
@@ -1002,17 +1015,30 @@ function WordSearchView({
                 {row.map((cell, ci) => {
                   const key = `${ri}-${ci}`;
                   const isSelected = selectedCells.includes(key);
-                  let cornerClass = "";
-                  if (ri === 0 && ci === 0) cornerClass = "rounded-tl-lg";
-                  if (ri === 0 && ci === row.length - 1) cornerClass = "rounded-tr-lg";
-                  if (ri === block.grid.length - 1 && ci === 0) cornerClass = "rounded-bl-lg";
-                  if (ri === block.grid.length - 1 && ci === row.length - 1) cornerClass = "rounded-br-lg";
+                  const isTop = ri === 0;
+                  const isLeft = ci === 0;
+                  const isTopLeft = isTop && isLeft;
+                  const isTopRight = isTop && ci === row.length - 1;
+                  const isBottomLeft = ri === block.grid.length - 1 && isLeft;
+                  const isBottomRight = ri === block.grid.length - 1 && ci === row.length - 1;
+                  const cellStyle: React.CSSProperties = {
+                    borderRight: '1px solid var(--color-border)',
+                    borderBottom: '1px solid var(--color-border)',
+                    ...(isTop ? { borderTop: '1px solid var(--color-border)' } : {}),
+                    ...(isLeft ? { borderLeft: '1px solid var(--color-border)' } : {}),
+                    ...(isTopLeft ? { borderTopLeftRadius: 4 } : {}),
+                    ...(isTopRight ? { borderTopRightRadius: 4 } : {}),
+                    ...(isBottomLeft ? { borderBottomLeftRadius: 4 } : {}),
+                    ...(isBottomRight ? { borderBottomRightRadius: 4 } : {}),
+                    ...(isPrint ? { fontWeight: 500 } : {}),
+                  };
                   return (
                     <td
                       key={ci}
-                      className={`text-center text-base font-mono font-semibold select-none border border-border aspect-square transition-colors ${cornerClass}
+                      className={`text-center text-base font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-semibold'}
                         ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
                         ${isSelected ? "bg-primary/20 text-primary" : ""}`}
+                      style={cellStyle}
                       onClick={() => toggleCell(key)}
                     >
                       {cell}
@@ -1024,18 +1050,6 @@ function WordSearchView({
           </tbody>
         </table>
       </div>
-      {block.showWordList && (
-        <div className="flex flex-wrap gap-2">
-          {block.words.map((word, i) => (
-            <span
-              key={i}
-              className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
-            >
-              {word}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -1258,12 +1272,14 @@ function scrambleWordDeterministic(
 
 function UnscrambleWordsView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
   showResults,
 }: {
   block: UnscrambleWordsBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -1271,6 +1287,7 @@ function UnscrambleWordsView({
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
+  const isPrint = mode === "print";
   const userAnswers = (answer as Record<string, string> | undefined) || {};
 
   // Compute a seed per word based on block id + word id
@@ -1284,11 +1301,11 @@ function UnscrambleWordsView({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
-      <div className="space-y-3">
+      <div>
         {block.words.map((item, i) => {
           const scrambled = scrambleWordDeterministic(
             item.word,
@@ -1305,20 +1322,20 @@ function UnscrambleWordsView({
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              className={`flex items-center gap-3 py-2 border-b last:border-b-0 transition-colors ${
                 showResults
                   ? isCorrect
-                    ? "border-green-500 bg-green-50"
+                    ? "bg-green-50"
                     : isWrong
-                      ? "border-red-500 bg-red-50"
-                      : "border-border"
-                  : "border-border"
+                      ? "bg-red-50"
+                      : ""
+                  : ""
               }`}
             >
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-mono text-base tracking-widest font-semibold select-none">
+              <span className="font-mono font-semibold select-none">
                 {scrambled}
               </span>
               <span className="text-muted-foreground">→</span>
@@ -1331,7 +1348,7 @@ function UnscrambleWordsView({
                     onChange={(e) =>
                       onAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
-                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors text-base ${
+                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
                       showResults
                         ? isCorrect
                           ? "border-green-500 text-green-700"
@@ -1349,7 +1366,7 @@ function UnscrambleWordsView({
                   )}
                 </div>
               ) : (
-                <span className="flex-1 border-b-2 border-gray-300 min-w-[80px] inline-block">
+                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3, minWidth: 80 }}>
                   &nbsp;
                 </span>
               )}
@@ -1376,18 +1393,21 @@ function UnscrambleWordsView({
 // ─── Fix Sentences View ─────────────────────────────────
 function FixSentencesView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
   showResults,
 }: {
   block: FixSentencesBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
 }) {
   const t = useTranslations("viewer");
+  const isPrint = mode === "print";
   // answer: Record<sentenceId, string[]> where string[] is user-ordered parts
   const userOrders = (answer as Record<string, string[]> | undefined) || {};
 
@@ -1441,11 +1461,11 @@ function FixSentencesView({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
-      <div className="space-y-4">
+      <div>
         {block.sentences.map((item, i) => {
           const correctParts = item.sentence.split(" | ").map((p) => p.trim());
           const displayParts = interactive
@@ -1459,16 +1479,16 @@ function FixSentencesView({
           return (
             <div
               key={item.id}
-              className={`rounded-lg border p-3 transition-colors ${
+              className={`py-2 transition-colors ${isPrint ? '' : 'border-b last:border-b-0'} ${
                 showResults
                   ? isFullyCorrect
-                    ? "border-green-500 bg-green-50"
-                    : "border-red-500 bg-red-50"
-                  : "border-border"
+                    ? "bg-green-50"
+                    : "bg-red-50"
+                  : ""
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0 mt-1">
+                <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }} className="font-bold text-muted-foreground bg-muted shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
@@ -1525,6 +1545,9 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
+                  {isPrint && (
+                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                  )}
                   {showResults && !isFullyCorrect && (
                     <p className="text-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
@@ -1563,6 +1586,7 @@ function VerbTableView({
   answer,
   onAnswer,
   showResults,
+  primaryColor = "#1a1a1a",
 }: {
   block: VerbTableBlock;
   mode: ViewMode;
@@ -1570,16 +1594,14 @@ function VerbTableView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  primaryColor?: string;
 }) {
   const t = useTranslations("viewer");
-  // answer: Record<rowId, string> — user-entered conjugation per row
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isSplit = block.splitConjugation ?? false;
   const showGlobal = block.showConjugations ?? false;
-  const colCount = isSplit ? 5 : 4;
   const isPrint = mode === "print";
 
-  // Helper to determine if a cell should show the answer or be a gap
   const shouldShowAnswer = (override: "show" | "hide" | null | undefined): boolean => {
     if (override === "show") return true;
     if (override === "hide") return false;
@@ -1591,128 +1613,113 @@ function VerbTableView({
     onAnswer({ ...userAnswers, [`${rowId}_${field}`]: value });
   };
 
-  const cellPadding = isPrint ? "px-3 py-0.5" : "px-4 py-2";
-  const personFontSize = isPrint ? 11 : 14;
-  const pronFontSize = isPrint ? 13 : 16;
-  const sectionFontSize = isPrint ? 12 : 16;
-  const inputFontSize = isPrint ? 13 : 16;
-  const cornerRadius = isPrint ? "rounded-[3px]" : "rounded-md";
+  const renderRow = (row: VerbTableBlock["singularRows"][0]) => {
+    const showConj1 = shouldShowAnswer(row.showOverride);
+    const showConj2 = shouldShowAnswer(row.showOverride2);
+    const userVal = isSplit
+      ? userAnswers[`${row.id}_conjugation`] || ""
+      : userAnswers[row.id] || userAnswers[`${row.id}_conjugation`] || "";
+    const userVal2 = userAnswers[`${row.id}_conjugation2`] || "";
+    const isCorrect = showResults && userVal.trim().toLowerCase() === row.conjugation.trim().toLowerCase();
+    const isWrong = showResults && userVal.trim() !== "" && !isCorrect;
+    const isCorrect2 = showResults && isSplit && userVal2.trim().toLowerCase() === (row.conjugation2 || "").trim().toLowerCase();
+    const isWrong2 = showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
 
-  const renderSection = (
-    label: string,
-    rows: VerbTableBlock["singularRows"],
-    isFirst: boolean,
-    isLast: boolean,
-  ) => (
-    <>
-      <tr className="bg-muted/50">
-        <td colSpan={colCount} className={`border-b border-border ${cellPadding} font-bold uppercase tracking-wider`} style={{ fontSize: sectionFontSize }}>
-          {label}
-        </td>
-      </tr>
-      {rows.map((row, rowIdx) => {
-        const isLastRow = isLast && rowIdx === rows.length - 1;
-        const userVal = isSplit
-          ? userAnswers[`${row.id}_conjugation`] || ""
-          : userAnswers[row.id] || userAnswers[`${row.id}_conjugation`] || "";
-        const userVal2 = userAnswers[`${row.id}_conjugation2`] || "";
-        const isCorrect =
-          showResults &&
-          userVal.trim().toLowerCase() ===
-            row.conjugation.trim().toLowerCase();
-        const isWrong = showResults && userVal.trim() !== "" && !isCorrect;
-        const isCorrect2 =
-          showResults &&
-          isSplit &&
-          userVal2.trim().toLowerCase() ===
-            (row.conjugation2 || "").trim().toLowerCase();
-        const isWrong2 =
-          showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
-
-        const borderB = isLastRow ? "" : "border-b";
-        
-        // Check visibility for each conjugation cell
-        const showConj1 = shouldShowAnswer(row.showOverride);
-        const showConj2 = shouldShowAnswer(row.showOverride2);
-
-        return (
-          <tr key={row.id}>
-            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase`} style={{ fontSize: personFontSize }}>
-              {row.person}
-            </td>
-            <td className={`border-r ${borderB} border-border ${cellPadding} text-muted-foreground uppercase`} style={{ fontSize: personFontSize }}>
-              {row.detail || ""}
-            </td>
-            <td className={`border-r ${borderB} border-border ${cellPadding} font-bold`} style={{ fontSize: pronFontSize }}>
-              {row.pronoun}
-            </td>
-            <td className={`${borderB} border-border ${cellPadding} font-bold${isSplit ? " border-r" : ""}`}>
-              {showConj1 ? (
-                <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation}</span>
-              ) : interactive ? (
+    return (
+      <div key={row.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+        {/* Person */}
+        <span
+          className="text-muted-foreground uppercase shrink-0"
+          style={{ fontSize: '0.7em', width: '15%' }}
+        >
+          {row.person}
+        </span>
+        {/* Detail (formell/informell) */}
+        <span
+          className="text-muted-foreground shrink-0"
+          style={{ fontSize: '0.7em', width: '15%' }}
+        >
+          {row.detail || ""}
+        </span>
+        {/* Pronoun */}
+        <span className="font-bold shrink-0" style={{ width: '15%' }}>
+          {row.pronoun}
+        </span>
+        {/* Conjugation 1 */}
+        <span style={{ width: isSplit ? '27.5%' : '55%' }}>
+          {showConj1 ? (
+            <span className="font-bold" style={{ color: primaryColor }}>{row.conjugation}</span>
+          ) : interactive ? (
+            <span>
+              <input
+                type="text"
+                value={userVal}
+                onChange={(e) => handleChange(row.id, "conjugation", e.target.value)}
+                disabled={showResults}
+                className={`w-full border rounded px-2 py-1 outline-none ${
+                  showResults
+                    ? isCorrect
+                      ? "border-green-500 bg-green-50 text-green-700"
+                      : isWrong
+                        ? "border-red-500 bg-red-50 text-red-700"
+                        : "border-border"
+                    : "border-border focus:border-primary"
+                }`}
+                placeholder="…"
+              />
+              {showResults && isWrong && (
+                <span className="text-xs text-green-600 mt-0.5 block">{row.conjugation}</span>
+              )}
+            </span>
+          ) : (
+            <span
+              className="bg-gray-100 rounded"
+              style={{ display: 'inline-block', verticalAlign: 'text-bottom', height: '1.3em', minWidth: '80px' }}
+            >
+              &nbsp;
+            </span>
+          )}
+        </span>
+        {/* Conjugation 2 (split) */}
+        {isSplit && (
+          <span style={{ width: '27.5%' }}>
+            {showConj2 ? (
+              <span className="font-bold" style={{ color: primaryColor }}>{row.conjugation2}</span>
+            ) : interactive ? (
+              <span>
                 <input
                   type="text"
-                  value={userVal}
-                  onChange={(e) => handleChange(row.id, "conjugation", e.target.value)}
+                  value={userVal2}
+                  onChange={(e) => handleChange(row.id, "conjugation2", e.target.value)}
                   disabled={showResults}
                   className={`w-full border rounded px-2 py-1 outline-none ${
                     showResults
-                      ? isCorrect
+                      ? isCorrect2
                         ? "border-green-500 bg-green-50 text-green-700"
-                        : isWrong
+                        : isWrong2
                           ? "border-red-500 bg-red-50 text-red-700"
                           : "border-border"
                       : "border-border focus:border-primary"
                   }`}
-                  style={{ fontSize: inputFontSize }}
                   placeholder="…"
                 />
-              ) : (
-                <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
-              )}
-              {showResults && isWrong && !showConj1 && (
-                <span className="text-xs text-green-600 mt-0.5 block">
-                  {row.conjugation}
-                </span>
-              )}
-            </td>
-            {isSplit && (
-              <td className={`${borderB} border-border ${cellPadding} font-bold`}>
-                {showConj2 ? (
-                  <span className="text-red-500" style={{ fontSize: inputFontSize }}>{row.conjugation2}</span>
-                ) : interactive ? (
-                  <input
-                    type="text"
-                    value={userVal2}
-                    onChange={(e) => handleChange(row.id, "conjugation2", e.target.value)}
-                    disabled={showResults}
-                    className={`w-full border rounded px-2 py-1 outline-none ${
-                      showResults
-                        ? isCorrect2
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : isWrong2
-                            ? "border-red-500 bg-red-50 text-red-700"
-                            : "border-border"
-                        : "border-border focus:border-primary"
-                    }`}
-                    style={{ fontSize: inputFontSize }}
-                    placeholder="…"
-                  />
-                ) : (
-                  <div className={`border-b border-dashed border-muted-foreground ${isPrint ? "h-4" : "h-6"}`} />
+                {showResults && isWrong2 && (
+                  <span className="text-xs text-green-600 mt-0.5 block">{row.conjugation2}</span>
                 )}
-                {showResults && isWrong2 && !showConj2 && (
-                  <span className="text-xs text-green-600 mt-0.5 block">
-                    {row.conjugation2}
-                  </span>
-                )}
-              </td>
+              </span>
+            ) : (
+              <span
+                className="bg-gray-100 rounded"
+                style={{ display: 'inline-block', verticalAlign: 'text-bottom', height: '1.3em', minWidth: '80px' }}
+              >
+                &nbsp;
+              </span>
             )}
-          </tr>
-        );
-      })}
-    </>
-  );
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const allRows = [...block.singularRows, ...block.pluralRows];
   const correctCount = showResults
@@ -1732,41 +1739,25 @@ function VerbTableView({
   return (
     <div>
       {block.verb && (
-        <table className={`w-full border-separate border-spacing-0 ${cornerRadius} overflow-hidden`} style={{ border: isPrint ? '1px solid #1a1a1a' : '2px solid #1a1a1a', marginBottom: isPrint ? 8 : 12 }}>
-          <tbody>
-            <tr className="bg-foreground text-background">
-              <td colSpan={colCount} className={`${cellPadding} font-bold`} style={{ fontSize: isPrint ? 14 : 18 }}>
-                {block.verb}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="font-bold py-2 border-b" style={{ color: primaryColor, borderColor: primaryColor }}>
+          {block.verb}
+        </div>
       )}
-      <table className={`w-full border-separate border-spacing-0 ${cornerRadius} overflow-hidden`} style={{ fontSize: isPrint ? 13 : 16, border: isPrint ? '1px solid #1a1a1a' : '2px solid #1a1a1a' }}>
-        <colgroup>
-          <col style={{ width: "15%" }} />
-          <col style={{ width: "15%" }} />
-          <col style={{ width: "15%" }} />
-          {isSplit ? (
-            <>
-              <col style={{ width: "27.5%" }} />
-              <col style={{ width: "27.5%" }} />
-            </>
-          ) : (
-            <col style={{ width: "55%" }} />
-          )}
-        </colgroup>
-        <tbody>
-          {renderSection("Singular", block.singularRows, true, false)}
-          {renderSection("Plural", block.pluralRows, false, true)}
-        </tbody>
-      </table>
+      <div>
+        {/* Singular */}
+        <div className="text-muted-foreground font-bold uppercase border-b border-border py-2 flex items-center">
+          Singular
+        </div>
+        {block.singularRows.map((row) => renderRow(row))}
+        {/* Plural */}
+        <div className="text-muted-foreground font-bold uppercase border-b border-border py-2 flex items-center">
+          Plural
+        </div>
+        {block.pluralRows.map((row) => renderRow(row))}
+      </div>
       {showResults && (
         <p className="text-xs text-muted-foreground mt-2">
-          {t("resultCount", {
-            correct: correctCount,
-            total: totalCount,
-          })}
+          {t("resultCount", { correct: correctCount, total: totalCount })}
         </p>
       )}
     </div>
@@ -1781,12 +1772,14 @@ export function ViewerBlockRenderer({
   answer,
   onAnswer,
   showResults = false,
+  primaryColor = "#1a1a1a",
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
   answer?: unknown;
   onAnswer?: (value: unknown) => void;
   showResults?: boolean;
+  primaryColor?: string;
 }) {
   const interactive = mode === "online";
   const noop = () => {};
@@ -1879,6 +1872,7 @@ export function ViewerBlockRenderer({
       return (
         <WordSearchView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -1898,6 +1892,7 @@ export function ViewerBlockRenderer({
       return (
         <UnscrambleWordsView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -1908,6 +1903,7 @@ export function ViewerBlockRenderer({
       return (
         <FixSentencesView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -1923,6 +1919,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          primaryColor={primaryColor}
         />
       );
     case "columns":
@@ -1933,6 +1930,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          primaryColor={primaryColor}
         />
       );
     default:

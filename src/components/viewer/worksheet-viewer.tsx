@@ -122,6 +122,14 @@ export function WorksheetViewer({
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-true-false-matrix { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-fix-sentences { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-verb-table { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-order-items { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-matching { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-fill-in-blank { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-word-search { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-inline-choices { break-inside: auto; page-break-inside: auto; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
                 h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
@@ -132,8 +140,8 @@ export function WorksheetViewer({
                 .print-table thead td { padding: 0; }
 
                 .print-header-content {
-                  height: 25mm;
-                  padding: 10mm 10mm 0 10mm;
+                  height: 30mm;
+                  padding: 15mm 15mm 0 20mm;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
@@ -157,7 +165,7 @@ export function WorksheetViewer({
                   left: 0;
                   right: 0;
                   height: 25mm;
-                  padding: 0 10mm 8mm 10mm;
+                  padding: 0 15mm 8mm 15mm;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;
@@ -169,7 +177,7 @@ export function WorksheetViewer({
                 }
 
                 .print-body-content {
-                  padding: 0 20mm 0 20mm;
+                  padding: 0 20mm 0 25mm;
                 }
               `,
             }}
@@ -204,10 +212,10 @@ export function WorksheetViewer({
                   <td>
                     <div className="print-header-content">
                       <div>
-                        {hasLogo && <img src={brandSettings.logo} alt="" />}
+                        {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+                        {hasLogo && <img src={brandSettings.logo} alt="" />}
                       </div>
                     </div>
                   </td>
@@ -235,7 +243,7 @@ export function WorksheetViewer({
                           key={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} />
                         </div>
                       ))}
                     </div>
@@ -280,6 +288,7 @@ export function WorksheetViewer({
                     answer={answers[block.id]}
                     onAnswer={(value) => updateAnswer(block.id, value)}
                     showResults={showResults}
+                    primaryColor={brandFonts.primaryColor}
                   />
                 </div>
               ))}

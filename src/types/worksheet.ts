@@ -281,6 +281,7 @@ export interface BrandFonts {
   headlineWeight: number;
   headerFooterFont: string;
   googleFontsUrl: string;
+  primaryColor: string;
 }
 
 export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
@@ -311,13 +312,15 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
     headlineWeight: 700,
     headerFooterFont: "Asap Condensed, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
+    primaryColor: "#1a1a1a",
   },
   lingostar: {
-    bodyFont: "Nunito, sans-serif",
+    bodyFont: "Encode Sans, sans-serif",
     headlineFont: "Merriweather, serif",
     headlineWeight: 400,
     headerFooterFont: "Encode Sans, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
+    primaryColor: "#3a4f40",
   },
 };
 
