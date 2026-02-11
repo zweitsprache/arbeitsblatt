@@ -11,6 +11,7 @@ import {
   ChevronRight,
   User,
   Shield,
+  BookOpen,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -45,6 +46,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor", labelKey: "newWorksheet", icon: Plus },
       { href: "/", labelKey: "worksheetLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "ebooks",
+    icon: BookOpen,
+    items: [
+      { href: "/ebooks/new", labelKey: "newEbook", icon: Plus },
+      { href: "/ebooks", labelKey: "ebooks", icon: Library },
     ],
   },
   {

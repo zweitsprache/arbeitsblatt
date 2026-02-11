@@ -39,3 +39,21 @@ model Worksheet {
   @@index([folderId])
   @@index([userId])
 }
+
+model EBook {
+  id            String   @id @default(cuid())
+  title         String   @default("Untitled E-Book")
+  slug          String   @unique
+  chapters      Json     @default("[]")  // Array of EBookChapter objects
+  coverSettings Json     @default("{}")  // EBookCoverSettings
+  settings      Json     @default("{}")  // EBookSettings
+  published     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  folderId      String?
+  userId        String?
+
+  @@index([slug])
+  @@index([folderId])
+  @@index([userId])
+}
