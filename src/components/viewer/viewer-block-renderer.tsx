@@ -96,7 +96,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
         {block.items.map((item) => {
           const [arW, arH] = (block.imageAspectRatio ?? "1:1").split(":").map(Number);
           return (
-          <div key={item.id} className="border rounded-lg overflow-hidden bg-card image-card-row">
+          <div key={item.id} className="border rounded overflow-hidden bg-card image-card-row">
             {item.src && (
               <div 
                 className="overflow-hidden relative mx-auto"
@@ -117,7 +117,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
               {block.showWritingLines ? (
                 <div className="space-y-0.5 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                   ))}
                 </div>
               ) : (
@@ -173,7 +173,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
         style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
       >
         {block.items.map((item) => (
-          <div key={item.id} className={`${block.showBorder ? "border rounded-lg" : ""} overflow-hidden bg-card text-card-row`}>
+          <div key={item.id} className={`${block.showBorder ? "border rounded" : ""} overflow-hidden bg-card text-card-row`}>
             <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
               {item.text && <span>{item.text}</span>}
             </div>
@@ -181,7 +181,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
               {block.showWritingLines ? (
                 <div className="space-y-0 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                   ))}
                 </div>
               ) : (
@@ -1431,6 +1431,9 @@ function UnscrambleWordsView({
     return Math.abs(seed);
   };
 
+  // Compute max word length for consistent arrow alignment
+  const maxWordLength = Math.max(...block.words.map((item) => item.word.length), 0);
+
   return (
     <div className="space-y-2">
       {block.instruction && (
@@ -1466,7 +1469,7 @@ function UnscrambleWordsView({
               <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-mono font-semibold select-none">
+              <span className="font-mono font-semibold select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.62}em` }}>
                 {scrambled}
               </span>
               <span className="text-muted-foreground">→</span>

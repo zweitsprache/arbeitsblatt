@@ -243,7 +243,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
           return (
           <div key={item.id} className="relative group/card">
             <div
-              className={`border rounded-lg overflow-hidden bg-card transition-all ${
+              className={`border rounded overflow-hidden bg-card transition-all ${
                 dragOverIndex === index ? "ring-2 ring-primary border-primary" : ""
               }`}
               onDrop={(e) => handleDrop(e, index)}
@@ -324,7 +324,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
                 {block.showWritingLines && (
                   <div className="space-y-0.5 mt-1 pb-2">
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                     ))}
                   </div>
                 )}
@@ -436,7 +436,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
       >
         {block.items.map((item, index) => (
           <div key={item.id} className="relative group/card">
-            <div className={`${block.showBorder ? "border rounded-lg" : ""} overflow-hidden bg-card transition-all`}>
+            <div className={`${block.showBorder ? "border rounded" : ""} overflow-hidden bg-card transition-all`}>
               <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
                 <input
                   type="text"
@@ -457,7 +457,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
                       placeholder={t("answerWord")}
                     />
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                     ))}
                   </div>
                 ) : (
