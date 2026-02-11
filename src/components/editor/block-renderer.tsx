@@ -324,7 +324,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
                 {block.showWritingLines && (
                   <div className="space-y-0.5 mt-1 pb-2">
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-4 border-b-2 border-muted-foreground/30 w-full" />
+                      <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                     ))}
                   </div>
                 )}
@@ -448,7 +448,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
               </div>
               <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
                 {block.showWritingLines ? (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0">
                     <input
                       type="text"
                       value={item.caption}
@@ -457,7 +457,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
                       placeholder={t("answerWord")}
                     />
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-4 border-b-2 border-muted-foreground/30 w-full" />
+                      <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                     ))}
                   </div>
                 ) : (

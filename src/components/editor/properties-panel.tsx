@@ -231,9 +231,9 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
         {block.items.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
-            {item.imageUrl ? (
+            {item.src ? (
               <div className="w-8 h-8 rounded overflow-hidden shrink-0 bg-slate-100">
-                <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+                <img src={item.src} alt="" className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded shrink-0 bg-slate-200 flex items-center justify-center">

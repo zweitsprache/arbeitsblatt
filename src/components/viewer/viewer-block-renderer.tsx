@@ -117,7 +117,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
               {block.showWritingLines ? (
                 <div className="space-y-0.5 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-4 border-b-2 border-muted-foreground/40 w-full" />
+                    <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                   ))}
                 </div>
               ) : (
@@ -179,9 +179,9 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
             </div>
             <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
               {block.showWritingLines ? (
-                <div className="space-y-0.5 pb-1">
+                <div className="space-y-0 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-4 border-b-2 border-muted-foreground/40 w-full" />
+                    <div key={i} className="h-8" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
                   ))}
                 </div>
               ) : (
