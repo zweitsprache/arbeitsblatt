@@ -26,6 +26,7 @@ import {
   Shuffle,
   WrapText,
   TableProperties,
+  LayoutGrid,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -48,6 +49,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Shuffle,
   WrapText,
   TableProperties,
+  LayoutGrid,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

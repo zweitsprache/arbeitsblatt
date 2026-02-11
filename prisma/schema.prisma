@@ -1,27 +1,21 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model Folder {
-  id        String   @id @default(cuid())
-  name      String
-  userId    String?
-  parentId  String?
-  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Folder[] @relation("FolderTree")
+  id         String      @id @default(cuid())
+  name       String
+  parentId   String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  userId     String?
+  parent     Folder?     @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Folder[]    @relation("FolderTree")
   worksheets Worksheet[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([parentId])
   @@index([userId])
@@ -35,11 +29,11 @@ model Worksheet {
   blocks      Json     @default("[]")
   settings    Json     @default("{}")
   published   Boolean  @default(false)
-  userId      String?
-  folderId    String?
-  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  folderId    String?
+  userId      String?
+  folder      Folder?  @relation(fields: [folderId], references: [id])
 
   @@index([slug])
   @@index([folderId])

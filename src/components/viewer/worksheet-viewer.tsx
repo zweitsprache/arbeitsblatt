@@ -130,6 +130,10 @@ export function WorksheetViewer({
                 .worksheet-block-fill-in-blank { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-word-search { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-inline-choices { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-image-cards { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-image-cards .image-card-row { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-text-cards { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-text-cards .text-card-row { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
                 h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
@@ -165,7 +169,7 @@ export function WorksheetViewer({
                   left: 0;
                   right: 0;
                   height: 25mm;
-                  padding: 0 15mm 8mm 15mm;
+                  padding: 0 15mm 8mm 20mm;
                   box-sizing: border-box;
                   display: flex;
                   justify-content: space-between;

@@ -7,6 +7,8 @@ import {
   HeadingBlock,
   TextBlock,
   ImageBlock,
+  ImageCardsBlock,
+  TextCardsBlock,
   SpacerBlock,
   DividerBlock,
   MultipleChoiceBlock,
@@ -30,7 +32,7 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -124,6 +126,372 @@ function ImageRenderer({ block }: { block: ImageBlock }) {
         </figcaption>
       )}
     </figure>
+  );
+}
+
+// ─── Image Cards ─────────────────────────────────────────────
+function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+
+  const handleImageUpload = async (file: File, index: number) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingIndex(index);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const newItems = [...block.items];
+        newItems[index] = { ...newItems[index], src: data.url, alt: file.name };
+        dispatch({
+          type: "UPDATE_BLOCK",
+          payload: { id: block.id, updates: { items: newItems } },
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(null);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleImageUpload(file, index);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(null);
+  };
+
+  const updateItemText = (index: number, text: string) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], text };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addCard = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), src: "", alt: "", text: `Caption ${block.items.length + 1}` },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeCard = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Word Bank Preview */}
+      {block.showWordBank && block.items.some(item => item.text) && (
+        <div className="bg-muted/50 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+          <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
+          <div className="flex flex-wrap gap-2">
+            {block.items
+              .filter(item => item.text)
+              .sort(() => Math.random() - 0.5)
+              .map((item) => (
+                <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+                  {item.text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {block.items.map((item, index) => {
+          const [arW, arH] = (block.imageAspectRatio ?? "1:1").split(":").map(Number);
+          const scale = (block.imageScale ?? 100) / 100;
+          return (
+          <div key={item.id} className="relative group/card">
+            <div
+              className={`border rounded-lg overflow-hidden bg-card transition-all ${
+                dragOverIndex === index ? "ring-2 ring-primary border-primary" : ""
+              }`}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+            >
+              {item.src ? (
+                <div 
+                  className="relative overflow-hidden mx-auto"
+                  style={{ 
+                    width: `${block.imageScale ?? 100}%`,
+                    aspectRatio: `${arW} / ${arH}` 
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.src}
+                    alt={item.alt}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newItems = [...block.items];
+                      newItems[index] = { ...newItems[index], src: "", alt: "" };
+                      dispatch({
+                        type: "UPDATE_BLOCK",
+                        payload: { id: block.id, updates: { items: newItems } },
+                      });
+                    }}
+                    className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <label 
+                  className={`w-full aspect-square flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                    dragOverIndex === index ? "bg-primary/10" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file, index);
+                      }}
+                    />
+                    {uploadingIndex === index ? (
+                      <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                    ) : dragOverIndex === index ? (
+                      <>
+                        <Upload className="h-8 w-8 text-primary mb-2" />
+                        <span className="text-xs text-primary font-medium">{t("dropImage")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <span className="text-xs text-muted-foreground">{t("dragOrClick")}</span>
+                      </>
+                    )}
+                  </div>
+                </label>
+              )}
+              <div className="p-2">
+                <input
+                  type="text"
+                  value={item.text}
+                  onChange={(e) => updateItemText(index, e.target.value)}
+                  className={`w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1 ${
+                    block.showWritingLines ? "text-muted-foreground" : ""
+                  }`}
+                  placeholder={block.showWritingLines ? t("answerWord") : t("caption")}
+                />
+                {block.showWritingLines && (
+                  <div className="space-y-0.5 mt-1 pb-2">
+                    {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
+                      <div key={i} className="h-4 border-b-2 border-muted-foreground/30 w-full" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {block.items.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeCard(index)}
+                className="absolute -top-2 -right-2 opacity-0 group-hover/card:opacity-100 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-1 shadow transition-opacity"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )})}
+      </div>
+      <button
+        type="button"
+        onClick={addCard}
+        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-lg text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus className="h-4 w-4" />
+        {t("addCard")}
+      </button>
+    </div>
+  );
+}
+
+// ─── Text Cards ──────────────────────────────────────────────
+function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+
+  const updateItemText = (index: number, text: string) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], text };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const updateItemCaption = (index: number, caption: string) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], caption };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addCard = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), text: `Text ${block.items.length + 1}`, caption: `Caption ${block.items.length + 1}` },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeCard = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const sizeClasses: Record<string, string> = {
+    xs: "text-xs",
+    sm: "text-sm",
+    base: "text-base",
+    lg: "text-lg",
+    xl: "text-xl",
+    "2xl": "text-2xl",
+  };
+
+  const alignClasses: Record<string, string> = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Word Bank Preview */}
+      {block.showWordBank && block.items.some(item => item.caption) && (
+        <div className="bg-muted/50 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+          <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
+          <div className="flex flex-wrap gap-2">
+            {block.items
+              .filter(item => item.caption)
+              .sort(() => Math.random() - 0.5)
+              .map((item) => (
+                <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+                  {item.caption}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {block.items.map((item, index) => (
+          <div key={item.id} className="relative group/card">
+            <div className={`${block.showBorder ? "border rounded-lg" : ""} overflow-hidden bg-card transition-all`}>
+              <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
+                <input
+                  type="text"
+                  value={item.text}
+                  onChange={(e) => updateItemText(index, e.target.value)}
+                  className={`w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1 ${alignClasses[block.textAlign ?? "center"]}`}
+                  placeholder={t("cardText")}
+                />
+              </div>
+              <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+                {block.showWritingLines ? (
+                  <div className="space-y-0.5">
+                    <input
+                      type="text"
+                      value={item.caption}
+                      onChange={(e) => updateItemCaption(index, e.target.value)}
+                      className="w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1 text-muted-foreground mb-1"
+                      placeholder={t("answerWord")}
+                    />
+                    {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
+                      <div key={i} className="h-4 border-b-2 border-muted-foreground/30 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={item.caption}
+                    onChange={(e) => updateItemCaption(index, e.target.value)}
+                    className="w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1"
+                    placeholder={t("caption")}
+                  />
+                )}
+              </div>
+            </div>
+            {block.items.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeCard(index)}
+                className="absolute -top-2 -right-2 opacity-0 group-hover/card:opacity-100 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-1 shadow transition-opacity"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addCard}
+        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-lg text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus className="h-4 w-4" />
+        {t("addCard")}
+      </button>
+    </div>
   );
 }
 
@@ -1859,6 +2227,10 @@ export function BlockRenderer({
       return <TextRenderer block={block} />;
     case "image":
       return <ImageRenderer block={block} />;
+    case "image-cards":
+      return <ImageCardsRenderer block={block} />;
+    case "text-cards":
+      return <TextCardsRenderer block={block} />;
     case "spacer":
       return <SpacerRenderer block={block} />;
     case "divider":

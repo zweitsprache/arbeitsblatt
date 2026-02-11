@@ -6,6 +6,8 @@ import {
   HeadingBlock,
   TextBlock,
   ImageBlock,
+  ImageCardsBlock,
+  TextCardsBlock,
   SpacerBlock,
   DividerBlock,
   MultipleChoiceBlock,
@@ -31,7 +33,7 @@ import { useTranslations } from "next-intl";
 
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-2xl", 2: "text-2xl", 3: "text-xl" };
+  const sizes = { 1: "text-xl", 2: "text-xl", 3: "text-lg" };
   return <Tag className={`${sizes[block.level]}`} style={block.level === 1 ? { marginBottom: -4 } : undefined}>{block.content}</Tag>;
 }
 
@@ -61,6 +63,135 @@ function ImageView({ block }: { block: ImageBlock }) {
         </figcaption>
       )}
     </figure>
+  );
+}
+
+function ImageCardsView({ block }: { block: ImageCardsBlock }) {
+  // Shuffle word bank items for display (memoized to maintain consistency)
+  const shuffledItems = useMemo(() => {
+    if (!block.showWordBank) return [];
+    return [...block.items]
+      .filter(item => item.text)
+      .sort(() => Math.random() - 0.5);
+  }, [block.items, block.showWordBank]);
+
+  return (
+    <div className="space-y-3">
+      {/* Word Bank */}
+      {block.showWordBank && shuffledItems.length > 0 && (
+        <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+          <div className="flex flex-wrap gap-2">
+            {shuffledItems.map((item) => (
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+                {item.text}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {block.items.map((item) => {
+          const [arW, arH] = (block.imageAspectRatio ?? "1:1").split(":").map(Number);
+          return (
+          <div key={item.id} className="border rounded-lg overflow-hidden bg-card image-card-row">
+            {item.src && (
+              <div 
+                className="overflow-hidden relative mx-auto"
+                style={{ 
+                  width: `${block.imageScale ?? 100}%`,
+                  aspectRatio: `${arW} / ${arH}` 
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+              {block.showWritingLines ? (
+                <div className="space-y-0.5 pb-1">
+                  {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
+                    <div key={i} className="h-4 border-b-2 border-muted-foreground/40 w-full" />
+                  ))}
+                </div>
+              ) : (
+                item.text && <span>{item.text}</span>
+              )}
+            </div>
+          </div>
+        )})}
+      </div>
+    </div>
+  );
+}
+
+function TextCardsView({ block }: { block: TextCardsBlock }) {
+  const shuffledItems = useMemo(() => {
+    if (!block.showWordBank) return [];
+    return [...block.items]
+      .filter(item => item.text)
+      .sort(() => Math.random() - 0.5);
+  }, [block.items, block.showWordBank]);
+
+  const sizeClasses: Record<string, string> = {
+    xs: "text-xs",
+    sm: "text-sm",
+    base: "text-base",
+    lg: "text-lg",
+    xl: "text-xl",
+    "2xl": "text-2xl",
+  };
+
+  const alignClasses: Record<string, string> = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Word Bank */}
+      {block.showWordBank && shuffledItems.length > 0 && (
+        <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-muted-foreground/30">
+          <div className="flex flex-wrap gap-2">
+            {shuffledItems.map((item) => (
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+                {item.caption}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {block.items.map((item) => (
+          <div key={item.id} className={`${block.showBorder ? "border rounded-lg" : ""} overflow-hidden bg-card text-card-row`}>
+            <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
+              {item.text && <span>{item.text}</span>}
+            </div>
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+              {block.showWritingLines ? (
+                <div className="space-y-0.5 pb-1">
+                  {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
+                    <div key={i} className="h-4 border-b-2 border-muted-foreground/40 w-full" />
+                  ))}
+                </div>
+              ) : (
+                item.caption && <span>{item.caption}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1791,6 +1922,10 @@ export function ViewerBlockRenderer({
       return <TextView block={block} />;
     case "image":
       return <ImageView block={block} />;
+    case "image-cards":
+      return <ImageCardsView block={block} />;
+    case "text-cards":
+      return <TextCardsView block={block} />;
     case "spacer":
       return <SpacerView block={block} />;
     case "divider":

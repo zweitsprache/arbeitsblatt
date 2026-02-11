@@ -9,6 +9,7 @@ export type BlockType =
   | "heading"
   | "text"
   | "image"
+  | "image-cards"
   | "spacer"
   | "divider"
   | "multiple-choice"
@@ -25,7 +26,8 @@ export type BlockType =
   | "sorting-categories"
   | "unscramble-words"
   | "fix-sentences"
-  | "verb-table";
+  | "verb-table"
+  | "text-cards";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -54,6 +56,46 @@ export interface ImageBlock extends BlockBase {
   alt: string;
   width?: number;
   caption?: string;
+}
+
+// ─── Image Cards block ───────────────────────────────────────
+export interface ImageCardItem {
+  id: string;
+  src: string;
+  alt: string;
+  text: string;
+}
+
+export interface ImageCardsBlock extends BlockBase {
+  type: "image-cards";
+  items: ImageCardItem[];
+  columns: 2 | 3 | 4;
+  imageAspectRatio: "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
+  imageScale: number; // 10-100
+  showWritingLines: boolean;
+  writingLinesCount: number;
+  showWordBank: boolean;
+}
+
+// ─── Text Cards block ────────────────────────────────────────
+export interface TextCardItem {
+  id: string;
+  text: string;
+  caption: string;
+}
+
+export interface TextCardsBlock extends BlockBase {
+  type: "text-cards";
+  items: TextCardItem[];
+  columns: 2 | 3 | 4;
+  textSize: "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
+  textAlign: "left" | "center" | "right";
+  textBold: boolean;
+  textItalic: boolean;
+  showBorder: boolean;
+  showWritingLines: boolean;
+  writingLinesCount: number;
+  showWordBank: boolean;
 }
 
 // ─── Spacer block ────────────────────────────────────────────
@@ -244,6 +286,8 @@ export type WorksheetBlock =
   | HeadingBlock
   | TextBlock
   | ImageBlock
+  | ImageCardsBlock
+  | TextCardsBlock
   | SpacerBlock
   | DividerBlock
   | MultipleChoiceBlock
@@ -433,6 +477,57 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "image",
       src: "",
       alt: "",
+      visibility: "both",
+    },
+  },
+  {
+    type: "image-cards",
+    label: "Image Cards",
+    description: "Grid of images with captions",
+    labelKey: "imageCards",
+    descriptionKey: "imageCardsDesc",
+    icon: "LayoutGrid",
+    category: "content",
+    translations: { de: { label: "Bildkarten", description: "Bilder im Raster mit Beschriftung" } },
+    defaultData: {
+      type: "image-cards",
+      items: [
+        { id: "card1", src: "", alt: "", text: "Caption 1" },
+        { id: "card2", src: "", alt: "", text: "Caption 2" },
+      ],
+      columns: 2,
+      imageAspectRatio: "1:1",
+      imageScale: 100,
+      showWritingLines: false,
+      writingLinesCount: 1,
+      showWordBank: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "text-cards",
+    label: "Text Cards",
+    description: "Grid of text items with optional writing lines",
+    labelKey: "textCards",
+    descriptionKey: "textCardsDesc",
+    icon: "LayoutList",
+    category: "content",
+    translations: { de: { label: "Textkarten", description: "Text im Raster mit Schreiblinien" } },
+    defaultData: {
+      type: "text-cards",
+      items: [
+        { id: "card1", text: "Text 1", caption: "Caption 1" },
+        { id: "card2", text: "Text 2", caption: "Caption 2" },
+      ],
+      columns: 2,
+      textSize: "base",
+      textAlign: "center",
+      textBold: false,
+      textItalic: false,
+      showBorder: true,
+      showWritingLines: false,
+      writingLinesCount: 1,
+      showWordBank: false,
       visibility: "both",
     },
   },

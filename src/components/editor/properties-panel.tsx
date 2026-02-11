@@ -6,6 +6,7 @@ import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ import {
   HeadingBlock,
   TextBlock,
   ImageBlock,
+  ImageCardsBlock,
+  TextCardsBlock,
   SpacerBlock,
   DividerBlock,
   MultipleChoiceBlock,
@@ -40,7 +43,7 @@ import {
   WorksheetBlock,
   BlockVisibility,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
@@ -147,6 +150,468 @@ function ImageProps({ block }: { block: ImageBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { caption: e.target.value } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.items.length) return;
+    const newItems = [...block.items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const updateItem = (index: number, updates: Partial<{ text: string; imageUrl: string }>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), imageUrl: "", text: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+        <Select
+          value={String(block.columns)}
+          onValueChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 } },
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 {tc("columns")}</SelectItem>
+            <SelectItem value="3">3 {tc("columns")}</SelectItem>
+            <SelectItem value="4">4 {tc("columns")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
+            {item.imageUrl ? (
+              <div className="w-8 h-8 rounded overflow-hidden shrink-0 bg-slate-100">
+                <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded shrink-0 bg-slate-200 flex items-center justify-center">
+                <span className="text-xs text-muted-foreground">—</span>
+              </div>
+            )}
+            <Input
+              value={item.text}
+              onChange={(e) => updateItem(i, { text: e.target.value })}
+              placeholder={t("cardText")}
+              className="flex-1 h-8 text-xs"
+            />
+            <div className="flex flex-col">
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, -1)}
+                disabled={i === 0}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+              </button>
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, 1)}
+                disabled={i === block.items.length - 1}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5" />
+              </button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeItem(i)}
+              disabled={block.items.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCard")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageAspectRatio")}</Label>
+        <div className="flex gap-1">
+          {(["16:9", "4:3", "1:1", "3:4", "9:16"] as const).map((ratio) => (
+            <Button
+              key={ratio}
+              variant={(block.imageAspectRatio ?? "1:1") === ratio ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { imageAspectRatio: ratio } },
+                })
+              }
+            >
+              {ratio}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-sm">{t("imageScale")}</Label>
+          <span className="text-xs text-muted-foreground">{block.imageScale ?? 100}%</span>
+        </div>
+        <Slider
+          value={[block.imageScale ?? 100]}
+          min={10}
+          max={100}
+          step={5}
+          onValueChange={([value]) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { imageScale: value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWritingLines")}</Label>
+        <Switch
+          checked={block.showWritingLines ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWritingLines: checked } },
+            })
+          }
+        />
+      </div>
+      {block.showWritingLines && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm">{t("writingLinesCount")}</Label>
+            <span className="text-xs text-muted-foreground">{block.writingLinesCount ?? 1}</span>
+          </div>
+          <Slider
+            value={[block.writingLinesCount ?? 1]}
+            min={1}
+            max={5}
+            step={1}
+            onValueChange={([value]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { writingLinesCount: value } },
+              })
+            }
+          />
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWordBank")}</Label>
+        <Switch
+          checked={block.showWordBank ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function TextCardsProps({ block }: { block: TextCardsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.items.length) return;
+    const newItems = [...block.items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const updateItem = (index: number, updates: Partial<{ text: string; caption: string }>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), text: "", caption: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+        <Select
+          value={String(block.columns)}
+          onValueChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 } },
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 {tc("columns")}</SelectItem>
+            <SelectItem value="3">3 {tc("columns")}</SelectItem>
+            <SelectItem value="4">4 {tc("columns")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
+              <Input
+                value={item.text}
+                onChange={(e) => updateItem(i, { text: e.target.value })}
+                placeholder={t("cardText")}
+                className="flex-1 h-8 text-xs"
+              />
+              <div className="flex flex-col">
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, -1)}
+                disabled={i === 0}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+              </button>
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, 1)}
+                disabled={i === block.items.length - 1}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5" />
+              </button>
+            </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeItem(i)}
+                disabled={block.items.length <= 1}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 shrink-0" />
+              <Input
+                value={item.caption}
+                onChange={(e) => updateItem(i, { caption: e.target.value })}
+                placeholder={t("caption")}
+                className="flex-1 h-7 text-xs text-muted-foreground"
+              />
+              <span className="w-[38px] shrink-0" />
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCard")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <div className="flex gap-1">
+          {(["xs", "sm", "base", "lg", "xl", "2xl"] as const).map((size) => (
+            <Button
+              key={size}
+              variant={(block.textSize ?? "base") === size ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textSize: size } },
+                })
+              }
+            >
+              {size}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textAlignment")}</Label>
+        <div className="flex gap-1">
+          {(["left", "center", "right"] as const).map((align) => (
+            <Button
+              key={align}
+              variant={(block.textAlign ?? "center") === align ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textAlign: align } },
+                })
+              }
+            >
+              {t(align)}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button
+          variant={block.textBold ? "default" : "outline"}
+          size="sm"
+          className="flex-1"
+          onClick={() =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { textBold: !block.textBold } },
+            })
+          }
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={block.textItalic ? "default" : "outline"}
+          size="sm"
+          className="flex-1"
+          onClick={() =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { textItalic: !block.textItalic } },
+            })
+          }
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+      </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showBorder")}</Label>
+        <Switch
+          checked={block.showBorder ?? true}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showBorder: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWritingLines")}</Label>
+        <Switch
+          checked={block.showWritingLines ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWritingLines: checked } },
+            })
+          }
+        />
+      </div>
+      {block.showWritingLines && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm">{t("writingLinesCount")}</Label>
+            <span className="text-xs text-muted-foreground">{block.writingLinesCount ?? 1}</span>
+          </div>
+          <Slider
+            value={[block.writingLinesCount ?? 1]}
+            min={1}
+            max={5}
+            step={1}
+            onValueChange={([value]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { writingLinesCount: value } },
+              })
+            }
+          />
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWordBank")}</Label>
+        <Switch
+          checked={block.showWordBank ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordBank: checked } },
             })
           }
         />
@@ -1494,6 +1959,10 @@ export function PropertiesPanel() {
         return <HeadingProps block={selectedBlock} />;
       case "image":
         return <ImageProps block={selectedBlock} />;
+      case "image-cards":
+        return <ImageCardsProps block={selectedBlock} />;
+      case "text-cards":
+        return <TextCardsProps block={selectedBlock} />;
       case "spacer":
         return <SpacerProps block={selectedBlock} />;
       case "divider":
@@ -1535,8 +2004,8 @@ export function PropertiesPanel() {
 
   return (
     <div className="w-80 flex flex-col h-full pt-8 pb-8">
-      <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
-      <ScrollArea className="flex-1">
+      <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden min-h-0">
+      <ScrollArea className="flex-1 overflow-hidden scrollbar-hide">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
           {/* Visibility */}
           <div>
