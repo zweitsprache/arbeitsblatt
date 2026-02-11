@@ -13,6 +13,7 @@ import {
   MultipleChoiceBlock,
   FillInBlankBlock,
   MatchingBlock,
+  GlossaryBlock,
   OpenResponseBlock,
   WordBankBlock,
   NumberLineBlock,
@@ -38,11 +39,32 @@ function HeadingView({ block }: { block: HeadingBlock }) {
 }
 
 function TextView({ block }: { block: TextBlock }) {
-  return (
+  const imageEl = block.imageSrc ? (
     <div
-      className="tiptap max-w-none"
-      dangerouslySetInnerHTML={{ __html: block.content }}
-    />
+      style={{
+        float: block.imageAlign === "right" ? "right" : "left",
+        width: `${block.imageScale ?? 30}%`,
+        margin: block.imageAlign === "right" ? "0 0 8px 12px" : "0 12px 8px 0",
+        flexShrink: 0,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={block.imageSrc}
+        alt=""
+        className="w-full rounded"
+      />
+    </div>
+  ) : null;
+
+  return (
+    <div style={{ overflow: "hidden" }}>
+      {imageEl}
+      <div
+        className="tiptap max-w-none"
+        dangerouslySetInnerHTML={{ __html: block.content }}
+      />
+    </div>
   );
 }
 
@@ -625,6 +647,35 @@ function MatchingView({
           {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
         </p>
       )}
+    </div>
+  );
+}
+
+function GlossaryView({
+  block,
+}: {
+  block: GlossaryBlock;
+}) {
+  return (
+    <div className="space-y-2">
+      {block.instruction && (
+        <p className="text-muted-foreground">{block.instruction}</p>
+      )}
+      <div className="space-y-0">
+        {block.pairs.map((pair) => (
+          <div
+            key={pair.id}
+            className="flex items-start gap-4 py-2 border-b last:border-b-0"
+          >
+            <span className="font-semibold" style={{ width: "25%", minWidth: "25%", flexShrink: 0 }}>
+              {pair.term}
+            </span>
+            <span className="flex-1">
+              {pair.definition}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1961,6 +2012,12 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+        />
+      );
+    case "glossary":
+      return (
+        <GlossaryView
+          block={block}
         />
       );
     case "open-response":

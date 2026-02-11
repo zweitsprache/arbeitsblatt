@@ -29,6 +29,7 @@ import {
   OpenResponseBlock,
   FillInBlankBlock,
   MatchingBlock,
+  GlossaryBlock,
   WordBankBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
@@ -1107,6 +1108,176 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
   );
 }
 
+function GlossaryProps({ block }: { block: GlossaryBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const parsed: { term: string; definition: string }[] = [];
+
+    for (const line of lines) {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+
+      if (parts.length >= 2) {
+        parsed.push({ term: parts[0], definition: parts.slice(1).join(sep === "\t" ? " " : ", ").trim() });
+      } else if (parts[0]) {
+        parsed.push({ term: parts[0], definition: "" });
+      }
+    }
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newPairs = parsed.map((p) => ({
+      id: `g${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      term: p.term,
+      definition: p.definition,
+    }));
+
+    const pairs = csvMode === "append"
+      ? [...block.pairs, ...newPairs]
+      : newPairs;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs } },
+    });
+    setCsvText("");
+  };
+
+  const updatePair = (index: number, updates: Partial<{ term: string; definition: string }>) => {
+    const newPairs = [...block.pairs];
+    newPairs[index] = { ...newPairs[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  const addPair = () => {
+    const newPairs = [
+      ...block.pairs,
+      { id: `g${Date.now()}`, term: t("newItem"), definition: t("newMatch") },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  const removePair = (index: number) => {
+    const newPairs = block.pairs.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Input
+          value={block.instruction}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: e.target.value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryTerms")}</Label>
+        {block.pairs.map((pair, i) => (
+          <div key={pair.id} className="flex items-center gap-1">
+            <Input
+              value={pair.term}
+              onChange={(e) => updatePair(i, { term: e.target.value })}
+              className="flex-1 h-8 text-xs"
+              placeholder={t("glossaryTerm")}
+            />
+            <span className="text-xs text-muted-foreground">→</span>
+            <Input
+              value={pair.definition}
+              onChange={(e) => updatePair(i, { definition: e.target.value })}
+              className="flex-1 h-8 text-xs"
+              placeholder={t("glossaryDefinition")}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removePair(i)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addPair} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WordBankProps({ block }: { block: WordBankBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -1219,9 +1390,46 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
 }
 
 function TextProps({ block }: { block: TextBlock }) {
+  const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        dispatch({
+          type: "UPDATE_BLOCK",
+          payload: { id: block.id, updates: { imageSrc: data.url } },
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleImageUpload(file);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -1240,6 +1448,103 @@ function TextProps({ block }: { block: TextBlock }) {
         <Sparkles className="h-3.5 w-3.5" />
         {t("aiGenerateText")}
       </Button>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textImage")}</Label>
+        {block.imageSrc ? (
+          <div className="space-y-3">
+            <div className="relative group/img rounded overflow-hidden border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={block.imageSrc} alt="" className="w-full" />
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { imageSrc: undefined } },
+                  })
+                }
+                className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">{t("textImageAlign")}</Label>
+              <div className="flex gap-1">
+                <Button
+                  variant={block.imageAlign !== "right" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-8 text-xs"
+                  onClick={() =>
+                    dispatch({
+                      type: "UPDATE_BLOCK",
+                      payload: { id: block.id, updates: { imageAlign: "left" } },
+                    })
+                  }
+                >
+                  {t("alignLeft")}
+                </Button>
+                <Button
+                  variant={block.imageAlign === "right" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-8 text-xs"
+                  onClick={() =>
+                    dispatch({
+                      type: "UPDATE_BLOCK",
+                      payload: { id: block.id, updates: { imageAlign: "right" } },
+                    })
+                  }
+                >
+                  {t("alignRight")}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">{t("textImageScale")} ({block.imageScale ?? 30}%)</Label>
+              <Slider
+                value={[block.imageScale ?? 30]}
+                min={10}
+                max={80}
+                step={5}
+                onValueChange={([v]) =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { imageScale: v } },
+                  })
+                }
+              />
+            </div>
+          </div>
+        ) : (
+          <label
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${
+              isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+            }`}
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+              }}
+            />
+            {isUploading ? (
+              <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+              </>
+            )}
+          </label>
+        )}
+      </div>
       <AiTextModal
         open={showAiModal}
         onOpenChange={setShowAiModal}
@@ -2149,6 +2454,8 @@ export function PropertiesPanel() {
         return <FillInBlankProps block={selectedBlock} />;
       case "matching":
         return <MatchingProps block={selectedBlock} />;
+      case "glossary":
+        return <GlossaryProps block={selectedBlock} />;
       case "word-bank":
         return <WordBankProps block={selectedBlock} />;
       case "columns":

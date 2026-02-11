@@ -41,6 +41,7 @@ import {
   FolderInput,
   Home,
   X,
+  Copy,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
@@ -58,6 +59,7 @@ interface FolderItem {
 
 interface WorksheetItem {
   id: string;
+  type?: string;
   title: string;
   slug: string;
   published: boolean;
@@ -212,6 +214,15 @@ export function WorksheetDashboard() {
       fetchContents(currentFolderId);
     } catch (err) {
       console.error("Failed to delete worksheet:", err);
+    }
+  };
+
+  const duplicateWorksheet = async (worksheetId: string) => {
+    try {
+      await authFetch(`/api/worksheets/${worksheetId}/duplicate`, { method: "POST" });
+      fetchContents(currentFolderId);
+    } catch (err) {
+      console.error("Failed to duplicate worksheet:", err);
     }
   };
 
@@ -483,6 +494,12 @@ export function WorksheetDashboard() {
                         <DropdownMenuItem onClick={() => router.push(`/editor/${ws.id}`)}>
                           <Pencil className="h-3.5 w-3.5 mr-2" />
                           {tc("edit")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => duplicateWorksheet(ws.id)}
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-2" />
+                          {t("duplicateWorksheet")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => openMoveDialog(ws.id)}

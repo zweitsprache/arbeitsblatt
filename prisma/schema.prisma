@@ -23,6 +23,7 @@ model Folder {
 
 model Worksheet {
   id          String   @id @default(cuid())
+  type        String   @default("worksheet") // "worksheet" | "flashcards" | future types
   title       String   @default("Untitled Worksheet")
   description String?
   slug        String   @unique
@@ -38,6 +39,7 @@ model Worksheet {
   @@index([slug])
   @@index([folderId])
   @@index([userId])
+  @@index([type])
 }
 
 model EBook {

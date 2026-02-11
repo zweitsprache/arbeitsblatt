@@ -52,6 +52,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   editable?: boolean;
+  floatingElement?: React.ReactNode;
 }
 
 function ToolbarButton({
@@ -92,6 +93,7 @@ export function RichTextEditor({
   onChange,
   placeholder,
   editable = true,
+  floatingElement,
 }: RichTextEditorProps) {
   const t = useTranslations("richtext");
   const resolvedPlaceholder = placeholder ?? t("startTyping");
@@ -357,7 +359,10 @@ export function RichTextEditor({
         )}
 
         {/* Editor content */}
-        <EditorContent editor={editor} />
+        <div style={{ overflow: "hidden" }}>
+          {floatingElement}
+          <EditorContent editor={editor} />
+        </div>
       </div>
     </TooltipProvider>
   );

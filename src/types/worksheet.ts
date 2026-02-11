@@ -27,7 +27,8 @@ export type BlockType =
   | "unscramble-words"
   | "fix-sentences"
   | "verb-table"
-  | "text-cards";
+  | "text-cards"
+  | "glossary";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -47,6 +48,9 @@ export interface HeadingBlock extends BlockBase {
 export interface TextBlock extends BlockBase {
   type: "text";
   content: string; // HTML string for WYSIWYG
+  imageSrc?: string;
+  imageAlign?: "left" | "right";
+  imageScale?: number; // 10-100, percentage of container width
 }
 
 // ─── Image block ─────────────────────────────────────────────
@@ -142,6 +146,19 @@ export interface MatchingBlock extends BlockBase {
   type: "matching";
   instruction: string;
   pairs: MatchingPair[];
+}
+
+// ─── Glossary block ─────────────────────────────────────────
+export interface GlossaryPair {
+  id: string;
+  term: string;
+  definition: string;
+}
+
+export interface GlossaryBlock extends BlockBase {
+  type: "glossary";
+  instruction: string;
+  pairs: GlossaryPair[];
 }
 
 // ─── Open response block ────────────────────────────────────
@@ -304,7 +321,8 @@ export type WorksheetBlock =
   | SortingCategoriesBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
-  | VerbTableBlock;
+  | VerbTableBlock
+  | GlossaryBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -830,6 +848,26 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "p2", person: "2. Person", detail: "informell", pronoun: "ihr", conjugation: "macht" },
         { id: "p3", person: "2. Person", detail: "formell", pronoun: "Sie", conjugation: "machen" },
         { id: "p4", person: "3. Person", pronoun: "sie", conjugation: "machen" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "glossary",
+    label: "Glossary",
+    description: "Term-definition list",
+    labelKey: "glossary",
+    descriptionKey: "glossaryDesc",
+    icon: "BookOpen",
+    category: "content",
+    translations: { de: { label: "Glossar", description: "Begriffe und Definitionen" } },
+    defaultData: {
+      type: "glossary",
+      instruction: "",
+      pairs: [
+        { id: "g1", term: "Term 1", definition: "Definition 1" },
+        { id: "g2", term: "Term 2", definition: "Definition 2" },
+        { id: "g3", term: "Term 3", definition: "Definition 3" },
       ],
       visibility: "both",
     },

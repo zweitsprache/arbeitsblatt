@@ -12,6 +12,7 @@ import {
   User,
   Shield,
   BookOpen,
+  Layers,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -46,6 +47,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor", labelKey: "newWorksheet", icon: Plus },
       { href: "/", labelKey: "worksheetLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "flashcards",
+    icon: Layers,
+    items: [
+      { href: "/editor/flashcards", labelKey: "newFlashcards", icon: Plus },
+      { href: "/flashcards", labelKey: "flashcardLibrary", icon: Library },
     ],
   },
   {
@@ -138,10 +147,21 @@ export function AppSidebar() {
               </SectionTitle>
               <nav className="px-3 pb-1 space-y-1">
                 {section.items.map((item) => {
-                  const isActive =
-                    item.labelKey === "worksheetLibrary"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
+                  let isActive: boolean;
+                  if (item.labelKey === "worksheetLibrary") {
+                    isActive = pathname === "/";
+                  } else if (item.labelKey === "flashcardLibrary") {
+                    isActive = pathname === "/flashcards";
+                  } else if (item.labelKey === "newWorksheet") {
+                    // Exact match or /editor/[id] but not /editor/flashcards or /editor/ebook
+                    isActive =
+                      pathname === "/editor" ||
+                      (pathname.startsWith("/editor/") &&
+                        !pathname.startsWith("/editor/flashcards") &&
+                        !pathname.startsWith("/editor/ebook"));
+                  } else {
+                    isActive = pathname.startsWith(item.href);
+                  }
 
                   return (
                     <Tooltip key={item.labelKey}>

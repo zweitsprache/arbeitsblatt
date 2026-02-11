@@ -204,6 +204,7 @@ export function PrintPreview({
 
 .worksheet-block-multiple-choice,
 .worksheet-block-matching,
+.worksheet-block-glossary,
 .worksheet-block-true-false-matrix,
 .worksheet-block-order-items,
 .worksheet-block-sorting-categories,

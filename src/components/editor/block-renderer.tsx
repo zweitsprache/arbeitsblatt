@@ -14,6 +14,7 @@ import {
   MultipleChoiceBlock,
   FillInBlankBlock,
   MatchingBlock,
+  GlossaryBlock,
   OpenResponseBlock,
   WordBankBlock,
   NumberLineBlock,
@@ -70,6 +71,24 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
+  const imageEl = block.imageSrc ? (
+    <div
+      style={{
+        float: block.imageAlign === "right" ? "right" : "left",
+        width: `${block.imageScale ?? 30}%`,
+        margin: block.imageAlign === "right" ? "0 0 8px 12px" : "0 12px 8px 0",
+        flexShrink: 0,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={block.imageSrc}
+        alt=""
+        className="w-full rounded"
+      />
+    </div>
+  ) : null;
+
   return (
     <>
       <div className="relative group/text">
@@ -82,6 +101,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
             })
           }
           placeholder={t("startTyping")}
+          floatingElement={imageEl}
         />
         <button
           type="button"
@@ -734,6 +754,32 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Glossary ────────────────────────────────────────────────
+function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="text-base text-muted-foreground">{block.instruction}</p>
+      )}
+      <div className="space-y-0">
+        {block.pairs.map((pair) => (
+          <div
+            key={pair.id}
+            className="flex items-start gap-4 py-2 border-b last:border-b-0"
+          >
+            <span className="text-base font-semibold" style={{ width: "25%", minWidth: "25%", flexShrink: 0 }}>
+              {pair.term}
+            </span>
+            <span className="text-base flex-1">
+              {pair.definition}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2241,6 +2287,8 @@ export function BlockRenderer({
       return <FillInBlankRenderer block={block} interactive={interactive} />;
     case "matching":
       return <MatchingRenderer block={block} />;
+    case "glossary":
+      return <GlossaryRenderer block={block} />;
     case "open-response":
       return <OpenResponseRenderer block={block} interactive={interactive} />;
     case "word-bank":
