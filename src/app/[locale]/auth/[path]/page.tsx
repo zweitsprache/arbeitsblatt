@@ -1,8 +1,6 @@
 import { AuthView } from "@neondatabase/auth/react";
 import { setRequestLocale } from "next-intl/server";
 
-export const dynamicParams = false;
-
 export default async function AuthPage({
   params,
 }: {

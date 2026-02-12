@@ -42,6 +42,8 @@ import {
   Home,
   X,
   Copy,
+  Printer,
+  Loader2,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
@@ -99,6 +101,7 @@ export function WorksheetDashboard() {
   const [renameFolderName, setRenameFolderName] = useState("");
   const [moveWorksheetId, setMoveWorksheetId] = useState<string | null>(null);
   const [moveTargetFolders, setMoveTargetFolders] = useState<FolderItem[]>([]);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
 
   const fetchContents = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -223,6 +226,33 @@ export function WorksheetDashboard() {
       fetchContents(currentFolderId);
     } catch (err) {
       console.error("Failed to duplicate worksheet:", err);
+    }
+  };
+
+  const downloadPdf = async (worksheetId: string, worksheetTitle: string) => {
+    setGeneratingPdfId(worksheetId);
+    try {
+      const res = await authFetch(`/api/worksheets/${worksheetId}/pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preview: false }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(t("pdfFailed", { error: err.error || "Unknown error" }));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${worksheetTitle}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF download error:", err);
+    } finally {
+      setGeneratingPdfId(null);
     }
   };
 
@@ -506,6 +536,17 @@ export function WorksheetDashboard() {
                         >
                           <FolderInput className="h-3.5 w-3.5 mr-2" />
                           {t("moveToFolder")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => downloadPdf(ws.id, ws.title)}
+                          disabled={generatingPdfId === ws.id}
+                        >
+                          {generatingPdfId === ws.id ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                          ) : (
+                            <Printer className="h-3.5 w-3.5 mr-2" />
+                          )}
+                          {t("downloadPdf")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
