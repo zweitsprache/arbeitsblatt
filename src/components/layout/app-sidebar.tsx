@@ -13,6 +13,7 @@ import {
   Shield,
   BookOpen,
   Layers,
+  LayoutGrid,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -55,6 +56,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor/flashcards", labelKey: "newFlashcards", icon: Plus },
       { href: "/flashcards", labelKey: "flashcardLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "cards",
+    icon: LayoutGrid,
+    items: [
+      { href: "/editor/cards", labelKey: "newCards", icon: Plus },
+      { href: "/cards", labelKey: "cardLibrary", icon: Library },
     ],
   },
   {
