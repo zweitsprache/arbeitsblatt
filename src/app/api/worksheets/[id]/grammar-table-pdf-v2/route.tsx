@@ -118,10 +118,12 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
-  bigLogo: {
+  bigLogoWrap: {
     position: "absolute",
     top: mm(20),
     right: mm(15),
+  },
+  bigLogo: {
     width: mm(40),
   },
   subtitle: {
@@ -508,10 +510,13 @@ function GrammarTablePDF({
     <Document title={title} author="lingostar">
       {/* ── Title page ── */}
       <Page size="A4" orientation="landscape" style={s.titlePage}>
-        <View style={s.titlePageContent}>
-          {bigLogoDataUri ? (
+        {/* Logo – direct child of Page so absolute coords are page-relative */}
+        {bigLogoDataUri ? (
+          <View style={s.bigLogoWrap}>
             <Image src={bigLogoDataUri} style={s.bigLogo} />
-          ) : null}
+          </View>
+        ) : null}
+        <View style={s.titlePageContent}>
           <View>
             <Text style={s.subtitle}>Verbkonjugation</Text>
             <Text style={s.mainTitle}>{title}</Text>
