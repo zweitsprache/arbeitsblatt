@@ -101,6 +101,7 @@ const TENSE_COLORS: Record<VerbTense, string> = {
 };
 
 const CELL_GAP = 1.5;       // white gap between cells (pt)
+const TENSE_GAP = CELL_GAP * 3; // wider gap between tense column groups
 const CELL_BG = "#f2f2f2"; // light grey for non-tense cells
 
 // mm → pt helper
@@ -372,6 +373,7 @@ function HeaderRow({
             {
               width: `${TENSE_W}%`,
               backgroundColor: TENSE_COLORS[tense],
+              marginLeft: TENSE_GAP,
             },
           ]}
         >
@@ -475,6 +477,7 @@ function TenseCells({
             {
               width: `${TENSE_W * frac}%`,
               backgroundColor: bg,
+              ...(i === 0 ? { marginLeft: TENSE_GAP } : {}),
             },
           ]}
         >
