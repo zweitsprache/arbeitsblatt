@@ -576,7 +576,8 @@ function buildConjugationFullHtml(
   title: string,
   brandSettings: BrandSettings,
   brand: Brand,
-  logoDataUri: string
+  logoDataUri: string,
+  bigLogoDataUri: string
 ): string {
   const brandFonts = BRAND_FONTS[brand];
   
@@ -607,6 +608,35 @@ function buildConjugationFullHtml(
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .title-page {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+  }
+  .title-page .big-logo {
+    width: 60mm;
+    height: auto;
+    margin-bottom: 15mm;
+  }
+  .title-page .subtitle {
+    font-family: 'Encode Sans', sans-serif;
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4mm;
+  }
+  .title-page .main-title {
+    font-family: 'Merriweather', serif;
+    font-size: 28pt;
+    font-weight: 400;
+    color: #222;
+  }
   .verb-table {
     margin-bottom: 5mm;
     page-break-inside: avoid;
@@ -633,7 +663,11 @@ function buildConjugationFullHtml(
 </style>
 </head>
 <body>
-<div class="document-title">${escapeHtml(title)}</div>
+<div class="title-page">
+  ${bigLogoDataUri ? `<img src="${bigLogoDataUri}" class="big-logo" />` : ''}
+  <div class="subtitle">Verbkonjugation</div>
+  <div class="main-title">${escapeHtml(title)}</div>
+</div>
 ${tablesHtml}
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
 </body>
@@ -707,6 +741,16 @@ export async function POST(
     }
   }
 
+  // Read big logo for title page (lingostar_logo_and_brand_flat.svg)
+  let bigLogoDataUri = "";
+  try {
+    const bigLogoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_and_brand_flat.svg");
+    const bigLogoRaw = fs.readFileSync(bigLogoPath, "utf-8");
+    bigLogoDataUri = `data:image/svg+xml,${encodeURIComponent(bigLogoRaw)}`;
+  } catch {
+    console.warn(`[Grammar Table PDF] Could not read big logo file`);
+  }
+
   // Build HTML based on table type
   let html: string;
   if (tableType === "verb-conjugation") {
@@ -718,7 +762,8 @@ export async function POST(
       worksheet.title,
       brandSettings,
       brand,
-      logoDataUri
+      logoDataUri,
+      bigLogoDataUri
     );
   } else {
     html = buildFullHtml(
