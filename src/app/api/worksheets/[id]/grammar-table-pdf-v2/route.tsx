@@ -120,8 +120,8 @@ const s = StyleSheet.create({
   },
   bigLogo: {
     position: "absolute",
-    top: 0,
-    right: 0,
+    top: mm(20),
+    right: mm(15),
     width: mm(40),
   },
   subtitle: {
