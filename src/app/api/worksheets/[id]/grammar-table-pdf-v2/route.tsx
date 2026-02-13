@@ -123,7 +123,7 @@ const s = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: mm(60),
+    width: mm(40),
   },
   subtitle: {
     fontFamily: "Encode Sans",
