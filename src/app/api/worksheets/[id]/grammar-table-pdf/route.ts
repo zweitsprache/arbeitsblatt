@@ -776,7 +776,7 @@ export async function POST(
 
     // Header template with logo (appears on all pages)
     const logoHeaderTemplate = logoDataUri 
-      ? `<div style="width: 100%; display: flex; justify-content: flex-end; padding: 0 15mm; margin-top: 5mm;">
+      ? `<div style="width: 100%; display: flex; justify-content: flex-end; padding: 0 15mm; margin-top: 10mm;">
           <img src="${logoDataUri}" style="width: 6mm; height: auto;" />
         </div>`
       : '<div></div>';
@@ -801,7 +801,7 @@ export async function POST(
       format: "A4",
       landscape: true,
       margin: {
-        top: logoDataUri ? "27.5mm" : "20mm",
+        top: "22.5mm",
         bottom: isLingostar ? "18mm" : "10mm",
         left: "15mm",
         right: "15mm",
