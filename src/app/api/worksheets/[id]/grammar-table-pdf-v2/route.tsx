@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   },
   // Content pages
   contentPage: {
-    paddingTop: mm(22.5),
+    paddingTop: mm(32.5),
     paddingBottom: mm(18),
     paddingLeft: mm(15),
     paddingRight: mm(15),
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   },
   headerIcon: {
     position: "absolute",
-    top: mm(10),
+    top: mm(20),
     right: mm(15),
   },
   headerIconImg: {
