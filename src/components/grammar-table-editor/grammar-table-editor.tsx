@@ -19,6 +19,8 @@ import {
   CONJUGATION_ROWS,
   StaticRowDef,
   PersonKey,
+  DeclinationInput,
+  ConjugationInput,
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -1228,6 +1230,9 @@ function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument
 
   useEffect(() => {
     if (document) {
+      // Determine which input type based on tableType
+      const isConjugation = document.tableType === "verb-conjugation";
+      
       dispatch({
         type: "LOAD",
         payload: {
@@ -1235,7 +1240,8 @@ function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument
           title: document.title,
           slug: document.slug,
           tableType: document.tableType,
-          input: document.input,
+          declinationInput: !isConjugation ? document.input as DeclinationInput : undefined,
+          conjugationInput: isConjugation ? document.input as ConjugationInput : undefined,
           tableData: document.tableData,
           settings: document.settings,
           published: document.published,
