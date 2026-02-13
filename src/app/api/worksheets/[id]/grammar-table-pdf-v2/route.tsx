@@ -448,19 +448,20 @@ function TenseCells({
 
   // Build cell values for this tense
   const values: string[] = [];
+  const bold: boolean[] = [];   // true = verb form (same weight as pronoun)
   if (tense === "perfekt") {
-    values.push(data?.auxiliary || "");
-    if (isRefl) values.push(data?.reflexive || "");
-    values.push(data?.partizip || "");
+    values.push(data?.auxiliary || "");  bold.push(false);
+    if (isRefl) { values.push(data?.reflexive || ""); bold.push(false); }
+    values.push(data?.partizip || "");  bold.push(true);
   } else {
-    values.push(data?.main || "");
+    values.push(data?.main || "");      bold.push(true);
     if (hasSep && isRefl) {
-      values.push(data?.reflexive || "");
-      values.push(data?.prefix || "");
+      values.push(data?.reflexive || ""); bold.push(false);
+      values.push(data?.prefix || "");    bold.push(true);
     } else if (hasSep) {
-      values.push(data?.prefix || "");
+      values.push(data?.prefix || "");    bold.push(true);
     } else if (isRefl) {
-      values.push(data?.reflexive || "");
+      values.push(data?.reflexive || ""); bold.push(false);
     }
   }
 
@@ -477,7 +478,7 @@ function TenseCells({
             },
           ]}
         >
-          <Text style={s.cellText}>{values[i] ?? ""}</Text>
+          <Text style={[s.cellText, bold[i] ? { fontWeight: 600 } : {}]}>{values[i] ?? ""}</Text>
         </View>
       ))}
     </>
