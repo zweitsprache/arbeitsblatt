@@ -610,25 +610,27 @@ function buildConjugationFullHtml(
   }
   .title-page {
     page-break-after: always;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: relative;
     height: 100vh;
-    text-align: center;
   }
   .title-page .big-logo {
+    position: absolute;
+    top: 0;
+    right: 0;
     width: 60mm;
     height: auto;
-    margin-bottom: 15mm;
+  }
+  .title-page .text-content {
+    position: absolute;
+    bottom: 50%;
+    left: 0;
   }
   .title-page .subtitle {
     font-family: 'Encode Sans', sans-serif;
     font-size: 11pt;
     font-weight: 600;
-    letter-spacing: 3px;
     text-transform: uppercase;
-    color: #666;
+    color: #000;
     margin-bottom: 4mm;
   }
   .title-page .main-title {
@@ -665,8 +667,10 @@ function buildConjugationFullHtml(
 <body>
 <div class="title-page">
   ${bigLogoDataUri ? `<img src="${bigLogoDataUri}" class="big-logo" />` : ''}
-  <div class="subtitle">Verbkonjugation</div>
-  <div class="main-title">${escapeHtml(title)}</div>
+  <div class="text-content">
+    <div class="subtitle">Verbkonjugation</div>
+    <div class="main-title">${escapeHtml(title)}</div>
+  </div>
 </div>
 ${tablesHtml}
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
