@@ -221,9 +221,13 @@ const s = StyleSheet.create({
   },
   // Section header (SINGULAR / PLURAL)
   sectionHeader: {
+    flexDirection: "row",
+    marginTop: CELL_GAP,
+  },
+  sectionHeaderLabel: {
     backgroundColor: CELL_BG,
     padding: "3 6",
-    marginTop: CELL_GAP,
+    width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
   },
   sectionHeaderText: {
     fontSize: 7,
@@ -234,6 +238,7 @@ const s = StyleSheet.create({
   cell: {
     padding: "3 6",
     justifyContent: "center",
+    backgroundColor: CELL_BG,
     marginLeft: CELL_GAP,
   },
   cellFirst: {
@@ -314,7 +319,9 @@ function VerbTable({ tableData }: VerbTableProps) {
         <HeaderRow hasSep={hasSep} isRefl={isRefl} />
         {/* SINGULAR */}
         <View style={s.sectionHeader}>
-          <Text style={s.sectionHeaderText}>Singular</Text>
+          <View style={s.sectionHeaderLabel}>
+            <Text style={s.sectionHeaderText}>Singular</Text>
+          </View>
         </View>
         {singularRows.map((rd) => (
           <DataRow
@@ -327,7 +334,9 @@ function VerbTable({ tableData }: VerbTableProps) {
         ))}
         {/* PLURAL */}
         <View style={s.sectionHeader}>
-          <Text style={s.sectionHeaderText}>Plural</Text>
+          <View style={s.sectionHeaderLabel}>
+            <Text style={s.sectionHeaderText}>Plural</Text>
+          </View>
         </View>
         {pluralRows.map((rd) => (
           <DataRow
