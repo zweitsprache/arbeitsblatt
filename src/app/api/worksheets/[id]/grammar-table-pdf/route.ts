@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import puppeteer from "puppeteer";
+import { PDFDocument } from "pdf-lib";
 import {
   AdjectiveDeclinationTable,
   VerbConjugationTable,
@@ -568,26 +569,14 @@ ${page2}
 }
 
 /**
- * Build full HTML for conjugation tables (multiple verbs on single page)
+ * Build title page HTML for conjugation PDF
  */
-function buildConjugationFullHtml(
-  tables: VerbConjugationTable[],
-  settings: GrammarTableSettings,
+function buildConjugationTitleHtml(
   title: string,
-  brandSettings: BrandSettings,
   brand: Brand,
-  logoDataUri: string,
   bigLogoDataUri: string
 ): string {
   const brandFonts = BRAND_FONTS[brand];
-  
-  const headerText = replaceVariables(brandSettings.headerRight || "", brandSettings);
-  const footerText = brand !== "lingostar" ? replaceVariables(brandSettings.footerLeft || "", brandSettings) : "";
-  
-  // Render all tables
-  const tablesHtml = tables.map(tableData => renderConjugationTable(tableData, settings)).join('\n');
-  
-  console.log(`[Grammar Table PDF] Rendering ${tables.length} verb conjugation tables`);
 
   return `<!DOCTYPE html>
 <html>
@@ -609,7 +598,6 @@ function buildConjugationFullHtml(
     print-color-adjust: exact;
   }
   .title-page {
-    page-break-after: always;
     position: relative;
     height: 100vh;
   }
@@ -639,15 +627,60 @@ function buildConjugationFullHtml(
     font-weight: 400;
     color: #222;
   }
+</style>
+</head>
+<body>
+<div class="title-page">
+  ${bigLogoDataUri ? `<img src="${bigLogoDataUri}" class="big-logo" />` : ''}
+  <div class="text-content">
+    <div class="subtitle">Verbkonjugation</div>
+    <div class="main-title">${escapeHtml(title)}</div>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+/**
+ * Build content pages HTML for conjugation tables (multiple verbs)
+ */
+function buildConjugationContentHtml(
+  tables: VerbConjugationTable[],
+  settings: GrammarTableSettings,
+  brandSettings: BrandSettings,
+  brand: Brand,
+): string {
+  const brandFonts = BRAND_FONTS[brand];
+  
+  const footerText = brand !== "lingostar" ? replaceVariables(brandSettings.footerLeft || "", brandSettings) : "";
+  
+  // Render all tables
+  const tablesHtml = tables.map(tableData => renderConjugationTable(tableData, settings)).join('\n');
+  
+  console.log(`[Grammar Table PDF] Rendering ${tables.length} verb conjugation tables`);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="${brandFonts.googleFontsUrl}" rel="stylesheet">
+<style>
+  @page {
+    size: A4 landscape;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: ${brandFonts.bodyFont};
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   .verb-table {
     margin-bottom: 5mm;
     page-break-inside: avoid;
-  }
-  .document-title {
-    font-family: ${brandFonts.headlineFont};
-    font-size: 14pt;
-    font-weight: normal;
-    margin-bottom: 5mm;
   }
   .footer {
     margin-top: 6mm;
@@ -665,13 +698,6 @@ function buildConjugationFullHtml(
 </style>
 </head>
 <body>
-<div class="title-page">
-  ${bigLogoDataUri ? `<img src="${bigLogoDataUri}" class="big-logo" />` : ''}
-  <div class="text-content">
-    <div class="subtitle">Verbkonjugation</div>
-    <div class="main-title">${escapeHtml(title)}</div>
-  </div>
-</div>
 ${tablesHtml}
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
 </body>
@@ -756,19 +782,15 @@ export async function POST(
   }
 
   // Build HTML based on table type
+  const isConjugation = tableType === "verb-conjugation";
   let html: string;
-  if (tableType === "verb-conjugation") {
+  let titlePageHtml: string | null = null;
+
+  if (isConjugation) {
     const conjTables = tableData as VerbConjugationTable[];
     console.log(`[Grammar Table PDF] Building HTML for ${conjTables.length} verb tables`);
-    html = buildConjugationFullHtml(
-      conjTables,
-      settings,
-      worksheet.title,
-      brandSettings,
-      brand,
-      logoDataUri,
-      bigLogoDataUri
-    );
+    titlePageHtml = buildConjugationTitleHtml(worksheet.title, brand, bigLogoDataUri);
+    html = buildConjugationContentHtml(conjTables, settings, brandSettings, brand);
   } else {
     html = buildFullHtml(
       tableData as AdjectiveDeclinationTable,
@@ -798,32 +820,12 @@ export async function POST(
       ],
     });
 
-    const page = await browser.newPage();
-
-    // Set viewport width to A4 landscape, height large enough for content to flow
-    await page.setViewport({ width: 1123, height: 10000 });
-
-    await page.setContent(html, {
-      waitUntil: "networkidle0",
-      timeout: 30000,
-    });
-
-    // Wait for fonts to load
-    await page.evaluateHandle("document.fonts.ready");
-    await new Promise((r) => setTimeout(r, 300));
-
-    // Debug: Get document height
-    const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
-    console.log(`[Grammar Table PDF] Document body height: ${bodyHeight}px`);
-
-    // Build lingostar footer template
+    const isLingostar = brand === "lingostar";
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentDate = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
-    
-    const isLingostar = brand === "lingostar";
 
-    // Header template with logo (appears on all pages)
+    // Header template with logo (appears on content pages)
     const logoHeaderTemplate = logoDataUri 
       ? `<div style="width: 100%; display: flex; justify-content: flex-end; padding: 0 15mm; margin-top: 10mm;">
           <img src="${logoDataUri}" style="width: 6mm; height: auto;" />
@@ -846,26 +848,89 @@ export async function POST(
       </div>
     `;
 
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      landscape: true,
-      margin: {
-        top: "22.5mm",
-        bottom: isLingostar ? "18mm" : "10mm",
-        left: "15mm",
-        right: "15mm",
-      },
-      printBackground: true,
-      displayHeaderFooter: isLingostar || !!logoDataUri,
-      footerTemplate: isLingostar ? lingostarFooterTemplate : '<div></div>',
-      headerTemplate: logoHeaderTemplate,
-    });
+    let finalPdfBytes: Uint8Array;
+
+    if (titlePageHtml) {
+      // Generate title page PDF (no header/footer)
+      const titlePage = await browser.newPage();
+      await titlePage.setViewport({ width: 1123, height: 10000 });
+      await titlePage.setContent(titlePageHtml, { waitUntil: "networkidle0", timeout: 30000 });
+      await titlePage.evaluateHandle("document.fonts.ready");
+      await new Promise((r) => setTimeout(r, 300));
+
+      const titlePdfBuffer = await titlePage.pdf({
+        format: "A4",
+        landscape: true,
+        margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" },
+        printBackground: true,
+        displayHeaderFooter: false,
+      });
+      await titlePage.close();
+
+      // Generate content pages PDF (with header icon + footer)
+      const contentPage = await browser.newPage();
+      await contentPage.setViewport({ width: 1123, height: 10000 });
+      await contentPage.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
+      await contentPage.evaluateHandle("document.fonts.ready");
+      await new Promise((r) => setTimeout(r, 300));
+
+      const contentPdfBuffer = await contentPage.pdf({
+        format: "A4",
+        landscape: true,
+        margin: {
+          top: "22.5mm",
+          bottom: isLingostar ? "18mm" : "10mm",
+          left: "15mm",
+          right: "15mm",
+        },
+        printBackground: true,
+        displayHeaderFooter: isLingostar || !!logoDataUri,
+        footerTemplate: isLingostar ? lingostarFooterTemplate : '<div></div>',
+        headerTemplate: logoHeaderTemplate,
+      });
+      await contentPage.close();
+
+      // Merge title page + content pages using pdf-lib
+      const mergedPdf = await PDFDocument.create();
+      const titleDoc = await PDFDocument.load(titlePdfBuffer);
+      const contentDoc = await PDFDocument.load(contentPdfBuffer);
+
+      const titlePages = await mergedPdf.copyPages(titleDoc, titleDoc.getPageIndices());
+      for (const p of titlePages) mergedPdf.addPage(p);
+
+      const contentPages = await mergedPdf.copyPages(contentDoc, contentDoc.getPageIndices());
+      for (const p of contentPages) mergedPdf.addPage(p);
+
+      finalPdfBytes = await mergedPdf.save();
+    } else {
+      // Single HTML, single PDF (adjective declination)
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1123, height: 10000 });
+      await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
+      await page.evaluateHandle("document.fonts.ready");
+      await new Promise((r) => setTimeout(r, 300));
+
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        landscape: true,
+        margin: {
+          top: "22.5mm",
+          bottom: isLingostar ? "18mm" : "10mm",
+          left: "15mm",
+          right: "15mm",
+        },
+        printBackground: true,
+        displayHeaderFooter: isLingostar || !!logoDataUri,
+        footerTemplate: isLingostar ? lingostarFooterTemplate : '<div></div>',
+        headerTemplate: logoHeaderTemplate,
+      });
+      await page.close();
+      finalPdfBytes = new Uint8Array(pdfBuffer);
+    }
 
     await browser.close();
 
-    const finalPdfBytes = new Uint8Array(pdfBuffer);
-    const pageCount = tableType === "verb-conjugation" ? 1 : 2;
-    console.log(`[Grammar Table PDF] Generated ${finalPdfBytes.length} bytes, ${pageCount} page(s)`);
+    console.log(`[Grammar Table PDF] Generated ${finalPdfBytes.length} bytes`);
 
     const safeTitle = worksheet.title
       .replace(/[\u2013\u2014]/g, "-")
