@@ -164,6 +164,17 @@ const s = StyleSheet.create({
     fontFamily: "Encode Sans",
     fontSize: 9,
   },
+  headerLeft: {
+    position: "absolute",
+    top: mm(20),
+    left: mm(15),
+  },
+  headerLeftText: {
+    fontFamily: "Encode Sans",
+    fontSize: 7,
+    color: "#666666",
+    lineHeight: 1.4,
+  },
   headerIcon: {
     position: "absolute",
     top: mm(20),
@@ -231,10 +242,11 @@ const s = StyleSheet.create({
     flexDirection: "row",
     marginTop: CELL_GAP,
   },
-  sectionHeaderLabel: {
+  sectionHeaderCol3: {
+    width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
     backgroundColor: CELL_BG,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    padding: "3 6",
+    justifyContent: "center",
   },
   sectionHeaderText: {
     fontSize: 7,
@@ -320,9 +332,12 @@ function VerbTable({ tableData }: VerbTableProps) {
         <HeaderRow hasSep={hasSep} isRefl={isRefl} />
         {/* SINGULAR */}
         <View style={s.sectionHeader}>
-          <View style={s.sectionHeaderLabel}>
+          <View style={s.sectionHeaderCol3}>
             <Text style={s.sectionHeaderText}>Singular</Text>
           </View>
+          {TENSES.map((t) => (
+            <View key={t} style={{ width: `${TENSE_W}%`, marginLeft: TENSE_GAP }} />
+          ))}
         </View>
         {singularRows.map((rd) => (
           <DataRow
@@ -335,9 +350,12 @@ function VerbTable({ tableData }: VerbTableProps) {
         ))}
         {/* PLURAL */}
         <View style={s.sectionHeader}>
-          <View style={s.sectionHeaderLabel}>
+          <View style={s.sectionHeaderCol3}>
             <Text style={s.sectionHeaderText}>Plural</Text>
           </View>
+          {TENSES.map((t) => (
+            <View key={t} style={{ width: `${TENSE_W}%`, marginLeft: TENSE_GAP }} />
+          ))}
         </View>
         {pluralRows.map((rd) => (
           <DataRow
@@ -561,6 +579,13 @@ function GrammarTablePDF({
         orientation="landscape"
         style={[s.contentPage, { fontFamily: bodyFont }]}
       >
+        {/* Repeating header – left text */}
+        <View style={s.headerLeft} fixed>
+          <Text style={s.headerLeftText}>
+            {`Verbkonjugation\n${title} – Indikativ | Präsens · Perfekt · Präteritum`}
+          </Text>
+        </View>
+
         {/* Repeating header icon */}
         {iconDataUri ? (
           <View style={s.headerIcon} fixed>
