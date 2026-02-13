@@ -609,7 +609,12 @@ function buildConjugationFullHtml(
   }
   .verb-table {
     margin-bottom: 5mm;
-    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tbody {
+    display: table-row-group;
   }
   .header {
     display: flex;
