@@ -104,6 +104,13 @@ const CELL_GAP = 1.5;       // white gap between cells (pt)
 const TENSE_GAP = CELL_GAP * 3; // wider gap between tense column groups
 const CELL_BG = "#f2f2f2"; // light grey for non-tense cells
 
+// Column width constants (%)
+const BASE_PERSON_W = 7;
+const BASE_FORMAL_W = 7;
+const BASE_PRONOUN_W = 10;
+const REMAINING_W = 100 - BASE_PERSON_W - BASE_FORMAL_W - BASE_PRONOUN_W; // 76%
+const TENSE_W = REMAINING_W / 3; // ~25.33%
+
 // mm → pt helper
 const mm = (v: number) => v * 2.8346;
 
@@ -292,12 +299,6 @@ interface VerbTableProps {
 }
 
 const TENSES: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
-
-const BASE_PERSON_W = 7;   // %
-const BASE_FORMAL_W = 7;   // %
-const BASE_PRONOUN_W = 10; // %
-const REMAINING_W = 100 - BASE_PERSON_W - BASE_FORMAL_W - BASE_PRONOUN_W; // 76%
-const TENSE_W = REMAINING_W / 3; // ~25.33%
 
 function VerbTable({ tableData }: VerbTableProps) {
   const hasSep =
