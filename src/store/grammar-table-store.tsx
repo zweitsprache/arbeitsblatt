@@ -80,6 +80,7 @@ type GrammarTableAction =
       field: "main" | "prefix" | "reflexive" | "auxiliary" | "partizip";
       value: string;
     } }
+  | { type: "UPDATE_INFINITIVE"; payload: { tableIndex: number; verb: string } }
   | { type: "RESET" };
 
 // ─── Reducer ─────────────────────────────────────────────────
@@ -187,6 +188,29 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
             ...updatedConjugations,
             [personKey]: updatedPerson,
           },
+        };
+      });
+      
+      return {
+        ...state,
+        tableData: updatedTables,
+        isDirty: true,
+      };
+    }
+
+    case "UPDATE_INFINITIVE": {
+      // Update the infinitive (verb title) of a specific table
+      const { tableIndex, verb } = action.payload;
+      if (!state.tableData || !Array.isArray(state.tableData)) return state;
+      
+      const tables = state.tableData as VerbConjugationTable[];
+      if (tableIndex < 0 || tableIndex >= tables.length) return state;
+      
+      const updatedTables = tables.map((table, idx) => {
+        if (idx !== tableIndex) return table;
+        return {
+          ...table,
+          input: { ...table.input, verb },
         };
       });
       

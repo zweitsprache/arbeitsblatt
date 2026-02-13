@@ -657,9 +657,10 @@ interface SingleConjugationTableProps {
     field: "main" | "prefix" | "reflexive" | "auxiliary" | "partizip",
     value: string
   ) => void;
+  onInfinitiveChange: (tableIndex: number, verb: string) => void;
 }
 
-function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange }: SingleConjugationTableProps) {
+function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange, onInfinitiveChange }: SingleConjugationTableProps) {
   const locale = "de";
   const tenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
   
@@ -901,7 +902,12 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange 
   return (
     <div className="space-y-4">
       <div className="mb-2">
-        <h2 className="text-base font-bold">{tableData.input.verb}</h2>
+        <h2 className="text-base font-bold">
+          <EditableCell 
+            value={tableData.input.verb} 
+            onChange={(v) => onInfinitiveChange(tableIndex, v)}
+          />
+        </h2>
       </div>
 
       <div className="overflow-x-auto">
@@ -973,6 +979,16 @@ function ConjugationTableView() {
     });
   }, [dispatch]);
 
+  const handleInfinitiveChange = useCallback((
+    tableIndex: number,
+    verb: string
+  ) => {
+    dispatch({
+      type: "UPDATE_INFINITIVE",
+      payload: { tableIndex, verb },
+    });
+  }, [dispatch]);
+
   if (!state.tableData) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -1005,6 +1021,7 @@ function ConjugationTableView() {
           tableIndex={idx}
           settings={{ highlightEndings: state.settings.highlightEndings }}
           onCellChange={handleCellChange}
+          onInfinitiveChange={handleInfinitiveChange}
         />
       ))}
     </div>
@@ -1021,7 +1038,7 @@ function EditorToolbar() {
 
   // Check if we can generate based on table type
   const canGenerate = state.tableType === "verb-conjugation"
-    ? state.conjugationInput.verbs.some(v => v.trim().length > 0)
+    ? (state.conjugationInput?.verbs ?? []).some(v => v.trim().length > 0)
     : (
         state.declinationInput.maskulin.adjective &&
         state.declinationInput.maskulin.noun &&
