@@ -14,6 +14,7 @@ import {
 } from "@react-pdf/renderer";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 import {
   AdjectiveDeclinationTable,
   VerbConjugationTable,
@@ -70,14 +71,23 @@ Font.register({
 // Disable hyphenation for German words
 Font.registerHyphenationCallback((word) => [word]);
 
-// ─── Logo Data URIs ─────────────────────────────────────────
+// ─── Logo helpers ───────────────────────────────────────────
 
-function readSvgDataUri(relativePath: string): string {
+/** Convert an SVG file to a PNG data-URI (react-pdf can't render SVG with CSS classes). */
+async function readLogoAsPngDataUri(
+  relativePath: string,
+  width = 400,
+): Promise<string> {
   try {
     const abs = path.join(process.cwd(), "public", relativePath);
-    const raw = fs.readFileSync(abs, "utf-8");
-    return `data:image/svg+xml;base64,${Buffer.from(raw).toString("base64")}`;
-  } catch {
+    const svgBuf = fs.readFileSync(abs);
+    const pngBuf = await sharp(svgBuf)
+      .resize({ width })
+      .png()
+      .toBuffer();
+    return `data:image/png;base64,${pngBuf.toString("base64")}`;
+  } catch (e) {
+    console.warn(`[Grammar Table PDF v2] Could not convert logo: ${relativePath}`, e);
     return "";
   }
 }
@@ -156,8 +166,6 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    borderTopWidth: 0.5,
-    borderTopColor: "#dddddd",
     paddingTop: mm(2),
   },
   footerText: {
@@ -622,10 +630,10 @@ export async function POST(
     ...settings.brandSettings,
   };
 
-  // Read logos
-  const bigLogoDataUri = readSvgDataUri("logo/lingostar_logo_and_brand_flat.svg");
-  const iconDataUri = brandSettings.logo
-    ? readSvgDataUri(brandSettings.logo.replace(/^\//, ""))
+// Read logos (convert SVG → PNG for react-pdf compatibility)
+    const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);
+    const iconDataUri = brandSettings.logo
+      ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
     : "";
 
   try {
