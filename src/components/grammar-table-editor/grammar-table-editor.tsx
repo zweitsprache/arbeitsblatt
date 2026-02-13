@@ -118,8 +118,11 @@ function ConjugationInputPanel() {
   const [bulkMode, setBulkMode] = React.useState(false);
   const [bulkText, setBulkText] = React.useState("");
 
+  // Safely get verbs array with fallback
+  const verbs = state.conjugationInput?.verbs ?? [""];
+
   const handleVerbChange = (index: number, value: string) => {
-    const newVerbs = [...state.conjugationInput.verbs];
+    const newVerbs = [...verbs];
     newVerbs[index] = value;
     dispatch({
       type: "UPDATE_CONJUGATION_INPUT",
@@ -130,12 +133,12 @@ function ConjugationInputPanel() {
   const addVerb = () => {
     dispatch({
       type: "UPDATE_CONJUGATION_INPUT",
-      payload: { verbs: [...state.conjugationInput.verbs, ""] },
+      payload: { verbs: [...verbs, ""] },
     });
   };
 
   const removeVerb = (index: number) => {
-    const newVerbs = state.conjugationInput.verbs.filter((_, i) => i !== index);
+    const newVerbs = verbs.filter((_, i) => i !== index);
     // Keep at least one verb
     if (newVerbs.length === 0) {
       newVerbs.push("");
@@ -201,7 +204,7 @@ function ConjugationInputPanel() {
       ) : (
         <>
           <div className="space-y-2">
-            {state.conjugationInput.verbs.map((verb, index) => (
+            {verbs.map((verb, index) => (
               <div key={index} className="flex gap-2 items-center p-3 bg-muted/30 rounded-lg">
                 <div className="flex-1">
                   <Input
@@ -211,7 +214,7 @@ function ConjugationInputPanel() {
                     className="text-sm"
                   />
                 </div>
-                {state.conjugationInput.verbs.length > 1 && (
+                {verbs.length > 1 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1040,14 +1043,14 @@ function EditorToolbar() {
   const canGenerate = state.tableType === "verb-conjugation"
     ? (state.conjugationInput?.verbs ?? []).some(v => v.trim().length > 0)
     : (
-        state.declinationInput.maskulin.adjective &&
-        state.declinationInput.maskulin.noun &&
-        state.declinationInput.neutrum.adjective &&
-        state.declinationInput.neutrum.noun &&
-        state.declinationInput.feminin.adjective &&
-        state.declinationInput.feminin.noun &&
-        state.declinationInput.plural.adjective &&
-        state.declinationInput.plural.noun
+        state.declinationInput?.maskulin?.adjective &&
+        state.declinationInput?.maskulin?.noun &&
+        state.declinationInput?.neutrum?.adjective &&
+        state.declinationInput?.neutrum?.noun &&
+        state.declinationInput?.feminin?.adjective &&
+        state.declinationInput?.feminin?.noun &&
+        state.declinationInput?.plural?.adjective &&
+        state.declinationInput?.plural?.noun
       );
 
   const handleDownloadPdf = useCallback(async () => {
