@@ -303,6 +303,9 @@ function DeclinationTableView() {
     );
   }
 
+  // Cast to AdjectiveDeclinationTable for this view
+  const tableData = state.tableData as AdjectiveDeclinationTable;
+
   const cases: GrammatikalFall[] = ["nominativ", "akkusativ", "dativ", "genitiv"];
   const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
 
@@ -320,7 +323,7 @@ function DeclinationTableView() {
   return (
     <div className="space-y-10">
       {cases.map((caseType) => {
-        const caseSection = state.tableData?.cases.find((c) => c.case === caseType);
+        const caseSection = tableData.cases.find((c) => c.case === caseType);
         if (!caseSection || !caseSection.groups) return null;
 
         // Calculate total rows for preposition rowspan
