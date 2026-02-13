@@ -234,7 +234,6 @@ const s = StyleSheet.create({
   cell: {
     padding: "3 6",
     justifyContent: "center",
-    backgroundColor: CELL_BG,
     marginLeft: CELL_GAP,
   },
   cellFirst: {
