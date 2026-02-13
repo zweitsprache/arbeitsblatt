@@ -100,9 +100,8 @@ const TENSE_COLORS: Record<VerbTense, string> = {
   praeteritum: "#faf4e8",
 };
 
-const BORDER_COLOR = "#cccccc";
-const BORDER_WIDTH = 0.75;
-const THICK_BORDER = 1.5;
+const CELL_GAP = 1.5;       // white gap between cells (pt)
+const CELL_BG = "#f2f2f2"; // light grey for non-tense cells
 
 // mm → pt helper
 const mm = (v: number) => v * 2.8346;
@@ -200,18 +199,21 @@ const s = StyleSheet.create({
   tableContainer: {
     borderRadius: 4,
     overflow: "hidden",
-    borderWidth: BORDER_WIDTH,
-    borderColor: BORDER_COLOR,
+    backgroundColor: "#ffffff",  // white shows through as cell gaps
   },
   // Row
   row: {
     flexDirection: "row",
+    marginTop: CELL_GAP,
+  },
+  rowFirst: {
+    marginTop: 0,
   },
   // Section header (SINGULAR / PLURAL)
   sectionHeader: {
-    borderBottomWidth: BORDER_WIDTH,
-    borderBottomColor: BORDER_COLOR,
+    backgroundColor: CELL_BG,
     padding: "3 6",
+    marginTop: CELL_GAP,
   },
   sectionHeaderText: {
     fontSize: 7,
@@ -220,12 +222,13 @@ const s = StyleSheet.create({
   },
   // Generic cell
   cell: {
-    borderRightWidth: BORDER_WIDTH,
-    borderRightColor: BORDER_COLOR,
-    borderBottomWidth: BORDER_WIDTH,
-    borderBottomColor: BORDER_COLOR,
     padding: "3 6",
     justifyContent: "center",
+    backgroundColor: CELL_BG,
+    marginLeft: CELL_GAP,
+  },
+  cellFirst: {
+    marginLeft: 0,
   },
   cellText: {
     fontSize: 9,
@@ -339,11 +342,12 @@ function HeaderRow({
   isRefl: boolean;
 }) {
   return (
-    <View style={[s.row, { backgroundColor: "#f9f9f9" }]}>
+    <View style={[s.row, s.rowFirst]}>
       {/* Empty cell spanning person + formality + pronoun */}
       <View
         style={[
           s.cell,
+          s.cellFirst,
           {
             width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
           },
@@ -351,27 +355,22 @@ function HeaderRow({
       >
         <Text style={s.cellText}></Text>
       </View>
-      {TENSES.map((tense) => {
-        const cols = getColsForTense(tense, hasSep, isRefl);
-        return (
-          <View
-            key={tense}
-            style={[
-              s.cell,
-              {
-                width: `${TENSE_W}%`,
-                backgroundColor: TENSE_COLORS[tense],
-                borderLeftWidth: THICK_BORDER,
-                borderLeftColor: "#999999",
-              },
-            ]}
-          >
-            <Text style={[s.cellText, { fontWeight: 700 }]}>
-              {TENSE_LABELS[tense].de}
-            </Text>
-          </View>
-        );
-      })}
+      {TENSES.map((tense, tIdx) => (
+        <View
+          key={tense}
+          style={[
+            s.cell,
+            {
+              width: `${TENSE_W}%`,
+              backgroundColor: TENSE_COLORS[tense],
+            },
+          ]}
+        >
+          <Text style={[s.cellText, { fontWeight: 700 }]}>
+            {TENSE_LABELS[tense].de}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -396,7 +395,7 @@ function DataRow({
   return (
     <View style={s.row}>
       {/* Person */}
-      <View style={[s.cell, { width: `${BASE_PERSON_W}%` }]}>
+      <View style={[s.cell, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
         <Text style={s.cellTextSmall}>{personDisplay}</Text>
       </View>
       {/* Formality */}
@@ -466,12 +465,6 @@ function TenseCells({
             {
               width: `${TENSE_W * frac}%`,
               backgroundColor: bg,
-              ...(i === 0
-                ? {
-                    borderLeftWidth: THICK_BORDER,
-                    borderLeftColor: "#999999",
-                  }
-                : {}),
             },
           ]}
         >
