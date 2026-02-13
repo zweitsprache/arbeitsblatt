@@ -252,6 +252,38 @@
   "footer": {
     "copyright": "© {year} Arbeitsblatt-Generator. Alle Rechte vorbehalten."
   },
+  "grammarTableEditor": {
+    "adjective": "Adjektiv",
+    "clickGenerate": "Klicken Sie auf 'Generieren' um die Tabelle zu erstellen",
+    "downloadPdf": "PDF herunterladen",
+    "downloadPdfTooltip": "Grammatiktabelle als PDF herunterladen",
+    "generate": "Generieren",
+    "generating": "Tabelle wird generiert…",
+    "highlightEndings": "Endungen hervorheben",
+    "inputDescription": "Geben Sie für jeden Genus ein Adjektiv und ein Nomen ein",
+    "inputTitle": "Adjektivdeklination",
+    "loading": "Laden…",
+    "noTableYet": "Noch keine Tabelle generiert",
+    "notes": "Anmerkungen",
+    "noun": "Nomen",
+    "pdfFailed": "PDF-Erstellung fehlgeschlagen: {error}",
+    "prepositions": "Präpositionen",
+    "regenerate": "Neu generieren",
+    "saveFirst": "Bitte zuerst die Tabelle speichern",
+    "settings": "Einstellungen",
+    "showNotes": "Anmerkungen anzeigen",
+    "showPrepositions": "Präpositionen anzeigen",
+    "untitledTable": "Unbenannte Tabelle",
+    "addVerb": "Verb hinzufügen",
+    "bulkMode": "Mehrfacheingabe",
+    "bulkPlaceholder": "Verben eingeben (ein Verb pro Zeile oder kommagetrennt)…",
+    "importVerbs": "Verben übernehmen",
+    "singleMode": "Einzeleingabe",
+    "verbInfinitive": "Infinitiv",
+    "verbInputDescription": "Geben Sie ein oder mehrere Verben im Infinitiv ein",
+    "verbInputTitle": "Verben",
+    "verbPlaceholder": "z.B. gehen, abholen, sprechen…"
+  },
   "header": {
     "newWorksheet": "Neues Arbeitsblatt"
   },

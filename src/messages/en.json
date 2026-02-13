@@ -252,6 +252,37 @@
   "footer": {
     "copyright": "© {year} Worksheet Generator. All rights reserved."
   },
+  "grammarTableEditor": {
+    "adjective": "Adjective",
+    "clickGenerate": "Click 'Generate' to create the table",
+    "downloadPdf": "Download PDF",
+    "downloadPdfTooltip": "Download grammar table as PDF",
+    "generate": "Generate",
+    "generating": "Generating table…",
+    "highlightEndings": "Highlight endings",
+    "inputDescription": "Enter an adjective and noun for each gender",
+    "inputTitle": "Adjective Declination",
+    "loading": "Loading…",
+    "noTableYet": "No table generated yet",
+    "notes": "Notes",
+    "noun": "Noun",
+    "pdfFailed": "PDF generation failed: {error}",
+    "prepositions": "Prepositions",
+    "regenerate": "Regenerate",
+    "saveFirst": "Please save the table first",
+    "settings": "Settings",
+    "showNotes": "Show notes",
+    "showPrepositions": "Show prepositions",
+    "untitledTable": "Untitled table",    "addVerb": "Add verb",
+    "bulkMode": "Bulk input",
+    "bulkPlaceholder": "Enter verbs (one per line or comma-separated)…",
+    "importVerbs": "Import verbs",
+    "singleMode": "Single input",
+    "verbInfinitive": "Infinitive",
+    "verbInputDescription": "Enter one or more verbs in infinitive form",
+    "verbInputTitle": "Verbs",
+    "verbPlaceholder": "e.g. go, pick up, speak…"
+  },
   "header": {
     "newWorksheet": "New worksheet"
   },

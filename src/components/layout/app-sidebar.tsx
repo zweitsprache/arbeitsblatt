@@ -14,6 +14,7 @@ import {
   BookOpen,
   Layers,
   LayoutGrid,
+  TableProperties,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -72,6 +73,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/ebooks/new", labelKey: "newEbook", icon: Plus },
       { href: "/ebooks", labelKey: "ebooks", icon: Library },
+    ],
+  },
+  {
+    titleKey: "grammarTables",
+    icon: TableProperties,
+    items: [
+      { href: "/editor/grammar-tables", labelKey: "newGrammarTable", icon: Plus },
+      { href: "/grammar-tables", labelKey: "grammarTableLibrary", icon: Library },
     ],
   },
   {

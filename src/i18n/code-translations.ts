@@ -121,6 +121,9 @@ const sidebar: LocaleTranslations = {
     flashcardLibrary: "Flashcard Library",
     ebooks: "E-Books",
     newEbook: "New E-Book",
+    grammarTables: "Grammar Tables",
+    newGrammarTable: "New Grammar Table",
+    grammarTableLibrary: "Grammar Table Library",
   },
   de: {
     account: "Konto",
@@ -134,6 +137,9 @@ const sidebar: LocaleTranslations = {
     flashcardLibrary: "Lernkarten-Bibliothek",
     ebooks: "E-Books",
     newEbook: "Neues E-Book",
+    grammarTables: "Grammatiktabellen",
+    newGrammarTable: "Neue Grammatiktabelle",
+    grammarTableLibrary: "Grammatiktabellen-Bibliothek",
   },
 };
 
@@ -418,6 +424,92 @@ const cardsDashboard: LocaleTranslations = {
   },
 };
 
+// ─── Grammar Table Dashboard ─────────────────────────────────
+
+const grammarTableDashboard: LocaleTranslations = {
+  en: {
+    title: "Grammar Tables",
+    subtitle: "Create and manage grammar reference tables",
+    newTable: "New Table",
+    searchPlaceholder: "Search tables…",
+    searching: "Searching…",
+    searchResults: "{count} result(s) for \"{query}\"",
+    noTables: "No tables found",
+    noTablesYet: "No grammar tables yet",
+    createFirstTable: "Create your first grammar table",
+    createTable: "Create table",
+    deleteConfirm: "Delete this grammar table?",
+    tryDifferentSearch: "Try a different search",
+    adjektivdeklination: "Adjective Declination",
+    grammarTable: "Grammar Table",
+  },
+  de: {
+    title: "Grammatiktabellen",
+    subtitle: "Erstelle und verwalte Grammatik-Referenztabellen",
+    newTable: "Neue Tabelle",
+    searchPlaceholder: "Tabellen suchen…",
+    searching: "Suche…",
+    searchResults: "{count} Ergebnis(se) für \"{query}\"",
+    noTables: "Keine Tabellen gefunden",
+    noTablesYet: "Noch keine Grammatiktabellen vorhanden",
+    createFirstTable: "Erstelle deine erste Grammatiktabelle",
+    createTable: "Tabelle erstellen",
+    deleteConfirm: "Diese Grammatiktabelle löschen?",
+    tryDifferentSearch: "Versuche eine andere Suche",
+    adjektivdeklination: "Adjektivdeklination",
+    grammarTable: "Grammatiktabelle",
+  },
+};
+
+// ─── Grammar Table Editor ────────────────────────────────────
+
+const grammarTableEditor: LocaleTranslations = {
+  en: {
+    inputTitle: "Input",
+    inputDescription: "Enter adjectives and nouns for each gender",
+    adjective: "Adjective",
+    noun: "Noun",
+    settings: "Settings",
+    showNotes: "Show notes",
+    showPrepositions: "Show prepositions",
+    highlightEndings: "Highlight endings",
+    prepositions: "Prepositions",
+    notes: "Notes",
+    noTableYet: "No table generated yet",
+    clickGenerate: "Fill in the words and click Generate",
+    generate: "Generate",
+    regenerate: "Regenerate",
+    generating: "Generating table…",
+    untitledTable: "Untitled Table",
+    downloadPdf: "PDF",
+    downloadPdfTooltip: "Download as double-sided A4 landscape PDF",
+    saveFirst: "Please save the table first",
+    pdfFailed: "PDF generation failed: {error}",
+  },
+  de: {
+    inputTitle: "Eingabe",
+    inputDescription: "Gib Adjektive und Nomen für jedes Genus ein",
+    adjective: "Adjektiv",
+    noun: "Nomen",
+    settings: "Einstellungen",
+    showNotes: "Anmerkungen anzeigen",
+    showPrepositions: "Präpositionen anzeigen",
+    highlightEndings: "Endungen hervorheben",
+    prepositions: "Präpositionen",
+    notes: "Anmerkungen",
+    noTableYet: "Noch keine Tabelle generiert",
+    clickGenerate: "Fülle die Wörter aus und klicke auf Generieren",
+    generate: "Generieren",
+    regenerate: "Neu generieren",
+    generating: "Tabelle wird generiert…",
+    untitledTable: "Unbenannte Tabelle",
+    downloadPdf: "PDF",
+    downloadPdfTooltip: "Als doppelseitiges A4-Querformat-PDF herunterladen",
+    saveFirst: "Bitte speichere die Tabelle zuerst",
+    pdfFailed: "PDF-Generierung fehlgeschlagen: {error}",
+  },
+};
+
 // ─── Registry of all code-defined namespaces ────────────────
 
 const CODE_NAMESPACES: Record<string, LocaleTranslations> = {
@@ -428,6 +520,8 @@ const CODE_NAMESPACES: Record<string, LocaleTranslations> = {
   flashcardDashboard,
   cardEditor,
   cardsDashboard,
+  grammarTableDashboard,
+  grammarTableEditor,
 };
 
 /**
