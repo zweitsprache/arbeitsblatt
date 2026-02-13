@@ -609,12 +609,7 @@ function buildConjugationFullHtml(
   }
   .verb-table {
     margin-bottom: 5mm;
-  }
-  thead {
-    display: table-header-group;
-  }
-  tbody {
-    display: table-row-group;
+    page-break-inside: avoid;
   }
   .document-title {
     font-family: ${brandFonts.headlineFont};
@@ -806,7 +801,7 @@ export async function POST(
       format: "A4",
       landscape: true,
       margin: {
-        top: logoDataUri ? "17.5mm" : "10mm",
+        top: logoDataUri ? "27.5mm" : "20mm",
         bottom: isLingostar ? "18mm" : "10mm",
         left: "15mm",
         right: "15mm",
