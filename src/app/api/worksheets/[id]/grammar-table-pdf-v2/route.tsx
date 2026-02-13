@@ -129,7 +129,7 @@ const s = StyleSheet.create({
   subtitle: {
     fontFamily: "Encode Sans",
     fontSize: 11,
-    fontWeight: 600,
+    fontWeight: 400,
     textTransform: "uppercase",
     color: "#000000",
     marginBottom: mm(4),
