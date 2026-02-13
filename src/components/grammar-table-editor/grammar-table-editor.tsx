@@ -1053,14 +1053,17 @@ function EditorToolbar() {
         state.declinationInput?.plural?.noun
       );
 
-  const handleDownloadPdf = useCallback(async () => {
+  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf") => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.documentId}/grammar-table-pdf`, {
+      const endpoint = engine === "react-pdf"
+        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2`
+        : `/api/worksheets/${state.documentId}/grammar-table-pdf`;
+      const res = await authFetch(endpoint, {
         method: "POST",
       });
       if (!res.ok) {
@@ -1161,7 +1164,7 @@ function EditorToolbar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDownloadPdf}
+              onClick={() => handleDownloadPdf()}
               disabled={isGeneratingPdf || !state.documentId || !state.tableData}
               className="gap-2"
             >
@@ -1177,6 +1180,30 @@ function EditorToolbar() {
             {t("downloadPdfTooltip")}
           </TooltipContent>
         </Tooltip>
+
+        {state.tableType === "verb-conjugation" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadPdf("react-pdf")}
+                disabled={isGeneratingPdf || !state.documentId || !state.tableData}
+                className="gap-2 border-dashed"
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                PDF v2
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              PDF export with react-pdf (test)
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         <Separator orientation="vertical" className="h-6" />
 
