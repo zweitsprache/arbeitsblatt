@@ -140,6 +140,13 @@ const s = StyleSheet.create({
     fontWeight: 400,
     color: "#222222",
   },
+  tenseInfo: {
+    fontFamily: "Encode Sans",
+    fontSize: 11,
+    fontWeight: 400,
+    color: "#000000",
+    marginTop: mm(3),
+  },
   // Content pages
   contentPage: {
     paddingTop: mm(30),
@@ -520,6 +527,7 @@ function GrammarTablePDF({
           <View>
             <Text style={s.subtitle}>Verbkonjugation</Text>
             <Text style={s.mainTitle}>{title}</Text>
+            <Text style={s.tenseInfo}>Indikativ Präsens · Perfekt · Präteritum</Text>
           </View>
         </View>
         {/* Title page footer – no page numbers */}
