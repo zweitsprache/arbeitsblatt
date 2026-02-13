@@ -141,7 +141,7 @@ const s = StyleSheet.create({
   // Content pages
   contentPage: {
     paddingTop: mm(30),
-    paddingBottom: mm(18),
+    paddingBottom: mm(12),
     paddingLeft: mm(15),
     paddingRight: mm(15),
     fontFamily: "Encode Sans",
@@ -188,7 +188,7 @@ const s = StyleSheet.create({
   },
   // Verb table
   verbTableWrap: {
-    marginBottom: mm(5),
+    marginBottom: mm(3),
   },
   verbTitle: {
     fontSize: 11,
