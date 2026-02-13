@@ -188,7 +188,7 @@ const s = StyleSheet.create({
   },
   // Verb table
   verbTableWrap: {
-    marginBottom: mm(3),
+    marginBottom: mm(4),
   },
   verbTitle: {
     fontSize: 11,
