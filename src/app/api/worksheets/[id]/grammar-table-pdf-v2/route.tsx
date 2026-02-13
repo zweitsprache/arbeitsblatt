@@ -527,7 +527,7 @@ function GrammarTablePDF({
           <View>
             <Text style={s.subtitle}>Verbkonjugation</Text>
             <Text style={s.mainTitle}>{title}</Text>
-            <Text style={s.tenseInfo}>Indikativ Präsens · Perfekt · Präteritum</Text>
+            <Text style={s.tenseInfo}>Indikativ | Präsens · Perfekt · Präteritum</Text>
           </View>
         </View>
         {/* Title page footer – no page numbers */}
