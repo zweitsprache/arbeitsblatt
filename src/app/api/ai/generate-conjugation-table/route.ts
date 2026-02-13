@@ -184,8 +184,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Filter out empty verbs
-    const verbs = input.verbs.map(v => v.trim().toLowerCase()).filter(v => v !== "");
+    // Filter out empty verbs (preserve original capitalization for nouns like "sich Sorgen machen")
+    const verbs = input.verbs.map(v => v.trim()).filter(v => v !== "");
     
     if (verbs.length === 0) {
       return NextResponse.json(
