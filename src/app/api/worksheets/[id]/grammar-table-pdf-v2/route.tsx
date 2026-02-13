@@ -233,8 +233,8 @@ const s = StyleSheet.create({
   },
   sectionHeaderLabel: {
     backgroundColor: CELL_BG,
-    padding: "3 6",
-    width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
   },
   sectionHeaderText: {
     fontSize: 7,
