@@ -616,20 +616,11 @@ function buildConjugationFullHtml(
   tbody {
     display: table-row-group;
   }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 5mm;
-  }
-  .logo {
-    width: 6mm;
-    height: auto;
-  }
-  .title {
+  .document-title {
     font-family: ${brandFonts.headlineFont};
     font-size: 14pt;
     font-weight: normal;
+    margin-bottom: 5mm;
   }
   .footer {
     margin-top: 6mm;
@@ -647,10 +638,7 @@ function buildConjugationFullHtml(
 </style>
 </head>
 <body>
-<div class="header">
-  <div class="title">${escapeHtml(title)}</div>
-  ${logoDataUri ? `<img src="${logoDataUri}" class="logo" />` : ''}
-</div>
+<div class="document-title">${escapeHtml(title)}</div>
 ${tablesHtml}
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
 </body>
@@ -790,6 +778,14 @@ export async function POST(
     const currentDate = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
     
     const isLingostar = brand === "lingostar";
+
+    // Header template with logo (appears on all pages)
+    const logoHeaderTemplate = logoDataUri 
+      ? `<div style="width: 100%; display: flex; justify-content: flex-end; padding: 0 15mm; margin-top: 5mm;">
+          <img src="${logoDataUri}" style="width: 6mm; height: auto;" />
+        </div>`
+      : '<div></div>';
+
     const lingostarFooterTemplate = `
       <div style="width: 100%; font-size: 7pt; font-family: 'Encode Sans', sans-serif; color: #666; padding: 0 15mm; margin-bottom: 5mm; display: flex; justify-content: space-between; align-items: flex-end;">
         <div style="text-align: left; line-height: 1.4;">
@@ -810,15 +806,15 @@ export async function POST(
       format: "A4",
       landscape: true,
       margin: {
-        top: "17.5mm",
+        top: logoDataUri ? "17.5mm" : "10mm",
         bottom: isLingostar ? "18mm" : "10mm",
         left: "15mm",
         right: "15mm",
       },
       printBackground: true,
-      displayHeaderFooter: isLingostar,
-      footerTemplate: isLingostar ? lingostarFooterTemplate : undefined,
-      headerTemplate: isLingostar ? '<div></div>' : undefined,
+      displayHeaderFooter: isLingostar || !!logoDataUri,
+      footerTemplate: isLingostar ? lingostarFooterTemplate : '<div></div>',
+      headerTemplate: logoHeaderTemplate,
     });
 
     await browser.close();
