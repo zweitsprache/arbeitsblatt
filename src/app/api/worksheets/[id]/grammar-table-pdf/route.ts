@@ -16,6 +16,10 @@ import {
   CONJUGATION_ROWS,
   StaticRowDef,
   PersonKey,
+  VerbPrepositionTableEntry,
+  VERB_PREP_ARTICLE_LABELS,
+  GENUS_LABELS,
+  Genus,
 } from "@/types/grammar-table";
 import { DEFAULT_BRAND_SETTINGS, BrandSettings, BRAND_FONTS, Brand } from "@/types/worksheet";
 import fs from "fs";
@@ -415,6 +419,136 @@ function renderConjugationTable(
   `;
 }
 
+// ─── Verb + Preposition table rendering (v1 Puppeteer) ──────
+
+const VP_GENDER_COLORS: Record<Genus, string> = {
+  maskulin: "#F2E2D4",
+  neutrum: "#D8E6F2",
+  feminin: "#F2EDDA",
+  plural: "#DAF0DC",
+};
+
+/**
+ * Render a single verb+preposition table as an HTML string.
+ * Layout: title + example text + 4-gender × 3-subcol declension table.
+ */
+function renderVerbPrepositionTable(entry: VerbPrepositionTableEntry): string {
+  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
+
+  const cell = (bg: string, extra = "") =>
+    `background-color:${bg};padding:3pt 6pt;text-align:left;font-size:9pt;${extra}`;
+
+  // Title / badges
+  const caseLabel = CASE_LABELS[entry.case]?.de || entry.case;
+  const articleLabel = VERB_PREP_ARTICLE_LABELS[entry.input.articleType]?.de || entry.input.articleType;
+  const reflexivBadge = entry.isReflexive
+    ? `<span style="display:inline-block;margin-left:4pt;padding:1pt 4pt;font-size:8pt;background:#E4E4EC;border-radius:3px;">reflexiv</span>`
+    : "";
+
+  const verbInfo = `
+    <div style="font-size:11pt;font-weight:700;margin-bottom:1mm;text-align:left;">
+      ${escapeHtml(entry.input.verb)} + ${escapeHtml(entry.input.preposition)}
+      <span style="display:inline-block;margin-left:4pt;padding:1pt 4pt;font-size:8pt;border:0.5pt solid #999;border-radius:3px;">${escapeHtml(caseLabel)}</span>
+      ${reflexivBadge}
+      <span style="display:inline-block;margin-left:4pt;padding:1pt 4pt;font-size:8pt;color:#666;border:0.5pt solid #bbb;border-radius:3px;">${escapeHtml(articleLabel)}</span>
+    </div>
+    <div style="font-size:9pt;font-style:italic;color:#666;margin-bottom:2mm;">
+      ${escapeHtml(entry.input?.sentenceIntro || entry.firstPersonExample || "")}
+    </div>
+  `;
+
+  // Data row
+  let dataRow = "<tr>";
+  genders.forEach((g, gi) => {
+    const d = entry.declension?.[g];
+    const blRadius = gi === 0 ? "border-bottom-left-radius:3px;" : "";
+    const brRadius = gi === genders.length - 1 ? "border-bottom-right-radius:3px;" : "";
+    dataRow += `<td style="${cell(VP_GENDER_COLORS[g], blRadius)}">${escapeHtml(d?.article || "")}</td>`;
+    dataRow += `<td style="${cell(VP_GENDER_COLORS[g])}">${escapeHtml(d?.adjective || "")}</td>`;
+    dataRow += `<td style="${cell(VP_GENDER_COLORS[g], brRadius)}">${escapeHtml(d?.noun || "")}</td>`;
+  });
+  dataRow += "</tr>";
+
+  return `
+    <div class="verb-table">
+      ${verbInfo}
+      <div style="background-color:#ffffff;">
+      <table style="border-collapse:separate;border-spacing:${CELL_GAP}pt;width:100%;table-layout:fixed;border-radius:4px;overflow:hidden;">
+        <colgroup>
+          ${genders.map(() => `<col style="width:7.5%"><col style="width:7.5%"><col style="width:10%">`).join("\n")}
+        </colgroup>
+        <thead>
+          <tr>
+            ${genders.map((g, i) => `<th colspan="3" style="${cell(VP_GENDER_COLORS[g], `font-weight:700;${i === 0 ? "border-top-left-radius:3px;" : ""}${i === genders.length - 1 ? "border-top-right-radius:3px;" : ""}`)}">${GENUS_LABELS[g].de}</th>`).join("\n")}
+          </tr>
+          <tr>
+            ${genders.map((g) => ["Artikel", "Adjektiv", "Nomen"].map((label) => `<th style="${cell(VP_GENDER_COLORS[g], "font-size:8pt;font-weight:600;")}">${label}</th>`).join("")).join("\n")}
+          </tr>
+        </thead>
+        <tbody>
+          ${dataRow}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build content pages HTML for verb+preposition tables.
+ */
+function buildVerbPrepositionContentHtml(
+  entries: VerbPrepositionTableEntry[],
+  settings: GrammarTableSettings,
+  brandSettings: BrandSettings,
+  brand: Brand,
+): string {
+  const brandFonts = BRAND_FONTS[brand];
+  const footerText = brand !== "lingostar" ? replaceVariables(brandSettings.footerLeft || "", brandSettings) : "";
+
+  const tablesHtml = entries.map((entry) => renderVerbPrepositionTable(entry)).join("\n");
+
+  console.log(`[Grammar Table PDF] Rendering ${entries.length} verb+preposition tables`);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="${brandFonts.googleFontsUrl}" rel="stylesheet">
+<style>
+  @page {
+    size: A4 landscape;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: ${brandFonts.bodyFont};
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .verb-table {
+    margin-bottom: 5mm;
+    page-break-inside: avoid;
+  }
+  .footer {
+    margin-top: 6mm;
+    font-size: 8pt;
+    color: #666;
+    border-top: 1px solid #ddd;
+    padding-top: 2mm;
+  }
+</style>
+</head>
+<body>
+${tablesHtml}
+${footerText ? `<div class="footer">${footerText}</div>` : ''}
+</body>
+</html>`;
+}
+
 /**
  * Build content pages HTML for declination tables (Adjektivdeklination)
  * Structured like buildConjugationContentHtml — no internal page wrappers;
@@ -641,7 +775,7 @@ export async function POST(
   const blocksData = worksheet.blocks as unknown as { 
     tableType?: GrammarTableType; 
     input?: unknown; 
-    tableData?: AdjectiveDeclinationTable | VerbConjugationTable[];
+    tableData?: AdjectiveDeclinationTable | VerbConjugationTable[] | VerbPrepositionTableEntry[];
   } | null;
   
   const tableType = blocksData?.tableType || "adjective-declination";
@@ -657,6 +791,11 @@ export async function POST(
     const conjData = tableData as VerbConjugationTable[];
     if (!Array.isArray(conjData) || conjData.length === 0) {
       return NextResponse.json({ error: "No conjugation data to export" }, { status: 400 });
+    }
+  } else if (tableType === "verb-preposition") {
+    const vpData = tableData as VerbPrepositionTableEntry[];
+    if (!Array.isArray(vpData) || vpData.length === 0) {
+      return NextResponse.json({ error: "No verb+preposition data to export" }, { status: 400 });
     }
   } else {
     const declData = tableData as AdjectiveDeclinationTable;
@@ -698,15 +837,19 @@ export async function POST(
   }
 
   // Build HTML based on table type
-  const isConjugation = tableType === "verb-conjugation";
   let html: string;
   let titlePageHtml: string | null = null;
 
-  if (isConjugation) {
+  if (tableType === "verb-conjugation") {
     const conjTables = tableData as VerbConjugationTable[];
     console.log(`[Grammar Table PDF] Building HTML for ${conjTables.length} verb tables`);
     titlePageHtml = buildTitlePageHtml(worksheet.title, "Verbkonjugation", brand, bigLogoDataUri);
     html = buildConjugationContentHtml(conjTables, settings, brandSettings, brand);
+  } else if (tableType === "verb-preposition") {
+    const vpEntries = tableData as VerbPrepositionTableEntry[];
+    console.log(`[Grammar Table PDF] Building HTML for ${vpEntries.length} verb+preposition tables`);
+    titlePageHtml = buildTitlePageHtml(worksheet.title, "Verben mit Präpositionen", brand, bigLogoDataUri);
+    html = buildVerbPrepositionContentHtml(vpEntries, settings, brandSettings, brand);
   } else {
     titlePageHtml = buildTitlePageHtml(worksheet.title, "Adjektivdeklination", brand, bigLogoDataUri);
     html = buildDeclinationContentHtml(

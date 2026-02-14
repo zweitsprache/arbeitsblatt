@@ -16,12 +16,19 @@ import {
   VerbTense,
   AdjectiveDeclinationTable,
   VerbConjugationTable,
+  VerbPrepositionTableEntry,
+  VerbPrepositionItem,
+  VerbPrepositionInput,
+  VerbPrepArticleType,
+  VERB_PREP_ARTICLE_LABELS,
   CONJUGATION_ROWS,
   StaticRowDef,
   PersonKey,
   DeclinationInput,
   ConjugationInput,
   TenseHighlights,
+  DEFAULT_VERB_PREPOSITION_INPUT,
+  GrammarTableInput,
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -57,6 +64,10 @@ import {
   Highlighter,
   ImagePlus,
   X,
+  ChevronUp,
+  ChevronDown,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -162,6 +173,19 @@ function ConjugationInputPanel() {
     });
   };
 
+  const moveVerb = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= verbs.length) return;
+    const newVerbs = [...verbs];
+    [newVerbs[index], newVerbs[newIndex]] = [newVerbs[newIndex], newVerbs[index]];
+    dispatch({
+      type: "UPDATE_CONJUGATION_INPUT",
+      payload: { verbs: newVerbs },
+    });
+  };
+
+  const isManualOrder = !(state.settings.alphabeticalOrder ?? true);
+
   const handleBulkImport = () => {
     // Parse bulk text: split by commas, newlines, or multiple spaces
     const verbs = bulkText
@@ -216,9 +240,31 @@ function ConjugationInputPanel() {
         </div>
       ) : (
         <>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {verbs.map((verb, index) => (
-              <div key={index} className="flex gap-2 items-center p-3 bg-muted/30 rounded-lg">
+              <div key={index} className="flex gap-2 items-center px-3 py-1.5 bg-muted/30 rounded-lg">
+                {isManualOrder && (
+                  <div className="flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveVerb(index, "up")}
+                      disabled={index === 0}
+                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveVerb(index, "down")}
+                      disabled={index === verbs.length - 1}
+                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex-1">
                   <Input
                     placeholder={t("verbPlaceholder")}
@@ -251,6 +297,231 @@ function ConjugationInputPanel() {
           </Button>
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Verb + Preposition Input Panel ──────────────────────────
+
+function VerbPrepositionInputPanel() {
+  const { state, dispatch } = useGrammarTable();
+  const t = useTranslations("grammarTableEditor");
+
+  const items = state.verbPrepositionInput?.items ?? [];
+
+  const updateItem = (index: number, updates: Partial<VerbPrepositionItem>) => {
+    const newItems = items.map((item, i) => {
+      if (i !== index) return item;
+      return { ...item, ...updates };
+    });
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: { items: newItems },
+    });
+  };
+
+  const updateNoun = (index: number, gender: Genus, value: string) => {
+    const newItems = items.map((item, i) => {
+      if (i !== index) return item;
+      return { ...item, nouns: { ...item.nouns, [gender]: value } };
+    });
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: { items: newItems },
+    });
+  };
+
+  const addItem = () => {
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: {
+        items: [
+          ...items,
+          {
+            verb: "",
+            preposition: "",
+            adjective: "",
+            articleType: "bestimmt" as VerbPrepArticleType,
+            sentenceIntro: "",
+            nouns: { maskulin: "", neutrum: "", feminin: "", plural: "" },
+          },
+        ],
+      },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = items.filter((_, i) => i !== index);
+    if (newItems.length === 0) {
+      newItems.push({
+        verb: "",
+        preposition: "",
+        adjective: "",
+        articleType: "bestimmt" as VerbPrepArticleType,
+        sentenceIntro: "",
+        nouns: { maskulin: "", neutrum: "", feminin: "", plural: "" },
+      });
+    }
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: { items: newItems },
+    });
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= items.length) return;
+    const newItems = [...items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: { items: newItems },
+    });
+  };
+
+  const articleTypes: VerbPrepArticleType[] = ["bestimmt", "unbestimmt", "nullartikel", "possessiv", "demonstrativ"];
+  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold mb-1">Verben mit Präpositionen</h3>
+        <p className="text-xs text-muted-foreground">Verb, Präposition, Adjektiv und Nomen eingeben</p>
+      </div>
+
+      {items.map((item, index) => (
+        <div key={index} className="space-y-2 p-3 bg-muted/30 rounded-lg relative">
+          {/* Item header with number and controls */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+            <div className="flex items-center gap-0.5">
+              {items.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => moveItem(index, "up")}
+                    disabled={index === 0}
+                    className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => moveItem(index, "down")}
+                    disabled={index === items.length - 1}
+                    className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeItem(index)}
+                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Row 1: Verb + Preposition */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] text-muted-foreground">Verb</Label>
+              <Input
+                placeholder="sich freuen"
+                value={item.verb}
+                onChange={(e) => updateItem(index, { verb: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">Präposition</Label>
+              <Input
+                placeholder="auf"
+                value={item.preposition}
+                onChange={(e) => updateItem(index, { preposition: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Sentence Intro */}
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Satzanfang</Label>
+            <Input
+              placeholder="Ich freue mich auf…"
+              value={item.sentenceIntro || ""}
+              onChange={(e) => updateItem(index, { sentenceIntro: e.target.value })}
+              className="text-sm"
+            />
+          </div>
+
+          {/* Row 2: Adjective + Article Type */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] text-muted-foreground">{t("adjective")}</Label>
+              <Input
+                placeholder="nächst"
+                value={item.adjective}
+                onChange={(e) => updateItem(index, { adjective: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">Artikel</Label>
+              <Select
+                value={item.articleType}
+                onValueChange={(value: VerbPrepArticleType) =>
+                  updateItem(index, { articleType: value })
+                }
+              >
+                <SelectTrigger className="text-sm h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {articleTypes.map((at) => (
+                    <SelectItem key={at} value={at}>
+                      {VERB_PREP_ARTICLE_LABELS[at].de}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: 4 Nouns */}
+          <div className="grid grid-cols-2 gap-2">
+            {genders.map((gender) => (
+              <div key={gender}>
+                <Label className="text-[10px] text-muted-foreground">
+                  {GENUS_LABELS[gender].de}
+                </Label>
+                <Input
+                  placeholder={gender === "maskulin" ? "Tag" : gender === "neutrum" ? "Wochenende" : gender === "feminin" ? "Woche" : "Ferien"}
+                  value={item.nouns[gender]}
+                  onChange={(e) => updateNoun(index, gender, e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={addItem}
+        className="w-full gap-1"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Verb hinzufügen
+      </Button>
     </div>
   );
 }
@@ -394,39 +665,28 @@ function SettingsPanel() {
               }
             />
           </div>
+
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("highlightEndings")}</Label>
+            <Switch
+              checked={state.settings.highlightEndings}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { highlightEndings: v } })
+              }
+            />
+          </div>
         </>
       )}
 
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("highlightEndings")}</Label>
-        <Switch
-          checked={state.settings.highlightEndings}
-          onCheckedChange={(v) =>
-            dispatch({ type: "UPDATE_SETTINGS", payload: { highlightEndings: v } })
-          }
-        />
-      </div>
-
-      {state.tableType === "adjective-declination" && (
+      {state.tableType === "verb-preposition" && (
         <>
-          <Separator />
-          <div className="space-y-1">
-            <Label className="text-sm">Seitentitel (Seite 2)</Label>
-            <Input
-              value={state.settings.contentTitle ?? ""}
-              onChange={(e) =>
-                dispatch({ type: "UPDATE_SETTINGS", payload: { contentTitle: e.target.value } })
-              }
-              placeholder={state.title || "Dokumenttitel"}
-            />
-          </div>
-          <CoverImagesPanel />
+          {/* No special settings needed — article type is per-item */}
+          <p className="text-xs text-muted-foreground">Artikeltyp wird pro Verb eingestellt.</p>
         </>
       )}
 
       {state.tableType === "verb-conjugation" && (
         <>
-          <Separator />
           <div className="flex items-center justify-between">
             <Label className="text-sm">{t("simplified")}</Label>
             <Switch
@@ -459,7 +719,6 @@ function SettingsPanel() {
             </div>
           )}
 
-          <Separator />
           <div className="flex items-center justify-between">
             <Label className="text-sm">{t("showIrregularHighlights")}</Label>
             <Switch
@@ -469,8 +728,31 @@ function SettingsPanel() {
               }
             />
           </div>
+
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("alphabeticalOrder")}</Label>
+            <Switch
+              checked={state.settings.alphabeticalOrder ?? true}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { alphabeticalOrder: v } })
+              }
+            />
+          </div>
         </>
       )}
+
+      <Separator />
+      <div className="space-y-1">
+        <Label className="text-sm">Seitentitel (Seite 2)</Label>
+        <Input
+          value={state.settings.contentTitle ?? ""}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_SETTINGS", payload: { contentTitle: e.target.value } })
+          }
+          placeholder={state.title || "Dokumenttitel"}
+        />
+      </div>
+      <CoverImagesPanel />
     </div>
   );
 }
@@ -1105,6 +1387,8 @@ interface SingleConjugationTableProps {
   tableData: VerbConjugationTable;
   tableIndex: number;
   showIrregularHighlights: boolean;
+  simplified: boolean;
+  simplifiedTenses: Record<VerbTense, boolean>;
   onCellChange: (
     tableIndex: number,
     personKey: PersonKey,
@@ -1122,9 +1406,10 @@ interface SingleConjugationTableProps {
   onInfinitiveChange: (tableIndex: number, verb: string) => void;
 }
 
-function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, onCellChange, onHighlightsChange, onInfinitiveChange }: SingleConjugationTableProps) {
+function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, simplified, simplifiedTenses, onCellChange, onHighlightsChange, onInfinitiveChange }: SingleConjugationTableProps) {
   const locale = "de";
-  const tenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
+  const allTenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
+  const tenses = simplified ? allTenses.filter(t => simplifiedTenses[t]) : allTenses;
   
   // Use static row definitions split by section
   const singularRows = CONJUGATION_ROWS.filter(r => r.section === "singular");
@@ -1544,10 +1829,11 @@ function ConjugationTableView() {
     );
   }
 
-  // Sort verbs alphabetically by infinitive, keeping track of original indices
-  const tables = tablesUnsorted
-    .map((table, originalIdx) => ({ table, originalIdx }))
-    .sort((a, b) => a.table.input.verb.localeCompare(b.table.input.verb, "de"));
+  // Optionally sort verbs alphabetically by infinitive, keeping track of original indices
+  const mapped = tablesUnsorted.map((table, originalIdx) => ({ table, originalIdx }));
+  const tables = (state.settings.alphabeticalOrder ?? true)
+    ? mapped.sort((a, b) => a.table.input.verb.localeCompare(b.table.input.verb, "de"))
+    : mapped;
 
   return (
     <div className="space-y-4">
@@ -1557,10 +1843,179 @@ function ConjugationTableView() {
           tableData={table}
           tableIndex={originalIdx}
           showIrregularHighlights={state.settings.showIrregularHighlights ?? false}
+          simplified={state.settings.simplified ?? false}
+          simplifiedTenses={state.settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
           onCellChange={handleCellChange}
           onHighlightsChange={handleHighlightsChange}
           onInfinitiveChange={handleInfinitiveChange}
         />
+      ))}
+    </div>
+  );
+}
+
+// ─── Verb + Preposition Table View ───────────────────────────
+
+function SingleVerbPrepositionTable({
+  entry,
+}: {
+  entry: VerbPrepositionTableEntry;
+}) {
+  // Gender background colours (matching declination view)
+  const genderBg: Record<string, string> = {
+    maskulin: "bg-[#F2E2D4]",
+    neutrum: "bg-[#D8E6F2]",
+    feminin: "bg-[#F2EDDA]",
+    plural: "bg-[#DAF0DC]",
+  };
+
+  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
+  const cellBase = "px-2 py-1.5 text-xs";
+
+  return (
+    <div className="space-y-3">
+      {/* Header: verb + preposition + case */}
+      <h2 className="text-base font-bold">
+        {entry.input.verb} + {entry.input.preposition}
+        {" "}
+        <Badge variant="outline" className="text-[10px] py-0 px-1.5 align-middle font-normal">
+          {CASE_LABELS[entry.case]?.de || entry.case}
+        </Badge>
+      </h2>
+
+      {/* 1st person singular example as a 12-col cloud row */}
+      {(() => {
+        const sentenceIntro = entry.input.sentenceIntro || entry.firstPersonExample || "";
+        const words = sentenceIntro.split(/\s+/).filter(Boolean);
+        const totalCols = 12;
+        return (
+          <div className="overflow-x-auto bg-white">
+            <table
+              className="w-full text-sm table-fixed rounded overflow-hidden"
+              style={{ borderCollapse: "separate", borderSpacing: "2px" }}
+            >
+              <colgroup>
+                {Array.from({ length: totalCols }).map((_, i) => (
+                  <col key={i} style={{ width: `${100 / totalCols}%` }} />
+                ))}
+              </colgroup>
+              <tbody>
+                <tr>
+                  {Array.from({ length: totalCols }).map((_, i) => (
+                    <td
+                      key={i}
+                      className={`px-2 py-1.5 text-xs ${i < words.length ? "bg-[#E4E4EC]" : ""} ${i === 0 ? "rounded-l" : ""} ${i === words.length - 1 ? "rounded-r" : ""}`}
+                    >
+                      {i < words.length ? words[i] : ""}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
+      {/* Gap */}
+      <div className="h-1" />
+
+      {/* Declension table: 4 genders × 3 subcols (Artikel / Adjektiv / Nomen) */}
+      <div className="overflow-x-auto bg-white">
+        <table
+          className="w-full text-sm table-fixed rounded overflow-hidden"
+          style={{ borderCollapse: "separate", borderSpacing: "2px" }}
+        >
+          <colgroup>
+            {/* 3 columns per gender = 12 total */}
+            <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+            <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+            <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+            <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+          </colgroup>
+          <thead>
+            {/* Row 1: Gender headers (span 3 cols each) */}
+            <tr>
+              {genders.map((g, gi) => (
+                <th
+                  key={g}
+                  colSpan={3}
+                  className={`${genderBg[g]} ${cellBase} text-left font-semibold ${gi === 0 ? "rounded-tl" : ""} ${gi === genders.length - 1 ? "rounded-tr" : ""}`}
+                >
+                  {GENUS_LABELS[g].de}
+                </th>
+              ))}
+            </tr>
+            {/* Row 2: Artikel / Adjektiv / Nomen × 4 */}
+            <tr>
+              {genders.map((g) =>
+                ["Artikel", "Adjektiv", "Nomen"].map((label, li) => (
+                  <th
+                    key={`${g}-${label}`}
+                    className={`${genderBg[g]} ${cellBase} text-left text-[10px] font-medium`}
+                  >
+                    {label}
+                  </th>
+                ))
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Single data row */}
+            <tr>
+              {genders.map((g, gi) => {
+                const d = entry.declension?.[g];
+                return (
+                  <React.Fragment key={g}>
+                    <td className={`${genderBg[g]} ${cellBase} ${gi === 0 ? "rounded-bl" : ""}`}>
+                      {d?.article || ""}
+                    </td>
+                    <td className={`${genderBg[g]} ${cellBase}`}>
+                      {d?.adjective || ""}
+                    </td>
+                    <td className={`${genderBg[g]} ${cellBase} ${gi === genders.length - 1 ? "rounded-br" : ""}`}>
+                      {d?.noun || ""}
+                    </td>
+                  </React.Fragment>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function VerbPrepositionTableView() {
+  const { state } = useGrammarTable();
+  const t = useTranslations("grammarTableEditor");
+
+  if (!state.tableData) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <p className="text-center">
+          {t("noTableYet")}
+          <br />
+          <span className="text-sm">{t("clickGenerate")}</span>
+        </p>
+      </div>
+    );
+  }
+
+  const entries = state.tableData as VerbPrepositionTableEntry[];
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <p className="text-center">{t("noTableYet")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {entries.map((entry, idx) => (
+        <SingleVerbPrepositionTable key={idx} entry={entry} />
       ))}
     </div>
   );
@@ -1574,10 +2029,22 @@ function EditorToolbar() {
   const tc = useTranslations("common");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPptx, setIsGeneratingPptx] = useState(false);
+  const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
+    open: boolean;
+    engine?: "puppeteer" | "react-pdf";
+  }>({ open: false });
 
   // Check if we can generate based on table type
   const canGenerate = state.tableType === "verb-conjugation"
     ? (state.conjugationInput?.verbs ?? []).some(v => v.trim().length > 0)
+    : state.tableType === "verb-preposition"
+    ? (state.verbPrepositionInput?.items ?? []).some(
+        (item) =>
+          item.verb.trim() &&
+          item.preposition.trim() &&
+          item.adjective.trim() &&
+          (item.nouns.maskulin.trim() || item.nouns.neutrum.trim() || item.nouns.feminin.trim() || item.nouns.plural.trim())
+      )
     : (
         state.declinationInput?.maskulin?.adjective &&
         state.declinationInput?.maskulin?.noun &&
@@ -1589,7 +2056,7 @@ function EditorToolbar() {
         state.declinationInput?.plural?.noun
       );
 
-  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf") => {
+  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" = "DE") => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
@@ -1599,8 +2066,8 @@ function EditorToolbar() {
       // v2 (react-pdf) now supports both table types
       const useV2 = engine === "react-pdf";
       const endpoint = useV2
-        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2`
-        : `/api/worksheets/${state.documentId}/grammar-table-pdf`;
+        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?locale=${locale}`
+        : `/api/worksheets/${state.documentId}/grammar-table-pdf?locale=${locale}`;
       const res = await authFetch(endpoint, {
         method: "POST",
       });
@@ -1613,7 +2080,9 @@ function EditorToolbar() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${state.title || "grammar-table"}.pdf`;
+      // Use short document ID + locale suffix
+      const shortId = state.documentId.slice(0, 16);
+      a.download = `${shortId}_${locale}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -1621,7 +2090,7 @@ function EditorToolbar() {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [state.documentId, state.title, t]);
+  }, [state.documentId, t]);
 
   const handleDownloadPptx = useCallback(async () => {
     if (!state.documentId) {
@@ -1673,6 +2142,7 @@ function EditorToolbar() {
           <SelectContent>
             <SelectItem value="adjective-declination">{TABLE_TYPE_LABELS["adjective-declination"].de}</SelectItem>
             <SelectItem value="verb-conjugation">{TABLE_TYPE_LABELS["verb-conjugation"].de}</SelectItem>
+            <SelectItem value="verb-preposition">{TABLE_TYPE_LABELS["verb-preposition"].de}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -1736,7 +2206,7 @@ function EditorToolbar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDownloadPdf()}
+              onClick={() => setPdfLocaleDialog({ open: true })}
               disabled={isGeneratingPdf || !state.documentId || !state.tableData}
               className="gap-2"
             >
@@ -1758,7 +2228,7 @@ function EditorToolbar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDownloadPdf("react-pdf")}
+              onClick={() => setPdfLocaleDialog({ open: true, engine: "react-pdf" })}
               disabled={isGeneratingPdf || !state.documentId || !state.tableData}
               className="gap-2 border-dashed"
             >
@@ -1814,6 +2284,41 @@ function EditorToolbar() {
           {tc("save")}
         </Button>
       </div>
+
+      {/* DE / CH locale picker dialog */}
+      <Dialog
+        open={pdfLocaleDialog.open}
+        onOpenChange={(open) => setPdfLocaleDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button
+              className="flex-1 gap-2"
+              variant="outline"
+              onClick={() => {
+                setPdfLocaleDialog({ open: false });
+                handleDownloadPdf(pdfLocaleDialog.engine, "DE");
+              }}
+            >
+              🇩🇪 Deutschland (ß)
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              variant="outline"
+              onClick={() => {
+                setPdfLocaleDialog({ open: false });
+                handleDownloadPdf(pdfLocaleDialog.engine, "CH");
+              }}
+            >
+              🇨🇭 Schweiz (ss)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1832,6 +2337,8 @@ function EditorContent() {
           <div className="p-4 space-y-6">
             {state.tableType === "verb-conjugation" ? (
               <ConjugationInputPanel />
+            ) : state.tableType === "verb-preposition" ? (
+              <VerbPrepositionInputPanel />
             ) : (
               <DeclinationInputPanel />
             )}
@@ -1852,6 +2359,8 @@ function EditorContent() {
               </div>
             ) : state.tableType === "verb-conjugation" ? (
               <ConjugationTableView />
+            ) : state.tableType === "verb-preposition" ? (
+              <VerbPrepositionTableView />
             ) : (
               <DeclinationTableView />
             )}
@@ -1871,6 +2380,7 @@ function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument
     if (document) {
       // Determine which input type based on tableType
       const isConjugation = document.tableType === "verb-conjugation";
+      const isVerbPreposition = document.tableType === "verb-preposition";
       
       dispatch({
         type: "LOAD",
@@ -1879,8 +2389,9 @@ function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument
           title: document.title,
           slug: document.slug,
           tableType: document.tableType,
-          declinationInput: !isConjugation ? document.input as DeclinationInput : undefined,
+          declinationInput: (!isConjugation && !isVerbPreposition) ? document.input as DeclinationInput : undefined,
           conjugationInput: isConjugation ? document.input as ConjugationInput : undefined,
+          verbPrepositionInput: isVerbPreposition ? document.input as VerbPrepositionInput : undefined,
           tableData: document.tableData,
           settings: document.settings,
           published: document.published,
@@ -1924,20 +2435,43 @@ export function GrammarTableEditor({ documentId }: { documentId?: string }) {
           // Transform the API response to our document format
           const tableType = data.blocks?.tableType || "adjective-declination";
           const isConj = tableType === "verb-conjugation";
+          const isVerbPrep = tableType === "verb-preposition";
+          
+          // For conjugation tables, reconstruct verbs from tableData if conjugationInput is missing or empty
+          let conjInput = data.blocks?.conjugationInput || data.blocks?.input;
+          const hasRealVerbs = conjInput?.verbs?.some((v: string) => v.trim().length > 0);
+          if (isConj && !hasRealVerbs) {
+            const tables = data.blocks?.tableData;
+            if (Array.isArray(tables) && tables.length > 0) {
+              const verbs = tables.map((t: { input?: { verb?: string } }) => t.input?.verb || "").filter(Boolean);
+              if (verbs.length > 0) {
+                conjInput = { verbs };
+              }
+            }
+          }
+
+          // Determine the correct input based on table type
+          let input: GrammarTableInput;
+          if (isConj) {
+            input = conjInput || { verbs: [""] };
+          } else if (isVerbPrep) {
+            input = data.blocks?.verbPrepositionInput || DEFAULT_VERB_PREPOSITION_INPUT;
+          } else {
+            input = data.blocks?.declinationInput || data.blocks?.input || {
+              maskulin: { adjective: "", noun: "" },
+              neutrum: { adjective: "", noun: "" },
+              feminin: { adjective: "", noun: "" },
+              plural: { adjective: "", noun: "" },
+            };
+          }
+          
           setDocument({
             id: data.id,
             title: data.title,
             description: data.description,
             slug: data.slug,
             tableType,
-            input: isConj
-              ? (data.blocks?.conjugationInput || data.blocks?.input || { verbs: [""] })
-              : (data.blocks?.declinationInput || data.blocks?.input || {
-                  maskulin: { adjective: "", noun: "" },
-                  neutrum: { adjective: "", noun: "" },
-                  feminin: { adjective: "", noun: "" },
-                  plural: { adjective: "", noun: "" },
-                }),
+            input,
             tableData: data.blocks?.tableData || null,
             settings: data.settings || {},
             published: data.published,

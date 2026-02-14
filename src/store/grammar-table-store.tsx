@@ -9,11 +9,13 @@ import {
   GrammarTableData,
   DeclinationInput,
   ConjugationInput,
+  VerbPrepositionInput,
   AdjectiveDeclinationTable,
   VerbConjugationTable,
   DEFAULT_GRAMMAR_TABLE_SETTINGS,
   DEFAULT_DECLINATION_INPUT,
   DEFAULT_CONJUGATION_INPUT,
+  DEFAULT_VERB_PREPOSITION_INPUT,
   PersonKey,
   VerbTense,
   TenseHighlights,
@@ -27,6 +29,7 @@ interface GrammarTableState {
   tableType: GrammarTableType;
   declinationInput: DeclinationInput;
   conjugationInput: ConjugationInput;
+  verbPrepositionInput: VerbPrepositionInput;
   tableData: GrammarTableData | null;
   settings: GrammarTableSettings;
   isDirty: boolean;
@@ -42,6 +45,7 @@ const initialState: GrammarTableState = {
   tableType: "adjective-declination",
   declinationInput: DEFAULT_DECLINATION_INPUT,
   conjugationInput: DEFAULT_CONJUGATION_INPUT,
+  verbPrepositionInput: DEFAULT_VERB_PREPOSITION_INPUT,
   tableData: null,
   settings: DEFAULT_GRAMMAR_TABLE_SETTINGS,
   isDirty: false,
@@ -59,6 +63,7 @@ type GrammarTableAction =
       tableType: GrammarTableType;
       declinationInput?: DeclinationInput;
       conjugationInput?: ConjugationInput;
+      verbPrepositionInput?: VerbPrepositionInput;
       tableData: GrammarTableData | null;
       settings: GrammarTableSettings; 
       published: boolean 
@@ -67,6 +72,7 @@ type GrammarTableAction =
   | { type: "SET_TABLE_TYPE"; payload: GrammarTableType }
   | { type: "UPDATE_DECLINATION_INPUT"; payload: Partial<DeclinationInput> }
   | { type: "UPDATE_CONJUGATION_INPUT"; payload: Partial<ConjugationInput> }
+  | { type: "UPDATE_VERB_PREPOSITION_INPUT"; payload: Partial<VerbPrepositionInput> }
   | { type: "SET_TABLE_DATA"; payload: GrammarTableData }
   | { type: "CLEAR_TABLE_DATA" }
   | { type: "UPDATE_SETTINGS"; payload: Partial<GrammarTableSettings> }
@@ -103,6 +109,7 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
         tableType: action.payload.tableType,
         declinationInput: action.payload.declinationInput || DEFAULT_DECLINATION_INPUT,
         conjugationInput: action.payload.conjugationInput || DEFAULT_CONJUGATION_INPUT,
+        verbPrepositionInput: action.payload.verbPrepositionInput || DEFAULT_VERB_PREPOSITION_INPUT,
         tableData: action.payload.tableData,
         settings: { ...DEFAULT_GRAMMAR_TABLE_SETTINGS, ...action.payload.settings },
         published: action.payload.published,
@@ -131,6 +138,13 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
       return {
         ...state,
         conjugationInput: { ...state.conjugationInput, ...action.payload },
+        isDirty: true,
+      };
+
+    case "UPDATE_VERB_PREPOSITION_INPUT":
+      return {
+        ...state,
+        verbPrepositionInput: { ...state.verbPrepositionInput, ...action.payload },
         isDirty: true,
       };
 
@@ -315,13 +329,18 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
     dispatch({ type: "SET_GENERATING", payload: true });
     try {
       // Choose API endpoint based on table type
-      const endpoint = state.tableType === "verb-conjugation"
-        ? "/api/ai/generate-conjugation-table"
-        : "/api/ai/generate-declination-table";
-      
-      const input = state.tableType === "verb-conjugation"
-        ? state.conjugationInput
-        : state.declinationInput;
+      let endpoint: string;
+      let input: DeclinationInput | ConjugationInput | VerbPrepositionInput;
+      if (state.tableType === "verb-conjugation") {
+        endpoint = "/api/ai/generate-conjugation-table";
+        input = state.conjugationInput;
+      } else if (state.tableType === "verb-preposition") {
+        endpoint = "/api/ai/generate-preposition-table";
+        input = state.verbPrepositionInput;
+      } else {
+        endpoint = "/api/ai/generate-declination-table";
+        input = state.declinationInput;
+      }
 
       const res = await authFetch(endpoint, {
         method: "POST",
@@ -341,7 +360,7 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
     } finally {
       dispatch({ type: "SET_GENERATING", payload: false });
     }
-  }, [state.tableType, state.declinationInput, state.conjugationInput]);
+  }, [state.tableType, state.declinationInput, state.conjugationInput, state.verbPrepositionInput]);
 
   const save = useCallback(async () => {
     dispatch({ type: "SET_SAVING", payload: true });
@@ -362,6 +381,7 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
             tableType: state.tableType,
             declinationInput: state.declinationInput,
             conjugationInput: state.conjugationInput,
+            verbPrepositionInput: state.verbPrepositionInput,
             tableData: state.tableData,
           },
           settings: state.settings,
@@ -385,6 +405,7 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
             tableType: data.blocks?.tableType || "adjective-declination",
             declinationInput: data.blocks?.declinationInput || DEFAULT_DECLINATION_INPUT,
             conjugationInput: data.blocks?.conjugationInput || DEFAULT_CONJUGATION_INPUT,
+            verbPrepositionInput: data.blocks?.verbPrepositionInput || DEFAULT_VERB_PREPOSITION_INPUT,
             tableData: data.blocks?.tableData || null,
             settings: data.settings as GrammarTableSettings,
             published: data.published,
@@ -398,7 +419,7 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
       console.error("Save failed:", err);
       dispatch({ type: "SET_SAVING", payload: false });
     }
-  }, [state.documentId, state.title, state.tableType, state.declinationInput, state.conjugationInput, state.tableData, state.settings, state.published]);
+  }, [state.documentId, state.title, state.tableType, state.declinationInput, state.conjugationInput, state.verbPrepositionInput, state.tableData, state.settings, state.published]);
 
   return (
     <GrammarTableContext.Provider value={{ state, dispatch, generate, save }}>

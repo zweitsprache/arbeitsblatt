@@ -121,6 +121,10 @@ export function GrammarTableDashboard() {
     switch (tableType) {
       case "adjective-declination":
         return t("adjektivdeklination");
+      case "verb-conjugation":
+        return t("verbkonjugation");
+      case "verb-preposition":
+        return t("verbenMitPraepositionen");
       default:
         return t("grammarTable");
     }

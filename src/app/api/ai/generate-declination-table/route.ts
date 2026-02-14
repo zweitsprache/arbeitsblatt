@@ -127,6 +127,8 @@ Gib die Antwort als JSON zurück:
 
 ERSETZE alle "DEKLINIERT", "SCHWACH_DEKLINIERT", "STARK_DEKLINIERT" mit den korrekten Adjektivformen!
 
+WICHTIG: Verwende immer die deutsche Standardorthografie mit ß (Eszett), NICHT die Schweizer Schreibweise mit ss. Beispiel: "groß" nicht "gross".
+
 Gib NUR valides JSON zurück, keine Markdown-Codeblöcke. Generiere alle 4 Fälle.`;
 
     const message = await client.messages.create({

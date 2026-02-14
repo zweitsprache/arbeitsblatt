@@ -96,8 +96,9 @@ BEISPIEL für "machen" (weder trennbar noch reflexiv):
 
 Beachte:
 - "sein"-Verben im Perfekt: verwendet "ist/sind/bin/bist/seid" statt "haben"
-- Starke Verben: unregelmässige Stammänderungen
+- Starke Verben: unregelmäßige Stammänderungen
 - Dativ-Reflexivpronomen (mir/dir/sich/uns/euch/sich) bei Verben wie "sich vorstellen", "sich merken"
+- WICHTIG: Verwende immer die deutsche Standardorthografie mit ß (Eszett), NICHT die Schweizer Schreibweise mit ss. Beispiel: "groß" nicht "gross", "heißen" nicht "heissen", "schließen" nicht "schliessen".
 
 Gib NUR das JSON zurück, kein anderer Text:`;
 

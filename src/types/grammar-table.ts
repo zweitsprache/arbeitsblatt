@@ -3,7 +3,7 @@
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "./worksheet";
 
 // ─── Table types ─────────────────────────────────────────────
-export type GrammarTableType = "adjective-declination" | "verb-conjugation";
+export type GrammarTableType = "adjective-declination" | "verb-conjugation" | "verb-preposition";
 
 // ─── Adjective Declination types ─────────────────────────────
 
@@ -113,13 +113,15 @@ export interface GrammarTableSettings {
   coverImages: string[];
   /** Show border around cover images */
   coverImageBorder: boolean;
+  /** Sort verbs alphabetically (default true). When false, use input order. */
+  alphabeticalOrder: boolean;
 }
 
 /** Union type for all grammar table inputs */
-export type GrammarTableInput = DeclinationInput | ConjugationInput;
+export type GrammarTableInput = DeclinationInput | ConjugationInput | VerbPrepositionInput;
 
 /** Union type for all grammar table data */
-export type GrammarTableData = AdjectiveDeclinationTable | VerbConjugationTable[];
+export type GrammarTableData = AdjectiveDeclinationTable | VerbConjugationTable[] | VerbPrepositionTableEntry[];
 
 export interface GrammarTableDocument {
   id: string;
@@ -147,6 +149,7 @@ export const DEFAULT_GRAMMAR_TABLE_SETTINGS: GrammarTableSettings = {
   contentTitle: "",
   coverImages: [],
   coverImageBorder: false,
+  alphabeticalOrder: true,
 };
 
 export const DEFAULT_DECLINATION_INPUT: DeclinationInput = {
@@ -311,6 +314,86 @@ export const DEFAULT_CONJUGATION_INPUT: ConjugationInput = {
   verbs: ["machen"],
 };
 
+// ─── Verb + Preposition types ────────────────────────────────
+
+/** Article type selection for each verb+preposition item */
+export type VerbPrepArticleType = "bestimmt" | "unbestimmt" | "nullartikel" | "possessiv" | "demonstrativ";
+
+/** One verb+preposition input item */
+export interface VerbPrepositionItem {
+  verb: string;
+  preposition: string;
+  adjective: string;
+  articleType: VerbPrepArticleType;
+  /** Manual sentence intro, e.g. "Ich freue mich auf…" or "Das kommt auf…" */
+  sentenceIntro: string;
+  nouns: {
+    maskulin: string;
+    neutrum: string;
+    feminin: string;
+    plural: string;
+  };
+}
+
+/** User input for generating a verb+preposition table */
+export interface VerbPrepositionInput {
+  items: VerbPrepositionItem[];
+}
+
+/** Structured declension for one gender */
+export interface VerbPrepositionGenderDeclension {
+  article: string;    // e.g. "den" (empty string for Nullartikel)
+  adjective: string;  // e.g. "nächsten"
+  noun: string;       // e.g. "Tag"
+}
+
+/** Declined phrase set for 4 genders */
+export interface VerbPrepositionDeclensionRow {
+  maskulin: VerbPrepositionGenderDeclension;
+  neutrum: VerbPrepositionGenderDeclension;
+  feminin: VerbPrepositionGenderDeclension;
+  plural: VerbPrepositionGenderDeclension;
+}
+
+/** Generated data for one verb+preposition item */
+export interface VerbPrepositionTableEntry {
+  input: VerbPrepositionItem;
+  /** The grammatical case governed by the preposition */
+  case: GrammatikalFall;
+  /** Whether the verb is reflexive */
+  isReflexive: boolean;
+  /** @deprecated Use input.sentenceIntro instead */
+  firstPersonExample?: string;
+  /** Declined phrases for the selected article type (structured) */
+  declension: VerbPrepositionDeclensionRow;
+}
+
+export const DEFAULT_VERB_PREPOSITION_INPUT: VerbPrepositionInput = {
+  items: [
+    {
+      verb: "sich freuen",
+      preposition: "auf",
+      adjective: "nächst",
+      articleType: "bestimmt",
+      sentenceIntro: "Ich freue mich auf…",
+      nouns: {
+        maskulin: "Tag",
+        neutrum: "Wochenende",
+        feminin: "Woche",
+        plural: "Ferien",
+      },
+    },
+  ],
+};
+
+export const VERB_PREP_ARTICLE_LABELS: Record<VerbPrepArticleType, { de: string; en: string }> = {
+  bestimmt: { de: "Bestimmter Artikel", en: "Definite Article" },
+  unbestimmt: { de: "Unbestimmter Artikel", en: "Indefinite Article" },
+  nullartikel: { de: "Nullartikel", en: "Zero Article" },
+  possessiv: { de: "Possessivartikel", en: "Possessive Article" },
+  demonstrativ: { de: "Demonstrativartikel", en: "Demonstrative Article" },
+};
+
 export const TENSE_LABELS: Record<VerbTense, { de: string; en: string }> = {
   praesens: { de: "Präsens", en: "Present" },
   perfekt: { de: "Perfekt", en: "Perfect" },
@@ -320,4 +403,5 @@ export const TENSE_LABELS: Record<VerbTense, { de: string; en: string }> = {
 export const TABLE_TYPE_LABELS: Record<GrammarTableType, { de: string; en: string }> = {
   "adjective-declination": { de: "Adjektivdeklination", en: "Adjective Declension" },
   "verb-conjugation": { de: "Verbkonjugation", en: "Verb Conjugation" },
+  "verb-preposition": { de: "Verben mit Präpositionen", en: "Verbs with Prepositions" },
 };

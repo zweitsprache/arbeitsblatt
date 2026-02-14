@@ -30,6 +30,8 @@ import {
   Genus,
   CASE_LABELS,
   GENUS_LABELS,
+  VerbPrepositionTableEntry,
+  VERB_PREP_ARTICLE_LABELS,
 } from "@/types/grammar-table";
 import {
   DEFAULT_BRAND_SETTINGS,
@@ -95,6 +97,28 @@ async function readLogoAsPngDataUri(
   } catch (e) {
     console.warn(`[Grammar Table PDF v2] Could not convert logo: ${relativePath}`, e);
     return "";
+  }
+}
+
+/** Download a remote image, resize & compress it, return as JPEG data-URI. */
+async function compressImageUrl(
+  url: string,
+  maxWidth = 400,
+  quality = 80,
+): Promise<string> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return url; // fallback to original
+    const buf = Buffer.from(await res.arrayBuffer());
+    const compressed = await sharp(buf)
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .resize({ width: maxWidth, withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
+    return `data:image/jpeg;base64,${compressed.toString("base64")}`;
+  } catch (e) {
+    console.warn(`[Grammar Table PDF v2] Could not compress image: ${url}`, e);
+    return url; // fallback to original
   }
 }
 
@@ -234,7 +258,7 @@ const s = StyleSheet.create({
     fontWeight: 400,
     fontSize: 14,
     color: "#000000",
-    marginBottom: mm(4),
+    marginBottom: mm(3),
   },
   // Verb table
   verbTableWrap: {
@@ -266,7 +290,7 @@ const s = StyleSheet.create({
   },
   sectionHeaderCol: {
     backgroundColor: CELL_BG,
-    padding: "3 6",
+    padding: "2 6",
     justifyContent: "center",
   },
   sectionHeaderText: {
@@ -276,7 +300,7 @@ const s = StyleSheet.create({
   },
   // Generic cell
   cell: {
-    padding: "3 6",
+    padding: "2 6",
     justifyContent: "center",
     backgroundColor: CELL_BG,
     marginLeft: CELL_GAP,
@@ -383,19 +407,36 @@ function HighlightedText({
         const prev = segments[i - 1];
         const next = segments[i + 1];
         if (seg.highlighted) {
-          // Space before if preceded by normal text, after if followed by normal text
-          // Plus non-breaking spaces inside for visual padding
-          const spaceBefore = prev && !prev.highlighted ? "\u00A0" : "";
-          const spaceAfter = next && !next.highlighted ? "\u00A0" : "";
+          // Trim whitespace captured from highlight ranges
+          const trimmed = seg.text.trim();
+          // Did the original text end with a space? (= badge is at end of a word)
+          const atWordEnd = seg.text !== seg.text.trimEnd();
+          // Badge content: inner padding via \u00A0 on both sides
+          const badgeText = `\u00A0${trimmed}\u00A0`;
+          // Small space before badge if preceded by a letter (not a space)
+          const prevEndsWithLetter = prev && !prev.highlighted && !prev.text.endsWith(" ");
+          const before = prevEndsWithLetter ? "\u00A0" : "";
+          // After badge: double space at word boundary, single space if followed by letter
+          const nextStartsWithLetter = next && !next.highlighted && !next.text.startsWith(" ");
+          const after = atWordEnd ? "\u00A0\u00A0" : (nextStartsWithLetter ? "\u00A0" : "");
           return (
             <React.Fragment key={i}>
-              {spaceBefore ? <Text>{spaceBefore}</Text> : null}
-              <Text style={{ backgroundColor: HIGHLIGHT_BG, color: HIGHLIGHT_COLOR }}>{`\u00A0${seg.text}\u00A0`}</Text>
-              {spaceAfter ? <Text>{spaceAfter}</Text> : null}
+              {before ? <Text>{before}</Text> : null}
+              <Text style={{ backgroundColor: HIGHLIGHT_BG, color: HIGHLIGHT_COLOR }}>{badgeText}</Text>
+              {after ? <Text>{after}</Text> : null}
             </React.Fragment>
           );
         }
-        return <Text key={i}>{seg.text}</Text>;
+        // Normal text: preserve spaces adjacent to highlights as non-breaking
+        let text = seg.text;
+        if (prev?.highlighted) {
+          // Remove leading space — spacing is handled by badge after-text
+          text = text.replace(/^ /, "");
+        }
+        if (next?.highlighted && text.endsWith(" ")) {
+          text = text.slice(0, -1) + "\u00A0";
+        }
+        return <Text key={i}>{text}</Text>;
       })}
     </Text>
   );
@@ -1086,7 +1127,7 @@ function CaseTable({ caseSection, settings, input }: CaseTableProps) {
           style={{
             marginTop: mm(2),
             borderBottomWidth: 0.5,
-            borderBottomColor: "#cccccc",
+            borderBottomColor: "#999999",
             borderBottomStyle: "dotted",
             width: "100%",
             height: mm(5),
@@ -1219,7 +1260,10 @@ function DeclinationTablePDF({
           </View>
         ) : null}
 
-        <Text style={s.contentTitle}>{settings.contentTitle || title}</Text>
+        {/* Document title – visible on first content page, invisible spacer on subsequent pages */}
+        <Text style={s.contentTitle} fixed
+          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+        />
 
         {(tableData.cases ?? []).map((cs) => (
           <CaseTable key={cs.case} caseSection={cs} settings={settings} input={tableData.input} />
@@ -1246,9 +1290,325 @@ function DeclinationTablePDF({
 
 // ─── Document ───────────────────────────────────────────────
 
+// ─── Verb + Preposition Components ──────────────────────────
+
+interface VPTableProps {
+  entry: VerbPrepositionTableEntry;
+}
+
+function VPTable({ entry }: VPTableProps) {
+  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
+
+  const caseLabel = CASE_LABELS[entry.case]?.de || entry.case;
+
+  // Reuse the same cell width math as the declination table: 12 data cells (3 per gender)
+  const totalItems = 12;
+  const totalGaps = totalItems - 1;
+  const available = DECL_CONTENT_W - totalGaps * CELL_GAP;
+  const cellW = available / 12;
+  const genderBlockW = 3 * cellW + 2 * CELL_GAP;
+
+  return (
+    <View style={s.verbTableWrap} wrap={false}>
+      {/* Title with Kasus badge */}
+      <View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: mm(1), gap: mm(2) }}>
+        <Text style={s.verbTitle}>
+          {entry.input.verb} + {entry.input.preposition}
+        </Text>
+        <View style={{ paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: "#999999", borderRadius: 3 }}>
+          <Text style={{ fontSize: 7 }}>{caseLabel}</Text>
+        </View>
+      </View>
+
+      {/* 1st person singular example as cloud-bg cells */}
+      {(() => {
+        const sentenceIntro = entry.input?.sentenceIntro || entry.firstPersonExample || "";
+        const words = sentenceIntro.split(/\s+/).filter(Boolean);
+        const totalCols = 12;
+        return (
+          <View style={[s.row, s.rowFirst]}>
+            {Array.from({ length: totalCols }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  s.cell,
+                  i === 0 ? s.cellFirst : {},
+                  {
+                    width: cellW,
+                    ...(i < words.length
+                      ? {
+                          backgroundColor: CELL_BG,
+                          ...(i === 0 ? { borderTopLeftRadius: 3, borderBottomLeftRadius: 3 } : {}),
+                          ...(i === words.length - 1 ? { borderTopRightRadius: 3, borderBottomRightRadius: 3 } : {}),
+                        }
+                      : { backgroundColor: "transparent" }),
+                  },
+                ]}
+              >
+                <Text style={s.cellText}>{i < words.length ? words[i] : ""}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      })()}
+
+      {/* Gap between example row and declension table */}
+      <View style={{ height: mm(2) }} />
+
+      {/* Declension table: 4 genders × 3 subcols (Artikel / Adjektiv / Nomen) */}
+      <View style={s.tableContainer}>
+        {/* Header row 1: one cell per gender spanning 3 subcols */}
+        <View style={[s.row, s.rowFirst]}>
+          {genders.map((g, gi) => (
+            <View
+              key={g}
+              style={[
+                s.cell,
+                gi === 0 ? s.cellFirst : {},
+                {
+                  width: genderBlockW,
+                  backgroundColor: GENDER_COLORS[g],
+                  ...(gi === 0 ? { borderTopLeftRadius: 3 } : {}),
+                  ...(gi === genders.length - 1 ? { borderTopRightRadius: 3 } : {}),
+                },
+              ]}
+            >
+              <Text style={[s.cellText, { fontWeight: 700 }]}>
+                {GENUS_LABELS[g].de}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Header row 2: Artikel / Adjektiv / Nomen × 4 */}
+        <View style={s.row}>
+          {genders.map((g, gi) =>
+            ["Artikel", "Adjektiv", "Nomen"].map((label, li) => (
+              <View
+                key={`${g}-${label}`}
+                style={[
+                  s.cell,
+                  gi === 0 && li === 0 ? s.cellFirst : {},
+                  {
+                    width: cellW,
+                    backgroundColor: GENDER_COLORS[g],
+                  },
+                ]}
+              >
+                <Text style={[s.cellTextSmall, { fontWeight: 600 }]}>
+                  {label}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Single data row */}
+        <View style={s.row}>
+          {genders.map((g, gi) => {
+            const d = entry.declension?.[g];
+            return (
+              <React.Fragment key={g}>
+                {/* Article cell */}
+                <View
+                  style={[
+                    s.cell,
+                    gi === 0 ? s.cellFirst : {},
+                    {
+                      width: cellW,
+                      backgroundColor: GENDER_COLORS[g],
+                      ...(gi === 0 ? { borderBottomLeftRadius: 3 } : {}),
+                    },
+                  ]}
+                >
+                  <Text style={s.cellText}>{d?.article || ""}</Text>
+                </View>
+                {/* Adjective cell */}
+                <View
+                  style={[
+                    s.cell,
+                    {
+                      width: cellW,
+                      backgroundColor: GENDER_COLORS[g],
+                    },
+                  ]}
+                >
+                  <Text style={s.cellText}>{d?.adjective || ""}</Text>
+                </View>
+                {/* Noun cell */}
+                <View
+                  style={[
+                    s.cell,
+                    {
+                      width: cellW,
+                      backgroundColor: GENDER_COLORS[g],
+                      ...(gi === genders.length - 1 ? { borderBottomRightRadius: 3 } : {}),
+                    },
+                  ]}
+                >
+                  <Text style={s.cellText}>{d?.noun || ""}</Text>
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── Verb + Preposition PDF Document ────────────────────────
+
+interface VerbPrepositionPDFProps {
+  title: string;
+  entries: VerbPrepositionTableEntry[];
+  settings: GrammarTableSettings;
+  brand: Brand;
+  worksheetId: string;
+  bigLogoDataUri: string;
+  iconDataUri: string;
+}
+
+function VerbPrepositionPDF({
+  title,
+  entries,
+  settings,
+  brand,
+  worksheetId,
+  bigLogoDataUri,
+  iconDataUri,
+}: VerbPrepositionPDFProps) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const dateStr = now.toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const bodyFont = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+
+  return (
+    <Document title={title} author="lingostar">
+      {/* ── Title page ── */}
+      <Page size="A4" orientation="landscape" style={s.titlePage}>
+        {bigLogoDataUri ? (
+          <View style={s.bigLogoWrap}>
+            <Image src={bigLogoDataUri} style={s.bigLogo} />
+          </View>
+        ) : null}
+        <View style={s.titlePageContent}>
+          <View>
+            <Text style={s.subtitle}>Verben mit Präpositionen</Text>
+            <Text style={s.mainTitle}>{title}</Text>
+            <Text style={s.tenseInfo}>Präsens · Adjektivdeklination</Text>
+            {/* 4 cover image slots */}
+            <View style={{ flexDirection: "row", gap: mm(4), marginTop: mm(12), justifyContent: "flex-start" }}>
+              {[0, 1, 2, 3].map((i) => {
+                const src = settings.coverImages?.[i];
+                const hasBorder = settings.coverImageBorder ?? false;
+                return src && src !== "" ? (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      ...(hasBorder
+                        ? { borderWidth: 1, borderColor: "#CCCCCC", borderStyle: "solid" as const }
+                        : {}),
+                    }}
+                  >
+                    <Image
+                      src={src}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: 3,
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      backgroundColor: "#F0F0F0",
+                      borderWidth: 1,
+                      borderColor: "#CCCCCC",
+                      borderStyle: "dashed",
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        </View>
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>
+            {`© ${year} lingostar | Marcel Allenspach\nAlle Rechte vorbehalten`}
+          </Text>
+          <Text style={s.footerCenter}></Text>
+          <Text style={s.footerRight}>
+            {`${worksheetId}\n${dateStr}`}
+          </Text>
+        </View>
+      </Page>
+
+      {/* ── Content pages ── */}
+      <Page
+        size="A4"
+        orientation="landscape"
+        style={[s.contentPage, { fontFamily: bodyFont }]}
+      >
+        <View style={s.headerLeft} fixed>
+          <Text style={s.headerLeftText}>
+            {`Verben mit Präpositionen\n${title} – Präsens · Adjektivdeklination`}
+          </Text>
+        </View>
+
+        {iconDataUri ? (
+          <View style={s.headerIcon} fixed>
+            <Image src={iconDataUri} style={s.headerIconImg} />
+          </View>
+        ) : null}
+
+        <Text style={s.contentTitle} fixed
+          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+        />
+
+        {entries.map((entry, i) => (
+          <VPTable key={i} entry={entry} />
+        ))}
+
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>
+            {`© ${year} lingostar | Marcel Allenspach\nAlle Rechte vorbehalten`}
+          </Text>
+          <Text
+            style={s.footerCenter}
+            render={({ pageNumber, totalPages }) =>
+              `${pageNumber - 1} / ${totalPages - 1}`
+            }
+          />
+          <Text style={s.footerRight}>
+            {`${worksheetId}\n${dateStr}`}
+          </Text>
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
+// ─── Document ───────────────────────────────────────────────
+
 interface GrammarTablePDFProps {
   title: string;
   tables: VerbConjugationTable[];
+  settings: GrammarTableSettings;
   brand: Brand;
   worksheetId: string;
   bigLogoDataUri: string;
@@ -1261,6 +1621,7 @@ interface GrammarTablePDFProps {
 function GrammarTablePDF({
   title,
   tables,
+  settings,
   brand,
   worksheetId,
   bigLogoDataUri,
@@ -1304,6 +1665,50 @@ function GrammarTablePDF({
             <Text style={s.subtitle}>Verbkonjugation</Text>
             <Text style={s.mainTitle}>{title}</Text>
             <Text style={s.tenseInfo}>Indikativ | {tenseLabel}</Text>
+            {/* 4 cover image slots */}
+            <View style={{ flexDirection: "row", gap: mm(4), marginTop: mm(12), justifyContent: "flex-start" }}>
+              {[0, 1, 2, 3].map((i) => {
+                const src = settings.coverImages?.[i];
+                const hasBorder = settings.coverImageBorder ?? false;
+                return src && src !== "" ? (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      ...(hasBorder
+                        ? { borderWidth: 1, borderColor: "#CCCCCC", borderStyle: "solid" as const }
+                        : {}),
+                    }}
+                  >
+                    <Image
+                      src={src}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: 3,
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      backgroundColor: "#F0F0F0",
+                      borderWidth: 1,
+                      borderColor: "#CCCCCC",
+                      borderStyle: "dashed",
+                    }}
+                  />
+                );
+              })}
+            </View>
           </View>
         </View>
         <View style={s.footer} fixed>
@@ -1339,8 +1744,10 @@ function GrammarTablePDF({
           </View>
         ) : null}
 
-        {/* Document title */}
-        <Text style={s.contentTitle}>{title}</Text>
+        {/* Document title – visible on first content page, invisible spacer on subsequent pages */}
+        <Text style={s.contentTitle} fixed
+          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+        />
 
         {/* Verb tables */}
         {simplified
@@ -1375,6 +1782,23 @@ function GrammarTablePDF({
 
 // ─── API Route ──────────────────────────────────────────────
 
+/**
+ * Deep-replace all ß → ss in string values of an object/array.
+ * Used for Swiss German (CH) PDF variant.
+ */
+function replaceEszett<T>(data: T): T {
+  if (typeof data === "string") return data.replace(/ß/g, "ss") as unknown as T;
+  if (Array.isArray(data)) return data.map(replaceEszett) as unknown as T;
+  if (data && typeof data === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      result[key] = replaceEszett(value);
+    }
+    return result as T;
+  }
+  return data;
+}
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -1384,6 +1808,9 @@ export async function POST(
   const { userId } = result;
 
   const { id } = await params;
+  const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH";
+  const isSwiss = locale === "CH";
+
   const worksheet = await prisma.worksheet.findFirst({
     where: {
       id,
@@ -1402,7 +1829,7 @@ export async function POST(
     tableType?: GrammarTableType;
     input?: unknown;
     declinationInput?: import("@/types/grammar-table").DeclinationInput;
-    tableData?: AdjectiveDeclinationTable | VerbConjugationTable[];
+    tableData?: AdjectiveDeclinationTable | VerbConjugationTable[] | VerbPrepositionTableEntry[];
   } | null;
 
   const tableType = blocksData?.tableType || "adjective-declination";
@@ -1421,6 +1848,16 @@ export async function POST(
     ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
     : "";
 
+  // Compress cover images (download, resize, convert to JPEG data-URI)
+  const rawCoverImages = settings.coverImages ?? [];
+  const compressedCoverImages = await Promise.all(
+    rawCoverImages.map((url) =>
+      url && url !== "" ? compressImageUrl(url, 400, 75) : Promise.resolve(url)
+    )
+  );
+  // Override coverImages in settings with compressed versions
+  const pdfSettings = { ...settings, coverImages: compressedCoverImages };
+
   try {
     let buffer: Buffer;
 
@@ -1433,20 +1870,25 @@ export async function POST(
         );
       }
 
-      // Sort verbs alphabetically by infinitive
-      const conjTables = [...conjTablesUnsorted].sort((a, b) =>
-        a.input.verb.localeCompare(b.input.verb, "de")
-      );
+      // Sort verbs alphabetically by infinitive (unless disabled)
+      const conjTablesSorted = (settings.alphabeticalOrder ?? true)
+        ? [...conjTablesUnsorted].sort((a, b) => a.input.verb.localeCompare(b.input.verb, "de"))
+        : conjTablesUnsorted;
+
+      // Apply ß → ss for Swiss variant
+      const conjTables = isSwiss ? replaceEszett(conjTablesSorted) : conjTablesSorted;
+      const pdfTitle = isSwiss ? replaceEszett(worksheet.title) : worksheet.title;
 
       console.log(
-        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (${conjTables.length} verbs)`
+        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (${conjTables.length} verbs, locale=${locale})`
       );
 
       buffer = Buffer.from(
         await renderToBuffer(
           <GrammarTablePDF
-            title={worksheet.title}
+            title={pdfTitle}
             tables={conjTables}
+            settings={isSwiss ? replaceEszett(pdfSettings) : pdfSettings}
             brand={brand}
             worksheetId={worksheet.id}
             bigLogoDataUri={bigLogoDataUri}
@@ -1454,6 +1896,36 @@ export async function POST(
             simplified={settings.simplified ?? false}
             simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
             showIrregularHighlights={settings.showIrregularHighlights ?? false}
+          />
+        )
+      );
+    } else if (tableType === "verb-preposition") {
+      const vpEntriesRaw = tableData as VerbPrepositionTableEntry[];
+      if (!Array.isArray(vpEntriesRaw) || vpEntriesRaw.length === 0) {
+        return NextResponse.json(
+          { error: "No verb+preposition data to export" },
+          { status: 400 }
+        );
+      }
+
+      // Apply ß → ss for Swiss variant
+      const vpEntries = isSwiss ? replaceEszett(vpEntriesRaw) : vpEntriesRaw;
+      const pdfTitle = isSwiss ? replaceEszett(worksheet.title) : worksheet.title;
+
+      console.log(
+        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (verb-preposition, ${vpEntries.length} entries, locale=${locale})`
+      );
+
+      buffer = Buffer.from(
+        await renderToBuffer(
+          <VerbPrepositionPDF
+            title={pdfTitle}
+            entries={vpEntries}
+            settings={isSwiss ? replaceEszett(pdfSettings) : pdfSettings}
+            brand={brand}
+            worksheetId={worksheet.id}
+            bigLogoDataUri={bigLogoDataUri}
+            iconDataUri={iconDataUri}
           />
         )
       );
@@ -1472,8 +1944,12 @@ export async function POST(
         declData.input = blocksData.declinationInput;
       }
 
+      // Apply ß → ss for Swiss variant
+      const pdfDeclData = isSwiss ? replaceEszett(declData) : declData;
+      const pdfTitle = isSwiss ? replaceEszett(worksheet.title) : worksheet.title;
+
       console.log(
-        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (adjective-declination, ${declData.cases.length} cases)`,
+        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (adjective-declination, ${declData.cases.length} cases, locale=${locale})`,
         `highlightEndings=${settings.highlightEndings}`,
         `input.maskulin.adj=${declData.input?.maskulin?.adjective}`,
       );
@@ -1481,9 +1957,9 @@ export async function POST(
       buffer = Buffer.from(
         await renderToBuffer(
           <DeclinationTablePDF
-            title={worksheet.title}
-            tableData={declData}
-            settings={settings}
+            title={pdfTitle}
+            tableData={pdfDeclData}
+            settings={isSwiss ? replaceEszett(pdfSettings) : pdfSettings}
             brand={brand}
             worksheetId={worksheet.id}
             bigLogoDataUri={bigLogoDataUri}
@@ -1493,14 +1969,13 @@ export async function POST(
       );
     }
 
-    const safeTitle = worksheet.title
-      .replace(/[\u2013\u2014]/g, "-")
-      .replace(/[^\x20-\x7E]/g, "_");
+    const shortId = worksheet.id.slice(0, 8);
+    const filename = `${shortId}_${locale}.pdf`;
 
     return new NextResponse(Buffer.from(buffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {

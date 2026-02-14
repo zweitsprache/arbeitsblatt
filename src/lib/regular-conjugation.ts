@@ -263,10 +263,24 @@ export function attachHighlights(
   const { isSeparable, separablePrefix } = table;
 
   // Derive the bare infinitive for stem extraction
-  // Handle "sich ..." reflexive prefix in the verb name
+  // Handle "sich ...", "sich etwas ...", "sich Mühe geben" etc.
+  // The actual verb infinitive is the last word (or last two words for separable verbs)
   let infinitive = table.input.verb;
-  if (infinitive.startsWith("sich ")) {
-    infinitive = infinitive.slice(5);
+  
+  // Strip everything before the core verb:
+  // "sich etwas abgewöhnen" → "abgewöhnen"
+  // "sich Mühe geben" → "geben"  
+  // "sich freuen" → "freuen"
+  // "machen" → "machen"
+  const words = infinitive.trim().split(/\s+/);
+  if (words.length > 1) {
+    // For separable verbs, the prefix is stored separately — just take the last word
+    // For "sich Sorgen machen", last word is "machen" which is the verb
+    infinitive = words[words.length - 1];
+    
+    // Re-attach separable prefix if it was part of the original infinitive
+    // e.g., "sich etwas abgewöhnen" with separablePrefix="ab" — last word is "abgewöhnen" ✓
+    // e.g., "sich freuen" — last word is "freuen" ✓
   }
 
   const regular = generateRegularForms(infinitive, isSeparable, separablePrefix);

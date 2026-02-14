@@ -125,6 +125,7 @@ IMPORTANT RULES:
 - Each row MUST have "person", "pronoun" and "conjugation" fields.
 - The "detail" field is only for the 2. Person to distinguish "informell" and "formell".
 - All conjugations must be grammatically correct German.
+- IMPORTANT: Always use the German standard orthography with ß (Eszett), NOT the Swiss spelling with ss. Example: "groß" not "gross", "heißen" not "heissen".
 - Do NOT wrap in markdown code blocks, just output raw JSON.
 - Respond ONLY with valid JSON, nothing else.`,
         },
