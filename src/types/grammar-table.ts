@@ -107,6 +107,12 @@ export interface GrammarTableSettings {
   showIrregularHighlights: boolean;
   brand: Brand;
   brandSettings: BrandSettings;
+  /** Second title shown on the content page (page 2) */
+  contentTitle: string;
+  /** Up to 4 cover images for the title page */
+  coverImages: string[];
+  /** Show border around cover images */
+  coverImageBorder: boolean;
 }
 
 /** Union type for all grammar table inputs */
@@ -138,6 +144,9 @@ export const DEFAULT_GRAMMAR_TABLE_SETTINGS: GrammarTableSettings = {
   showIrregularHighlights: false,
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
+  contentTitle: "",
+  coverImages: [],
+  coverImageBorder: false,
 };
 
 export const DEFAULT_DECLINATION_INPUT: DeclinationInput = {

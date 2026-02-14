@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useUpload } from "@/lib/use-upload";
 import {
   Save,
   Loader2,
@@ -54,6 +55,8 @@ import {
   RefreshCw,
   FileText,
   Highlighter,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -252,6 +255,112 @@ function ConjugationInputPanel() {
   );
 }
 
+// ─── Cover Images Panel ──────────────────────────────────────
+
+function CoverImagesPanel() {
+  const { state, dispatch } = useGrammarTable();
+  const { upload, isUploading } = useUpload();
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
+  const images = state.settings.coverImages ?? [];
+
+  // Ensure we always have a 4-element array
+  const slots: (string | null)[] = [0, 1, 2, 3].map((i) => images[i] || null);
+
+  const handleUpload = useCallback(async (slot: number, file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingSlot(slot);
+    try {
+      const result = await upload(file);
+      const next = [...slots];
+      next[slot] = result.url;
+      dispatch({
+        type: "UPDATE_SETTINGS",
+        payload: { coverImages: next.filter((u): u is string => u !== null) },
+      });
+      // Keep sparse array but store only non-null in order
+      // Actually store all 4 positions to preserve ordering
+      dispatch({
+        type: "UPDATE_SETTINGS",
+        payload: { coverImages: next.map((u) => u ?? "") },
+      });
+    } catch {
+      // skip failed
+    } finally {
+      setUploadingSlot(null);
+    }
+  }, [slots, upload, dispatch]);
+
+  const handleRemove = useCallback((slot: number) => {
+    const next = [...slots];
+    next[slot] = null;
+    dispatch({
+      type: "UPDATE_SETTINGS",
+      payload: { coverImages: next.map((u) => u ?? "") },
+    });
+  }, [slots, dispatch]);
+
+  const handleDrop = useCallback((slot: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(slot, file);
+  }, [handleUpload]);
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm">Titelseite Bilder</Label>
+      <div className="grid grid-cols-4 gap-2">
+        {slots.map((url, i) => (
+          <div key={i}>
+            {url ? (
+              <div className="relative aspect-square rounded bg-muted overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Bild ${i + 1}`} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleRemove(i)}
+                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <label
+                onDrop={(e) => handleDrop(i, e)}
+                onDragOver={(e) => e.preventDefault()}
+                className="aspect-square rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              >
+                {uploadingSlot === i ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(i, f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">Bildrahmen</Label>
+        <Switch
+          checked={state.settings.coverImageBorder ?? false}
+          onCheckedChange={(v) =>
+            dispatch({ type: "UPDATE_SETTINGS", payload: { coverImageBorder: v } })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Settings Panel ──────────────────────────────────────────
 
 function SettingsPanel() {
@@ -297,6 +406,23 @@ function SettingsPanel() {
           }
         />
       </div>
+
+      {state.tableType === "adjective-declination" && (
+        <>
+          <Separator />
+          <div className="space-y-1">
+            <Label className="text-sm">Seitentitel (Seite 2)</Label>
+            <Input
+              value={state.settings.contentTitle ?? ""}
+              onChange={(e) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { contentTitle: e.target.value } })
+              }
+              placeholder={state.title || "Dokumenttitel"}
+            />
+          </div>
+          <CoverImagesPanel />
+        </>
+      )}
 
       {state.tableType === "verb-conjugation" && (
         <>
@@ -351,6 +477,43 @@ function SettingsPanel() {
 
 // ─── Declination Table View ──────────────────────────────────
 
+/**
+ * Render an adjective with its ending highlighted.
+ * Compares base adjective (e.g. "frisch") with declined form (e.g. "frische")
+ * and wraps only the differing ending in a highlight span.
+ */
+function HighlightedAdjective({
+  base,
+  declined,
+  highlight,
+}: {
+  base: string;
+  declined: string;
+  highlight: boolean;
+}) {
+  if (!highlight || !base || !declined) {
+    return <>{declined}</>;
+  }
+  const baseLower = base.toLowerCase();
+  const declinedLower = declined.toLowerCase();
+  let matchLen = 0;
+  for (let i = 0; i < baseLower.length && i < declinedLower.length; i++) {
+    if (baseLower[i] === declinedLower[i]) matchLen++;
+    else break;
+  }
+  if (matchLen >= declined.length) {
+    return <>{declined}</>;
+  }
+  return (
+    <>
+      {declined.slice(0, matchLen)}
+      <span className="font-semibold bg-[#5a4540] text-white px-0.5 rounded-sm">
+        {declined.slice(matchLen)}
+      </span>
+    </>
+  );
+}
+
 function DeclinationTableView() {
   const { state } = useGrammarTable();
   const t = useTranslations("grammarTableEditor");
@@ -372,18 +535,17 @@ function DeclinationTableView() {
   const tableData = state.tableData as AdjectiveDeclinationTable;
 
   const cases: GrammatikalFall[] = ["nominativ", "akkusativ", "dativ", "genitiv"];
-  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
 
-  // Helper to render a cell with optional highlighting
-  const renderCell = (article: string, adjective: string, noun: string) => (
-    <>
-      <span className="text-slate-500">{article}</span>{" "}
-      <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-        {adjective}
-      </span>{" "}
-      <span>{noun}</span>
-    </>
-  );
+  // Gender background colours (matching v2 PDF style)
+  const genderBg: Record<string, string> = {
+    maskulin: "bg-[#F2E2D4]",
+    neutrum: "bg-[#D8E6F2]",
+    feminin: "bg-[#F2EDDA]",
+    plural: "bg-[#DAF0DC]",
+  };
+
+  // Shared cell classes (gap-based – no borders, just coloured backgrounds)
+  const cellBase = "px-2 py-1.5 text-xs";
 
   return (
     <div className="space-y-10">
@@ -397,91 +559,72 @@ function DeclinationTableView() {
           0
         );
 
-        // Check for prepositions (Akkusativ/Dativ)
-        const hasPrepositions = state.settings.showPrepositions && 
-          caseSection.prepositions && 
-          caseSection.prepositions.length > 0;
-        
-        // Check for notes (Nominativ/Genitiv)
-        const hasNotes = state.settings.showNotes && 
-          caseSection.groups.some((g) => g.note);
-        
-        // Show the last column if we have prepositions OR notes
-        const showLastColumn = hasPrepositions || hasNotes;
-
         let rowCounter = 0;
+
+        // Find the last valid group index for bottom-corner radius
+        let lastValidGroupIdx = -1;
+        caseSection.groups.forEach((g, i) => {
+          if (g.articleRows && g.shared) lastValidGroupIdx = i;
+        });
 
         return (
           <div key={caseType}>
-            <h3 className="text-lg font-bold mb-3">{CASE_LABELS[caseType][locale]}</h3>
+            <h3 className="text-base font-bold mb-2">{CASE_LABELS[caseType][locale]}</h3>
             
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm table-fixed">
+            <div className="overflow-x-auto bg-white">
+              <table className="w-full text-sm table-fixed rounded overflow-hidden" style={{ borderCollapse: "separate", borderSpacing: "2px" }}>
                 <colgroup>
-                  {/* 3 columns per gender: article (6%), adjective (6%), noun (7%) */}
-                  <col style={{ width: "6%" }} /><col style={{ width: "6%" }} /><col style={{ width: "7%" }} />
-                  <col style={{ width: "6%" }} /><col style={{ width: "6%" }} /><col style={{ width: "7%" }} />
-                  <col style={{ width: "6%" }} /><col style={{ width: "6%" }} /><col style={{ width: "7%" }} />
-                  <col style={{ width: "6%" }} /><col style={{ width: "6%" }} /><col style={{ width: "7%" }} />
-                  {showLastColumn && <col style={{ width: "18%" }} />}
+                  {/* 3 columns per gender */}
+                  <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+                  <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+                  <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
+                  <col style={{ width: "7.5%" }} /><col style={{ width: "7.5%" }} /><col style={{ width: "10%" }} />
                 </colgroup>
                 <thead>
                   <tr>
-                    <th colSpan={3} className="bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-semibold text-xs">
+                    <th colSpan={3} className={`${genderBg.maskulin} ${cellBase} text-left font-semibold rounded-tl`}>
                       {GENUS_LABELS.maskulin[locale]}
                     </th>
-                    <th colSpan={3} className="bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-semibold text-xs">
+                    <th colSpan={3} className={`${genderBg.neutrum} ${cellBase} text-left font-semibold`}>
                       {GENUS_LABELS.neutrum[locale]}
                     </th>
-                    <th colSpan={3} className="bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-semibold text-xs">
+                    <th colSpan={3} className={`${genderBg.feminin} ${cellBase} text-left font-semibold`}>
                       {GENUS_LABELS.feminin[locale]}
                     </th>
-                    <th colSpan={3} className="bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-semibold text-xs">
+                    <th colSpan={3} className={`${genderBg.plural} ${cellBase} text-left font-semibold rounded-tr`}>
                       {GENUS_LABELS.plural[locale]}
                     </th>
-                    {showLastColumn && (
-                      <th className="bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-semibold text-xs">
-                        {hasPrepositions ? t("prepositions") : t("notes")}
-                      </th>
-                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {caseSection.groups.map((group, groupIdx) => {
                     if (!group.articleRows || !group.shared) return null;
                     const rowCount = group.articleRows.length;
-                    const isFirstGroup = groupIdx === 0;
+                    const isLastGroup = groupIdx === lastValidGroupIdx;
                     
                     return group.articleRows.map((artRow, artRowIdx) => {
                       const isFirstRowInGroup = artRowIdx === 0;
                       const isGlobalFirstRow = rowCounter === 0;
                       rowCounter++;
-                      
-                      // Determine if we should show border separator
-                      const showSeparator = !isFirstGroup && isFirstRowInGroup;
+                      const isLastRow = rowCounter === totalRows;
                       
                       return (
-                        <tr 
-                          key={`${group.type}-${artRowIdx}`}
-                          className={showSeparator ? "border-t-2 border-slate-500" : ""}
-                        >
+                        <tr key={`${group.type}-${artRowIdx}`}>
                           {/* Maskulin */}
-                          <td className="border border-slate-300 px-2 py-1.5 text-xs">
-                            {artRow.maskulin}
+                          <td className={`${genderBg.maskulin} ${cellBase} ${isLastRow ? 'rounded-bl' : ''}`}>
+                            {(artRow.maskulin || "").replace(/\*+$/g, "")}
                           </td>
                           {isFirstRowInGroup ? (
                             <>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.maskulin} ${cellBase} align-middle`}
                               >
-                                <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                  {group.shared.maskulin.adjective}
-                                </span>
+                                <HighlightedAdjective base={state.declinationInput?.maskulin?.adjective || ""} declined={group.shared.maskulin.adjective} highlight={state.settings.highlightEndings} />
                               </td>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.maskulin} ${cellBase} align-middle`}
                               >
                                 {group.shared.maskulin.noun}
                               </td>
@@ -489,22 +632,20 @@ function DeclinationTableView() {
                           ) : null}
                           
                           {/* Neutrum */}
-                          <td className="border border-slate-300 px-2 py-1.5 text-xs">
-                            {artRow.neutrum}
+                          <td className={`${genderBg.neutrum} ${cellBase}`}>
+                            {(artRow.neutrum || "").replace(/\*+$/g, "")}
                           </td>
                           {isFirstRowInGroup ? (
                             <>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.neutrum} ${cellBase} align-middle`}
                               >
-                                <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                  {group.shared.neutrum.adjective}
-                                </span>
+                                <HighlightedAdjective base={state.declinationInput?.neutrum?.adjective || ""} declined={group.shared.neutrum.adjective} highlight={state.settings.highlightEndings} />
                               </td>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.neutrum} ${cellBase} align-middle`}
                               >
                                 {group.shared.neutrum.noun}
                               </td>
@@ -512,22 +653,20 @@ function DeclinationTableView() {
                           ) : null}
                           
                           {/* Feminin */}
-                          <td className="border border-slate-300 px-2 py-1.5 text-xs">
-                            {artRow.feminin}
+                          <td className={`${genderBg.feminin} ${cellBase}`}>
+                            {(artRow.feminin || "").replace(/\*+$/g, "")}
                           </td>
                           {isFirstRowInGroup ? (
                             <>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.feminin} ${cellBase} align-middle`}
                               >
-                                <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                  {group.shared.feminin.adjective}
-                                </span>
+                                <HighlightedAdjective base={state.declinationInput?.feminin?.adjective || ""} declined={group.shared.feminin.adjective} highlight={state.settings.highlightEndings} />
                               </td>
                               <td 
                                 rowSpan={rowCount} 
-                                className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                className={`${genderBg.feminin} ${cellBase} align-middle`}
                               >
                                 {group.shared.feminin.noun}
                               </td>
@@ -535,67 +674,58 @@ function DeclinationTableView() {
                           ) : null}
                           
                           {/* Plural - more complex due to pluralOverride */}
-                          <td className="border border-slate-300 px-2 py-1.5 text-xs">
-                            {artRow.plural}
+                          <td className={`${genderBg.plural} ${cellBase}`}>
+                            {(artRow.plural || "").replace(/\*+$/g, "")}
                           </td>
                           {(() => {
                             // For plural, handle overrides
                             if (artRow.pluralOverride) {
-                              // This row has its own adjective/noun
                               return (
                                 <>
-                                  <td className="border border-slate-300 px-2 py-1.5 text-xs align-middle">
-                                    <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                      {artRow.pluralOverride.adjective}
-                                    </span>
+                                  <td className={`${genderBg.plural} ${cellBase} align-middle`}>
+                                    <HighlightedAdjective base={state.declinationInput?.plural?.adjective || ""} declined={artRow.pluralOverride.adjective} highlight={state.settings.highlightEndings} />
                                   </td>
-                                  <td className="border border-slate-300 px-2 py-1.5 text-xs align-middle">
+                                  <td className={`${genderBg.plural} ${cellBase} align-middle`}>
                                     {artRow.pluralOverride.noun}
                                   </td>
                                 </>
                               );
                             } else if (isFirstRowInGroup) {
-                              // Count how many rows don't have pluralOverride
                               const sharedCount = group.articleRows.filter(r => !r.pluralOverride).length;
-                              // Check if any subsequent rows have override
                               const hasOverrides = group.articleRows.some(r => r.pluralOverride);
                               const effectiveRowSpan = hasOverrides ? sharedCount : rowCount;
+                              const cornerBR = isLastGroup ? 'rounded-br' : '';
                               
                               return (
                                 <>
                                   <td 
                                     rowSpan={effectiveRowSpan} 
-                                    className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                    className={`${genderBg.plural} ${cellBase} align-middle`}
                                   >
-                                    <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                      {group.shared.plural.adjective}
-                                    </span>
+                                    <HighlightedAdjective base={state.declinationInput?.plural?.adjective || ""} declined={group.shared.plural.adjective} highlight={state.settings.highlightEndings} />
                                   </td>
                                   <td 
                                     rowSpan={effectiveRowSpan} 
-                                    className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                    className={`${genderBg.plural} ${cellBase} align-middle ${cornerBR}`}
                                   >
                                     {group.shared.plural.noun}
                                   </td>
                                 </>
                               );
                             } else if (!group.articleRows.slice(0, artRowIdx).some(r => !r.pluralOverride)) {
-                              // If all previous rows had overrides, we need to start new rowspan
                               const remainingNoOverride = group.articleRows.slice(artRowIdx).filter(r => !r.pluralOverride).length;
                               if (remainingNoOverride > 0) {
                                 return (
                                   <>
                                     <td 
                                       rowSpan={remainingNoOverride} 
-                                      className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                      className={`${genderBg.plural} ${cellBase} align-middle`}
                                     >
-                                      <span className={state.settings.highlightEndings ? "font-semibold text-pink-700" : ""}>
-                                        {group.shared.plural.adjective}
-                                      </span>
+                                      <HighlightedAdjective base={state.declinationInput?.plural?.adjective || ""} declined={group.shared.plural.adjective} highlight={state.settings.highlightEndings} />
                                     </td>
                                     <td 
                                       rowSpan={remainingNoOverride} 
-                                      className="border border-slate-300 px-2 py-1.5 text-xs align-middle"
+                                      className={`${genderBg.plural} ${cellBase} align-middle`}
                                     >
                                       {group.shared.plural.noun}
                                     </td>
@@ -605,31 +735,6 @@ function DeclinationTableView() {
                             }
                             return null;
                           })()}
-                          
-                          {/* Notes / Prepositions column */}
-                          {showLastColumn && isGlobalFirstRow && hasPrepositions && (
-                            <td 
-                              rowSpan={totalRows}
-                              className="border border-slate-300 px-2 py-1.5 text-xs align-top text-slate-600"
-                            >
-                              {caseSection.prepositionHeading && (
-                                <div className="font-bold mb-1">{caseSection.prepositionHeading}</div>
-                              )}
-                              {caseSection.prepositions?.map((p, i) => (
-                                <div key={i} className="mb-1">{p}</div>
-                              ))}
-                            </td>
-                          )}
-                          
-                          {/* Show notes for this group (nominativ/genitiv) */}
-                          {showLastColumn && !hasPrepositions && isFirstRowInGroup && (
-                            <td 
-                              rowSpan={rowCount}
-                              className="border border-slate-300 px-2 py-1.5 text-xs align-top text-slate-500"
-                            >
-                              {group.note || ''}
-                            </td>
-                          )}
                         </tr>
                       );
                     });
@@ -1077,9 +1182,9 @@ function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights
           
           // Tense background colors - very light earth tones
           const tenseColors = {
-            praesens: "bg-[#fcf9f6]",     // very light warm sand
-            perfekt: "bg-[#f9faf8]",      // very light sage
-            praeteritum: "bg-[#fef9f2]",  // very light honey
+            praesens: "bg-[#F2E2D4]",     // Peach
+            perfekt: "bg-[#D8E6F2]",      // Sky
+            praeteritum: "bg-[#DAF0DC]",  // Mint
           };
           const bgClass = tenseColors[tense];
           
@@ -1468,6 +1573,7 @@ function EditorToolbar() {
   const t = useTranslations("grammarTableEditor");
   const tc = useTranslations("common");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingPptx, setIsGeneratingPptx] = useState(false);
 
   // Check if we can generate based on table type
   const canGenerate = state.tableType === "verb-conjugation"
@@ -1490,7 +1596,9 @@ function EditorToolbar() {
     }
     setIsGeneratingPdf(true);
     try {
-      const endpoint = engine === "react-pdf"
+      // v2 (react-pdf) now supports both table types
+      const useV2 = engine === "react-pdf";
+      const endpoint = useV2
         ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2`
         : `/api/worksheets/${state.documentId}/grammar-table-pdf`;
       const res = await authFetch(endpoint, {
@@ -1512,6 +1620,40 @@ function EditorToolbar() {
       console.error("PDF download failed:", err);
     } finally {
       setIsGeneratingPdf(false);
+    }
+  }, [state.documentId, state.title, t]);
+
+  const handleDownloadPptx = useCallback(async () => {
+    if (!state.documentId) {
+      alert(t("saveFirst"));
+      return;
+    }
+    setIsGeneratingPptx(true);
+    try {
+      const res = await authFetch(
+        `/api/worksheets/${state.documentId}/grammar-table-pptx`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(`PPTX export failed: ${errorMsg}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${state.title || "grammar-table"}.pptx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PPTX download failed:", err);
+    } finally {
+      setIsGeneratingPptx(false);
     }
   }, [state.documentId, state.title, t]);
 
@@ -1611,29 +1753,49 @@ function EditorToolbar() {
           </TooltipContent>
         </Tooltip>
 
-        {state.tableType === "verb-conjugation" && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownloadPdf("react-pdf")}
-                disabled={isGeneratingPdf || !state.documentId || !state.tableData}
-                className="gap-2 border-dashed"
-              >
-                {isGeneratingPdf ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileText className="h-4 w-4" />
-                )}
-                PDF v2
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              PDF export with react-pdf (test)
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownloadPdf("react-pdf")}
+              disabled={isGeneratingPdf || !state.documentId || !state.tableData}
+              className="gap-2 border-dashed"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              PDF v2
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            PDF export with react-pdf (test)
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPptx}
+              disabled={isGeneratingPptx || !state.documentId || !state.tableData}
+              className="gap-2 border-dashed"
+            >
+              {isGeneratingPptx ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              PPTX
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            PowerPoint export (16:9 slides)
+          </TooltipContent>
+        </Tooltip>
 
         <Separator orientation="vertical" className="h-6" />
 
@@ -1703,7 +1865,7 @@ function EditorContent() {
 // ─── Main Editor Component ───────────────────────────────────
 
 function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument }) {
-  const { dispatch } = useGrammarTable();
+  const { state, dispatch, save } = useGrammarTable();
 
   useEffect(() => {
     if (document) {
@@ -1726,6 +1888,15 @@ function GrammarTableEditorInner({ document }: { document?: GrammarTableDocument
       });
     }
   }, [document, dispatch]);
+
+  // Auto-save after 1.5s of inactivity when dirty
+  useEffect(() => {
+    if (!state.isDirty || !state.documentId || state.isSaving) return;
+    const timer = setTimeout(() => {
+      save();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [state.isDirty, state.documentId, state.isSaving, save]);
 
   return (
     <TooltipProvider>

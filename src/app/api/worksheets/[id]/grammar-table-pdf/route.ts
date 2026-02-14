@@ -21,11 +21,6 @@ import { DEFAULT_BRAND_SETTINGS, BrandSettings, BRAND_FONTS, Brand } from "@/typ
 import fs from "fs";
 import path from "path";
 
-// ─── Layout constants (mm) ──────────────────────────────────
-const PAGE_W = 297; // A4 landscape
-const PAGE_H = 210;
-const MARGIN = 10; // mm
-
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -46,8 +41,22 @@ function replaceVariables(html: string, brandSettings: BrandSettings): string {
     .replace(/\{teacher\}/g, brandSettings.teacher || "");
 }
 
+// ─── Gap-based table constants (matching v2 Verbkonjugation style) ──────────
+const CELL_GAP = 1.5;        // pt – white gap between cells
+const GROUP_GAP = CELL_GAP * 3; // pt – wider gap between gender column groups
+
+// Gender background colours
+const GENDER_COLORS: Record<string, string> = {
+  maskulin: "#F2E2D4",    // Peach
+  neutrum: "#D8E6F2",     // Sky
+  feminin: "#F2EDDA",     // Buttercup
+  plural: "#DAF0DC",      // Mint
+};
+const NOTES_BG = "#E4E4EC"; // Cloud
+
 /**
- * Build HTML for a single case table
+ * Build HTML for a single case table – gap-based style (no borders,
+ * white space between coloured cells) matching the v2 Verbkonjugation PDF.
  */
 function renderCaseTable(
   caseSection: CaseSection,
@@ -57,30 +66,24 @@ function renderCaseTable(
     return "";
   }
 
-  // Determine if this case has prepositions (akkusativ/dativ)
   const hasPreps = (caseSection.case === "akkusativ" || caseSection.case === "dativ") && settings.showPrepositions;
-  // Determine if this case has notes (nominativ/genitiv)
   const hasNotes = (caseSection.case === "nominativ" || caseSection.case === "genitiv") && settings.showNotes;
   const showLastColumn = hasPreps || hasNotes;
 
-  // Column background colors for each gender
-  const genderColors = {
-    maskulin: "#e3f2fd",    // light blue
-    neutrum: "#fff3e0",     // light orange
-    feminin: "#fce4ec",     // light pink
-    plural: "#e8f5e9",      // light green
-  };
-
-  // Calculate total rows for this case
+  // Calculate total rows for this case (for preposition rowspan)
   let totalRows = 0;
   for (const group of caseSection.groups) {
     totalRows += group.articleRows?.length ?? 1;
   }
+  // +2 for the two header rows
+  const totalRowsIncHeaders = totalRows + 2;
+
+  // Shared cell style (no borders – gaps come from border-spacing on white bg)
+  const cell = (bg: string, extra = "") =>
+    `background-color:${bg};padding:3pt 6pt;text-align:left;font-size:9pt;${extra}`;
 
   let rows = "";
   let globalRowIndex = 0;
-
-  // Count groups for tracking last group
   const totalGroups = caseSection.groups.length;
   let groupIdx = 0;
 
@@ -94,16 +97,10 @@ function renderCaseTable(
       const isFirstRowInGroup = rowIdx === 0;
       const isGlobalFirstRow = globalRowIndex === 0;
       const isLastRow = globalRowIndex === totalRows - 1;
-      const isLastRowInGroup = rowIdx === rowCount - 1;
 
-      // Get the adj/noun for each gender
       const getCell = (gender: "maskulin" | "neutrum" | "feminin") => {
         const shared = group.shared?.[gender] || { adjective: "", noun: "" };
-        return {
-          article: row?.[gender] || "",
-          adjective: shared.adjective,
-          noun: shared.noun,
-        };
+        return { article: row?.[gender] || "", adjective: shared.adjective, noun: shared.noun };
       };
 
       const pluralCell = {
@@ -114,37 +111,32 @@ function renderCaseTable(
 
       rows += `<tr>`;
 
-      // Render article cells for each gender with column-based colors
-      (["maskulin", "neutrum", "feminin"] as const).forEach((gender, gIdx) => {
-        const cell = getCell(gender);
-        const bg = genderColors[gender];
-        // Bottom-left corner for maskulin article on last row
-        const cornerBL = (isLastRow && gIdx === 0) ? "border-bottom-left-radius:4px;" : "";
-        rows += `<td style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${bg};${cornerBL}">${escapeHtml(cell.article)}</td>`;
-        
+      // Gender data cells
+      (["maskulin", "neutrum", "feminin"] as const).forEach((gender) => {
+        const c = getCell(gender);
+        const bg = GENDER_COLORS[gender];
+        const cornerBL = (isLastRow && gender === "maskulin") ? "border-bottom-left-radius:3px;" : "";
+        rows += `<td style="${cell(bg, cornerBL)}">${escapeHtml(c.article)}</td>`;
         if (isFirstRowInGroup) {
-          rows += `<td rowspan="${rowCount}" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${bg};">${escapeHtml(cell.adjective)}</td>`;
-          rows += `<td rowspan="${rowCount}" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${bg};">${escapeHtml(cell.noun)}</td>`;
+          rows += `<td rowspan="${rowCount}" style="${cell(bg)}">${escapeHtml(c.adjective)}</td>`;
+          rows += `<td rowspan="${rowCount}" style="${cell(bg)}">${escapeHtml(c.noun)}</td>`;
         }
       });
 
-      // Plural with column color
-      const pluralBg = genderColors.plural;
-      // Bottom-right corner for plural noun on last row (if no last column)
-      const cornerBRPlural = (isLastRow && !showLastColumn) ? "border-bottom-right-radius:4px;" : "";
-      rows += `<td style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${pluralBg};">${escapeHtml(pluralCell.article)}</td>`;
+      // Plural
+      const pBg = GENDER_COLORS.plural;
+      rows += `<td style="${cell(pBg)}">${escapeHtml(pluralCell.article)}</td>`;
       if (isFirstRowInGroup) {
-        rows += `<td rowspan="${rowCount}" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${pluralBg};">${escapeHtml(pluralCell.adjective)}</td>`;
-        // Last noun cell gets corner radius if it's the last group and no last column
-        const nounCorner = (isLastGroup && !showLastColumn) ? "border-bottom-right-radius:4px;" : "";
-        rows += `<td rowspan="${rowCount}" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;background-color:${pluralBg};${nounCorner}">${escapeHtml(pluralCell.noun)}</td>`;
+        const cornerBR = (!showLastColumn && isLastGroup) ? "border-bottom-right-radius:3px;" : "";
+        rows += `<td rowspan="${rowCount}" style="${cell(pBg)}">${escapeHtml(pluralCell.adjective)}</td>`;
+        rows += `<td rowspan="${rowCount}" style="${cell(pBg, cornerBR)}">${escapeHtml(pluralCell.noun)}</td>`;
       }
 
-      // Prepositions column (akkusativ/dativ) - with bottom-right corner
+      // Prepositions (akkusativ/dativ)
       if (showLastColumn && isGlobalFirstRow && hasPreps) {
-        rows += `<td colspan="3" rowspan="${totalRows}" style="border:1px solid #ccc;padding:6px 8px;text-align:left;font-size:8pt;vertical-align:top;background-color:#f5f5f5;border-bottom-right-radius:4px;">`;
+        rows += `<td rowspan="${totalRows}" style="${cell(NOTES_BG, "vertical-align:top;font-size:8pt;border-bottom-right-radius:3px;")}">`;
         if (caseSection.prepositionHeading) {
-          rows += `<div style="font-weight:bold;margin-bottom:4px;">${escapeHtml(caseSection.prepositionHeading)}</div>`;
+          rows += `<div style="font-weight:700;margin-bottom:4px;">${escapeHtml(caseSection.prepositionHeading)}</div>`;
         }
         if (caseSection.prepositions) {
           for (const p of caseSection.prepositions) {
@@ -154,10 +146,10 @@ function renderCaseTable(
         rows += `</td>`;
       }
 
-      // Notes column (nominativ/genitiv) - with bottom-right corner if last group
+      // Notes (nominativ/genitiv)
       if (showLastColumn && !hasPreps && isFirstRowInGroup) {
-        const noteCorner = isLastGroup ? "border-bottom-right-radius:4px;" : "";
-        rows += `<td colspan="3" rowspan="${rowCount}" style="border:1px solid #ccc;padding:4px 6px;font-size:8pt;vertical-align:top;text-align:left;background-color:#f9f9f9;${noteCorner}">${escapeHtml(group.note || "")}</td>`;
+        const notesBRR = isLastGroup ? "border-bottom-right-radius:3px;" : "";
+        rows += `<td rowspan="${rowCount}" style="${cell(NOTES_BG, "vertical-align:top;font-size:8pt;" + notesBRR)}">${escapeHtml(group.note || "")}</td>`;
       }
 
       rows += `</tr>`;
@@ -166,46 +158,38 @@ function renderCaseTable(
     groupIdx++;
   }
 
-  // Column headers - 15 column grid (12 data + 3 for notes/preps)
-  const headers = ["Artikel", "Adjektiv", "Nomen", "Artikel", "Adjektiv", "Nomen", "Artikel", "Adjektiv", "Nomen", "Artikel", "Adjektiv", "Nomen"];
+  // Column widths
+  const colWidth = "6.67%";
   const lastColHeader = hasPreps ? "Präpositionen" : hasNotes ? "Anmerkungen" : "";
 
-  // 15-col grid: each gender gets 3 cols = 12 cols, last column gets 3 cols = 15 total
-  // Each col = ~6.67% of width. 3 cols = 20%
-  const colWidth = "6.67%";
-
-  // Border radius for top corners
-  const radiusTL = "border-top-left-radius:4px;";
-  const radiusTR = "border-top-right-radius:4px;";
-
   return `
-    <div style="margin-bottom:15mm;">
-      <div style="font-size:12pt;font-weight:bold;margin-bottom:4mm;color:#333;text-align:left;">${CASE_LABELS[caseSection.case].de}</div>
-      <div style="border-radius:4px;overflow:hidden;border:1px solid #ccc;">
-      <table style="border-collapse:collapse;width:calc(100% + 2px);table-layout:fixed;margin:-1px;">
+    <div style="margin-bottom:12mm;">
+      <div style="font-size:11pt;font-weight:700;margin-bottom:2mm;color:#000;text-align:left;">${CASE_LABELS[caseSection.case].de}</div>
+      <div style="background-color:#ffffff;">
+      <table style="border-collapse:separate;border-spacing:${CELL_GAP}pt;width:100%;table-layout:fixed;border-radius:4px;overflow:hidden;">
         <colgroup>
           <col style="width:${colWidth}"><col style="width:${colWidth}"><col style="width:${colWidth}">
           <col style="width:${colWidth}"><col style="width:${colWidth}"><col style="width:${colWidth}">
           <col style="width:${colWidth}"><col style="width:${colWidth}"><col style="width:${colWidth}">
           <col style="width:${colWidth}"><col style="width:${colWidth}"><col style="width:${colWidth}">
-          ${showLastColumn ? `<col style="width:${colWidth}"><col style="width:${colWidth}"><col style="width:${colWidth}">` : ''}
+          ${showLastColumn ? `<col style="width:${Number(colWidth.replace('%','')) * 3}%">` : ''}
         </colgroup>
         <thead>
           <tr>
-            <th colspan="3" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:${genderColors.maskulin};${radiusTL}">Maskulin</th>
-            <th colspan="3" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:${genderColors.neutrum};">Neutrum</th>
-            <th colspan="3" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:${genderColors.feminin};">Feminin</th>
-            <th colspan="3" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:${genderColors.plural};${showLastColumn ? '' : radiusTR}">Plural</th>
-            ${showLastColumn ? `<th colspan="3" style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:#f5f5f5;vertical-align:top;${radiusTR}">${lastColHeader}</th>` : ''}
+            <th colspan="3" style="${cell(GENDER_COLORS.maskulin, "font-weight:700;font-size:9pt;border-top-left-radius:3px;")}">Maskulin</th>
+            <th colspan="3" style="${cell(GENDER_COLORS.neutrum, "font-weight:700;font-size:9pt;")}">Neutrum</th>
+            <th colspan="3" style="${cell(GENDER_COLORS.feminin, "font-weight:700;font-size:9pt;")}">Feminin</th>
+            <th colspan="3" style="${cell(GENDER_COLORS.plural, "font-weight:700;font-size:9pt;"+ (showLastColumn ? '' : 'border-top-right-radius:3px;'))}">Plural</th>
+            ${showLastColumn ? `<th style="${cell(NOTES_BG, "font-weight:700;font-size:9pt;border-top-right-radius:3px;")}">${lastColHeader}</th>` : ''}
           </tr>
           <tr>
-            ${headers.map((h, i) => {
+            ${["Artikel","Adjektiv","Nomen","Artikel","Adjektiv","Nomen","Artikel","Adjektiv","Nomen","Artikel","Adjektiv","Nomen"].map((h, i) => {
               const genderIdx = Math.floor(i / 3);
               const genders = ["maskulin", "neutrum", "feminin", "plural"] as const;
-              const bg = genderColors[genders[genderIdx]];
-              return `<th style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:8pt;font-weight:bold;background-color:${bg};">${h}</th>`;
+              const bg = GENDER_COLORS[genders[genderIdx]];
+              return `<th style="${cell(bg, "font-weight:600;font-size:7pt;")}">${h}</th>`;
             }).join('')}
-            ${showLastColumn ? '<th colspan="3" style="border:1px solid #ccc;padding:4px 6px;background-color:#f5f5f5;"></th>' : ''}
+            ${showLastColumn ? `<th style="${cell(NOTES_BG)}"></th>` : ''}
           </tr>
         </thead>
         <tbody>
@@ -292,70 +276,65 @@ function renderConjugationTable(
   
   // Tense colors - very light earth tones
   const tenseColors = {
-    praesens: "#f8f4ef",   // light warm sand
-    perfekt: "#f4f6f3",    // light sage
-    praeteritum: "#faf4e8", // light honey
+    praesens: "#F2E2D4",   // Peach
+    perfekt: "#D8E6F2",    // Sky
+    praeteritum: "#DAF0DC", // Mint
   };
   
+  // Shared cell builder (gap-based, no borders)
+  const cell = (bg: string, extra = "") =>
+    `background-color:${bg};padding:3pt 6pt;text-align:left;font-size:9pt;${extra}`;
+  const baseBg = NOTES_BG; // #f2f2f2 for person/formality/pronoun cells
+  
   // Helper function to render a data row using static definition and AI conjugations
-  const renderDataRow = (rowDef: StaticRowDef, isLastRow: boolean) => {
+  const renderDataRow = (rowDef: StaticRowDef, isLastRow = false) => {
     let rowHtml = `<tr>`;
     const personDisplay = `${rowDef.person}. Person`;
-    const blCorner = isLastRow ? "border-bottom-left-radius:4px;" : "";
+    const blr = isLastRow ? "border-bottom-left-radius:3px;" : "";
     
     // Static labels
-    rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:7pt;${blCorner}">${escapeHtml(personDisplay)}</td>`;
-    rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:7pt;color:#666;">${escapeHtml(rowDef.formality || "")}</td>`;
-    rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;font-weight:500;">${escapeHtml(rowDef.pronoun)}</td>`;
+    rowHtml += `<td style="${cell(baseBg, "font-size:7pt;" + blr)}">${escapeHtml(personDisplay)}</td>`;
+    rowHtml += `<td style="${cell(baseBg, "font-size:7pt;color:#666;")}">${escapeHtml(rowDef.formality || "")}</td>`;
+    rowHtml += `<td style="${cell(baseBg, "font-weight:600;")}">${escapeHtml(rowDef.pronoun)}</td>`;
     
     // Get conjugations for this person from AI data
     const conjugations = tableData.conjugations?.[rowDef.personKey];
     
-    tenses.forEach((tense, tenseIdx) => {
+    tenses.forEach((tense) => {
       const tenseData = conjugations?.[tense];
-      const isLastTense = tenseIdx === tenses.length - 1;
-      const brCorner = isLastRow && isLastTense ? "border-bottom-right-radius:4px;" : "";
-      const thickLeft = "border-left:2px solid #999;";
+      const isLastTense = isLastRow && tense === "praeteritum";
       
       if (tense === "perfekt") {
-        // Perfekt: aux | partizip OR aux | reflexive | partizip
         const aux = tenseData?.auxiliary || "";
         const refl = tenseData?.reflexive || "";
         const part = tenseData?.partizip || "";
         
         if (isReflexive) {
-          // 3 columns: aux | reflexive | partizip
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${tenseColors.perfekt};">${escapeHtml(aux)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${tenseColors.perfekt};">${escapeHtml(refl)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${tenseColors.perfekt};${brCorner}">${escapeHtml(part)}</td>`;
+          rowHtml += `<td style="${cell(tenseColors.perfekt)}">${escapeHtml(aux)}</td>`;
+          rowHtml += `<td style="${cell(tenseColors.perfekt)}">${escapeHtml(refl)}</td>`;
+          rowHtml += `<td style="${cell(tenseColors.perfekt)}">${escapeHtml(part)}</td>`;
         } else {
-          // 2 columns: aux | partizip
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${tenseColors.perfekt};">${escapeHtml(aux)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${tenseColors.perfekt};${brCorner}">${escapeHtml(part)}</td>`;
+          rowHtml += `<td style="${cell(tenseColors.perfekt)}">${escapeHtml(aux)}</td>`;
+          rowHtml += `<td style="${cell(tenseColors.perfekt)}">${escapeHtml(part)}</td>`;
         }
       } else {
-        // Präsens or Präteritum
         const main = tenseData?.main || "";
         const refl = tenseData?.reflexive || "";
         const prefix = tenseData?.prefix || "";
         const bgColor = tense === "praesens" ? tenseColors.praesens : tenseColors.praeteritum;
         
         if (hasSeparablePrefix && isReflexive) {
-          // 3 columns: main | reflexive | prefix
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};">${escapeHtml(main)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};">${escapeHtml(refl)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};${brCorner}">${escapeHtml(prefix)}</td>`;
+          rowHtml += `<td style="${cell(bgColor)}">${escapeHtml(main)}</td>`;
+          rowHtml += `<td style="${cell(bgColor)}">${escapeHtml(refl)}</td>`;
+          rowHtml += `<td style="${cell(bgColor, isLastTense ? 'border-bottom-right-radius:3px;' : '')}">${escapeHtml(prefix)}</td>`;
         } else if (hasSeparablePrefix) {
-          // 2 columns: main | prefix
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};">${escapeHtml(main)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};${brCorner}">${escapeHtml(prefix)}</td>`;
+          rowHtml += `<td style="${cell(bgColor)}">${escapeHtml(main)}</td>`;
+          rowHtml += `<td style="${cell(bgColor, isLastTense ? 'border-bottom-right-radius:3px;' : '')}">${escapeHtml(prefix)}</td>`;
         } else if (isReflexive) {
-          // 2 columns: main | reflexive
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};">${escapeHtml(main)}</td>`;
-          rowHtml += `<td style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};${brCorner}">${escapeHtml(refl)}</td>`;
+          rowHtml += `<td style="${cell(bgColor)}">${escapeHtml(main)}</td>`;
+          rowHtml += `<td style="${cell(bgColor, isLastTense ? 'border-bottom-right-radius:3px;' : '')}">${escapeHtml(refl)}</td>`;
         } else {
-          // 1 column: main only
-          rowHtml += `<td style="border:1px solid #ccc;${thickLeft}padding:3px 6px;text-align:left;font-size:9pt;background-color:${bgColor};${brCorner}">${escapeHtml(main)}</td>`;
+          rowHtml += `<td style="${cell(bgColor, isLastTense ? 'border-bottom-right-radius:3px;' : '')}">${escapeHtml(main)}</td>`;
         }
       }
     });
@@ -369,21 +348,20 @@ function renderConjugationTable(
   
   // Singular section header
   rows += `<tr>
-    <td colspan="${totalCols}" style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:7pt;font-weight:bold;">SINGULAR</td>
+    <td colspan="${totalCols}" style="${cell(baseBg, "font-size:7pt;font-weight:700;")}">SINGULAR</td>
   </tr>`;
   
   singularRows.forEach((rowDef) => {
-    rows += renderDataRow(rowDef, false);
+    rows += renderDataRow(rowDef);
   });
   
   // Plural section header
   rows += `<tr>
-    <td colspan="${totalCols}" style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:7pt;font-weight:bold;">PLURAL</td>
+    <td colspan="${totalCols}" style="${cell(baseBg, "font-size:7pt;font-weight:700;")}">PLURAL</td>
   </tr>`;
   
   pluralRows.forEach((rowDef, idx) => {
-    const isLastRow = idx === pluralRows.length - 1;
-    rows += renderDataRow(rowDef, isLastRow);
+    rows += renderDataRow(rowDef, idx === pluralRows.length - 1);
   });
 
   // Build colgroup
@@ -401,25 +379,25 @@ function renderConjugationTable(
 
   // Build header row - merge first 3 columns
   let headerHtml = `
-    <th colspan="3" style="border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:9pt;font-weight:bold;border-top-left-radius:4px;"></th>
+    <th colspan="3" style="${cell(baseBg, "border-top-left-radius:3px;")}"></th>
   `;
   
   tenses.forEach((tense, idx) => {
-    const isLast = idx === tenses.length - 1;
-    const cornerStyle = isLast ? "border-top-right-radius:4px;" : "";
     const colspan = getColsForTense(tense);
-    headerHtml += `<th colspan="${colspan}" style="border:1px solid #ccc;border-left:2px solid #999;padding:3px 6px;text-align:left;font-size:9pt;font-weight:bold;background-color:${tenseColors[tense]};${cornerStyle}">${TENSE_LABELS[tense].de}</th>`;
+    const isLast = idx === tenses.length - 1;
+    const extra = "font-weight:700;" + (isLast ? "border-top-right-radius:3px;" : "");
+    headerHtml += `<th colspan="${colspan}" style="${cell(tenseColors[tense], extra)}">${TENSE_LABELS[tense].de}</th>`;
   });
 
-  // Verb title with info
+  // Verb title
   const verbStr = tableData.input.verb;
-  let verbInfo = `<div style="font-size:11pt;font-weight:bold;margin-bottom:2mm;text-align:left;">${escapeHtml(verbStr)}</div>`;
+  let verbInfo = `<div style="font-size:11pt;font-weight:700;margin-bottom:2mm;text-align:left;">${escapeHtml(verbStr)}</div>`;
 
   return `
     <div class="verb-table">
       ${verbInfo}
-      <div style="border-radius:4px;overflow:hidden;border:1px solid #ccc;">
-      <table style="border-collapse:collapse;width:calc(100% + 2px);table-layout:fixed;margin:-1px;">
+      <div style="background-color:#ffffff;">
+      <table style="border-collapse:separate;border-spacing:${CELL_GAP}pt;width:100%;table-layout:fixed;border-radius:4px;overflow:hidden;">
         <colgroup>
           ${colgroupHtml}
         </colgroup>
@@ -437,57 +415,33 @@ function renderConjugationTable(
   `;
 }
 
-function buildPageHtml(
+/**
+ * Build content pages HTML for declination tables (Adjektivdeklination)
+ * Structured like buildConjugationContentHtml — no internal page wrappers;
+ * Puppeteer handles margins, headers and footers.
+ */
+function buildDeclinationContentHtml(
   tableData: AdjectiveDeclinationTable,
   settings: GrammarTableSettings,
-  pageIndex: number, // 0 = Nominativ+Akkusativ, 1 = Dativ+Genitiv
-  title: string,
-  brandSettings: BrandSettings,
-  brandFonts: { headlineFont: string; bodyFont: string; googleFontsUrl: string },
-  logoDataUri: string
-): string {
-  // Page 1: Nominativ + Akkusativ, Page 2: Dativ + Genitiv
-  const casesForPage: GrammatikalFall[] = pageIndex === 0 
-    ? ["nominativ", "akkusativ"] 
-    : ["dativ", "genitiv"];
-
-  const caseSectionsForPage = tableData.cases.filter(c => casesForPage.includes(c.case));
-
-  let tablesHtml = "";
-  for (const caseSection of caseSectionsForPage) {
-    tablesHtml += renderCaseTable(caseSection, settings);
-  }
-
-  // Header with logo and title
-  const headerText = replaceVariables(brandSettings.headerRight || "", brandSettings);
-  const footerText = replaceVariables(brandSettings.footerLeft || "", brandSettings);
-
-  return `
-    <div class="page">
-      <div class="header">
-        <div class="title">${escapeHtml(title)}</div>
-        ${logoDataUri ? `<img src="${logoDataUri}" class="logo" />` : ''}
-      </div>
-      <div class="content">
-        ${tablesHtml}
-      </div>
-      ${footerText ? `<div class="footer">${footerText}</div>` : ''}
-    </div>
-  `;
-}
-
-function buildFullHtml(
-  tableData: AdjectiveDeclinationTable,
-  settings: GrammarTableSettings,
-  title: string,
   brandSettings: BrandSettings,
   brand: Brand,
-  logoDataUri: string
 ): string {
   const brandFonts = BRAND_FONTS[brand];
+  const footerText = brand !== "lingostar" ? replaceVariables(brandSettings.footerLeft || "", brandSettings) : "";
 
-  const page1 = buildPageHtml(tableData, settings, 0, title, brandSettings, brandFonts, logoDataUri);
-  const page2 = buildPageHtml(tableData, settings, 1, title, brandSettings, brandFonts, logoDataUri);
+  // Page 1: Nominativ + Akkusativ
+  const page1Cases = tableData.cases.filter(c => ["nominativ", "akkusativ"].includes(c.case));
+  let page1Html = "";
+  for (const cs of page1Cases) {
+    page1Html += renderCaseTable(cs, settings);
+  }
+
+  // Page 2: Dativ + Genitiv
+  const page2Cases = tableData.cases.filter(c => ["dativ", "genitiv"].includes(c.case));
+  let page2Html = "";
+  for (const cs of page2Cases) {
+    page2Html += renderCaseTable(cs, settings);
+  }
 
   return `<!DOCTYPE html>
 <html>
@@ -499,80 +453,48 @@ function buildFullHtml(
 <style>
   @page {
     size: A4 landscape;
-    margin: 0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    width: ${PAGE_W}mm;
     margin: 0;
     padding: 0;
     font-family: ${brandFonts.bodyFont};
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .page {
-    width: ${PAGE_W}mm;
-    height: ${PAGE_H}mm;
-    position: relative;
-    overflow: hidden;
-    page-break-after: always;
-    padding: ${MARGIN}mm;
+  .case-page {
+    page-break-inside: avoid;
   }
-  .page:last-child {
-    page-break-after: auto;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 5mm;
-  }
-  .logo {
-    width: 6mm;
-    height: auto;
-  }
-  .title {
-    font-family: ${brandFonts.headlineFont};
-    font-size: 14pt;
-    font-weight: normal;
-  }
-  .header-text {
-    font-size: 9pt;
-    color: #666;
-  }
-  .content {
-    flex: 1;
+  .case-page + .case-page {
+    page-break-before: always;
   }
   .footer {
-    position: absolute;
-    bottom: ${MARGIN}mm;
-    left: ${MARGIN}mm;
-    right: ${MARGIN}mm;
+    margin-top: 6mm;
     font-size: 8pt;
     color: #666;
     border-top: 1px solid #ddd;
     padding-top: 2mm;
   }
-  table {
-    border-collapse: collapse;
-  }
-  th, td {
-    border: 1px solid #ccc;
-  }
 </style>
 </head>
 <body>
-${page1}
-${page2}
+<div class="case-page">
+${page1Html}
+</div>
+<div class="case-page">
+${page2Html}
+</div>
+${footerText ? `<div class="footer">${footerText}</div>` : ''}
 </body>
 </html>`;
 }
 
 /**
- * Build title page HTML for conjugation PDF
+ * Build title page HTML for grammar table PDFs (Verbkonjugation & Adjektivdeklination)
  */
-function buildConjugationTitleHtml(
+function buildTitlePageHtml(
   title: string,
+  subtitle: string,
   brand: Brand,
   bigLogoDataUri: string
 ): string {
@@ -605,7 +527,7 @@ function buildConjugationTitleHtml(
     position: absolute;
     top: 0;
     right: 0;
-    width: 60mm;
+    width: 40mm;
     height: auto;
   }
   .title-page .text-content {
@@ -633,7 +555,7 @@ function buildConjugationTitleHtml(
 <div class="title-page">
   ${bigLogoDataUri ? `<img src="${bigLogoDataUri}" class="big-logo" />` : ''}
   <div class="text-content">
-    <div class="subtitle">Verbkonjugation</div>
+    <div class="subtitle">${escapeHtml(subtitle)}</div>
     <div class="main-title">${escapeHtml(title)}</div>
   </div>
 </div>
@@ -688,12 +610,6 @@ function buildConjugationContentHtml(
     color: #666;
     border-top: 1px solid #ddd;
     padding-top: 2mm;
-  }
-  table {
-    border-collapse: collapse;
-  }
-  th, td {
-    border: 1px solid #ccc;
   }
 </style>
 </head>
@@ -789,16 +705,15 @@ export async function POST(
   if (isConjugation) {
     const conjTables = tableData as VerbConjugationTable[];
     console.log(`[Grammar Table PDF] Building HTML for ${conjTables.length} verb tables`);
-    titlePageHtml = buildConjugationTitleHtml(worksheet.title, brand, bigLogoDataUri);
+    titlePageHtml = buildTitlePageHtml(worksheet.title, "Verbkonjugation", brand, bigLogoDataUri);
     html = buildConjugationContentHtml(conjTables, settings, brandSettings, brand);
   } else {
-    html = buildFullHtml(
+    titlePageHtml = buildTitlePageHtml(worksheet.title, "Adjektivdeklination", brand, bigLogoDataUri);
+    html = buildDeclinationContentHtml(
       tableData as AdjectiveDeclinationTable,
       settings,
-      worksheet.title,
       brandSettings,
       brand,
-      logoDataUri
     );
   }
 
@@ -850,11 +765,12 @@ export async function POST(
 
     let finalPdfBytes: Uint8Array;
 
-    if (titlePageHtml) {
+    // Both table types now use title page + content pages merged via pdf-lib
+    {
       // Generate title page PDF (no header/footer)
       const titlePage = await browser.newPage();
       await titlePage.setViewport({ width: 1123, height: 10000 });
-      await titlePage.setContent(titlePageHtml, { waitUntil: "networkidle0", timeout: 30000 });
+      await titlePage.setContent(titlePageHtml!, { waitUntil: "networkidle0", timeout: 30000 });
       await titlePage.evaluateHandle("document.fonts.ready");
       await new Promise((r) => setTimeout(r, 300));
 
@@ -902,30 +818,6 @@ export async function POST(
       for (const p of contentPages) mergedPdf.addPage(p);
 
       finalPdfBytes = await mergedPdf.save();
-    } else {
-      // Single HTML, single PDF (adjective declination)
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1123, height: 10000 });
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
-      await page.evaluateHandle("document.fonts.ready");
-      await new Promise((r) => setTimeout(r, 300));
-
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        landscape: true,
-        margin: {
-          top: "22.5mm",
-          bottom: isLingostar ? "18mm" : "10mm",
-          left: "15mm",
-          right: "15mm",
-        },
-        printBackground: true,
-        displayHeaderFooter: isLingostar || !!logoDataUri,
-        footerTemplate: isLingostar ? lingostarFooterTemplate : '<div></div>',
-        headerTemplate: logoHeaderTemplate,
-      });
-      await page.close();
-      finalPdfBytes = new Uint8Array(pdfBuffer);
     }
 
     await browser.close();

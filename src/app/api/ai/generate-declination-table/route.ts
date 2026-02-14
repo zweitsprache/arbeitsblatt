@@ -50,7 +50,6 @@ WICHTIG: Die Tabelle hat diese EXAKTE Struktur für jeden Fall:
 **Gruppe 1 - Bestimmter Artikel (definite):**
 - 2 Artikelvarianten: "der/dieser" für Maskulin, "das/dieses" für Neutrum, "die/diese" für Feminin, "die/diese" für Plural
 - Adjektiv und Nomen sind für beide Zeilen gleich (werden per rowspan dargestellt)
-- Anmerkung für Plural: "*alle, beide, jene, manche, solche, welche"
 
 **Gruppe 2 - Unbestimmter Artikel (indefinite):**
 - 3 Artikelvarianten: "ein", "kein", "mein"
@@ -61,7 +60,6 @@ WICHTIG: Die Tabelle hat diese EXAKTE Struktur für jeden Fall:
 
 **Gruppe 3 - Nullartikel (zero):**
 - 1 Zeile: "…" als Artikel, starke Adjektivendung
-- Anmerkung für Plural: "**viele, einige, ein paar, mehrere"
 
 ADJEKTIVENDUNGEN-REGELN:
 - Nach bestimmtem Artikel: -e (Nom Sg), -en (alle anderen)
@@ -89,10 +87,9 @@ Gib die Antwort als JSON zurück:
             "plural": { "adjective": "DEKLINIERT", "noun": "${input.plural.noun}" }
           },
           "articleRows": [
-            { "maskulin": "der", "neutrum": "das", "feminin": "die", "plural": "die*" },
-            { "maskulin": "dieser", "neutrum": "dieses", "feminin": "diese", "plural": "diese*" }
-          ],
-          "note": "*alle, beide, jene, manche, solche, welche"
+            { "maskulin": "der", "neutrum": "das", "feminin": "die", "plural": "die" },
+            { "maskulin": "dieser", "neutrum": "dieses", "feminin": "diese", "plural": "diese" }
+          ]
         },
         {
           "type": "indefinite",
@@ -119,9 +116,8 @@ Gib die Antwort als JSON zurück:
             "plural": { "adjective": "STARK_DEKLINIERT", "noun": "${input.plural.noun}" }
           },
           "articleRows": [
-            { "maskulin": "…", "neutrum": "", "feminin": "…", "plural": "…**" }
-          ],
-          "note": "**viele, einige, ein paar, mehrere"
+            { "maskulin": "…", "neutrum": "", "feminin": "…", "plural": "…" }
+          ]
         }
       ]
     }

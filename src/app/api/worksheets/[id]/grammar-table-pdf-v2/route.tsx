@@ -25,6 +25,11 @@ import {
   CONJUGATION_ROWS,
   PersonKey,
   TenseHighlights,
+  CaseSection,
+  GrammatikalFall,
+  Genus,
+  CASE_LABELS,
+  GENUS_LABELS,
 } from "@/types/grammar-table";
 import {
   DEFAULT_BRAND_SETTINGS,
@@ -96,14 +101,22 @@ async function readLogoAsPngDataUri(
 // ─── Constants ──────────────────────────────────────────────
 
 const TENSE_COLORS: Record<VerbTense, string> = {
-  praesens: "#f8f4ef",
-  perfekt: "#f4f6f3",
-  praeteritum: "#faf4e8",
+  praesens: "#F2E2D4",    // Peach
+  perfekt: "#D8E6F2",     // Sky
+  praeteritum: "#DAF0DC", // Mint
 };
 
 const CELL_GAP = 1.5;       // white gap between cells (pt)
 const TENSE_GAP = CELL_GAP * 3; // wider gap between tense column groups
-const CELL_BG = "#f2f2f2"; // light grey for non-tense cells
+const CELL_BG = "#E4E4EC"; // Cloud – for non-tense cells
+
+// Adjective-declination gender colours (pastel palette)
+const GENDER_COLORS: Record<Genus, string> = {
+  maskulin: "#F2E2D4",  // Peach
+  neutrum: "#D8E6F2",   // Sky
+  feminin: "#F2EDDA",   // Buttercup
+  plural: "#DAF0DC",    // Mint
+};
 
 // Column width constants (%)
 const BASE_PERSON_W = 7;
@@ -847,6 +860,390 @@ function SimplifiedTenseCells({
   );
 }
 
+// ─── Adjective ending highlight helper ───────────────────────
+
+/**
+ * Compare a base adjective (e.g. "frisch") with its declined form (e.g. "frische")
+ * and return a highlight range covering the ending that differs.
+ * Returns undefined if no difference or inputs are empty.
+ */
+function getAdjectiveEndingRange(
+  baseAdj: string,
+  declinedAdj: string,
+): [number, number][] | undefined {
+  if (!baseAdj || !declinedAdj) return undefined;
+  const base = baseAdj.toLowerCase();
+  const declined = declinedAdj.toLowerCase();
+  // Find how many leading characters match
+  let matchLen = 0;
+  for (let i = 0; i < base.length && i < declined.length; i++) {
+    if (base[i] === declined[i]) matchLen++;
+    else break;
+  }
+  // The ending is everything from matchLen onwards in the declined form
+  if (matchLen >= declinedAdj.length) return undefined; // no ending to highlight
+  return [[matchLen, declinedAdj.length]];
+}
+
+// ─── Adjective-Declination Components ───────────────────────
+
+interface CaseTableProps {
+  caseSection: CaseSection;
+  settings: GrammarTableSettings;
+  /** Base adjective inputs per gender – needed for ending highlights */
+  input: import("@/types/grammar-table").DeclinationInput;
+}
+
+// A4 landscape content width in pt (297mm – 15mm left – 15mm right = 267mm)
+const DECL_CONTENT_W = mm(267);
+
+function CaseTable({ caseSection, settings, input }: CaseTableProps) {
+  const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
+
+  // ── Compute fixed-pt column widths ──
+  // 12 data cells (3 per gender), no extra column
+  const totalItems = 12;
+  const totalGaps = totalItems - 1;
+  const available = DECL_CONTENT_W - totalGaps * CELL_GAP;
+  const cellW = available / 12;
+  const genderBlockW = 3 * cellW + 2 * CELL_GAP; // header row 1: spans 3 cells + 2 internal gaps
+
+  // Flatten all data rows across groups
+  type FlatRow = {
+    groupIdx: number;
+    rowIdx: number;
+    isFirstInGroup: boolean;
+    groupRowCount: number;
+    group: CaseSection["groups"][number];
+    articleRow: CaseSection["groups"][number]["articleRows"][number];
+    isLastGroup: boolean;
+  };
+  const flatRows: FlatRow[] = [];
+  caseSection.groups.forEach((group, gi) => {
+    const rows = group.articleRows ?? [];
+    rows.forEach((ar, ri) => {
+      flatRows.push({
+        groupIdx: gi,
+        rowIdx: ri,
+        isFirstInGroup: ri === 0,
+        groupRowCount: rows.length,
+        group,
+        articleRow: ar,
+        isLastGroup: gi === caseSection.groups.length - 1,
+      });
+    });
+  });
+
+  return (
+    <View style={{ marginBottom: mm(4) }} wrap={false}>
+      {/* Case title */}
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          marginBottom: mm(2),
+          color: "#000000",
+        }}
+      >
+        {CASE_LABELS[caseSection.case].de}
+      </Text>
+
+      <View style={s.tableContainer}>
+        {/* ── Header row 1: one cell per gender (true colspan via computed widths) ── */}
+        <View style={[s.row, s.rowFirst]}>
+          {genders.map((g, gi) => (
+            <View
+              key={g}
+              style={[
+                s.cell,
+                gi === 0 ? s.cellFirst : {},
+                {
+                  width: genderBlockW,
+                  backgroundColor: GENDER_COLORS[g],
+                  ...(gi === 0 ? { borderTopLeftRadius: 3 } : {}),
+                  ...(gi === genders.length - 1
+                    ? { borderTopRightRadius: 3 }
+                    : {}),
+                },
+              ]}
+            >
+              <Text style={[s.cellText, { fontWeight: 700 }]}>
+                {GENUS_LABELS[g].de}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* ── Header row 2: Artikel / Adjektiv / Nomen × 4 ── */}
+        <View style={s.row}>
+          {genders.map((g, gi) =>
+            ["Artikel", "Adjektiv", "Nomen"].map((label, li) => (
+              <View
+                key={`${g}-${label}`}
+                style={[
+                  s.cell,
+                  gi === 0 && li === 0 ? s.cellFirst : {},
+                  {
+                    width: cellW,
+                    backgroundColor: GENDER_COLORS[g],
+                  },
+                ]}
+              >
+                <Text style={[s.cellTextSmall, { fontWeight: 600 }]}>
+                  {label}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* ── Data rows ── */}
+        {flatRows.map((fr, fi) => {
+          const isGlobalLast = fi === flatRows.length - 1;
+
+          return (
+            <View key={fi} style={s.row}>
+              {genders.map((g, gi) => {
+                const shared = fr.group.shared?.[g] || {
+                  adjective: "",
+                  noun: "",
+                };
+                const article = (fr.articleRow?.[g] || "").replace(/\*+$/g, "");
+                const adj =
+                  g === "plural" && fr.articleRow?.pluralOverride
+                    ? fr.articleRow.pluralOverride.adjective
+                    : shared.adjective;
+                const noun =
+                  g === "plural" && fr.articleRow?.pluralOverride
+                    ? fr.articleRow.pluralOverride.noun
+                    : shared.noun;
+                const bg = GENDER_COLORS[g];
+
+                return (
+                  <React.Fragment key={g}>
+                    {/* Article cell */}
+                    <View
+                      style={[
+                        s.cell,
+                        gi === 0 ? s.cellFirst : {},
+                        {
+                          width: cellW,
+                          backgroundColor: bg,
+                          ...(isGlobalLast && gi === 0
+                            ? { borderBottomLeftRadius: 3 }
+                            : {}),
+                        },
+                      ]}
+                    >
+                      <Text style={s.cellText}>{article}</Text>
+                    </View>
+                    {/* Adjective cell */}
+                    <View
+                      style={[
+                        s.cell,
+                        {
+                          width: cellW,
+                          backgroundColor: bg,
+                        },
+                      ]}
+                    >
+                      <HighlightedText
+                        value={adj}
+                        ranges={getAdjectiveEndingRange(input?.[g]?.adjective ?? "", adj)}
+                        show={settings.highlightEndings ?? false}
+                        style={s.cellText}
+                      />
+                    </View>
+                    {/* Noun cell */}
+                    <View
+                      style={[
+                        s.cell,
+                        {
+                          width: cellW,
+                          backgroundColor: bg,
+                          ...(isGlobalLast &&
+                          gi === genders.length - 1
+                            ? { borderBottomRightRadius: 3 }
+                            : {}),
+                        },
+                      ]}
+                    >
+                      <Text style={s.cellText}>{noun}</Text>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Two dotted writing lines */}
+      {[0, 1].map((i) => (
+        <View
+          key={`line-${i}`}
+          style={{
+            marginTop: mm(2),
+            borderBottomWidth: 0.5,
+            borderBottomColor: "#cccccc",
+            borderBottomStyle: "dotted",
+            width: "100%",
+            height: mm(5),
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ─── Declination PDF Document ───────────────────────────────
+
+interface DeclinationTablePDFProps {
+  title: string;
+  tableData: AdjectiveDeclinationTable;
+  settings: GrammarTableSettings;
+  brand: Brand;
+  worksheetId: string;
+  bigLogoDataUri: string;
+  iconDataUri: string;
+}
+
+function DeclinationTablePDF({
+  title,
+  tableData,
+  settings,
+  brand,
+  worksheetId,
+  bigLogoDataUri,
+  iconDataUri,
+}: DeclinationTablePDFProps) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const dateStr = now.toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const bodyFont =
+    brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+
+  return (
+    <Document title={title} author="lingostar">
+      {/* ── Title page ── */}
+      <Page size="A4" orientation="landscape" style={s.titlePage}>
+        {bigLogoDataUri ? (
+          <View style={s.bigLogoWrap}>
+            <Image src={bigLogoDataUri} style={s.bigLogo} />
+          </View>
+        ) : null}
+        <View style={s.titlePageContent}>
+          <View>
+            <Text style={s.subtitle}>Adjektivdeklination</Text>
+            <Text style={s.mainTitle}>{title}</Text>
+            <Text style={s.tenseInfo}>
+              Nominativ · Akkusativ · Dativ · Genitiv
+            </Text>
+            {/* 4 cover image slots */}
+            <View style={{ flexDirection: "row", gap: mm(4), marginTop: mm(12), justifyContent: "flex-start" }}>
+              {[0, 1, 2, 3].map((i) => {
+                const src = settings.coverImages?.[i];
+                const hasBorder = settings.coverImageBorder ?? false;
+                return src && src !== "" ? (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      ...(hasBorder
+                        ? { borderWidth: 1, borderColor: "#CCCCCC", borderStyle: "solid" as const }
+                        : {}),
+                    }}
+                  >
+                    <Image
+                      src={src}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: 3,
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <View
+                    key={i}
+                    style={{
+                      width: mm(30),
+                      height: mm(30),
+                      borderRadius: 3,
+                      backgroundColor: "#F0F0F0",
+                      borderWidth: 1,
+                      borderColor: "#CCCCCC",
+                      borderStyle: "dashed",
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        </View>
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>
+            {`© ${year} lingostar | Marcel Allenspach\nAlle Rechte vorbehalten`}
+          </Text>
+          <Text style={s.footerCenter}></Text>
+          <Text style={s.footerRight}>
+            {`${worksheetId}\n${dateStr}`}
+          </Text>
+        </View>
+      </Page>
+
+      {/* ── Content pages ── */}
+      <Page
+        size="A4"
+        orientation="landscape"
+        style={[s.contentPage, { fontFamily: bodyFont }]}
+      >
+        <View style={s.headerLeft} fixed>
+          <Text style={s.headerLeftText}>
+            {`Adjektivdeklination | Nominativ · Akkusativ · Dativ · Genitiv`}
+          </Text>
+        </View>
+
+        {iconDataUri ? (
+          <View style={s.headerIcon} fixed>
+            <Image src={iconDataUri} style={s.headerIconImg} />
+          </View>
+        ) : null}
+
+        <Text style={s.contentTitle}>{settings.contentTitle || title}</Text>
+
+        {(tableData.cases ?? []).map((cs) => (
+          <CaseTable key={cs.case} caseSection={cs} settings={settings} input={tableData.input} />
+        ))}
+
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>
+            {`© ${year} lingostar | Marcel Allenspach\nAlle Rechte vorbehalten`}
+          </Text>
+          <Text
+            style={s.footerCenter}
+            render={({ pageNumber, totalPages }) =>
+              `${pageNumber - 1} / ${totalPages - 1}`
+            }
+          />
+          <Text style={s.footerRight}>
+            {`${worksheetId}\n${dateStr}`}
+          </Text>
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
 // ─── Document ───────────────────────────────────────────────
 
 interface GrammarTablePDFProps {
@@ -964,7 +1361,7 @@ function GrammarTablePDF({
           <Text
             style={s.footerCenter}
             render={({ pageNumber, totalPages }) =>
-              `${pageNumber} / ${totalPages}`
+              `${pageNumber - 1} / ${totalPages - 1}`
             }
           />
           <Text style={s.footerRight}>
@@ -1004,6 +1401,7 @@ export async function POST(
   const blocksData = worksheet.blocks as unknown as {
     tableType?: GrammarTableType;
     input?: unknown;
+    declinationInput?: import("@/types/grammar-table").DeclinationInput;
     tableData?: AdjectiveDeclinationTable | VerbConjugationTable[];
   } | null;
 
@@ -1011,56 +1409,89 @@ export async function POST(
   const tableData = blocksData?.tableData ?? null;
   const settings = (worksheet.settings ?? {}) as unknown as GrammarTableSettings;
 
-  if (tableType !== "verb-conjugation") {
-    return NextResponse.json(
-      { error: "react-pdf v2 route only supports verb-conjugation. Use original route for adjective-declination." },
-      { status: 400 }
-    );
-  }
-
-  const conjTablesUnsorted = tableData as VerbConjugationTable[];
-  if (!Array.isArray(conjTablesUnsorted) || conjTablesUnsorted.length === 0) {
-    return NextResponse.json(
-      { error: "No conjugation data to export" },
-      { status: 400 }
-    );
-  }
-
-  // Sort verbs alphabetically by infinitive
-  const conjTables = [...conjTablesUnsorted].sort((a, b) =>
-    a.input.verb.localeCompare(b.input.verb, "de")
-  );
-
   const brand = settings.brand || "edoomio";
   const brandSettings: BrandSettings = {
     ...DEFAULT_BRAND_SETTINGS[brand],
     ...settings.brandSettings,
   };
 
-// Read logos (convert SVG → PNG for react-pdf compatibility)
-    const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);
-    const iconDataUri = brandSettings.logo
-      ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
+  // Read logos (convert SVG → PNG for react-pdf compatibility)
+  const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);
+  const iconDataUri = brandSettings.logo
+    ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
     : "";
 
   try {
-    console.log(
-      `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (${conjTables.length} verbs)`
-    );
+    let buffer: Buffer;
 
-    const buffer = await renderToBuffer(
-      <GrammarTablePDF
-        title={worksheet.title}
-        tables={conjTables}
-        brand={brand}
-        worksheetId={worksheet.id}
-        bigLogoDataUri={bigLogoDataUri}
-        iconDataUri={iconDataUri}
-        simplified={settings.simplified ?? false}
-        simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
-        showIrregularHighlights={settings.showIrregularHighlights ?? false}
-      />
-    );
+    if (tableType === "verb-conjugation") {
+      const conjTablesUnsorted = tableData as VerbConjugationTable[];
+      if (!Array.isArray(conjTablesUnsorted) || conjTablesUnsorted.length === 0) {
+        return NextResponse.json(
+          { error: "No conjugation data to export" },
+          { status: 400 }
+        );
+      }
+
+      // Sort verbs alphabetically by infinitive
+      const conjTables = [...conjTablesUnsorted].sort((a, b) =>
+        a.input.verb.localeCompare(b.input.verb, "de")
+      );
+
+      console.log(
+        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (${conjTables.length} verbs)`
+      );
+
+      buffer = Buffer.from(
+        await renderToBuffer(
+          <GrammarTablePDF
+            title={worksheet.title}
+            tables={conjTables}
+            brand={brand}
+            worksheetId={worksheet.id}
+            bigLogoDataUri={bigLogoDataUri}
+            iconDataUri={iconDataUri}
+            simplified={settings.simplified ?? false}
+            simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
+            showIrregularHighlights={settings.showIrregularHighlights ?? false}
+          />
+        )
+      );
+    } else {
+      // adjective-declination
+      const declData = tableData as AdjectiveDeclinationTable;
+      if (!declData || !declData.cases || declData.cases.length === 0) {
+        return NextResponse.json(
+          { error: "No declination data to export" },
+          { status: 400 }
+        );
+      }
+
+      // Prefer user's stored declinationInput over AI-generated input
+      if (blocksData?.declinationInput) {
+        declData.input = blocksData.declinationInput;
+      }
+
+      console.log(
+        `[Grammar Table PDF v2] Generating react-pdf for "${worksheet.title}" (adjective-declination, ${declData.cases.length} cases)`,
+        `highlightEndings=${settings.highlightEndings}`,
+        `input.maskulin.adj=${declData.input?.maskulin?.adjective}`,
+      );
+
+      buffer = Buffer.from(
+        await renderToBuffer(
+          <DeclinationTablePDF
+            title={worksheet.title}
+            tableData={declData}
+            settings={settings}
+            brand={brand}
+            worksheetId={worksheet.id}
+            bigLogoDataUri={bigLogoDataUri}
+            iconDataUri={iconDataUri}
+          />
+        )
+      );
+    }
 
     const safeTitle = worksheet.title
       .replace(/[\u2013\u2014]/g, "-")
