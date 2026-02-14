@@ -73,6 +73,11 @@ export async function PUT(
   if (body.published !== undefined) data.published = body.published;
   if (body.folderId !== undefined) data.folderId = body.folderId || null;
 
+  // Invalidate cached thumbnail when content changes
+  if (body.chapters !== undefined || body.settings !== undefined || body.coverSettings !== undefined) {
+    data.thumbnail = null;
+  }
+
   const ebook = await prisma.eBook.update({
     where: { id },
     data,

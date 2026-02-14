@@ -48,6 +48,11 @@ export async function PUT(
   if (body.published !== undefined) data.published = body.published;
   if (body.folderId !== undefined) data.folderId = body.folderId || null;
 
+  // Invalidate cached thumbnail when content changes
+  if (body.blocks !== undefined || body.settings !== undefined) {
+    data.thumbnail = null;
+  }
+
   const worksheet = await prisma.worksheet.update({
     where: { id },
     data,

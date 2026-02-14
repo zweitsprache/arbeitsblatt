@@ -99,6 +99,12 @@ export interface GrammarTableSettings {
   showNotes: boolean;
   showPrepositions: boolean;
   highlightEndings: boolean;
+  /** Simplified mode: show only one tense, 3 verbs side by side, infinitive as header */
+  simplified: boolean;
+  /** Which tenses to show in simplified mode */
+  simplifiedTenses: Record<VerbTense, boolean>;
+  /** Highlight irregular verb form deviations with yellow background */
+  showIrregularHighlights: boolean;
   brand: Brand;
   brandSettings: BrandSettings;
 }
@@ -127,6 +133,9 @@ export const DEFAULT_GRAMMAR_TABLE_SETTINGS: GrammarTableSettings = {
   showNotes: true,
   showPrepositions: true,
   highlightEndings: false,
+  simplified: false,
+  simplifiedTenses: { praesens: true, perfekt: false, praeteritum: false },
+  showIrregularHighlights: false,
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
 };
@@ -231,6 +240,18 @@ export const CONJUGATION_ROWS: StaticRowDef[] = [
   { personKey: "sie_pl", person: "3", pronoun: "sie", section: "plural" },
 ];
 
+/**
+ * Character-level highlight ranges [startIndex, endIndex) marking irregular deviations.
+ * Each range is inclusive-start, exclusive-end.
+ */
+export interface TenseHighlights {
+  main?: [number, number][];
+  prefix?: [number, number][];
+  auxiliary?: [number, number][];
+  partizip?: [number, number][];
+  reflexive?: [number, number][];
+}
+
 /** A conjugation for a single person in a tense */
 export interface TenseConjugation {
   /** Main conjugated form (e.g., "mache" or "hole") */
@@ -243,6 +264,8 @@ export interface TenseConjugation {
   auxiliary?: string;
   /** Partizip II for Perfekt (gemacht, abgeholt) */
   partizip?: string;
+  /** Character-level irregularity highlights per field */
+  highlights?: TenseHighlights;
 }
 
 /** Conjugations for all tenses for one person */

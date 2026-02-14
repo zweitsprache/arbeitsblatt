@@ -16,6 +16,7 @@ import {
   DEFAULT_CONJUGATION_INPUT,
   PersonKey,
   VerbTense,
+  TenseHighlights,
 } from "@/types/grammar-table";
 
 // ─── State ───────────────────────────────────────────────────
@@ -81,6 +82,13 @@ type GrammarTableAction =
       value: string;
     } }
   | { type: "UPDATE_INFINITIVE"; payload: { tableIndex: number; verb: string } }
+  | { type: "UPDATE_CONJUGATION_HIGHLIGHTS"; payload: {
+      tableIndex: number;
+      personKey: PersonKey;
+      tense: VerbTense;
+      field: keyof TenseHighlights;
+      ranges: [number, number][] | undefined;
+    } }
   | { type: "RESET" };
 
 // ─── Reducer ─────────────────────────────────────────────────
@@ -174,11 +182,20 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
         const personData = updatedConjugations[personKey];
         if (!personData) return table;
         
+        // Clear highlights for this field when text changes
+        const existingTense = personData[tense];
+        const existingHighlights = existingTense?.highlights;
+        let newHighlights: TenseHighlights | undefined;
+        if (existingHighlights) {
+          const { [field]: _removed, ...rest } = existingHighlights;
+          newHighlights = Object.keys(rest).length > 0 ? rest as TenseHighlights : undefined;
+        }
         const updatedPerson = {
           ...personData,
           [tense]: {
             ...personData[tense],
             [field]: value,
+            highlights: newHighlights,
           },
         };
         
@@ -191,6 +208,58 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
         };
       });
       
+      return {
+        ...state,
+        tableData: updatedTables,
+        isDirty: true,
+      };
+    }
+
+    case "UPDATE_CONJUGATION_HIGHLIGHTS": {
+      const { tableIndex, personKey, tense, field, ranges } = action.payload;
+      if (!state.tableData || !Array.isArray(state.tableData)) return state;
+
+      const tables = state.tableData as VerbConjugationTable[];
+      if (tableIndex < 0 || tableIndex >= tables.length) return state;
+
+      const updatedTables = tables.map((table, idx) => {
+        if (idx !== tableIndex) return table;
+
+        const updatedConjugations = { ...table.conjugations };
+        const personData = updatedConjugations[personKey];
+        if (!personData) return table;
+
+        const existingTense = personData[tense];
+        if (!existingTense) return table;
+
+        let newHighlights: TenseHighlights | undefined;
+        if (ranges && ranges.length > 0) {
+          newHighlights = { ...existingTense.highlights, [field]: ranges };
+        } else {
+          // Remove this field from highlights
+          if (existingTense.highlights) {
+            const { [field]: _removed, ...rest } = existingTense.highlights;
+            newHighlights = Object.keys(rest).length > 0 ? rest as TenseHighlights : undefined;
+          }
+        }
+
+        const updatedPerson = {
+          ...personData,
+          [tense]: {
+            ...existingTense,
+            highlights: newHighlights,
+          },
+        };
+
+        return {
+          ...table,
+          conjugations: {
+            ...updatedConjugations,
+            [personKey]: updatedPerson,
+          },
+        };
+      });
+
       return {
         ...state,
         tableData: updatedTables,

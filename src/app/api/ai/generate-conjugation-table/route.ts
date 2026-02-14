@@ -7,6 +7,7 @@ import {
   PersonKey,
   PersonConjugations,
 } from "@/types/grammar-table";
+import { attachHighlights } from "@/lib/regular-conjugation";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -57,6 +58,8 @@ Für JEDE Person und JEDE Zeitform:
 - partizip = Partizip II
 - reflexive = Reflexivpronomen (nur bei reflexiven Verben)
 
+WICHTIG: Gib KEINE "highlights" zurück. Gib NUR die korrekten Konjugationsformen zurück.
+
 BEISPIEL für "sich abmelden" (trennbar + reflexiv):
 {
   "isSeparable": true,
@@ -77,35 +80,6 @@ BEISPIEL für "sich abmelden" (trennbar + reflexiv):
   }
 }
 
-BEISPIEL für "sich freuen" (reflexiv, nicht trennbar):
-{
-  "isSeparable": false,
-  "isReflexive": true,
-  "conjugations": {
-    "ich": {
-      "praesens": { "main": "freue", "reflexive": "mich" },
-      "perfekt": { "auxiliary": "habe", "reflexive": "mich", "partizip": "gefreut" },
-      "praeteritum": { "main": "freute", "reflexive": "mich" }
-    },
-    ...
-  }
-}
-
-BEISPIEL für "abholen" (trennbar, nicht reflexiv):
-{
-  "isSeparable": true,
-  "separablePrefix": "ab",
-  "isReflexive": false,
-  "conjugations": {
-    "ich": {
-      "praesens": { "main": "hole", "prefix": "ab" },
-      "perfekt": { "auxiliary": "habe", "partizip": "abgeholt" },
-      "praeteritum": { "main": "holte", "prefix": "ab" }
-    },
-    ...
-  }
-}
-
 BEISPIEL für "machen" (weder trennbar noch reflexiv):
 {
   "isSeparable": false,
@@ -121,8 +95,8 @@ BEISPIEL für "machen" (weder trennbar noch reflexiv):
 }
 
 Beachte:
-- "sein"-Verben im Perfekt: verwendet "ist/sind/bin/bist" statt "haben"
-- Starke Verben: unregelmäßige Stammänderungen
+- "sein"-Verben im Perfekt: verwendet "ist/sind/bin/bist/seid" statt "haben"
+- Starke Verben: unregelmässige Stammänderungen
 - Dativ-Reflexivpronomen (mir/dir/sich/uns/euch/sich) bei Verben wie "sich vorstellen", "sich merken"
 
 Gib NUR das JSON zurück, kein anderer Text:`;
@@ -165,6 +139,10 @@ Gib NUR das JSON zurück, kein anderer Text:`;
     isReflexive: aiResponse.isReflexive || false,
     conjugations: aiResponse.conjugations,
   };
+
+  // Deterministic irregularity detection:
+  // Generate regular forms programmatically and diff against AI-generated actual forms
+  attachHighlights(tableData);
   
   return tableData;
 }

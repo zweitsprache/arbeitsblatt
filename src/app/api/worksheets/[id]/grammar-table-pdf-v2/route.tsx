@@ -24,6 +24,7 @@ import {
   VerbTense,
   CONJUGATION_ROWS,
   PersonKey,
+  TenseHighlights,
 } from "@/types/grammar-table";
 import {
   DEFAULT_BRAND_SETTINGS,
@@ -214,6 +215,14 @@ const s = StyleSheet.create({
     textAlign: "right",
     lineHeight: 1.4,
   },
+  // Document title on content pages
+  contentTitle: {
+    fontFamily: "Merriweather",
+    fontWeight: 400,
+    fontSize: 14,
+    color: "#000000",
+    marginBottom: mm(4),
+  },
   // Verb table
   verbTableWrap: {
     marginBottom: mm(4),
@@ -242,8 +251,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     marginTop: CELL_GAP,
   },
-  sectionHeaderCol3: {
-    width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
+  sectionHeaderCol: {
     backgroundColor: CELL_BG,
     padding: "3 6",
     justifyContent: "center",
@@ -304,15 +312,92 @@ function subColFractions(
   return [1];
 }
 
+// ─── Highlighted Text (irregularity markers) ────────────────
+
+const HIGHLIGHT_BG = "#5a4540"; // dark brown marker
+const HIGHLIGHT_COLOR = "#ffffff"; // white text
+
+/**
+ * Renders text with optional yellow background highlights on specific character ranges.
+ * If no highlights or showHighlights is off, renders plain text.
+ */
+function HighlightedText({
+  value,
+  ranges,
+  show,
+  style,
+}: {
+  value: string;
+  ranges?: [number, number][];
+  show: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  style: any;
+}) {
+  if (!show || !ranges || ranges.length === 0 || !value) {
+    return <Text style={style}>{value}</Text>;
+  }
+
+  // Sort ranges by start index and merge/clip
+  const sorted = [...ranges]
+    .filter(([s, e]) => s < e && s < value.length)
+    .sort((a, b) => a[0] - b[0]);
+
+  if (sorted.length === 0) {
+    return <Text style={style}>{value}</Text>;
+  }
+
+  // Build segments: alternating normal / highlighted
+  const segments: { text: string; highlighted: boolean }[] = [];
+  let cursor = 0;
+  for (const [start, end] of sorted) {
+    const s = Math.max(start, cursor);
+    const e = Math.min(end, value.length);
+    if (s > cursor) {
+      segments.push({ text: value.slice(cursor, s), highlighted: false });
+    }
+    if (e > s) {
+      segments.push({ text: value.slice(s, e), highlighted: true });
+    }
+    cursor = e;
+  }
+  if (cursor < value.length) {
+    segments.push({ text: value.slice(cursor), highlighted: false });
+  }
+
+  return (
+    <Text style={style}>
+      {segments.map((seg, i) => {
+        const prev = segments[i - 1];
+        const next = segments[i + 1];
+        if (seg.highlighted) {
+          // Space before if preceded by normal text, after if followed by normal text
+          // Plus non-breaking spaces inside for visual padding
+          const spaceBefore = prev && !prev.highlighted ? "\u00A0" : "";
+          const spaceAfter = next && !next.highlighted ? "\u00A0" : "";
+          return (
+            <React.Fragment key={i}>
+              {spaceBefore ? <Text>{spaceBefore}</Text> : null}
+              <Text style={{ backgroundColor: HIGHLIGHT_BG, color: HIGHLIGHT_COLOR }}>{`\u00A0${seg.text}\u00A0`}</Text>
+              {spaceAfter ? <Text>{spaceAfter}</Text> : null}
+            </React.Fragment>
+          );
+        }
+        return <Text key={i}>{seg.text}</Text>;
+      })}
+    </Text>
+  );
+}
+
 // ─── Components ─────────────────────────────────────────────
 
 interface VerbTableProps {
   tableData: VerbConjugationTable;
+  showHighlights: boolean;
 }
 
 const TENSES: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
 
-function VerbTable({ tableData }: VerbTableProps) {
+function VerbTable({ tableData, showHighlights }: VerbTableProps) {
   const hasSep =
     tableData.isSeparable && !!tableData.separablePrefix;
   const isRefl = tableData.isReflexive || false;
@@ -332,9 +417,11 @@ function VerbTable({ tableData }: VerbTableProps) {
         <HeaderRow hasSep={hasSep} isRefl={isRefl} />
         {/* SINGULAR */}
         <View style={s.sectionHeader}>
-          <View style={s.sectionHeaderCol3}>
+          <View style={[s.sectionHeaderCol, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
             <Text style={s.sectionHeaderText}>Singular</Text>
           </View>
+          <View style={[s.sectionHeaderCol, { width: `${BASE_FORMAL_W}%`, marginLeft: CELL_GAP }]} />
+          <View style={[s.sectionHeaderCol, { width: `${BASE_PRONOUN_W}%`, marginLeft: CELL_GAP }]} />
           {TENSES.map((t) => (
             <View key={t} style={{ width: `${TENSE_W}%`, marginLeft: TENSE_GAP }} />
           ))}
@@ -346,13 +433,16 @@ function VerbTable({ tableData }: VerbTableProps) {
             conjugations={tableData.conjugations?.[rd.personKey]}
             hasSep={hasSep}
             isRefl={isRefl}
+            showHighlights={showHighlights}
           />
         ))}
         {/* PLURAL */}
         <View style={s.sectionHeader}>
-          <View style={s.sectionHeaderCol3}>
+          <View style={[s.sectionHeaderCol, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
             <Text style={s.sectionHeaderText}>Plural</Text>
           </View>
+          <View style={[s.sectionHeaderCol, { width: `${BASE_FORMAL_W}%`, marginLeft: CELL_GAP }]} />
+          <View style={[s.sectionHeaderCol, { width: `${BASE_PRONOUN_W}%`, marginLeft: CELL_GAP }]} />
           {TENSES.map((t) => (
             <View key={t} style={{ width: `${TENSE_W}%`, marginLeft: TENSE_GAP }} />
           ))}
@@ -364,6 +454,7 @@ function VerbTable({ tableData }: VerbTableProps) {
             conjugations={tableData.conjugations?.[rd.personKey]}
             hasSep={hasSep}
             isRefl={isRefl}
+            showHighlights={showHighlights}
           />
         ))}
       </View>
@@ -380,16 +471,14 @@ function HeaderRow({
 }) {
   return (
     <View style={[s.row, s.rowFirst]}>
-      {/* Empty cell spanning person + formality + pronoun */}
-      <View
-        style={[
-          s.cell,
-          s.cellFirst,
-          {
-            width: `${BASE_PERSON_W + BASE_FORMAL_W + BASE_PRONOUN_W}%`,
-          },
-        ]}
-      >
+      {/* Person + Formality + Pronoun: 3 separate cells matching data rows */}
+      <View style={[s.cell, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+        <Text style={s.cellText}></Text>
+      </View>
+      <View style={[s.cell, { width: `${BASE_FORMAL_W}%` }]}>
+        <Text style={s.cellText}></Text>
+      </View>
+      <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
         <Text style={s.cellText}></Text>
       </View>
       {TENSES.map((tense, tIdx) => (
@@ -418,6 +507,7 @@ function DataRow({
   conjugations,
   hasSep,
   isRefl,
+  showHighlights,
 }: {
   rowDef: (typeof CONJUGATION_ROWS)[0];
   conjugations?: {
@@ -427,6 +517,7 @@ function DataRow({
   };
   hasSep: boolean;
   isRefl: boolean;
+  showHighlights: boolean;
 }) {
   const personDisplay = `${rowDef.person}. Person`;
 
@@ -454,6 +545,7 @@ function DataRow({
           data={conjugations?.[tense]}
           hasSep={hasSep}
           isRefl={isRefl}
+          showHighlights={showHighlights}
         />
       ))}
     </View>
@@ -465,32 +557,36 @@ function TenseCells({
   data,
   hasSep,
   isRefl,
+  showHighlights,
 }: {
   tense: VerbTense;
   data?: import("@/types/grammar-table").TenseConjugation;
   hasSep: boolean;
   isRefl: boolean;
+  showHighlights: boolean;
 }) {
   const cols = getColsForTense(tense, hasSep, isRefl);
   const fractions = subColFractions(tense, cols);
   const bg = TENSE_COLORS[tense];
+  const hl = data?.highlights;
 
-  // Build cell values for this tense
+  // Build cell values and corresponding highlight ranges for this tense
   const values: string[] = [];
-  const bold: boolean[] = [];   // true = verb form (same weight as pronoun)
+  const bold: boolean[] = [];
+  const hlRanges: ([number, number][] | undefined)[] = [];
   if (tense === "perfekt") {
-    values.push(data?.auxiliary || "");  bold.push(false);
-    if (isRefl) { values.push(data?.reflexive || ""); bold.push(false); }
-    values.push(data?.partizip || "");  bold.push(true);
+    values.push(data?.auxiliary || "");  bold.push(false); hlRanges.push(hl?.auxiliary);
+    if (isRefl) { values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive); }
+    values.push(data?.partizip || "");  bold.push(true);  hlRanges.push(hl?.partizip);
   } else {
-    values.push(data?.main || "");      bold.push(true);
+    values.push(data?.main || "");      bold.push(true);  hlRanges.push(hl?.main);
     if (hasSep && isRefl) {
-      values.push(data?.reflexive || ""); bold.push(false);
-      values.push(data?.prefix || "");    bold.push(true);
+      values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive);
+      values.push(data?.prefix || "");    bold.push(true);  hlRanges.push(hl?.prefix);
     } else if (hasSep) {
-      values.push(data?.prefix || "");    bold.push(true);
+      values.push(data?.prefix || "");    bold.push(true);  hlRanges.push(hl?.prefix);
     } else if (isRefl) {
-      values.push(data?.reflexive || ""); bold.push(false);
+      values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive);
     }
   }
 
@@ -504,11 +600,247 @@ function TenseCells({
             {
               width: `${TENSE_W * frac}%`,
               backgroundColor: bg,
-              ...(i === 0 ? { marginLeft: TENSE_GAP } : {}),
+              marginLeft: i === 0 ? TENSE_GAP : 0,
             },
           ]}
         >
-          <Text style={[s.cellText, bold[i] ? { fontWeight: 600 } : {}]}>{values[i] ?? ""}</Text>
+          <HighlightedText
+            value={values[i] ?? ""}
+            ranges={hlRanges[i]}
+            show={showHighlights}
+            style={[s.cellText, bold[i] ? { fontWeight: 600 } : {}]}
+          />
+        </View>
+      ))}
+    </>
+  );
+}
+
+// ─── Simplified table helpers ───────────────────────────────
+
+/** Chunk array into groups of n */
+function chunkArray<T>(arr: T[], n: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) {
+    result.push(arr.slice(i, i + n));
+  }
+  return result;
+}
+
+// Simplified mode reuses BASE_* widths for left columns; REMAINING_W for verb area
+// A4 landscape content width in pt (297mm - 30mm margins = 267mm ≈ 757pt)
+const SIMP_PAGE_W_PT = mm(267);
+// Subtract the TENSE_GAP margins (one per verb) from remaining width
+function simpVerbW(verbCount: number): number {
+  const gapsPt = verbCount * TENSE_GAP; // each verb gets a TENSE_GAP marginLeft
+  const gapsPct = (gapsPt / SIMP_PAGE_W_PT) * 100;
+  return (REMAINING_W - gapsPct) / verbCount;
+}
+
+interface SimplifiedVerbTableProps {
+  tables: VerbConjugationTable[];
+  tense: VerbTense;
+  showHighlights: boolean;
+}
+
+/** Simplified table: shows up to 3 verbs side-by-side for a single tense */
+function SimplifiedVerbTable({ tables, tense, showHighlights }: SimplifiedVerbTableProps) {
+  const singularRows = CONJUGATION_ROWS.filter((r) => r.section === "singular");
+  const pluralRows = CONJUGATION_ROWS.filter((r) => r.section === "plural");
+  const bg = TENSE_COLORS[tense];
+  const verbCount = tables.length;
+  // Always use 3-verb width so partial chunks don't stretch
+  const verbW = simpVerbW(3);
+
+  return (
+    <View style={s.verbTableWrap} wrap={false}>
+      <View style={s.tableContainer}>
+        {/* Header row: empty left (3 cells matching data rows) + infinitive per verb */}
+        <View style={[s.row, s.rowFirst]}>
+          <View style={[s.cell, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          <View style={[s.cell, { width: `${BASE_FORMAL_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          {tables.map((tbl, i) => (
+            <View
+              key={i}
+              style={[
+                s.cell,
+                {
+                  width: `${verbW}%`,
+                  backgroundColor: bg,
+                  marginLeft: i === 0 ? TENSE_GAP : TENSE_GAP,
+                },
+              ]}
+            >
+              <Text style={[s.cellText, { fontWeight: 700 }]}>{tbl.input.verb}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* SINGULAR header */}
+        <View style={s.sectionHeader}>
+          <View style={[s.sectionHeaderCol, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+            <Text style={s.sectionHeaderText}>Singular</Text>
+          </View>
+          <View style={[s.sectionHeaderCol, { width: `${BASE_FORMAL_W}%`, marginLeft: CELL_GAP }]} />
+          <View style={[s.sectionHeaderCol, { width: `${BASE_PRONOUN_W}%`, marginLeft: CELL_GAP }]} />
+          {tables.map((_, i) => (
+            <View key={i} style={{ width: `${verbW}%`, marginLeft: TENSE_GAP }} />
+          ))}
+        </View>
+        {singularRows.map((rd) => (
+          <SimplifiedDataRow
+            key={rd.personKey}
+            rowDef={rd}
+            tables={tables}
+            tense={tense}
+            verbW={verbW}
+            showHighlights={showHighlights}
+          />
+        ))}
+
+        {/* PLURAL header */}
+        <View style={s.sectionHeader}>
+          <View style={[s.sectionHeaderCol, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+            <Text style={s.sectionHeaderText}>Plural</Text>
+          </View>
+          <View style={[s.sectionHeaderCol, { width: `${BASE_FORMAL_W}%`, marginLeft: CELL_GAP }]} />
+          <View style={[s.sectionHeaderCol, { width: `${BASE_PRONOUN_W}%`, marginLeft: CELL_GAP }]} />
+          {tables.map((_, i) => (
+            <View key={i} style={{ width: `${verbW}%`, marginLeft: TENSE_GAP }} />
+          ))}
+        </View>
+        {pluralRows.map((rd) => (
+          <SimplifiedDataRow
+            key={rd.personKey}
+            rowDef={rd}
+            tables={tables}
+            tense={tense}
+            verbW={verbW}
+            showHighlights={showHighlights}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SimplifiedDataRow({
+  rowDef,
+  tables,
+  tense,
+  verbW,
+  showHighlights,
+}: {
+  rowDef: (typeof CONJUGATION_ROWS)[0];
+  tables: VerbConjugationTable[];
+  tense: VerbTense;
+  verbW: number;
+  showHighlights: boolean;
+}) {
+  const personDisplay = `${rowDef.person}. Person`;
+
+  return (
+    <View style={s.row}>
+      {/* Person */}
+      <View style={[s.cell, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+        <Text style={s.cellTextSmall}>{personDisplay}</Text>
+      </View>
+      {/* Formality */}
+      <View style={[s.cell, { width: `${BASE_FORMAL_W}%` }]}>
+        <Text style={s.cellTextMuted}>{rowDef.formality || ""}</Text>
+      </View>
+      {/* Pronoun */}
+      <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
+        <Text style={[s.cellText, { fontWeight: 600 }]}>{rowDef.pronoun}</Text>
+      </View>
+      {/* One tense cell group per verb — reuses TenseCells with verbW */}
+      {tables.map((tbl, i) => {
+        const hasSep = tbl.isSeparable && !!tbl.separablePrefix;
+        const isRefl = tbl.isReflexive || false;
+        const conj = tbl.conjugations?.[rowDef.personKey]?.[tense];
+        return (
+          <SimplifiedTenseCells
+            key={i}
+            tense={tense}
+            data={conj}
+            hasSep={hasSep}
+            isRefl={isRefl}
+            verbW={verbW}
+            showHighlights={showHighlights}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+function SimplifiedTenseCells({
+  tense,
+  data,
+  hasSep,
+  isRefl,
+  verbW,
+  showHighlights,
+}: {
+  tense: VerbTense;
+  data?: import("@/types/grammar-table").TenseConjugation;
+  hasSep: boolean;
+  isRefl: boolean;
+  verbW: number;
+  showHighlights: boolean;
+}) {
+  const bg = TENSE_COLORS[tense];
+  const cols = getColsForTense(tense, hasSep, isRefl);
+  const fractions = subColFractions(tense, cols);
+  const hl = data?.highlights;
+
+  // Build cell values and highlight ranges — same logic as TenseCells
+  const values: string[] = [];
+  const bold: boolean[] = [];
+  const hlRanges: ([number, number][] | undefined)[] = [];
+  if (tense === "perfekt") {
+    values.push(data?.auxiliary || "");  bold.push(false); hlRanges.push(hl?.auxiliary);
+    if (isRefl) { values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive); }
+    values.push(data?.partizip || "");  bold.push(true);  hlRanges.push(hl?.partizip);
+  } else {
+    values.push(data?.main || "");      bold.push(true);  hlRanges.push(hl?.main);
+    if (hasSep && isRefl) {
+      values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive);
+      values.push(data?.prefix || "");    bold.push(true);  hlRanges.push(hl?.prefix);
+    } else if (hasSep) {
+      values.push(data?.prefix || "");    bold.push(true);  hlRanges.push(hl?.prefix);
+    } else if (isRefl) {
+      values.push(data?.reflexive || ""); bold.push(false); hlRanges.push(hl?.reflexive);
+    }
+  }
+
+  return (
+    <>
+      {fractions.map((frac, j) => (
+        <View
+          key={j}
+          style={[
+            s.cell,
+            {
+              width: `${verbW * frac}%`,
+              backgroundColor: bg,
+              marginLeft: j === 0 ? TENSE_GAP : 0,
+            },
+          ]}
+        >
+          <HighlightedText
+            value={values[j] ?? ""}
+            ranges={hlRanges[j]}
+            show={showHighlights}
+            style={[s.cellText, bold[j] ? { fontWeight: 600 } : {}]}
+          />
         </View>
       ))}
     </>
@@ -524,6 +856,9 @@ interface GrammarTablePDFProps {
   worksheetId: string;
   bigLogoDataUri: string;
   iconDataUri: string;
+  simplified: boolean;
+  simplifiedTenses: Record<VerbTense, boolean>;
+  showIrregularHighlights: boolean;
 }
 
 function GrammarTablePDF({
@@ -533,6 +868,9 @@ function GrammarTablePDF({
   worksheetId,
   bigLogoDataUri,
   iconDataUri,
+  simplified,
+  simplifiedTenses,
+  showIrregularHighlights,
 }: GrammarTablePDFProps) {
   const now = new Date();
   const year = now.getFullYear();
@@ -544,11 +882,21 @@ function GrammarTablePDF({
   const brandFonts = BRAND_FONTS[brand];
   const bodyFont = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
 
+  // Determine which tenses are active for simplified mode
+  const activeTenses: VerbTense[] = simplified
+    ? TENSES.filter((t) => simplifiedTenses[t])
+    : [];
+  // Chunk tables into groups of 3 for simplified mode
+  const verbChunks = simplified ? chunkArray(tables, 3) : [];
+  // Build tense label for header
+  const tenseLabel = simplified
+    ? activeTenses.map((t) => TENSE_LABELS[t].de).join(" · ")
+    : "Präsens · Perfekt · Präteritum";
+
   return (
     <Document title={title} author="lingostar">
       {/* ── Title page ── */}
       <Page size="A4" orientation="landscape" style={s.titlePage}>
-        {/* Logo – direct child of Page so absolute coords are page-relative */}
         {bigLogoDataUri ? (
           <View style={s.bigLogoWrap}>
             <Image src={bigLogoDataUri} style={s.bigLogo} />
@@ -558,10 +906,9 @@ function GrammarTablePDF({
           <View>
             <Text style={s.subtitle}>Verbkonjugation</Text>
             <Text style={s.mainTitle}>{title}</Text>
-            <Text style={s.tenseInfo}>Indikativ | Präsens · Perfekt · Präteritum</Text>
+            <Text style={s.tenseInfo}>Indikativ | {tenseLabel}</Text>
           </View>
         </View>
-        {/* Title page footer – no page numbers */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>
             {`© ${year} lingostar | Marcel Allenspach\nAlle Rechte vorbehalten`}
@@ -582,7 +929,9 @@ function GrammarTablePDF({
         {/* Repeating header – left text */}
         <View style={s.headerLeft} fixed>
           <Text style={s.headerLeftText}>
-            {`Verbkonjugation\n${title} – Indikativ | Präsens · Perfekt · Präteritum`}
+            {simplified
+              ? `Verbkonjugation – Indikativ | ${tenseLabel}`
+              : `Verbkonjugation\n${title} – Indikativ | ${tenseLabel}`}
           </Text>
         </View>
 
@@ -593,10 +942,19 @@ function GrammarTablePDF({
           </View>
         ) : null}
 
+        {/* Document title */}
+        <Text style={s.contentTitle}>{title}</Text>
+
         {/* Verb tables */}
-        {tables.map((tbl, i) => (
-          <VerbTable key={i} tableData={tbl} />
-        ))}
+        {simplified
+          ? activeTenses.map((tense) =>
+              verbChunks.map((chunk, ci) => (
+                <SimplifiedVerbTable key={`${tense}-${ci}`} tables={chunk} tense={tense} showHighlights={showIrregularHighlights} />
+              ))
+            )
+          : tables.map((tbl, i) => (
+              <VerbTable key={i} tableData={tbl} showHighlights={showIrregularHighlights} />
+            ))}
 
         {/* Repeating footer with page numbers */}
         <View style={s.footer} fixed>
@@ -660,13 +1018,18 @@ export async function POST(
     );
   }
 
-  const conjTables = tableData as VerbConjugationTable[];
-  if (!Array.isArray(conjTables) || conjTables.length === 0) {
+  const conjTablesUnsorted = tableData as VerbConjugationTable[];
+  if (!Array.isArray(conjTablesUnsorted) || conjTablesUnsorted.length === 0) {
     return NextResponse.json(
       { error: "No conjugation data to export" },
       { status: 400 }
     );
   }
+
+  // Sort verbs alphabetically by infinitive
+  const conjTables = [...conjTablesUnsorted].sort((a, b) =>
+    a.input.verb.localeCompare(b.input.verb, "de")
+  );
 
   const brand = settings.brand || "edoomio";
   const brandSettings: BrandSettings = {
@@ -693,6 +1056,9 @@ export async function POST(
         worksheetId={worksheet.id}
         bigLogoDataUri={bigLogoDataUri}
         iconDataUri={iconDataUri}
+        simplified={settings.simplified ?? false}
+        simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
+        showIrregularHighlights={settings.showIrregularHighlights ?? false}
       />
     );
 

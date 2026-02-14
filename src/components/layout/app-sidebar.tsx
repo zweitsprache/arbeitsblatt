@@ -15,6 +15,7 @@ import {
   Layers,
   LayoutGrid,
   TableProperties,
+  Store,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -40,6 +41,7 @@ interface NavSection {
 
 const topItems: NavItem[] = [
   { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/library", labelKey: "library", icon: Store },
 ];
 
 const sections: NavSection[] = [

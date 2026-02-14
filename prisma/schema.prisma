@@ -30,6 +30,7 @@ model Worksheet {
   blocks      Json     @default("[]")
   settings    Json     @default("{}")
   published   Boolean  @default(false)
+  thumbnail   String?  // base64 data URL of first-page preview
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   folderId    String?
@@ -50,6 +51,7 @@ model EBook {
   coverSettings Json     @default("{}")  // EBookCoverSettings
   settings      Json     @default("{}")  // EBookSettings
   published     Boolean  @default(false)
+  thumbnail     String?  // base64 data URL of first-page preview
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   folderId      String?

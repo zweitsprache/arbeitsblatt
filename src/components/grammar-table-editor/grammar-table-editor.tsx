@@ -21,6 +21,7 @@ import {
   PersonKey,
   DeclinationInput,
   ConjugationInput,
+  TenseHighlights,
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -52,7 +53,16 @@ import {
   Settings2,
   RefreshCw,
   FileText,
+  Highlighter,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 // ─── Declination Input Panel ─────────────────────────────────
 
@@ -248,6 +258,8 @@ function SettingsPanel() {
   const { state, dispatch } = useGrammarTable();
   const t = useTranslations("grammarTableEditor");
 
+  const simplifiedTenses = state.settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false };
+
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">{t("settings")}</h3>
@@ -285,6 +297,54 @@ function SettingsPanel() {
           }
         />
       </div>
+
+      {state.tableType === "verb-conjugation" && (
+        <>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("simplified")}</Label>
+            <Switch
+              checked={state.settings.simplified ?? false}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { simplified: v } })
+              }
+            />
+          </div>
+
+          {state.settings.simplified && (
+            <div className="space-y-2 pl-2 border-l-2 border-muted">
+              <Label className="text-xs text-muted-foreground">{t("simplifiedTenses")}</Label>
+              {(["praesens", "perfekt", "praeteritum"] as const).map((tense) => (
+                <div key={tense} className="flex items-center justify-between">
+                  <Label className="text-sm">{TENSE_LABELS[tense].de}</Label>
+                  <Switch
+                    checked={simplifiedTenses[tense]}
+                    onCheckedChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_SETTINGS",
+                        payload: {
+                          simplifiedTenses: { ...simplifiedTenses, [tense]: v },
+                        },
+                      })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Separator />
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("showIrregularHighlights")}</Label>
+            <Switch
+              checked={state.settings.showIrregularHighlights ?? false}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { showIrregularHighlights: v } })
+              }
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -584,86 +644,380 @@ function DeclinationTableView() {
   );
 }
 
-// ─── Editable Cell ───────────────────────────────────────────────────────────
+// ─── Highlight Range Utilities ───────────────────────────────────────────────
 
-function EditableCell({ 
-  value, 
-  onChange, 
-  className = "",
-  highlight = false,
-}: { 
-  value: string; 
-  onChange: (newValue: string) => void;
-  className?: string;
-  highlight?: boolean;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  
-  const handleBlur = () => {
-    setIsEditing(false);
-    if (editValue !== value) {
-      onChange(editValue);
+/** Merge overlapping/adjacent [start, end) ranges and sort ascending */
+function mergeRanges(ranges: [number, number][]): [number, number][] {
+  if (ranges.length === 0) return [];
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    if (sorted[i][0] <= last[1]) {
+      last[1] = Math.max(last[1], sorted[i][1]);
+    } else {
+      merged.push(sorted[i]);
     }
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      setIsEditing(false);
-      if (editValue !== value) {
-        onChange(editValue);
-      }
-    } else if (e.key === "Escape") {
-      setIsEditing(false);
-      setEditValue(value);
-    }
-  };
-  
-  if (isEditing) {
-    return (
-      <input
-        type="text"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        className={`w-full bg-transparent outline-none border-b border-blue-400 ${className}`}
-      />
-    );
   }
-  
+  return merged;
+}
+
+/** Build a Set of highlighted char indices from ranges */
+function hlIndexSet(ranges: [number, number][] | undefined, len: number): Set<number> {
+  const s = new Set<number>();
+  if (!ranges) return s;
+  for (const [start, end] of ranges) {
+    for (let i = start; i < end && i < len; i++) s.add(i);
+  }
+  return s;
+}
+
+/** Convert a Set of indices back to merged [start, end) ranges */
+function setToRanges(s: Set<number>): [number, number][] {
+  if (s.size === 0) return [];
+  const sorted = [...s].sort((a, b) => a - b);
+  const ranges: [number, number][] = [];
+  let start = sorted[0];
+  let end = sorted[0] + 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end) {
+      end++;
+    } else {
+      ranges.push([start, end]);
+      start = sorted[i];
+      end = sorted[i] + 1;
+    }
+  }
+  ranges.push([start, end]);
+  return ranges;
+}
+
+// ─── Highlight Edit Modal ────────────────────────────────────────────────────
+
+function HighlightEditModal({
+  open,
+  onOpenChange,
+  value,
+  onValueChange,
+  highlightRanges,
+  onHighlightsChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  value: string;
+  onValueChange: (v: string) => void;
+  highlightRanges?: [number, number][];
+  onHighlightsChange: (ranges: [number, number][] | undefined) => void;
+}) {
+  const [editText, setEditText] = useState(value);
+  const [hlSet, setHlSet] = useState<Set<number>>(() => hlIndexSet(highlightRanges, value.length));
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragAction, setDragAction] = useState<"add" | "remove">("add");
+  const [textEdited, setTextEdited] = useState(false);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setEditText(value);
+      setHlSet(hlIndexSet(highlightRanges, value.length));
+      setTextEdited(false);
+    }
+  }, [open, value, highlightRanges]);
+
+  // When text changes, highlights become invalid → clear them
+  const handleTextChange = (newText: string) => {
+    setEditText(newText);
+    setTextEdited(newText !== value);
+    if (newText !== value) {
+      setHlSet(new Set());
+    } else {
+      // Reverted to original → restore original highlights
+      setHlSet(hlIndexSet(highlightRanges, value.length));
+    }
+  };
+
+  const handleCharMouseDown = (idx: number) => {
+    // Determine action: if char is highlighted → remove mode, else → add mode
+    const action = hlSet.has(idx) ? "remove" : "add";
+    setDragAction(action);
+    setIsDragging(true);
+    setHlSet((prev) => {
+      const next = new Set(prev);
+      if (action === "add") next.add(idx);
+      else next.delete(idx);
+      return next;
+    });
+  };
+
+  const handleCharMouseEnter = (idx: number) => {
+    if (!isDragging) return;
+    setHlSet((prev) => {
+      const next = new Set(prev);
+      if (dragAction === "add") next.add(idx);
+      else next.delete(idx);
+      return next;
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Listen for mouseup globally to end drag
+  useEffect(() => {
+    if (!isDragging) return;
+    const handler = () => setIsDragging(false);
+    window.addEventListener("mouseup", handler);
+    return () => window.removeEventListener("mouseup", handler);
+  }, [isDragging]);
+
+  const handleSave = () => {
+    // Save text changes
+    if (editText !== value) {
+      onValueChange(editText);
+    }
+    // Save highlight changes
+    const ranges = setToRanges(hlSet);
+    onHighlightsChange(ranges.length > 0 ? ranges : undefined);
+    onOpenChange(false);
+  };
+
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
-    <span 
-      onClick={() => {
-        setIsEditing(true);
-        setEditValue(value);
-      }}
-      className={`cursor-pointer hover:bg-blue-50 rounded px-0.5 -mx-0.5 ${highlight ? "font-semibold text-pink-700" : ""} ${className}`}
-      title="Click to edit"
-    >
-      {value || <span className="text-slate-300 italic">—</span>}
-    </span>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle className="text-sm font-medium">Wert & Hervorhebungen bearbeiten</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Text bearbeiten oder Buchstaben anklicken/ziehen um Hervorhebungen zu setzen.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Text input */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Text</Label>
+          <Input
+            value={editText}
+            onChange={(e) => handleTextChange(e.target.value)}
+            className="font-mono"
+            autoFocus
+          />
+        </div>
+
+        {/* Character-level highlight toggle */}
+        {editText.length > 0 && (
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Highlighter className="h-3 w-3" />
+              Hervorhebungen {textEdited && <span className="text-amber-600 text-[10px]">(Text geändert — Hervorhebungen zurückgesetzt)</span>}
+            </Label>
+            <div
+              className="flex flex-wrap gap-0 select-none border rounded-md p-2 bg-muted/30"
+              onMouseUp={handleMouseUp}
+            >
+              {Array.from(editText).map((ch, i) => (
+                <span
+                  key={i}
+                  onMouseDown={(e) => { e.preventDefault(); handleCharMouseDown(i); }}
+                  onMouseEnter={() => handleCharMouseEnter(i)}
+                  className={`
+                    inline-flex items-center justify-center min-w-[1.5em] h-8 text-base font-mono cursor-pointer
+                    border transition-colors
+                    ${hlSet.has(i)
+                      ? "bg-amber-200 border-amber-400 hover:bg-amber-300"
+                      : "bg-white border-slate-200 hover:bg-slate-100"
+                    }
+                    ${ch === " " ? "text-slate-300" : ""}
+                    first:rounded-l-sm last:rounded-r-sm
+                  `}
+                >
+                  {ch === " " ? "·" : ch}
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Klicken oder ziehen um Buchstaben hervorzuheben. Gelb = hervorgehoben (irregulär).
+            </p>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={handleCancel}>
+            Abbrechen
+          </Button>
+          <Button size="sm" onClick={handleSave}>
+            Übernehmen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Highlightable Cell ─────────────────────────────────────────────────────
+
+function HighlightableCell({
+  value,
+  onChange,
+  highlightRanges,
+  onHighlightsChange,
+  className = "",
+  showHighlights = false,
+}: {
+  value: string;
+  onChange: (newValue: string) => void;
+  highlightRanges?: [number, number][];
+  onHighlightsChange?: (ranges: [number, number][] | undefined) => void;
+  className?: string;
+  showHighlights?: boolean;
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Render text with highlight segments
+  const renderText = () => {
+    if (!value) return <span className="text-slate-300 italic">—</span>;
+
+    if (!showHighlights || !highlightRanges || highlightRanges.length === 0) {
+      return <>{value}</>;
+    }
+
+    const hlSet_ = hlIndexSet(highlightRanges, value.length);
+    const segments: { text: string; highlighted: boolean }[] = [];
+    for (let i = 0; i < value.length; i++) {
+      const hl = hlSet_.has(i);
+      if (segments.length > 0 && segments[segments.length - 1].highlighted === hl) {
+        segments[segments.length - 1].text += value[i];
+      } else {
+        segments.push({ text: value[i], highlighted: hl });
+      }
+    }
+
+    return (
+      <>
+        {segments.map((seg, i) =>
+          seg.highlighted ? (
+            <span key={i} className="bg-amber-200 rounded-sm">{seg.text}</span>
+          ) : (
+            <span key={i}>{seg.text}</span>
+          )
+        )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      <span
+        onClick={() => setModalOpen(true)}
+        className={`cursor-pointer hover:bg-blue-50 rounded px-0.5 -mx-0.5 ${className}`}
+        title="Click to edit"
+      >
+        {renderText()}
+      </span>
+      {modalOpen && onHighlightsChange && showHighlights ? (
+        <HighlightEditModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          value={value}
+          onValueChange={onChange}
+          highlightRanges={highlightRanges}
+          onHighlightsChange={onHighlightsChange}
+        />
+      ) : modalOpen ? (
+        // Simple inline edit fallback when highlights not enabled
+        <SimpleEditModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          value={value}
+          onValueChange={onChange}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** Simple text-only edit modal (when highlights are disabled) */
+function SimpleEditModal({
+  open,
+  onOpenChange,
+  value,
+  onValueChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  value: string;
+  onValueChange: (v: string) => void;
+}) {
+  const [editText, setEditText] = useState(value);
+
+  useEffect(() => {
+    if (open) setEditText(value);
+  }, [open, value]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle className="text-sm font-medium">Wert bearbeiten</DialogTitle>
+          <DialogDescription className="sr-only">Text bearbeiten</DialogDescription>
+        </DialogHeader>
+        <Input
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          className="font-mono"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (editText !== value) onValueChange(editText);
+              onOpenChange(false);
+            }
+          }}
+        />
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Abbrechen
+          </Button>
+          <Button size="sm" onClick={() => {
+            if (editText !== value) onValueChange(editText);
+            onOpenChange(false);
+          }}>
+            Übernehmen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ─── Conjugation Table View ─────────────────────────────────────────────────
 
+type ConjFieldName = "main" | "prefix" | "reflexive" | "auxiliary" | "partizip";
+
 interface SingleConjugationTableProps {
   tableData: VerbConjugationTable;
   tableIndex: number;
-  settings: { highlightEndings: boolean };
+  showIrregularHighlights: boolean;
   onCellChange: (
     tableIndex: number,
     personKey: PersonKey,
     tense: VerbTense,
-    field: "main" | "prefix" | "reflexive" | "auxiliary" | "partizip",
+    field: ConjFieldName,
     value: string
+  ) => void;
+  onHighlightsChange: (
+    tableIndex: number,
+    personKey: PersonKey,
+    tense: VerbTense,
+    field: keyof TenseHighlights,
+    ranges: [number, number][] | undefined
   ) => void;
   onInfinitiveChange: (tableIndex: number, verb: string) => void;
 }
 
-function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange, onInfinitiveChange }: SingleConjugationTableProps) {
+function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, onCellChange, onHighlightsChange, onInfinitiveChange }: SingleConjugationTableProps) {
   const locale = "de";
   const tenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
   
@@ -700,8 +1054,12 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
     const personKey = rowDef.personKey;
     
     // Helper to create onChange handler
-    const handleChange = (tense: VerbTense, field: "main" | "prefix" | "reflexive" | "auxiliary" | "partizip") => 
+    const handleChange = (tense: VerbTense, field: ConjFieldName) => 
       (value: string) => onCellChange(tableIndex, personKey, tense, field, value);
+    
+    // Helper to create onHighlightsChange handler
+    const handleHlChange = (tense: VerbTense, field: keyof TenseHighlights) =>
+      (ranges: [number, number][] | undefined) => onHighlightsChange(tableIndex, personKey, tense, field, ranges);
     
     return (
       <tr key={idx}>
@@ -735,23 +1093,30 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               return (
                 <React.Fragment key={tense}>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={aux} 
                       onChange={handleChange(tense, "auxiliary")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.auxiliary}
+                      onHighlightsChange={handleHlChange(tense, "auxiliary")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={refl} 
                       onChange={handleChange(tense, "reflexive")}
+                      highlightRanges={tenseData?.highlights?.reflexive}
+                      onHighlightsChange={handleHlChange(tense, "reflexive")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={part} 
                       onChange={handleChange(tense, "partizip")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.partizip}
+                      onHighlightsChange={handleHlChange(tense, "partizip")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                 </React.Fragment>
@@ -760,17 +1125,21 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               return (
                 <React.Fragment key={tense}>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={aux} 
                       onChange={handleChange(tense, "auxiliary")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.auxiliary}
+                      onHighlightsChange={handleHlChange(tense, "auxiliary")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={part} 
                       onChange={handleChange(tense, "partizip")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.partizip}
+                      onHighlightsChange={handleHlChange(tense, "partizip")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                 </React.Fragment>
@@ -787,22 +1156,30 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               return (
                 <React.Fragment key={tense}>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={main} 
                       onChange={handleChange(tense, "main")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.main}
+                      onHighlightsChange={handleHlChange(tense, "main")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={refl} 
                       onChange={handleChange(tense, "reflexive")}
+                      highlightRanges={tenseData?.highlights?.reflexive}
+                      onHighlightsChange={handleHlChange(tense, "reflexive")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={prefix} 
                       onChange={handleChange(tense, "prefix")}
+                      highlightRanges={tenseData?.highlights?.prefix}
+                      onHighlightsChange={handleHlChange(tense, "prefix")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                 </React.Fragment>
@@ -812,16 +1189,21 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               return (
                 <React.Fragment key={tense}>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={main} 
                       onChange={handleChange(tense, "main")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.main}
+                      onHighlightsChange={handleHlChange(tense, "main")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={prefix} 
                       onChange={handleChange(tense, "prefix")}
+                      highlightRanges={tenseData?.highlights?.prefix}
+                      onHighlightsChange={handleHlChange(tense, "prefix")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                 </React.Fragment>
@@ -831,16 +1213,21 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               return (
                 <React.Fragment key={tense}>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={main} 
                       onChange={handleChange(tense, "main")}
-                      highlight={settings.highlightEndings}
+                      highlightRanges={tenseData?.highlights?.main}
+                      onHighlightsChange={handleHlChange(tense, "main")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                   <td className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                    <EditableCell 
+                    <HighlightableCell 
                       value={refl} 
                       onChange={handleChange(tense, "reflexive")}
+                      highlightRanges={tenseData?.highlights?.reflexive}
+                      onHighlightsChange={handleHlChange(tense, "reflexive")}
+                      showHighlights={showIrregularHighlights}
                     />
                   </td>
                 </React.Fragment>
@@ -849,10 +1236,12 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
               // 1 column: main only
               return (
                 <td key={tense} className={`border border-slate-300 px-2 py-1.5 text-xs ${bgClass}`}>
-                  <EditableCell 
+                  <HighlightableCell 
                     value={main} 
                     onChange={handleChange(tense, "main")}
-                    highlight={settings.highlightEndings}
+                    highlightRanges={tenseData?.highlights?.main}
+                    onHighlightsChange={handleHlChange(tense, "main")}
+                    showHighlights={showIrregularHighlights}
                   />
                 </td>
               );
@@ -906,9 +1295,9 @@ function SingleConjugationTable({ tableData, tableIndex, settings, onCellChange,
     <div className="space-y-4">
       <div className="mb-2">
         <h2 className="text-base font-bold">
-          <EditableCell 
+          <HighlightableCell 
             value={tableData.input.verb} 
-            onChange={(v) => onInfinitiveChange(tableIndex, v)}
+            onChange={(v: string) => onInfinitiveChange(tableIndex, v)}
           />
         </h2>
       </div>
@@ -976,10 +1365,45 @@ function ConjugationTableView() {
     field: "main" | "prefix" | "reflexive" | "auxiliary" | "partizip",
     value: string
   ) => {
-    dispatch({
-      type: "UPDATE_CONJUGATION_CELL",
-      payload: { tableIndex, personKey, tense, field, value },
-    });
+    // Partizip II is the same for all persons in Perfekt — sync text across all
+    if (tense === "perfekt" && field === "partizip") {
+      const allPersonKeys: PersonKey[] = ["ich", "du", "Sie_sg", "er_sie_es", "wir", "ihr", "Sie_pl", "sie_pl"];
+      for (const pk of allPersonKeys) {
+        dispatch({
+          type: "UPDATE_CONJUGATION_CELL",
+          payload: { tableIndex, personKey: pk, tense, field, value },
+        });
+      }
+    } else {
+      dispatch({
+        type: "UPDATE_CONJUGATION_CELL",
+        payload: { tableIndex, personKey, tense, field, value },
+      });
+    }
+  }, [dispatch]);
+
+  const handleHighlightsChange = useCallback((
+    tableIndex: number,
+    personKey: PersonKey,
+    tense: VerbTense,
+    field: keyof TenseHighlights,
+    ranges: [number, number][] | undefined
+  ) => {
+    // Partizip II is the same for all persons in Perfekt — sync highlights across all
+    if (tense === "perfekt" && field === "partizip") {
+      const allPersonKeys: PersonKey[] = ["ich", "du", "Sie_sg", "er_sie_es", "wir", "ihr", "Sie_pl", "sie_pl"];
+      for (const pk of allPersonKeys) {
+        dispatch({
+          type: "UPDATE_CONJUGATION_HIGHLIGHTS",
+          payload: { tableIndex, personKey: pk, tense, field, ranges },
+        });
+      }
+    } else {
+      dispatch({
+        type: "UPDATE_CONJUGATION_HIGHLIGHTS",
+        payload: { tableIndex, personKey, tense, field, ranges },
+      });
+    }
   }, [dispatch]);
 
   const handleInfinitiveChange = useCallback((
@@ -1005,9 +1429,9 @@ function ConjugationTableView() {
   }
 
   // Cast to VerbConjugationTable[] (array of tables for multiple verbs)
-  const tables = state.tableData as VerbConjugationTable[];
+  const tablesUnsorted = state.tableData as VerbConjugationTable[];
   
-  if (!Array.isArray(tables) || tables.length === 0) {
+  if (!Array.isArray(tablesUnsorted) || tablesUnsorted.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
         <p className="text-center">{t("noTableYet")}</p>
@@ -1015,15 +1439,21 @@ function ConjugationTableView() {
     );
   }
 
+  // Sort verbs alphabetically by infinitive, keeping track of original indices
+  const tables = tablesUnsorted
+    .map((table, originalIdx) => ({ table, originalIdx }))
+    .sort((a, b) => a.table.input.verb.localeCompare(b.table.input.verb, "de"));
+
   return (
     <div className="space-y-4">
-      {tables.map((table, idx) => (
+      {tables.map(({ table, originalIdx }) => (
         <SingleConjugationTable 
-          key={idx} 
+          key={originalIdx} 
           tableData={table}
-          tableIndex={idx}
-          settings={{ highlightEndings: state.settings.highlightEndings }}
+          tableIndex={originalIdx}
+          showIrregularHighlights={state.settings.showIrregularHighlights ?? false}
           onCellChange={handleCellChange}
+          onHighlightsChange={handleHighlightsChange}
           onInfinitiveChange={handleInfinitiveChange}
         />
       ))}
@@ -1321,18 +1751,22 @@ export function GrammarTableEditor({ documentId }: { documentId?: string }) {
         if (res.ok) {
           const data = await res.json();
           // Transform the API response to our document format
+          const tableType = data.blocks?.tableType || "adjective-declination";
+          const isConj = tableType === "verb-conjugation";
           setDocument({
             id: data.id,
             title: data.title,
             description: data.description,
             slug: data.slug,
-            tableType: data.blocks?.tableType || "adjective-declination",
-            input: data.blocks?.input || {
-              maskulin: { adjective: "", noun: "" },
-              neutrum: { adjective: "", noun: "" },
-              feminin: { adjective: "", noun: "" },
-              plural: { adjective: "", noun: "" },
-            },
+            tableType,
+            input: isConj
+              ? (data.blocks?.conjugationInput || data.blocks?.input || { verbs: [""] })
+              : (data.blocks?.declinationInput || data.blocks?.input || {
+                  maskulin: { adjective: "", noun: "" },
+                  neutrum: { adjective: "", noun: "" },
+                  feminin: { adjective: "", noun: "" },
+                  plural: { adjective: "", noun: "" },
+                }),
             tableData: data.blocks?.tableData || null,
             settings: data.settings || {},
             published: data.published,
