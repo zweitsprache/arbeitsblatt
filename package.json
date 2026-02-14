@@ -23,7 +23,6 @@
     "@prisma/client": "^7.3.0",
     "@react-pdf/renderer": "^4.3.2",
     "@resvg/resvg-js": "^2.6.2",
-    "@resvg/resvg-js-darwin-arm64": "^2.6.2",
     "@tiptap/extension-color": "^3.19.0",
     "@tiptap/extension-highlight": "^3.19.0",
     "@tiptap/extension-link": "^3.19.0",
