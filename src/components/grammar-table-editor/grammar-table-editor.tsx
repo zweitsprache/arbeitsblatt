@@ -68,6 +68,7 @@ import {
   ChevronDown,
   Plus,
   Trash2,
+  Upload,
 } from "lucide-react";
 import {
   Dialog,
@@ -382,6 +383,48 @@ function VerbPrepositionInputPanel() {
   const articleTypes: VerbPrepArticleType[] = ["bestimmt", "unbestimmt", "nullartikel", "possessiv", "demonstrativ"];
   const genders: Genus[] = ["maskulin", "neutrum", "feminin", "plural"];
 
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [csvError, setCsvError] = useState<string | null>(null);
+
+  const importCsv = () => {
+    setCsvError(null);
+    const lines = csvText.trim().split("\n").filter(Boolean);
+    if (lines.length === 0) { setCsvError("Keine Daten gefunden."); return; }
+
+    // detect if first line is header
+    const firstLine = lines[0].toLowerCase();
+    const startIdx = firstLine.includes("verb") && firstLine.includes("präposition") ? 1 : 0;
+
+    const parsed: VerbPrepositionItem[] = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const cols = lines[i].split(",").map(c => c.trim());
+      if (cols.length < 7) { setCsvError(`Zeile ${i + 1}: Mindestens 7 Spalten erwartet (${cols.length} gefunden).`); return; }
+      parsed.push({
+        verb: cols[0],
+        preposition: cols[1],
+        adjective: cols[2],
+        articleType: "bestimmt",
+        sentenceIntro: cols[7] || "",
+        nouns: {
+          maskulin: cols[3],
+          neutrum: cols[4],
+          feminin: cols[5],
+          plural: cols[6],
+        },
+      });
+    }
+
+    if (parsed.length === 0) { setCsvError("Keine gültigen Zeilen gefunden."); return; }
+
+    dispatch({
+      type: "UPDATE_VERB_PREPOSITION_INPUT",
+      payload: { items: [...items, ...parsed] },
+    });
+    setCsvOpen(false);
+    setCsvText("");
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -522,6 +565,38 @@ function VerbPrepositionInputPanel() {
         <Plus className="h-3.5 w-3.5" />
         Verb hinzufügen
       </Button>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => { setCsvOpen(true); setCsvText(""); setCsvError(null); }}
+        className="w-full gap-1"
+      >
+        <Upload className="h-3.5 w-3.5" />
+        CSV importieren
+      </Button>
+
+      <Dialog open={csvOpen} onOpenChange={setCsvOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>CSV importieren</DialogTitle>
+            <DialogDescription>
+              Format: Verb, Präposition, Adjektiv, Maskulin, Neutrum, Feminin, Plural, Intro
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            className="w-full h-48 text-xs font-mono p-2 border rounded resize-y bg-muted/30"
+            placeholder={"achten,auf,neu,Computer,Handy,Uhr,Ohrringe,Ich achte auf\nankommen,auf,richtig,Preis,Angebot,Summe,Details,Es kommt auf"}
+            value={csvText}
+            onChange={(e) => setCsvText(e.target.value)}
+          />
+          {csvError && <p className="text-xs text-destructive">{csvError}</p>}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCsvOpen(false)}>Abbrechen</Button>
+            <Button size="sm" onClick={importCsv}>Importieren</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
