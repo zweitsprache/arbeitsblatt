@@ -2153,7 +2153,7 @@ export async function POST(
       const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
       const filename = `${shortId}${exSuffix}_cover_${locale}.png`;
 
-      return new NextResponse(pngBuffer, {
+      return new NextResponse(new Uint8Array(pngBuffer), {
         headers: {
           "Content-Type": "image/png",
           "Content-Disposition": `attachment; filename="${filename}"`,
