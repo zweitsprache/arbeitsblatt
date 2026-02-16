@@ -2045,8 +2045,9 @@ export async function POST(
   const { userId } = result;
 
   const { id } = await params;
-  const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH";
+  const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH" | "NEUTRAL";
   const isSwiss = locale === "CH";
+  const isNeutral = locale === "NEUTRAL";
 
   const worksheet = await prisma.worksheet.findFirst({
     where: {
@@ -2081,10 +2082,12 @@ export async function POST(
 
   // Read logos (convert SVG → PNG for react-pdf compatibility)
   const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);
-  const flagDataUri = await readLogoAsPngDataUri(
-    isSwiss ? "key_visuals/flag_of_Switzerland.svg" : "key_visuals/flag_of_Germany.svg",
-    200,
-  );
+  const flagDataUri = isNeutral
+    ? ""
+    : await readLogoAsPngDataUri(
+        isSwiss ? "key_visuals/flag_of_Switzerland.svg" : "key_visuals/flag_of_Germany.svg",
+        200,
+      );
   const iconDataUri = brandSettings.logo
     ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
     : "";
@@ -2151,7 +2154,7 @@ export async function POST(
 
       const shortId = worksheet.id.slice(0, 8);
       const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
-      const filename = `${shortId}${exSuffix}_cover_${locale}.png`;
+      const filename = `${shortId}${exSuffix}_cover_${locale === "NEUTRAL" ? "DACH" : locale}.png`;
 
       return new NextResponse(new Uint8Array(pngBuffer), {
         headers: {
@@ -2287,7 +2290,7 @@ export async function POST(
 
     const shortId = worksheet.id.slice(0, 8);
     const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
-    const filename = `${shortId}${exSuffix}_${locale}.pdf`;
+    const filename = `${shortId}${exSuffix}_${locale === "NEUTRAL" ? "DACH" : locale}.pdf`;
 
     return new NextResponse(Buffer.from(buffer), {
       headers: {

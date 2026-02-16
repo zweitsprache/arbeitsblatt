@@ -2214,7 +2214,7 @@ function EditorToolbar() {
         state.declinationInput?.plural?.noun
       );
 
-  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" = "DE", titlePage = true) => {
+  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" | "NEUTRAL" = "DE", titlePage = true) => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
@@ -2242,7 +2242,8 @@ function EditorToolbar() {
       // Use short document ID + locale suffix
       const shortId = state.documentId.slice(0, 16);
       const exSuffix = state.tableType === "verb-conjugation" && !(state.settings.simplified ?? false) ? "_EX" : "";
-      a.download = `${shortId}${exSuffix}_${locale}.pdf`;
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = `${shortId}${exSuffix}_${fileSuffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -2286,7 +2287,7 @@ function EditorToolbar() {
     }
   }, [state.documentId, state.title, t]);
 
-  const handleDownloadCover = useCallback(async (locale: "DE" | "CH" = "DE") => {
+  const handleDownloadCover = useCallback(async (locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
@@ -2312,7 +2313,8 @@ function EditorToolbar() {
       a.href = url;
       const shortId = state.documentId.slice(0, 16);
       const exSuffix = state.tableType === "verb-conjugation" && !(state.settings.simplified ?? false) ? "_EX" : "";
-      a.download = `${shortId}${exSuffix}_cover_${locale}.png`;
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = `${shortId}${exSuffix}_cover_${fileSuffix}.png`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -2557,6 +2559,22 @@ function EditorToolbar() {
               }}
             >
               🇨🇭 Schweiz (ss)
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              variant="outline"
+              onClick={() => {
+                const mode = pdfLocaleDialog.mode;
+                const titlePage = pdfIncludeTitlePage;
+                setPdfLocaleDialog({ open: false });
+                if (mode === "cover") {
+                  handleDownloadCover("NEUTRAL");
+                } else {
+                  handleDownloadPdf(pdfLocaleDialog.engine, "NEUTRAL", titlePage);
+                }
+              }}
+            >
+              🌐 Neutral
             </Button>
           </div>
         </DialogContent>
