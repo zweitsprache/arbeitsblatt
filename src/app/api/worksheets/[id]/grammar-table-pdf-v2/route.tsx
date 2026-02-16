@@ -15,6 +15,7 @@ import {
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import satori from "satori";
 import {
   AdjectiveDeclinationTable,
   VerbConjugationTable,
@@ -32,6 +33,7 @@ import {
   GENUS_LABELS,
   VerbPrepositionTableEntry,
   VERB_PREP_ARTICLE_LABELS,
+  THIRD_PERSON_KEYS,
 } from "@/types/grammar-table";
 import {
   DEFAULT_BRAND_SETTINGS,
@@ -56,6 +58,7 @@ Font.register({
   family: "Encode Sans",
   fonts: [
     { src: fontDataUri("EncodeSans-Regular.ttf"), fontWeight: 400 },
+    { src: fontDataUri("EncodeSans-Medium.ttf"), fontWeight: 500 },
     { src: fontDataUri("EncodeSans-Bold.ttf"), fontWeight: 700 },
   ],
 });
@@ -133,6 +136,11 @@ const TENSE_COLORS: Record<VerbTense, string> = {
 const CELL_GAP = 1.5;       // white gap between cells (pt)
 const TENSE_GAP = CELL_GAP * 3; // wider gap between tense column groups
 const CELL_BG = "#E4E4EC"; // Cloud – for non-tense cells
+const ROW_H = 14;           // uniform row height for all table rows (pt)
+
+// Alternating verb column colours for simplified layout
+const SIMPLIFIED_VERB_COLORS = ["#F2EDDA", "#F2E2D4", "#F2EDDA"]; // Buttercup, Peach, Buttercup
+const SIMPLIFIED_VERB_COLORS_LIGHT = ["#F7F4EC", "#F8F0E8", "#F7F4EC"]; // lighter variants for subtitle row
 
 // Adjective-declination gender colours (pastel palette)
 const GENDER_COLORS: Record<Genus, string> = {
@@ -290,8 +298,9 @@ const s = StyleSheet.create({
   },
   sectionHeaderCol: {
     backgroundColor: CELL_BG,
-    padding: "2 6",
+    paddingHorizontal: 6,
     justifyContent: "center",
+    height: ROW_H,
   },
   sectionHeaderText: {
     fontSize: 7,
@@ -300,10 +309,11 @@ const s = StyleSheet.create({
   },
   // Generic cell
   cell: {
-    padding: "2 6",
+    paddingHorizontal: 6,
     justifyContent: "center",
     backgroundColor: CELL_BG,
     marginLeft: CELL_GAP,
+    height: ROW_H,
   },
   cellFirst: {
     marginLeft: 0,
@@ -320,7 +330,7 @@ const s = StyleSheet.create({
   },
   cellTextBold: {
     fontSize: 9,
-    fontWeight: 600,
+    fontWeight: 500,
   },
 });
 
@@ -455,6 +465,7 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
   const hasSep =
     tableData.isSeparable && !!tableData.separablePrefix;
   const isRefl = tableData.isReflexive || false;
+  const isThirdOnly = tableData.thirdPersonOnly ?? false;
 
   const singularRows = CONJUGATION_ROWS.filter(
     (r) => r.section === "singular"
@@ -484,7 +495,11 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
           <DataRow
             key={rd.personKey}
             rowDef={rd}
-            conjugations={tableData.conjugations?.[rd.personKey]}
+            conjugations={
+              isThirdOnly && !THIRD_PERSON_KEYS.includes(rd.personKey)
+                ? undefined
+                : tableData.conjugations?.[rd.personKey]
+            }
             hasSep={hasSep}
             isRefl={isRefl}
             showHighlights={showHighlights}
@@ -505,7 +520,11 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
           <DataRow
             key={rd.personKey}
             rowDef={rd}
-            conjugations={tableData.conjugations?.[rd.personKey]}
+            conjugations={
+              isThirdOnly && !THIRD_PERSON_KEYS.includes(rd.personKey)
+                ? undefined
+                : tableData.conjugations?.[rd.personKey]
+            }
             hasSep={hasSep}
             isRefl={isRefl}
             showHighlights={showHighlights}
@@ -587,7 +606,7 @@ function DataRow({
       </View>
       {/* Pronoun */}
       <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
-        <Text style={[s.cellText, { fontWeight: 600 }]}>
+        <Text style={[s.cellText, { fontWeight: 500 }]}>
           {rowDef.pronoun}
         </Text>
       </View>
@@ -662,7 +681,7 @@ function TenseCells({
             value={values[i] ?? ""}
             ranges={hlRanges[i]}
             show={showHighlights}
-            style={[s.cellText, bold[i] ? { fontWeight: 600 } : {}]}
+            style={[s.cellText, bold[i] ? { fontWeight: 500 } : {}]}
           />
         </View>
       ))}
@@ -701,7 +720,6 @@ interface SimplifiedVerbTableProps {
 function SimplifiedVerbTable({ tables, tense, showHighlights }: SimplifiedVerbTableProps) {
   const singularRows = CONJUGATION_ROWS.filter((r) => r.section === "singular");
   const pluralRows = CONJUGATION_ROWS.filter((r) => r.section === "plural");
-  const bg = TENSE_COLORS[tense];
   const verbCount = tables.length;
   // Always use 3-verb width so partial chunks don't stretch
   const verbW = simpVerbW(3);
@@ -727,14 +745,52 @@ function SimplifiedVerbTable({ tables, tense, showHighlights }: SimplifiedVerbTa
                 s.cell,
                 {
                   width: `${verbW}%`,
-                  backgroundColor: bg,
-                  marginLeft: i === 0 ? TENSE_GAP : TENSE_GAP,
+                  backgroundColor: SIMPLIFIED_VERB_COLORS[i] || SIMPLIFIED_VERB_COLORS[0],
+                  marginLeft: TENSE_GAP,
                 },
               ]}
             >
               <Text style={[s.cellText, { fontWeight: 700 }]}>{tbl.input.verb}</Text>
             </View>
           ))}
+        </View>
+
+        {/* Second row: Perfekt (Hilfsverb + Partizip II) | Präteritum 3.P.Sg */}
+        <View style={s.row}>
+          <View style={[s.cell, s.cellFirst, { width: `${BASE_PERSON_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          <View style={[s.cell, { width: `${BASE_FORMAL_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
+            <Text style={s.cellText}></Text>
+          </View>
+          {tables.map((tbl, i) => {
+            const isRefl = tbl.isReflexive || false;
+            const perfekt3 = tbl.conjugations?.er_sie_es?.perfekt;
+            const praet3 = tbl.conjugations?.er_sie_es?.praeteritum;
+            const perfektParts = [perfekt3?.auxiliary, isRefl ? "sich" : undefined, perfekt3?.partizip].filter(Boolean);
+            const perfektStr = perfektParts.join(" ");
+            const praetParts = [praet3?.main, isRefl ? "sich" : undefined].filter(Boolean);
+            const praetStr = praetParts.join(" ");
+            const subtitle = [perfektStr, praetStr].filter(Boolean).join(" | ");
+            return (
+              <View
+                key={i}
+                style={[
+                  s.cell,
+                  {
+                    width: `${verbW}%`,
+                    backgroundColor: SIMPLIFIED_VERB_COLORS_LIGHT[i] || SIMPLIFIED_VERB_COLORS_LIGHT[0],
+                    marginLeft: TENSE_GAP,
+                  },
+                ]}
+              >
+                <Text style={{ fontSize: 9, fontWeight: 400, color: "#444444" }}>{subtitle}</Text>
+              </View>
+            );
+          })}
         </View>
 
         {/* SINGULAR header */}
@@ -812,21 +868,24 @@ function SimplifiedDataRow({
       </View>
       {/* Pronoun */}
       <View style={[s.cell, { width: `${BASE_PRONOUN_W}%` }]}>
-        <Text style={[s.cellText, { fontWeight: 600 }]}>{rowDef.pronoun}</Text>
+        <Text style={[s.cellText, { fontWeight: 500 }]}>{rowDef.pronoun}</Text>
       </View>
       {/* One tense cell group per verb — reuses TenseCells with verbW */}
       {tables.map((tbl, i) => {
         const hasSep = tbl.isSeparable && !!tbl.separablePrefix;
         const isRefl = tbl.isReflexive || false;
+        const isThirdOnly = tbl.thirdPersonOnly ?? false;
         const conj = tbl.conjugations?.[rowDef.personKey]?.[tense];
+        const blankRow = isThirdOnly && !THIRD_PERSON_KEYS.includes(rowDef.personKey);
         return (
           <SimplifiedTenseCells
             key={i}
             tense={tense}
-            data={conj}
+            data={blankRow ? undefined : conj}
             hasSep={hasSep}
             isRefl={isRefl}
             verbW={verbW}
+            verbIndex={i}
             showHighlights={showHighlights}
           />
         );
@@ -841,6 +900,7 @@ function SimplifiedTenseCells({
   hasSep,
   isRefl,
   verbW,
+  verbIndex,
   showHighlights,
 }: {
   tense: VerbTense;
@@ -848,9 +908,10 @@ function SimplifiedTenseCells({
   hasSep: boolean;
   isRefl: boolean;
   verbW: number;
+  verbIndex: number;
   showHighlights: boolean;
 }) {
-  const bg = TENSE_COLORS[tense];
+  const bg = SIMPLIFIED_VERB_COLORS[verbIndex] || SIMPLIFIED_VERB_COLORS[0];
   const cols = getColsForTense(tense, hasSep, isRefl);
   const fractions = subColFractions(tense, cols);
   const hl = data?.highlights;
@@ -893,7 +954,7 @@ function SimplifiedTenseCells({
             value={values[j] ?? ""}
             ranges={hlRanges[j]}
             show={showHighlights}
-            style={[s.cellText, bold[j] ? { fontWeight: 600 } : {}]}
+            style={[s.cellText, bold[j] ? { fontWeight: 500 } : {}]}
           />
         </View>
       ))}
@@ -1148,6 +1209,7 @@ interface DeclinationTablePDFProps {
   worksheetId: string;
   bigLogoDataUri: string;
   iconDataUri: string;
+  includeTitlePage?: boolean;
 }
 
 function DeclinationTablePDF({
@@ -1158,6 +1220,7 @@ function DeclinationTablePDF({
   worksheetId,
   bigLogoDataUri,
   iconDataUri,
+  includeTitlePage = true,
 }: DeclinationTablePDFProps) {
   const now = new Date();
   const year = now.getFullYear();
@@ -1172,6 +1235,7 @@ function DeclinationTablePDF({
   return (
     <Document title={title} author="lingostar">
       {/* ── Title page ── */}
+      {includeTitlePage ? (
       <Page size="A4" orientation="landscape" style={s.titlePage}>
         {bigLogoDataUri ? (
           <View style={s.bigLogoWrap}>
@@ -1241,6 +1305,7 @@ function DeclinationTablePDF({
           </Text>
         </View>
       </Page>
+      ) : null}
 
       {/* ── Content pages ── */}
       <Page
@@ -1262,7 +1327,7 @@ function DeclinationTablePDF({
 
         {/* Document title – visible on first content page, invisible spacer on subsequent pages */}
         <Text style={s.contentTitle} fixed
-          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+          render={({ pageNumber }) => pageNumber === (includeTitlePage ? 2 : 1) ? (settings.contentTitle || title) : "\u00A0"}
         />
 
         {(tableData.cases ?? []).map((cs) => (
@@ -1275,9 +1340,10 @@ function DeclinationTablePDF({
           </Text>
           <Text
             style={s.footerCenter}
-            render={({ pageNumber, totalPages }) =>
-              `${pageNumber - 1} / ${totalPages - 1}`
-            }
+            render={({ pageNumber, totalPages }) => {
+              const off = includeTitlePage ? 1 : 0;
+              return `${pageNumber - off} / ${totalPages - off}`;
+            }}
           />
           <Text style={s.footerRight}>
             {`${worksheetId}\n${dateStr}`}
@@ -1467,6 +1533,7 @@ interface VerbPrepositionPDFProps {
   worksheetId: string;
   bigLogoDataUri: string;
   iconDataUri: string;
+  includeTitlePage?: boolean;
 }
 
 function VerbPrepositionPDF({
@@ -1477,6 +1544,7 @@ function VerbPrepositionPDF({
   worksheetId,
   bigLogoDataUri,
   iconDataUri,
+  includeTitlePage = true,
 }: VerbPrepositionPDFProps) {
   const now = new Date();
   const year = now.getFullYear();
@@ -1490,6 +1558,7 @@ function VerbPrepositionPDF({
   return (
     <Document title={title} author="lingostar">
       {/* ── Title page ── */}
+      {includeTitlePage ? (
       <Page size="A4" orientation="landscape" style={s.titlePage}>
         {bigLogoDataUri ? (
           <View style={s.bigLogoWrap}>
@@ -1557,6 +1626,7 @@ function VerbPrepositionPDF({
           </Text>
         </View>
       </Page>
+      ) : null}
 
       {/* ── Content pages ── */}
       <Page
@@ -1577,7 +1647,7 @@ function VerbPrepositionPDF({
         ) : null}
 
         <Text style={s.contentTitle} fixed
-          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+          render={({ pageNumber }) => pageNumber === (includeTitlePage ? 2 : 1) ? (settings.contentTitle || title) : "\u00A0"}
         />
 
         {entries.map((entry, i) => (
@@ -1590,9 +1660,10 @@ function VerbPrepositionPDF({
           </Text>
           <Text
             style={s.footerCenter}
-            render={({ pageNumber, totalPages }) =>
-              `${pageNumber - 1} / ${totalPages - 1}`
-            }
+            render={({ pageNumber, totalPages }) => {
+              const off = includeTitlePage ? 1 : 0;
+              return `${pageNumber - off} / ${totalPages - off}`;
+            }}
           />
           <Text style={s.footerRight}>
             {`${worksheetId}\n${dateStr}`}
@@ -1616,6 +1687,7 @@ interface GrammarTablePDFProps {
   simplified: boolean;
   simplifiedTenses: Record<VerbTense, boolean>;
   showIrregularHighlights: boolean;
+  includeTitlePage?: boolean;
 }
 
 function GrammarTablePDF({
@@ -1629,6 +1701,7 @@ function GrammarTablePDF({
   simplified,
   simplifiedTenses,
   showIrregularHighlights,
+  includeTitlePage = true,
 }: GrammarTablePDFProps) {
   const now = new Date();
   const year = now.getFullYear();
@@ -1648,12 +1721,13 @@ function GrammarTablePDF({
   const verbChunks = simplified ? chunkArray(tables, 3) : [];
   // Build tense label for header
   const tenseLabel = simplified
-    ? activeTenses.map((t) => TENSE_LABELS[t].de).join(" · ")
+    ? activeTenses.map((t) => TENSE_LABELS[t].de).join(" · ") + " – 3. Person Singular Perfekt und Präteritum"
     : "Präsens · Perfekt · Präteritum";
 
   return (
     <Document title={title} author="lingostar">
       {/* ── Title page ── */}
+      {includeTitlePage ? (
       <Page size="A4" orientation="landscape" style={s.titlePage}>
         {bigLogoDataUri ? (
           <View style={s.bigLogoWrap}>
@@ -1721,6 +1795,7 @@ function GrammarTablePDF({
           </Text>
         </View>
       </Page>
+      ) : null}
 
       {/* ── Content pages ── */}
       <Page
@@ -1746,7 +1821,7 @@ function GrammarTablePDF({
 
         {/* Document title – visible on first content page, invisible spacer on subsequent pages */}
         <Text style={s.contentTitle} fixed
-          render={({ pageNumber }) => pageNumber === 2 ? (settings.contentTitle || title) : "\u00A0"}
+          render={({ pageNumber }) => pageNumber === (includeTitlePage ? 2 : 1) ? (settings.contentTitle || title) : "\u00A0"}
         />
 
         {/* Verb tables */}
@@ -1767,9 +1842,10 @@ function GrammarTablePDF({
           </Text>
           <Text
             style={s.footerCenter}
-            render={({ pageNumber, totalPages }) =>
-              `${pageNumber - 1} / ${totalPages - 1}`
-            }
+            render={({ pageNumber, totalPages }) => {
+              const off = includeTitlePage ? 1 : 0;
+              return `${pageNumber - off} / ${totalPages - off}`;
+            }}
           />
           <Text style={s.footerRight}>
             {`${worksheetId}\n${dateStr}`}
@@ -1797,6 +1873,167 @@ function replaceEszett<T>(data: T): T {
     return result as T;
   }
   return data;
+}
+
+// ─── Cover page via satori (JSX → SVG → PNG) ───────────────
+
+interface CoverSvgProps {
+  subtitle: string;
+  title: string;
+  tenseInfo: string;
+  settings: GrammarTableSettings;
+  worksheetId: string;
+  bigLogoDataUri: string;
+  flagDataUri?: string;
+  ribbonLabel?: string;
+  ribbonColor?: string;
+}
+
+/** Render cover page to SVG string using satori, then convert to PNG buffer via sharp. */
+async function renderCoverPng(props: CoverSvgProps): Promise<Buffer> {
+  const { subtitle, title, tenseInfo, settings, worksheetId, bigLogoDataUri, flagDataUri, ribbonLabel, ribbonColor } = props;
+  const now = new Date();
+  const year = now.getFullYear();
+  const dateStr = now.toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  // Load font files for satori
+  const encodeSansRegular = fs.readFileSync(path.join(fontDir, "EncodeSans-Regular.ttf"));
+  const encodeSansMedium = fs.readFileSync(path.join(fontDir, "EncodeSans-Medium.ttf"));
+  const merriweatherRegular = fs.readFileSync(path.join(fontDir, "Merriweather-Regular.woff"));
+
+  // A4 at 2x density: 595 × 842 pt → 1190 × 1684 px
+  const W = 1190;
+  const H = 1684;
+  const PAD = 85; // ~15mm at 2x
+
+  const coverImages = settings.coverImages ?? [];
+  const hasBorder = settings.coverImageBorder ?? false;
+  const imgSize = 227; // ~40mm at 2x
+  const imgGap = 23;   // ~4mm at 2x
+
+  const jsx = (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: PAD, backgroundColor: "white", position: "relative", overflow: "hidden" }}>
+      {/* Ribbon — positioned so the rotated band spans from left edge to top edge */}
+      {ribbonLabel ? (
+        <div style={{
+          position: "absolute",
+          top: 130,
+          left: -110,
+          width: 560,
+          height: 60,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: ribbonColor || "#4A3D55",
+          transform: "rotate(-45deg)",
+          transformOrigin: "center center",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+        }}>
+          <span style={{ fontFamily: "Encode Sans", fontWeight: 500, fontSize: 26, color: "#FFFFFF", textTransform: "uppercase" as const, letterSpacing: 1, lineHeight: 1, textAlign: "center" as const }}>
+            {ribbonLabel}
+          </span>
+        </div>
+      ) : null}
+      {/* Flag — top-left corner */}
+      {flagDataUri ? (
+        <div style={{ position: "absolute", top: 45, left: 45, display: "flex" }}>
+          <img src={flagDataUri} width={72} height={48} />
+        </div>
+      ) : null}
+      {/* Logo */}
+      {bigLogoDataUri ? (
+        <div style={{ position: "absolute", top: PAD, right: PAD, display: "flex" }}>
+          <img src={bigLogoDataUri} width={227} height={53} />
+        </div>
+      ) : null}
+
+      {/* Centered content */}
+      <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontFamily: "Encode Sans", fontSize: 22, fontWeight: 400, textTransform: "uppercase" as const, color: "#000000", marginBottom: 23 }}>
+            {subtitle}
+          </span>
+          <span style={{ fontFamily: "Merriweather", fontSize: 56, fontWeight: 400, color: "#222222" }}>
+            {title}
+          </span>
+          <span style={{ fontFamily: "Encode Sans", fontSize: 22, fontWeight: 400, color: "#000000", marginTop: 17 }}>
+            {tenseInfo}
+          </span>
+
+          {/* Cover images */}
+          <div style={{ display: "flex", flexDirection: "row", gap: imgGap, marginTop: 68, flexWrap: "wrap" }}>
+            {[0, 1, 2, 3].map((i) => {
+              const src = coverImages[i];
+              return src && src !== "" ? (
+                <div
+                  key={i}
+                  style={{
+                    width: imgSize,
+                    height: imgSize,
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    display: "flex",
+                    ...(hasBorder
+                      ? { border: "2px solid #CCCCCC" }
+                      : {}),
+                  }}
+                >
+                  <img
+                    src={src}
+                    width={imgSize}
+                    height={imgSize}
+                    style={{ objectFit: "cover", borderRadius: 6 }}
+                  />
+                </div>
+              ) : (
+                <div
+                  key={i}
+                  style={{
+                    width: imgSize,
+                    height: imgSize,
+                    borderRadius: 6,
+                    backgroundColor: "#F0F0F0",
+                    border: "2px dashed #CCCCCC",
+                    display: "flex",
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 11 }}>
+        <span style={{ fontFamily: "Encode Sans", fontSize: 14, color: "#666666", lineHeight: 1.4 }}>
+          {`© ${year} lingostar | Marcel Allenspach`}
+        </span>
+        <span style={{ fontFamily: "Encode Sans", fontSize: 14, color: "#666666", textAlign: "right" as const, lineHeight: 1.4 }}>
+          {`${worksheetId}  ·  ${dateStr}`}
+        </span>
+      </div>
+    </div>
+  );
+
+  const svg = await satori(jsx as React.ReactNode, {
+    width: W,
+    height: H,
+    fonts: [
+      { name: "Encode Sans", data: encodeSansRegular, weight: 400, style: "normal" as const },
+      { name: "Encode Sans", data: encodeSansMedium, weight: 500, style: "normal" as const },
+      { name: "Merriweather", data: merriweatherRegular, weight: 400, style: "normal" as const },
+    ],
+  });
+
+  const pngBuffer = await sharp(Buffer.from(svg))
+    .png()
+    .toBuffer();
+
+  return pngBuffer;
 }
 
 export async function POST(
@@ -1844,6 +2081,10 @@ export async function POST(
 
   // Read logos (convert SVG → PNG for react-pdf compatibility)
   const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);
+  const flagDataUri = await readLogoAsPngDataUri(
+    isSwiss ? "key_visuals/flag_of_Switzerland.svg" : "key_visuals/flag_of_Germany.svg",
+    200,
+  );
   const iconDataUri = brandSettings.logo
     ? await readLogoAsPngDataUri(brandSettings.logo.replace(/^\//, ""), 200)
     : "";
@@ -1858,6 +2099,76 @@ export async function POST(
   // Override coverImages in settings with compressed versions
   const pdfSettings = { ...settings, coverImages: compressedCoverImages };
 
+  const format = _req.nextUrl.searchParams.get("format"); // "cover" for title page image
+  const includeTitlePage = _req.nextUrl.searchParams.get("titlePage") !== "false"; // default true
+
+  // ── Cover page image (portrait PNG) ──
+  if (format === "cover") {
+    try {
+      const pdfTitle = isSwiss ? replaceEszett(worksheet.title) : worksheet.title;
+
+      // Determine subtitle and tense info based on table type
+      let coverSubtitle = "Grammatik";
+      let coverTenseInfo = "";
+      let coverRibbonLabel = "";
+      let coverRibbonColor = "";
+      if (tableType === "verb-conjugation") {
+        const simplified = settings.simplified ?? false;
+        const activeTenses: VerbTense[] = simplified
+          ? TENSES.filter((t) => (settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false })[t])
+          : [];
+        const tenseLabel = simplified
+          ? activeTenses.map((t) => TENSE_LABELS[t].de).join(" · ") + " – 3. Person Singular Perfekt und Präteritum"
+          : "Präsens · Perfekt · Präteritum";
+        coverSubtitle = "Verbkonjugation";
+        coverTenseInfo = `Indikativ | ${tenseLabel}`;
+        coverRibbonLabel = simplified ? "Kompakte Version" : "Ausführliche Version";
+        coverRibbonColor = simplified ? "#4A3D55" : "#3A6570";
+      } else if (tableType === "adjective-declination") {
+        coverSubtitle = "Adjektivdeklination";
+        coverTenseInfo = "Nominativ · Akkusativ · Dativ · Genitiv";
+      } else if (tableType === "verb-preposition") {
+        coverSubtitle = "Verben mit Präpositionen";
+        coverTenseInfo = "Präsens · Adjektivdeklination";
+      }
+
+      if (isSwiss) {
+        coverSubtitle = replaceEszett(coverSubtitle);
+        coverTenseInfo = replaceEszett(coverTenseInfo);
+      }
+
+      const pngBuffer = await renderCoverPng({
+        subtitle: coverSubtitle,
+        title: pdfTitle,
+        tenseInfo: coverTenseInfo,
+        settings: isSwiss ? replaceEszett(pdfSettings) : pdfSettings,
+        worksheetId: worksheet.id,
+        bigLogoDataUri,
+        flagDataUri,
+        ribbonLabel: coverRibbonLabel || undefined,
+        ribbonColor: coverRibbonColor || undefined,
+      });
+
+      const shortId = worksheet.id.slice(0, 8);
+      const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
+      const filename = `${shortId}${exSuffix}_cover_${locale}.png`;
+
+      return new NextResponse(pngBuffer, {
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+        },
+      });
+    } catch (error) {
+      console.error("[Grammar Table PDF v2] Cover image error:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return NextResponse.json(
+        { error: `Cover image generation failed: ${message}` },
+        { status: 500 }
+      );
+    }
+  }
+
   try {
     let buffer: Buffer;
 
@@ -1871,8 +2182,10 @@ export async function POST(
       }
 
       // Sort verbs alphabetically by infinitive (unless disabled)
+      // Strip leading "sich " so reflexive verbs sort by infinitive
+      const sortKey = (verb: string) => verb.replace(/^sich\s+/i, "");
       const conjTablesSorted = (settings.alphabeticalOrder ?? true)
-        ? [...conjTablesUnsorted].sort((a, b) => a.input.verb.localeCompare(b.input.verb, "de"))
+        ? [...conjTablesUnsorted].sort((a, b) => sortKey(a.input.verb).localeCompare(sortKey(b.input.verb), "de"))
         : conjTablesUnsorted;
 
       // Apply ß → ss for Swiss variant
@@ -1896,6 +2209,7 @@ export async function POST(
             simplified={settings.simplified ?? false}
             simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
             showIrregularHighlights={settings.showIrregularHighlights ?? false}
+            includeTitlePage={includeTitlePage}
           />
         )
       );
@@ -1926,6 +2240,7 @@ export async function POST(
             worksheetId={worksheet.id}
             bigLogoDataUri={bigLogoDataUri}
             iconDataUri={iconDataUri}
+            includeTitlePage={includeTitlePage}
           />
         )
       );
@@ -1964,13 +2279,15 @@ export async function POST(
             worksheetId={worksheet.id}
             bigLogoDataUri={bigLogoDataUri}
             iconDataUri={iconDataUri}
+            includeTitlePage={includeTitlePage}
           />
         )
       );
     }
 
     const shortId = worksheet.id.slice(0, 8);
-    const filename = `${shortId}_${locale}.pdf`;
+    const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
+    const filename = `${shortId}${exSuffix}_${locale}.pdf`;
 
     return new NextResponse(Buffer.from(buffer), {
       headers: {

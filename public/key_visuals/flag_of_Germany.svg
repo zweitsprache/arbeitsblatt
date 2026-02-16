@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 900 600">
+  <!-- Generator: Adobe Illustrator 30.0.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 123)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #ffce00;
+      }
+
+      .st1 {
+        fill: #d00;
+      }
+    </style>
+  </defs>
+  <rect id="black_stripe" width="900" height="600"/>
+  <rect id="red_stripe" class="st1" y="200" width="900" height="400"/>
+  <rect id="gold_stripe" class="st0" y="400" width="900" height="200"/>
+</svg>

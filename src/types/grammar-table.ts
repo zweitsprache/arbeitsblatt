@@ -306,9 +306,14 @@ export interface VerbConjugationTable {
   separablePrefix?: string;
   /** Whether the verb is reflexive (reflexiv) */
   isReflexive: boolean;
+  /** Only show 3. Person Singular & 3. Person Plural (other rows stay empty) */
+  thirdPersonOnly?: boolean;
   /** Conjugations indexed by person key */
   conjugations: Record<PersonKey, PersonConjugations>;
 }
+
+/** Person keys that represent 3rd person */
+export const THIRD_PERSON_KEYS: PersonKey[] = ["er_sie_es", "sie_pl"];
 
 export const DEFAULT_CONJUGATION_INPUT: ConjugationInput = {
   verbs: ["machen"],

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 900 600">
+  <!-- Generator: Adobe Illustrator 30.0.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 123)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+      }
+
+      .st1 {
+        fill: red;
+      }
+    </style>
+  </defs>
+  <path class="st1" d="M0,0h900v600H0V0Z"/>
+  <path class="st0" d="M393.8,112.5h112.5v131.2h131.2v112.5h-131.2v131.2h-112.5v-131.2h-131.2v-112.5h131.2V112.5Z"/>
+</svg>

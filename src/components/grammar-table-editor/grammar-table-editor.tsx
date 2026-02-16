@@ -29,6 +29,7 @@ import {
   TenseHighlights,
   DEFAULT_VERB_PREPOSITION_INPUT,
   GrammarTableInput,
+  THIRD_PERSON_KEYS,
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -63,6 +64,7 @@ import {
   FileText,
   Highlighter,
   ImagePlus,
+  ImageDown,
   X,
   ChevronUp,
   ChevronDown,
@@ -1534,9 +1536,10 @@ interface SingleConjugationTableProps {
     ranges: [number, number][] | undefined
   ) => void;
   onInfinitiveChange: (tableIndex: number, verb: string) => void;
+  onToggleThirdPersonOnly: (tableIndex: number) => void;
 }
 
-function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, simplified, simplifiedTenses, onCellChange, onHighlightsChange, onInfinitiveChange }: SingleConjugationTableProps) {
+function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, simplified, simplifiedTenses, onCellChange, onHighlightsChange, onInfinitiveChange, onToggleThirdPersonOnly }: SingleConjugationTableProps) {
   const locale = "de";
   const allTenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
   const tenses = simplified ? allTenses.filter(t => simplifiedTenses[t]) : allTenses;
@@ -1567,10 +1570,13 @@ function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights
   const totalTenseCols = tenses.reduce((sum, t) => sum + getColsForTense(t), 0);
   const totalCols = 3 + totalTenseCols;
   
+  const isThirdPersonOnly = tableData.thirdPersonOnly ?? false;
+
   // Helper to render a data row using static definition and AI conjugations
   const renderDataRow = (rowDef: StaticRowDef, idx: number) => {
     const personDisplay = `${rowDef.person}. Person`;
-    const conjugations = tableData.conjugations?.[rowDef.personKey];
+    const isBlankRow = isThirdPersonOnly && !THIRD_PERSON_KEYS.includes(rowDef.personKey);
+    const conjugations = isBlankRow ? undefined : tableData.conjugations?.[rowDef.personKey];
     const personKey = rowDef.personKey;
     
     // Helper to create onChange handler
@@ -1813,22 +1819,29 @@ function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights
 
   return (
     <div className="space-y-4">
-      <div className="mb-2">
+      <div className="mb-2 flex items-center gap-3">
         <h2 className="text-base font-bold">
           <HighlightableCell 
             value={tableData.input.verb} 
             onChange={(v: string) => onInfinitiveChange(tableIndex, v)}
           />
         </h2>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+          <Switch
+            checked={isThirdPersonOnly}
+            onCheckedChange={() => onToggleThirdPersonOnly(tableIndex)}
+            className="scale-75"
+          />
+          nur 3. Person
+        </label>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <colgroup>
-            <col style={{ width: col1Width }} /> {/* Person */}
-            <col style={{ width: col2Width }} /> {/* Formalität */}
-            <col style={{ width: col3Width }} /> {/* Pronoun */}
-            {/* Dynamic columns per tense */}
+            <col style={{ width: col1Width }} />
+            <col style={{ width: col2Width }} />
+            <col style={{ width: col3Width }} />
             {tenses.map((tense) => {
               const widths = getColWidths(tense);
               return widths.map((width, i) => (
@@ -1936,6 +1949,15 @@ function ConjugationTableView() {
     });
   }, [dispatch]);
 
+  const handleToggleThirdPersonOnly = useCallback((
+    tableIndex: number
+  ) => {
+    dispatch({
+      type: "TOGGLE_THIRD_PERSON_ONLY",
+      payload: { tableIndex },
+    });
+  }, [dispatch]);
+
   if (!state.tableData) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -1960,9 +1982,11 @@ function ConjugationTableView() {
   }
 
   // Optionally sort verbs alphabetically by infinitive, keeping track of original indices
+  // Strip leading "sich " so reflexive verbs sort by infinitive
+  const sortKey = (verb: string) => verb.replace(/^sich\s+/i, "");
   const mapped = tablesUnsorted.map((table, originalIdx) => ({ table, originalIdx }));
   const tables = (state.settings.alphabeticalOrder ?? true)
-    ? mapped.sort((a, b) => a.table.input.verb.localeCompare(b.table.input.verb, "de"))
+    ? mapped.sort((a, b) => sortKey(a.table.input.verb).localeCompare(sortKey(b.table.input.verb), "de"))
     : mapped;
 
   return (
@@ -1978,6 +2002,7 @@ function ConjugationTableView() {
           onCellChange={handleCellChange}
           onHighlightsChange={handleHighlightsChange}
           onInfinitiveChange={handleInfinitiveChange}
+          onToggleThirdPersonOnly={handleToggleThirdPersonOnly}
         />
       ))}
     </div>
@@ -2159,10 +2184,13 @@ function EditorToolbar() {
   const tc = useTranslations("common");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPptx, setIsGeneratingPptx] = useState(false);
+  const [isGeneratingCover, setIsGeneratingCover] = useState(false);
   const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
     open: boolean;
     engine?: "puppeteer" | "react-pdf";
+    mode?: "pdf" | "cover";
   }>({ open: false });
+  const [pdfIncludeTitlePage, setPdfIncludeTitlePage] = useState(true);
 
   // Check if we can generate based on table type
   const canGenerate = state.tableType === "verb-conjugation"
@@ -2186,7 +2214,7 @@ function EditorToolbar() {
         state.declinationInput?.plural?.noun
       );
 
-  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" = "DE") => {
+  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" = "DE", titlePage = true) => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
@@ -2195,8 +2223,9 @@ function EditorToolbar() {
     try {
       // v2 (react-pdf) now supports both table types
       const useV2 = engine === "react-pdf";
+      const titlePageParam = titlePage ? "" : "&titlePage=false";
       const endpoint = useV2
-        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?locale=${locale}`
+        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?locale=${locale}${titlePageParam}`
         : `/api/worksheets/${state.documentId}/grammar-table-pdf?locale=${locale}`;
       const res = await authFetch(endpoint, {
         method: "POST",
@@ -2212,7 +2241,8 @@ function EditorToolbar() {
       a.href = url;
       // Use short document ID + locale suffix
       const shortId = state.documentId.slice(0, 16);
-      a.download = `${shortId}_${locale}.pdf`;
+      const exSuffix = state.tableType === "verb-conjugation" && !(state.settings.simplified ?? false) ? "_EX" : "";
+      a.download = `${shortId}${exSuffix}_${locale}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -2255,6 +2285,42 @@ function EditorToolbar() {
       setIsGeneratingPptx(false);
     }
   }, [state.documentId, state.title, t]);
+
+  const handleDownloadCover = useCallback(async (locale: "DE" | "CH" = "DE") => {
+    if (!state.documentId) {
+      alert(t("saveFirst"));
+      return;
+    }
+    setIsGeneratingCover(true);
+    try {
+      const res = await authFetch(
+        `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?format=cover&locale=${locale}`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(`Cover image generation failed: ${errorMsg}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const shortId = state.documentId.slice(0, 16);
+      const exSuffix = state.tableType === "verb-conjugation" && !(state.settings.simplified ?? false) ? "_EX" : "";
+      a.download = `${shortId}${exSuffix}_cover_${locale}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Cover image download failed:", err);
+    } finally {
+      setIsGeneratingCover(false);
+    }
+  }, [state.documentId, t]);
 
   return (
     <div className="flex items-center justify-between p-4 border-b bg-background">
@@ -2397,6 +2463,28 @@ function EditorToolbar() {
           </TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPdfLocaleDialog({ open: true, mode: "cover" })}
+              disabled={isGeneratingCover || !state.documentId || !state.tableData}
+              className="gap-2 border-dashed"
+            >
+              {isGeneratingCover ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageDown className="h-4 w-4" />
+              )}
+              Cover
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Title page as portrait PNG image
+          </TooltipContent>
+        </Tooltip>
+
         <Separator orientation="vertical" className="h-6" />
 
         <Button
@@ -2425,13 +2513,31 @@ function EditorToolbar() {
             <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
             <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
           </DialogHeader>
+          {pdfLocaleDialog.mode !== "cover" && (
+            <div className="flex items-center gap-2 pt-1">
+              <Switch
+                id="include-title-page"
+                checked={pdfIncludeTitlePage}
+                onCheckedChange={setPdfIncludeTitlePage}
+              />
+              <Label htmlFor="include-title-page" className="text-sm cursor-pointer">
+                Titelseite einschliessen
+              </Label>
+            </div>
+          )}
           <div className="flex gap-3 pt-2">
             <Button
               className="flex-1 gap-2"
               variant="outline"
               onClick={() => {
+                const mode = pdfLocaleDialog.mode;
+                const titlePage = pdfIncludeTitlePage;
                 setPdfLocaleDialog({ open: false });
-                handleDownloadPdf(pdfLocaleDialog.engine, "DE");
+                if (mode === "cover") {
+                  handleDownloadCover("DE");
+                } else {
+                  handleDownloadPdf(pdfLocaleDialog.engine, "DE", titlePage);
+                }
               }}
             >
               🇩🇪 Deutschland (ß)
@@ -2440,8 +2546,14 @@ function EditorToolbar() {
               className="flex-1 gap-2"
               variant="outline"
               onClick={() => {
+                const mode = pdfLocaleDialog.mode;
+                const titlePage = pdfIncludeTitlePage;
                 setPdfLocaleDialog({ open: false });
-                handleDownloadPdf(pdfLocaleDialog.engine, "CH");
+                if (mode === "cover") {
+                  handleDownloadCover("CH");
+                } else {
+                  handleDownloadPdf(pdfLocaleDialog.engine, "CH", titlePage);
+                }
               }}
             >
               🇨🇭 Schweiz (ss)

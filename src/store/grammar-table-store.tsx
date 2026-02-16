@@ -88,6 +88,7 @@ type GrammarTableAction =
       value: string;
     } }
   | { type: "UPDATE_INFINITIVE"; payload: { tableIndex: number; verb: string } }
+  | { type: "TOGGLE_THIRD_PERSON_ONLY"; payload: { tableIndex: number } }
   | { type: "UPDATE_CONJUGATION_HIGHLIGHTS"; payload: {
       tableIndex: number;
       personKey: PersonKey;
@@ -302,6 +303,18 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
         tableData: updatedTables,
         isDirty: true,
       };
+    }
+
+    case "TOGGLE_THIRD_PERSON_ONLY": {
+      const { tableIndex } = action.payload;
+      if (!state.tableData || !Array.isArray(state.tableData)) return state;
+      const tables = state.tableData as VerbConjugationTable[];
+      if (tableIndex < 0 || tableIndex >= tables.length) return state;
+      const updatedTables = tables.map((table, idx) => {
+        if (idx !== tableIndex) return table;
+        return { ...table, thirdPersonOnly: !table.thirdPersonOnly };
+      });
+      return { ...state, tableData: updatedTables, isDirty: true };
     }
 
     case "RESET":
