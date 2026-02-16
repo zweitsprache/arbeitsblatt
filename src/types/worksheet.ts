@@ -28,7 +28,8 @@ export type BlockType =
   | "fix-sentences"
   | "verb-table"
   | "text-cards"
-  | "glossary";
+  | "glossary"
+  | "article-training";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -202,6 +203,20 @@ export interface TrueFalseMatrixBlock extends BlockBase {
   }[];
 }
 
+// ─── Article Training block ──────────────────────────────────
+export type ArticleAnswer = "der" | "das" | "die";
+
+export interface ArticleTrainingBlock extends BlockBase {
+  type: "article-training";
+  instruction: string;
+  showWritingLine: boolean;
+  items: {
+    id: string;
+    text: string;
+    correctArticle: ArticleAnswer;
+  }[];
+}
+
 // ─── Order Items block ───────────────────────────────────────
 export interface OrderItemsBlock extends BlockBase {
   type: "order-items";
@@ -322,7 +337,8 @@ export type WorksheetBlock =
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | VerbTableBlock
-  | GlossaryBlock;
+  | GlossaryBlock
+  | ArticleTrainingBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -868,6 +884,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "g1", term: "Term 1", definition: "Definition 1" },
         { id: "g2", term: "Term 2", definition: "Definition 2" },
         { id: "g3", term: "Term 3", definition: "Definition 3" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "article-training",
+    label: "Article Training",
+    description: "Practice German articles (der/das/die)",
+    labelKey: "articleTraining",
+    descriptionKey: "articleTrainingDesc",
+    icon: "BookA",
+    category: "interactive",
+    translations: { de: { label: "Artikel-Training", description: "Deutsche Artikel (der/das/die) üben" } },
+    defaultData: {
+      type: "article-training",
+      instruction: "Kreuze den richtigen Artikel an.",
+      showWritingLine: true,
+      items: [
+        { id: "at1", text: "Hund", correctArticle: "der" },
+        { id: "at2", text: "Katze", correctArticle: "die" },
+        { id: "at3", text: "Haus", correctArticle: "das" },
       ],
       visibility: "both",
     },

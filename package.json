@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "concurrently --raw \"next dev\" \"i18nexus listen -p src/messages\"",
     "dev:next": "next dev",
-    "build": "prisma generate && ([ -n \"$I18NEXUS_API_KEY\" ] && i18nexus pull -p src/messages || true) && next build",
+    "build": "prisma generate && (i18nexus pull -p src/messages || true) && node scripts/validate-translations.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "i18n:pull": "i18nexus pull -p src/messages",
-    "i18n:import": "i18nexus import src/messages/de.json --overwrite -k $I18NEXUS_API_KEY -t $I18NEXUS_PERSONAL_ACCESS_TOKEN",
-    "i18n:sync": "npm run i18n:import && npm run i18n:pull"
+    "i18n:validate": "node scripts/validate-translations.mjs",
+    "i18n:import": "i18nexus import src/messages/de.json --overwrite",
+    "i18n:sync": "npm run i18n:import && sleep 3 && npm run i18n:pull && npm run i18n:validate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
@@ -50,6 +51,7 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-easy-crop": "^5.5.6",
     "satori": "^0.19.2",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.4.0",

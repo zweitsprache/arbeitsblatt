@@ -33,6 +33,8 @@ import {
   WordBankBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
+  ArticleTrainingBlock,
+  ArticleAnswer,
   OrderItemsBlock,
   InlineChoicesBlock,
   WordSearchBlock,
@@ -1692,6 +1694,148 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
   );
 }
 
+function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const parsed: { text: string; correctArticle: ArticleAnswer }[] = [];
+
+    for (const line of lines) {
+      const sep = line.includes("\t") ? "\t" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+
+      if (parts.length >= 2) {
+        const article = parts[0].toLowerCase();
+        const noun = parts.slice(1).join(sep === "\t" ? " " : ", ").trim();
+        if (["der", "das", "die"].includes(article)) {
+          parsed.push({
+            text: noun,
+            correctArticle: article as ArticleAnswer,
+          });
+        } else {
+          // Try the other way: noun, article
+          const articleEnd = parts[parts.length - 1].toLowerCase();
+          const nounStart = parts.slice(0, parts.length - 1).join(sep === "\t" ? " " : ", ").trim();
+          if (["der", "das", "die"].includes(articleEnd)) {
+            parsed.push({
+              text: nounStart,
+              correctArticle: articleEnd as ArticleAnswer,
+            });
+          } else {
+            parsed.push({ text: line.trim(), correctArticle: "der" });
+          }
+        }
+      } else {
+        parsed.push({ text: parts[0], correctArticle: "der" });
+      }
+    }
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newItems = parsed.map((p, i) => ({
+      id: `at${Date.now()}-${i}`,
+      text: p.text,
+      correctArticle: p.correctArticle,
+    }));
+
+    const items = csvMode === "append"
+      ? [...block.items, ...newItems]
+      : newItems;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items },
+      },
+    });
+    setCsvText("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("articleItems")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("articleItemCount", { count: block.items.length })}
+        </p>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("writingLine")}</Label>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={block.showWritingLine}
+            onCheckedChange={(checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWritingLine: checked } },
+              })
+            }
+          />
+          <span className="text-xs text-muted-foreground">{t("showWritingLine")}</span>
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("articleCsvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("articleCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -2462,6 +2606,8 @@ export function PropertiesPanel() {
         return <ColumnsProps block={selectedBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
+      case "article-training":
+        return <ArticleTrainingProps block={selectedBlock} />;
       case "order-items":
         return <OrderItemsProps block={selectedBlock} />;
       case "inline-choices":

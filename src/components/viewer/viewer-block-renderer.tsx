@@ -19,6 +19,8 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   TrueFalseMatrixBlock,
+  ArticleTrainingBlock,
+  ArticleAnswer,
   OrderItemsBlock,
   InlineChoicesBlock,
   WordSearchBlock,
@@ -864,6 +866,99 @@ function TrueFalseMatrixView({
       {showResults && (
         <p className="text-xs text-muted-foreground">
           {t("resultCount", { correct: block.statements.filter((s) => answers[s.id] === s.correctAnswer).length, total: block.statements.length })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ArticleTrainingView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: ArticleTrainingBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const t = useTranslations("viewer");
+  const answers = (answer as Record<string, ArticleAnswer | null> | undefined) || {};
+  const articles: ArticleAnswer[] = ["der", "das", "die"];
+
+  const handleSelect = (itemId: string, value: ArticleAnswer) => {
+    if (!interactive) return;
+    onAnswer({ ...answers, [itemId]: value });
+  };
+
+  return (
+    <div className="space-y-2">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="w-[28px] p-2 border-b"></th>
+            {articles.map((a) => (
+              <th key={a} className="w-14 p-2 border-b text-center font-medium text-muted-foreground">{a}</th>
+            ))}
+            <th className="text-left py-2 px-2 border-b font-bold text-foreground"></th>
+            {block.showWritingLine && (
+              <th className="text-left py-2 px-2 border-b font-bold text-muted-foreground"></th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {block.items.map((item, idx) => {
+            const selected = answers[item.id];
+            const isCorrect = selected === item.correctArticle;
+
+            return (
+              <tr key={item.id} className="border-b last:border-b-0">
+                <td className="p-2 text-center">
+                  <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                </td>
+                {articles.map((a) => (
+                  <td key={a} className="p-2 text-center">
+                    {interactive ? (
+                      <button
+                        className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors
+                          ${selected === a
+                            ? showResults
+                              ? item.correctArticle === a
+                                ? "bg-green-500 border-green-500 text-white"
+                                : "bg-red-500 border-red-500 text-white"
+                              : "bg-primary border-primary text-white"
+                            : "border-muted-foreground/30 hover:border-primary/50"
+                          }`}
+                        onClick={() => handleSelect(item.id, a)}
+                      >
+                        {selected === a && "✓"}
+                      </button>
+                    ) : (
+                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
+                    )}
+                  </td>
+                ))}
+                <td className="py-2 px-2">
+                  <span className="flex-1">{item.text}</span>
+                </td>
+                {block.showWritingLine && (
+                  <td className="py-2 px-2">
+                    <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {showResults && (
+        <p className="text-xs text-muted-foreground">
+          {t("resultCount", { correct: block.items.filter((item) => answers[item.id] === item.correctArticle).length, total: block.items.length })}
         </p>
       )}
     </div>
@@ -2036,6 +2131,16 @@ export function ViewerBlockRenderer({
     case "true-false-matrix":
       return (
         <TrueFalseMatrixView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
+    case "article-training":
+      return (
+        <ArticleTrainingView
           block={block}
           interactive={interactive}
           answer={answer}

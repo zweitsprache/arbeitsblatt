@@ -206,6 +206,7 @@ export function PrintPreview({
 .worksheet-block-matching,
 .worksheet-block-glossary,
 .worksheet-block-true-false-matrix,
+.worksheet-block-article-training,
 .worksheet-block-order-items,
 .worksheet-block-sorting-categories,
 .worksheet-block-word-search,

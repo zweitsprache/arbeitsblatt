@@ -27,6 +27,7 @@ import {
   WrapText,
   TableProperties,
   LayoutGrid,
+  BookA,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -50,6 +51,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   WrapText,
   TableProperties,
   LayoutGrid,
+  BookA,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

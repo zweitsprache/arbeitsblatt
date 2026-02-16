@@ -78,6 +78,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
+import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 
 // ─── Declination Input Panel ─────────────────────────────────
 
@@ -609,22 +611,56 @@ function CoverImagesPanel() {
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const images = state.settings.coverImages ?? [];
 
+  // Crop dialog state
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropSlot, setCropSlot] = useState<number>(0);
+  const [cropOpen, setCropOpen] = useState(false);
+
+  // Media browser state
+  const [browserOpen, setBrowserOpen] = useState(false);
+  const [browserSlot, setBrowserSlot] = useState<number>(0);
+
   // Ensure we always have a 4-element array
   const slots: (string | null)[] = [0, 1, 2, 3].map((i) => images[i] || null);
 
-  const handleUpload = useCallback(async (slot: number, file: File) => {
+  /** Open media browser for a slot */
+  const openBrowser = useCallback((slot: number) => {
+    setBrowserSlot(slot);
+    setBrowserOpen(true);
+  }, []);
+
+  /** Open crop dialog with a local object-URL of the selected file */
+  const handleFileSelected = useCallback((slot: number, file: File) => {
     if (!file.type.startsWith("image/")) return;
-    setUploadingSlot(slot);
+    const objectUrl = URL.createObjectURL(file);
+    setCropSlot(slot);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  }, []);
+
+  /** When user picks an existing image from the media browser */
+  const handleSelectExisting = useCallback((url: string) => {
+    const next = [...slots];
+    next[browserSlot] = url;
+    dispatch({
+      type: "UPDATE_SETTINGS",
+      payload: { coverImages: next.map((u) => u ?? "") },
+    });
+  }, [browserSlot, slots, dispatch]);
+
+  /** When user picks a new file from the media browser upload tab */
+  const handleBrowserFile = useCallback((file: File) => {
+    handleFileSelected(browserSlot, file);
+  }, [browserSlot, handleFileSelected]);
+
+  /** After cropping, upload the cropped blob */
+  const handleCropComplete = useCallback(async (result: CropResult) => {
+    setUploadingSlot(cropSlot);
     try {
-      const result = await upload(file);
+      const file = new File([result.blob], `cover-${cropSlot}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
       const next = [...slots];
-      next[slot] = result.url;
-      dispatch({
-        type: "UPDATE_SETTINGS",
-        payload: { coverImages: next.filter((u): u is string => u !== null) },
-      });
-      // Keep sparse array but store only non-null in order
-      // Actually store all 4 positions to preserve ordering
+      next[cropSlot] = uploadResult.url;
       dispatch({
         type: "UPDATE_SETTINGS",
         payload: { coverImages: next.map((u) => u ?? "") },
@@ -633,8 +669,12 @@ function CoverImagesPanel() {
       // skip failed
     } finally {
       setUploadingSlot(null);
+      // Revoke the object URL from the crop preview
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      // Revoke the result preview URL
+      URL.revokeObjectURL(result.url);
     }
-  }, [slots, upload, dispatch]);
+  }, [cropSlot, cropSrc, slots, upload, dispatch]);
 
   const handleRemove = useCallback((slot: number) => {
     const next = [...slots];
@@ -648,8 +688,8 @@ function CoverImagesPanel() {
   const handleDrop = useCallback((slot: number, e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) handleUpload(slot, file);
-  }, [handleUpload]);
+    if (file) handleFileSelected(slot, file);
+  }, [handleFileSelected]);
 
   return (
     <div className="space-y-3">
@@ -669,31 +709,46 @@ function CoverImagesPanel() {
                 </button>
               </div>
             ) : (
-              <label
+              <button
+                type="button"
+                onClick={() => openBrowser(i)}
                 onDrop={(e) => handleDrop(i, e)}
                 onDragOver={(e) => e.preventDefault()}
-                className="aspect-square rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                className="aspect-square rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors w-full"
               >
                 {uploadingSlot === i ? (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 ) : (
                   <ImagePlus className="h-4 w-4 text-muted-foreground" />
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUpload(i, f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              </button>
             )}
           </div>
         ))}
       </div>
+
+      {/* Media browser dialog */}
+      <MediaBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelectUrl={handleSelectExisting}
+        onSelectFile={handleBrowserFile}
+      />
+
+      {/* Crop dialog */}
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open && cropSrc) {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
+          }
+        }}
+        onCropComplete={handleCropComplete}
+        aspect={1}
+      />
       <div className="flex items-center justify-between">
         <Label className="text-sm">Bildrahmen</Label>
         <Switch

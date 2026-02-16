@@ -28,6 +28,8 @@ import {
   FixSentencesBlock,
   VerbTableBlock,
   VerbTableRow,
+  ArticleTrainingBlock,
+  ArticleAnswer,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -1037,6 +1039,149 @@ function TrueFalseMatrixRenderer({
         </button>
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+// ─── Article Training ───────────────────────────────────────
+function ArticleTrainingRenderer({
+  block,
+  interactive,
+}: {
+  block: ArticleTrainingBlock;
+  interactive: boolean;
+}) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const articles: ArticleAnswer[] = ["der", "das", "die"];
+
+  const updateItem = (id: string, updates: Partial<{ text: string; correctArticle: ArticleAnswer }>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
+          ),
+        },
+      },
+    });
+  };
+
+  const addItem = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...block.items,
+            { id: crypto.randomUUID(), text: t("newNoun"), correctArticle: "der" as ArticleAnswer },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeItem = (id: string) => {
+    if (block.items.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: block.items.filter((item) => item.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="w-8 p-2 border-b"></th>
+            {articles.map((a) => (
+              <th key={a} className="w-14 p-2 border-b text-center font-medium text-muted-foreground">{a}</th>
+            ))}
+            <th className="text-left py-2 px-2 border-b font-bold text-foreground">{t("articleNoun")}</th>
+            {block.showWritingLine && (
+              <th className="text-left py-2 px-2 border-b font-bold text-muted-foreground">{t("articleWritingLine")}</th>
+            )}
+            <th className="w-8 p-2 border-b"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {block.items.map((item, idx) => (
+            <tr key={item.id} className="group/row border-b last:border-b-0">
+              <td className="p-2 text-center">
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+              </td>
+              {articles.map((a) => (
+                <td key={a} className="p-2 text-center">
+                  <button
+                    className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
+                      ${item.correctArticle === a
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-muted-foreground/30 hover:border-green-400"
+                      }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateItem(item.id, { correctArticle: a });
+                    }}
+                  >
+                    {item.correctArticle === a && <Check className="h-3 w-3" />}
+                  </button>
+                </td>
+              ))}
+              <td className="py-2 px-2">
+                <span
+                  className="outline-none block flex-1"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    updateItem(item.id, { text: e.currentTarget.textContent || "" })
+                  }
+                >
+                  {item.text}
+                </span>
+              </td>
+              {block.showWritingLine && (
+                <td className="py-2 px-2">
+                  <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
+                </td>
+              )}
+              <td className="p-2 text-center">
+                <button
+                  className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeItem(item.id);
+                  }}
+                >
+                  <X className="h-3 w-3 text-destructive" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="flex items-center gap-3">
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            addItem();
+          }}
+        >
+          <Plus className="h-3 w-3" /> {t("addNoun")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -2297,6 +2442,8 @@ export function BlockRenderer({
       return <NumberLineRenderer block={block} />;
     case "true-false-matrix":
       return <TrueFalseMatrixRenderer block={block} interactive={interactive} />;
+    case "article-training":
+      return <ArticleTrainingRenderer block={block} interactive={interactive} />;
     case "order-items":
       return <OrderItemsRenderer block={block} interactive={interactive} />;
     case "inline-choices":

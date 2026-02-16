@@ -48,6 +48,7 @@ export function WorksheetViewer({
       b.type === "fill-in-blank" ||
       b.type === "open-response" ||
       b.type === "true-false-matrix" ||
+      b.type === "article-training" ||
       b.type === "matching"
   );
 
@@ -123,6 +124,7 @@ export function WorksheetViewer({
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-true-false-matrix { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-article-training { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-fix-sentences { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-verb-table { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-order-items { break-inside: auto; page-break-inside: auto; }
