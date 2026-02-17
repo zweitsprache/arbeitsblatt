@@ -821,7 +821,7 @@ function SimplifiedVerbTable({ tables, tense, showHighlights }: SimplifiedVerbTa
             const praet3 = tbl.conjugations?.er_sie_es?.praeteritum;
             const perfektParts = [perfekt3?.auxiliary, isRefl ? "sich" : undefined, perfekt3?.partizip].filter(Boolean);
             const perfektStr = perfektParts.join(" ");
-            const praetParts = [praet3?.main, isRefl ? "sich" : undefined].filter(Boolean);
+            const praetParts = [praet3?.main, isRefl ? "sich" : undefined, praet3?.prefix].filter(Boolean);
             const praetStr = praetParts.join(" ");
             const subtitle = [perfektStr, praetStr].filter(Boolean).join(" | ");
             return (
