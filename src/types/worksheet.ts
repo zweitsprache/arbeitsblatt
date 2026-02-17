@@ -229,11 +229,31 @@ export interface OrderItemsBlock extends BlockBase {
 }
 
 // ─── Inline Choices block ────────────────────────────────────
-// Text with inline choices marked as {{choice:option1|option2|*correctOption|option3}}
+// Each item is a sentence with inline choices marked as {{choice:option1|option2|*correctOption|option3}}
 // The correct option is prefixed with *
+export interface InlineChoiceItem {
+  id: string;
+  content: string; // e.g. "Er {{choice:*geht|gehe|gehst}} zur Schule."
+}
+
 export interface InlineChoicesBlock extends BlockBase {
   type: "inline-choices";
-  content: string;
+  items: InlineChoiceItem[];
+  /** @deprecated — kept for backward compatibility with old data. Use items instead. */
+  content?: string;
+}
+
+/**
+ * Migrate legacy InlineChoicesBlock that only has `content` (single string)
+ * into the new `items` array format. Each line becomes one item.
+ */
+export function migrateInlineChoicesBlock(block: InlineChoicesBlock): InlineChoiceItem[] {
+  if (block.items && block.items.length > 0) return block.items;
+  if (!block.content) return [];
+  return block.content.split("\n").filter((line) => line.trim().length > 0).map((line, i) => ({
+    id: `ic${Date.now()}-${i}`,
+    content: line,
+  }));
 }
 
 // ─── Word Search block ──────────────────────────────────────
@@ -752,7 +772,9 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Inline-Auswahl", description: "Auswahlmöglichkeiten im Text" } },
     defaultData: {
       type: "inline-choices",
-      content: "In {{choice:1889|*1988|1898}} he was born in London.",
+      items: [
+        { id: "ic-default-1", content: "In {{choice:1889|*1988|1898}} he was born in London." },
+      ],
       visibility: "both",
     },
   },

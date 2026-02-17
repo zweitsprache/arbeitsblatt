@@ -22,6 +22,7 @@ import {
   TrueFalseMatrixBlock,
   OrderItemsBlock,
   InlineChoicesBlock,
+  migrateInlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   UnscrambleWordsBlock,
@@ -1315,6 +1316,51 @@ function OrderItemsRenderer({
 }
 
 // ─── Inline Choices ─────────────────────────────────────────
+function renderInlineChoiceLine(content: string): React.ReactNode[] {
+  const parts = content.split(/(\{\{choice:[^}]+\}\})/g);
+  // Track whether any visible text appeared before the current part
+  let hasTextBefore = false;
+  return parts.map((part, i) => {
+    const match = part.match(/\{\{choice:(.+)\}\}/);
+    if (match) {
+      const options = match[1].split("|");
+      const atStart = !hasTextBefore;
+      return (
+        <span key={i} className="inline-flex items-center gap-1 mx-0.5">
+          {options.map((opt, oi) => {
+            const isCorrect = opt.startsWith("*");
+            const raw = isCorrect ? opt.slice(1) : opt;
+            const label = atStart ? raw.charAt(0).toUpperCase() + raw.slice(1) : raw;
+            return (
+              <span key={oi} className="inline-flex items-center">
+                {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
+                <span
+                  className={`inline-flex items-center gap-0.5 ${
+                    isCorrect
+                      ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
+                      : ""
+                  }`}
+                >
+                  <span
+                    className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                      isCorrect
+                        ? "border-green-500 bg-green-500"
+                        : "border-muted-foreground/40"
+                    }`}
+                  />
+                  <span>{label}</span>
+                </span>
+              </span>
+            );
+          })}
+        </span>
+      );
+    }
+    if (part.trim().length > 0) hasTextBefore = true;
+    return <span key={i}>{renderTextWithSup(part)}</span>;
+  });
+}
+
 function InlineChoicesRenderer({
   block,
   interactive,
@@ -1322,52 +1368,32 @@ function InlineChoicesRenderer({
   block: InlineChoicesBlock;
   interactive: boolean;
 }) {
-  const { dispatch } = useEditor();
-
-  // Parse {{choice:opt1|opt2|*correct|opt3}} patterns
-  const parts = block.content.split(/(\{\{choice:[^}]+\}\})/g);
+  const items = migrateInlineChoicesBlock(block);
 
   return (
-    <div className="leading-relaxed">
-      {parts.map((part, i) => {
-        const match = part.match(/\{\{choice:(.+)\}\}/);
-        if (match) {
-          const options = match[1].split("|");
-          const correctOption = options.find((o) => o.startsWith("*"));
-          return (
-            <span key={i} className="inline-flex items-center gap-1 mx-0.5">
-              {options.map((opt, oi) => {
-                const isCorrect = opt.startsWith("*");
-                const label = isCorrect ? opt.slice(1) : opt;
-                return (
-                  <span key={oi} className="inline-flex items-center">
-                    {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
-                    <span
-                      className={`inline-flex items-center gap-0.5 ${
-                        isCorrect
-                          ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
-                          : ""
-                      }`}
-                    >
-                      <span
-                        className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
-                          isCorrect
-                            ? "border-green-500 bg-green-500"
-                            : "border-muted-foreground/40"
-                        }`}
-                      />
-                      <span>{label}</span>
-                    </span>
-                  </span>
-                );
-              })}
-            </span>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
+    <div className="leading-relaxed space-y-1">
+      {items.map((item, idx) => (
+        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-1.5">
+          <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+            {String(idx + 1).padStart(2, "0")}
+          </span>
+          <span className="flex-1">{renderInlineChoiceLine(item.content)}</span>
+        </div>
+      ))}
     </div>
   );
+}
+
+/** Render text that may contain <sup>...</sup> tags as React elements. */
+function renderTextWithSup(text: string): React.ReactNode[] {
+  const parts = text.split(/(<sup>[^<]*<\/sup>)/g);
+  return parts.map((p, i) => {
+    const m = p.match(/^<sup>([^<]*)<\/sup>$/);
+    if (m) {
+      return <sup key={i} className="text-[0.6em] text-muted-foreground ml-0.5">{m[1]}</sup>;
+    }
+    return <React.Fragment key={i}>{p}</React.Fragment>;
+  });
 }
 
 // ─── Word Search ────────────────────────────────────────────

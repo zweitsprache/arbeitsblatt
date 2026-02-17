@@ -37,6 +37,8 @@ import {
   ArticleAnswer,
   OrderItemsBlock,
   InlineChoicesBlock,
+  InlineChoiceItem,
+  migrateInlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   SortingCategory,
@@ -52,6 +54,7 @@ import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
+import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
 
 // ─── Block-specific property editors ────────────────────────
 
@@ -1962,24 +1965,132 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [showAiModal, setShowAiModal] = React.useState(false);
+
+  // Migrate legacy content to items on first render
+  const items: InlineChoiceItem[] = React.useMemo(
+    () => migrateInlineChoicesBlock(block),
+    [block]
+  );
+
+  // Persist migrated items if block still has old format
+  React.useEffect(() => {
+    if ((!block.items || block.items.length === 0) && block.content && items.length > 0) {
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items, content: undefined } },
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateItem = (index: number, content: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], content };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItem: InlineChoiceItem = {
+      id: `ic${Date.now()}`,
+      content: "{{choice:*correct|wrong1|wrong2}}",
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: [...items, newItem] } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: items.filter((_, i) => i !== index) },
+      },
+    });
+  };
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= items.length) return;
+    const newItems = [...items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">
           {t("inlineChoicesHelp")}
         </p>
-        <textarea
-          value={block.content}
-          onChange={(e) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { content: e.target.value } },
-            })
-          }
-          className="w-full border rounded-md p-2 text-xs min-h-[120px] resize-y font-mono"
-        />
+        {items.map((item, i) => (
+          <div key={item.id} className="flex items-start gap-1">
+            <div className="flex flex-col gap-0.5 mt-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={() => moveItem(i, -1)}
+                disabled={i === 0}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={() => moveItem(i, 1)}
+                disabled={i === items.length - 1}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+            <textarea
+              value={item.content}
+              onChange={(e) => updateItem(i, e.target.value)}
+              className="flex-1 border rounded-md p-1.5 text-xs min-h-[40px] resize-y font-mono"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 mt-1"
+              onClick={() => removeItem(i)}
+              disabled={items.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
       </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t("aiVerbExerciseHint")}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
+          onClick={() => setShowAiModal(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          {t("aiGenerate")}
+        </Button>
+      </div>
+      <AiVerbExerciseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
   ArticleAnswer,
   OrderItemsBlock,
   InlineChoicesBlock,
+  migrateInlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   UnscrambleWordsBlock,
@@ -1135,6 +1136,108 @@ function OrderItemsView({
 }
 
 // ─── Inline Choices View ─────────────────────────────────────
+
+/** Render one inline-choices line with interactive/print mode support. */
+function renderInlineChoiceViewLine(
+  content: string,
+  lineKey: string,
+  interactive: boolean,
+  selections: Record<string, string>,
+  onAnswer: (value: unknown) => void,
+  showResults: boolean,
+  choiceCounter: { value: number }
+): React.ReactNode[] {
+  const parts = content.split(/(\{\{choice:[^}]+\}\})/g);
+  // Track whether any visible text appeared before the current part
+  let hasTextBefore = false;
+  return parts.map((part, i) => {
+    const match = part.match(/\{\{choice:(.+)\}\}/);
+    if (match) {
+      const options = match[1].split("|");
+      const atStart = !hasTextBefore;
+      const capitalise = (s: string) => atStart ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      const key = `choice-${choiceCounter.value}`;
+      choiceCounter.value++;
+      const selectedValue = selections[key] || "";
+
+      const correctLabel = capitalise(options
+        .find((o) => o.startsWith("*"))
+        ?.slice(1) || "");
+
+      if (interactive) {
+        return (
+          <span key={`${lineKey}-${i}`} className="inline-flex items-center gap-1 mx-0.5">
+            {options.map((opt, oi) => {
+              const isCorrectOpt = opt.startsWith("*");
+              const label = capitalise(isCorrectOpt ? opt.slice(1) : opt);
+              const isSelected = selectedValue === label;
+
+              let btnClass =
+                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors";
+              if (showResults) {
+                if (isCorrectOpt) {
+                  btnClass += " bg-green-100 text-green-800 font-semibold";
+                } else if (isSelected && !isCorrectOpt) {
+                  btnClass += " bg-red-100 text-red-800 line-through";
+                } else {
+                  btnClass += " text-muted-foreground";
+                }
+              } else if (isSelected) {
+                btnClass += " bg-primary/10 text-primary font-semibold";
+              } else {
+                btnClass += " hover:bg-muted";
+              }
+
+              return (
+                <span key={oi} className="inline-flex items-center">
+                  {oi > 0 && (
+                    <span className="mx-0.5 text-muted-foreground">/</span>
+                  )}
+                  <button
+                    type="button"
+                    className={btnClass}
+                    onClick={() => {
+                      if (showResults) return;
+                      onAnswer({ ...selections, [key]: label });
+                    }}
+                    disabled={showResults}
+                  >
+                    <span
+                      className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                        isSelected
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground/40"
+                      }`}
+                    />
+                    {label}
+                  </button>
+                </span>
+              );
+            })}
+          </span>
+        );
+      }
+
+      // Print mode: show squares
+      return (
+        <span key={`${lineKey}-${i}`} className="mx-0.5">
+          {options.map((opt, oi) => {
+            const label = capitalise(opt.startsWith("*") ? opt.slice(1) : opt);
+            return (
+              <span key={oi} style={{ marginRight: oi < options.length - 1 ? 6 : 0 }}>
+                <span className="inline-block border-2 border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-1px', borderRadius: 2 }} />
+                <span className="ml-1">{label}</span>
+              </span>
+            );
+          })}
+        </span>
+      );
+    }
+    if (part.trim().length > 0) hasTextBefore = true;
+    return <span key={`${lineKey}-${i}`}>{renderTextWithSup(part)}</span>;
+  });
+}
+
 function InlineChoicesView({
   block,
   interactive,
@@ -1149,98 +1252,43 @@ function InlineChoicesView({
   showResults: boolean;
 }) {
   const selections = (answer as Record<string, string> | undefined) || {};
-  const parts = block.content.split(/(\{\{choice:[^}]+\}\})/g);
-  let choiceIndex = 0;
+  const items = migrateInlineChoicesBlock(block);
+  const choiceCounter = { value: 0 };
 
   return (
-    <div className="leading-loose">
-      {parts.map((part, i) => {
-        const match = part.match(/\{\{choice:(.+)\}\}/);
-        if (match) {
-          const options = match[1].split("|");
-          const key = `choice-${choiceIndex}`;
-          choiceIndex++;
-          const selectedValue = selections[key] || "";
-
-          // Find the correct answer (prefixed with *)
-          const correctLabel = options
-            .find((o) => o.startsWith("*"))
-            ?.slice(1) || "";
-          const isCorrect = selectedValue === correctLabel;
-
-          if (interactive) {
-            return (
-              <span key={i} className="inline-flex items-center gap-1 mx-0.5">
-                {options.map((opt, oi) => {
-                  const isCorrectOpt = opt.startsWith("*");
-                  const label = isCorrectOpt ? opt.slice(1) : opt;
-                  const isSelected = selectedValue === label;
-
-                  let btnClass =
-                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-colors";
-                  if (showResults) {
-                    if (isCorrectOpt) {
-                      btnClass += " bg-green-100 text-green-800 font-semibold";
-                    } else if (isSelected && !isCorrectOpt) {
-                      btnClass += " bg-red-100 text-red-800 line-through";
-                    } else {
-                      btnClass += " text-muted-foreground";
-                    }
-                  } else if (isSelected) {
-                    btnClass += " bg-primary/10 text-primary font-semibold";
-                  } else {
-                    btnClass += " hover:bg-muted";
-                  }
-
-                  return (
-                    <span key={oi} className="inline-flex items-center">
-                      {oi > 0 && (
-                        <span className="mx-0.5 text-muted-foreground">/</span>
-                      )}
-                      <button
-                        type="button"
-                        className={btnClass}
-                        onClick={() => {
-                          if (showResults) return;
-                          onAnswer({ ...selections, [key]: label });
-                        }}
-                        disabled={showResults}
-                      >
-                        <span
-                          className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
-                            isSelected
-                              ? "border-primary bg-primary"
-                              : "border-muted-foreground/40"
-                          }`}
-                        />
-                        {label}
-                      </button>
-                    </span>
-                  );
-                })}
-              </span>
-            );
-          }
-
-          // Print mode: show squares (matching T/F style)
-          return (
-            <span key={i} className="mx-0.5">
-              {options.map((opt, oi) => {
-                const label = opt.startsWith("*") ? opt.slice(1) : opt;
-                return (
-                  <span key={oi} style={{ marginRight: oi < options.length - 1 ? 6 : 0 }}>
-                    <span className="inline-block border-2 border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-1px', borderRadius: 2 }} />
-                    <span className="ml-1">{label}</span>
-                  </span>
-                );
-              })}
-            </span>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
+    <div className="leading-loose space-y-1">
+      {items.map((item, idx) => (
+        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-1.5">
+          <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
+            {String(idx + 1).padStart(2, "0")}
+          </span>
+          <span className="flex-1">
+            {renderInlineChoiceViewLine(
+              item.content,
+              `line-${idx}`,
+              interactive,
+              selections,
+              onAnswer,
+              showResults,
+              choiceCounter
+            )}
+          </span>
+        </div>
+      ))}
     </div>
   );
+}
+
+/** Render text that may contain <sup>...</sup> tags as React elements. */
+function renderTextWithSup(text: string): React.ReactNode[] {
+  const parts = text.split(/(<sup>[^<]*<\/sup>)/g);
+  return parts.map((p, i) => {
+    const m = p.match(/^<sup>([^<]*)<\/sup>$/);
+    if (m) {
+      return <sup key={i} className="text-[0.6em] text-muted-foreground ml-0.5">{m[1]}</sup>;
+    }
+    return <React.Fragment key={i}>{p}</React.Fragment>;
+  });
 }
 
 // ─── Word Search View ────────────────────────────────────────
