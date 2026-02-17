@@ -34,6 +34,25 @@ function escapeHtml(str: string): string {
     .replace(/\n/g, "<br>");
 }
 
+// Source attribution text + CSS + HTML snippet for Puppeteer PDFs
+const SOURCE_TEXT_V1 = "Quellenverzeichnis | Text: selbst erstellt – Fonts: fonts.google.com – Bilder: KI-generiert mit Google Nano Banana Pro";
+
+const SOURCE_TEXT_CSS = `
+  .source-text {
+    position: fixed;
+    right: 3mm;
+    bottom: 15mm;
+    transform: rotate(-90deg);
+    transform-origin: right bottom;
+    font-family: 'Encode Sans', sans-serif;
+    font-size: 5.5pt;
+    color: #999;
+    white-space: nowrap;
+  }
+`;
+
+const SOURCE_TEXT_HTML = `<div class="source-text">${SOURCE_TEXT_V1}</div>`;
+
 /** Replace brand template variables in header/footer HTML */
 function replaceVariables(html: string, brandSettings: BrandSettings): string {
   const now = new Date();
@@ -540,11 +559,13 @@ function buildVerbPrepositionContentHtml(
     border-top: 1px solid #ddd;
     padding-top: 2mm;
   }
+  ${SOURCE_TEXT_CSS}
 </style>
 </head>
 <body>
 ${tablesHtml}
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
+${SOURCE_TEXT_HTML}
 </body>
 </html>`;
 }
@@ -609,6 +630,7 @@ function buildDeclinationContentHtml(
     border-top: 1px solid #ddd;
     padding-top: 2mm;
   }
+  ${SOURCE_TEXT_CSS}
 </style>
 </head>
 <body>
@@ -619,6 +641,7 @@ ${page1Html}
 ${page2Html}
 </div>
 ${footerText ? `<div class="footer">${footerText}</div>` : ''}
+${SOURCE_TEXT_HTML}
 </body>
 </html>`;
 }
@@ -698,6 +721,40 @@ function buildTitlePageHtml(
 }
 
 /**
+ * Create an empty VerbConjugationTable for "Leertabellen" padding (v1).
+ */
+function createEmptyVerbTableV1(): VerbConjugationTable {
+  const emptyTense = { main: "" };
+  const emptyPerson = { praesens: emptyTense, perfekt: emptyTense, praeteritum: emptyTense };
+  return {
+    input: { verb: "\u00A0" },
+    isSeparable: false,
+    isReflexive: false,
+    conjugations: {
+      ich: emptyPerson,
+      du: emptyPerson,
+      Sie_sg: emptyPerson,
+      er_sie_es: emptyPerson,
+      wir: emptyPerson,
+      ihr: emptyPerson,
+      Sie_pl: emptyPerson,
+      sie_pl: emptyPerson,
+    } as Record<PersonKey, import("@/types/grammar-table").PersonConjugations>,
+  };
+}
+
+/**
+ * Pad verb tables with empty entries (v1). Full mode only → pad to multiple of 6.
+ */
+function padWithEmptyTablesV1(tables: VerbConjugationTable[]): VerbConjugationTable[] {
+  const multiple = 6;
+  const remainder = tables.length % multiple;
+  if (remainder === 0) return tables;
+  const padding = multiple - remainder;
+  return [...tables, ...Array.from({ length: padding }, () => createEmptyVerbTableV1())];
+}
+
+/**
  * Build content pages HTML for conjugation tables (multiple verbs)
  */
 function buildConjugationContentHtml(
@@ -710,10 +767,15 @@ function buildConjugationContentHtml(
   
   const footerText = brand !== "lingostar" ? replaceVariables(brandSettings.footerLeft || "", brandSettings) : "";
   
-  // Render all tables
-  const tablesHtml = tables.map(tableData => renderConjugationTable(tableData, settings)).join('\n');
+  // Optionally pad with empty tables for student fill-in
+  const paddedTables = settings.insertEmptyTables
+    ? padWithEmptyTablesV1(tables)
+    : tables;
   
-  console.log(`[Grammar Table PDF] Rendering ${tables.length} verb conjugation tables`);
+  // Render all tables
+  const tablesHtml = paddedTables.map(tableData => renderConjugationTable(tableData, settings)).join('\n');
+  
+  console.log(`[Grammar Table PDF] Rendering ${paddedTables.length} verb conjugation tables (${paddedTables.length - tables.length} empty padding)`);
 
   return `<!DOCTYPE html>
 <html>

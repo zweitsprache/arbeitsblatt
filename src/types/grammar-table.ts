@@ -115,6 +115,10 @@ export interface GrammarTableSettings {
   coverImageBorder: boolean;
   /** Sort verbs alphabetically (default true). When false, use input order. */
   alphabeticalOrder: boolean;
+  /** Insert empty tables so students can fill in their own verb conjugation.
+   *  Simplified: pad to next multiple of 12 (6 per page × 2 for double page).
+   *  Full: pad to next multiple of 6. */
+  insertEmptyTables: boolean;
 }
 
 /** Union type for all grammar table inputs */
@@ -150,6 +154,7 @@ export const DEFAULT_GRAMMAR_TABLE_SETTINGS: GrammarTableSettings = {
   coverImages: [],
   coverImageBorder: false,
   alphabeticalOrder: true,
+  insertEmptyTables: false,
 };
 
 export const DEFAULT_DECLINATION_INPUT: DeclinationInput = {

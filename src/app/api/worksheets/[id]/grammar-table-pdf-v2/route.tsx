@@ -85,7 +85,7 @@ Font.registerHyphenationCallback((word) => [word]);
 // ─── Logo helpers ───────────────────────────────────────────
 
 /** Convert an SVG file to a PNG data-URI (react-pdf can't render SVG with CSS classes). */
-async function readLogoAsPngDataUri(
+export async function readLogoAsPngDataUri(
   relativePath: string,
   width = 400,
 ): Promise<string> {
@@ -104,7 +104,7 @@ async function readLogoAsPngDataUri(
 }
 
 /** Download a remote image, resize & compress it, return as JPEG data-URI. */
-async function compressImageUrl(
+export async function compressImageUrl(
   url: string,
   maxWidth = 400,
   quality = 80,
@@ -126,6 +126,8 @@ async function compressImageUrl(
 }
 
 // ─── Constants ──────────────────────────────────────────────
+
+const SOURCE_TEXT = "Quellenverzeichnis | Text: selbst erstellt – Fonts: fonts.google.com – Bilder: KI-generiert mit Google Nano Banana Pro";
 
 const TENSE_COLORS: Record<VerbTense, string> = {
   praesens: "#F2E2D4",    // Peach
@@ -267,6 +269,19 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: "#000000",
     marginBottom: mm(3),
+  },
+  // Source attribution text – rotated 90° CCW on right edge of last page
+  // Positioned so that after center-based rotation the text sits vertically
+  // along the right margin of A4 landscape (297×210mm).
+  sourceText: {
+    position: "absolute" as const,
+    left: mm(199),    // centers element at x≈289mm (8mm from right edge)
+    top: mm(93),      // centers element at y≈95mm
+    fontFamily: "Encode Sans",
+    fontSize: 5.5,
+    color: "#000000",
+    transform: "rotate(-90deg)",
+    width: mm(180),   // becomes visual height after rotation
   },
   // Verb table
   verbTableWrap: {
@@ -459,7 +474,7 @@ interface VerbTableProps {
   showHighlights: boolean;
 }
 
-const TENSES: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
+export const TENSES: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
 
 function VerbTable({ tableData, showHighlights }: VerbTableProps) {
   const hasSep =
@@ -698,6 +713,40 @@ function chunkArray<T>(arr: T[], n: number): T[][] {
     result.push(arr.slice(i, i + n));
   }
   return result;
+}
+
+/** Create an empty VerbConjugationTable for "Leertabellen" padding */
+function createEmptyVerbTable(): VerbConjugationTable {
+  const emptyTense = { main: "" };
+  const emptyPerson = { praesens: emptyTense, perfekt: emptyTense, praeteritum: emptyTense };
+  return {
+    input: { verb: "\u00A0" },
+    isSeparable: false,
+    isReflexive: false,
+    conjugations: {
+      ich: emptyPerson,
+      du: emptyPerson,
+      Sie_sg: emptyPerson,
+      er_sie_es: emptyPerson,
+      wir: emptyPerson,
+      ihr: emptyPerson,
+      Sie_pl: emptyPerson,
+      sie_pl: emptyPerson,
+    } as Record<PersonKey, import("@/types/grammar-table").PersonConjugations>,
+  };
+}
+
+/**
+ * Pad verb tables with empty entries so pages are fully filled.
+ * - Full mode: pad to next multiple of 6
+ * - Simplified mode: pad to next multiple of 12 (6 per page × 2 for double page)
+ */
+function padWithEmptyTables(tables: VerbConjugationTable[], simplified: boolean): VerbConjugationTable[] {
+  const multiple = simplified ? 12 : 6;
+  const remainder = tables.length % multiple;
+  if (remainder === 0) return tables;
+  const padding = multiple - remainder;
+  return [...tables, ...Array.from({ length: padding }, () => createEmptyVerbTable())];
 }
 
 // Simplified mode reuses BASE_* widths for left columns; REMAINING_W for verb area
@@ -1349,6 +1398,11 @@ function DeclinationTablePDF({
             {`${worksheetId}\n${dateStr}`}
           </Text>
         </View>
+
+        {/* Source attribution – rotated 90° CCW on right edge, last page only */}
+        <Text style={s.sourceText} fixed
+          render={({ pageNumber, totalPages }) => pageNumber === totalPages ? SOURCE_TEXT : ""}
+        />
       </Page>
     </Document>
   );
@@ -1669,6 +1723,11 @@ function VerbPrepositionPDF({
             {`${worksheetId}\n${dateStr}`}
           </Text>
         </View>
+
+        {/* Source attribution – rotated 90° CCW on right edge, last page only */}
+        <Text style={s.sourceText} fixed
+          render={({ pageNumber, totalPages }) => pageNumber === totalPages ? SOURCE_TEXT : ""}
+        />
       </Page>
     </Document>
   );
@@ -1690,7 +1749,9 @@ interface GrammarTablePDFProps {
   includeTitlePage?: boolean;
 }
 
-function GrammarTablePDF({
+export { renderToBuffer };
+
+export function GrammarTablePDF({
   title,
   tables,
   settings,
@@ -1717,8 +1778,12 @@ function GrammarTablePDF({
   const activeTenses: VerbTense[] = simplified
     ? TENSES.filter((t) => simplifiedTenses[t])
     : [];
+  // Optionally pad with empty tables for student fill-in
+  const paddedTables = settings.insertEmptyTables
+    ? padWithEmptyTables(tables, simplified)
+    : tables;
   // Chunk tables into groups of 3 for simplified mode
-  const verbChunks = simplified ? chunkArray(tables, 3) : [];
+  const verbChunks = simplified ? chunkArray(paddedTables, 3) : [];
   // Build tense label for header
   const tenseLabel = simplified
     ? activeTenses.map((t) => TENSE_LABELS[t].de).join(" · ") + " – 3. Person Singular Perfekt und Präteritum"
@@ -1831,7 +1896,7 @@ function GrammarTablePDF({
                 <SimplifiedVerbTable key={`${tense}-${ci}`} tables={chunk} tense={tense} showHighlights={showIrregularHighlights} />
               ))
             )
-          : tables.map((tbl, i) => (
+          : paddedTables.map((tbl, i) => (
               <VerbTable key={i} tableData={tbl} showHighlights={showIrregularHighlights} />
             ))}
 
@@ -1851,6 +1916,11 @@ function GrammarTablePDF({
             {`${worksheetId}\n${dateStr}`}
           </Text>
         </View>
+
+        {/* Source attribution – rotated 90° CCW on right edge, last page only */}
+        <Text style={s.sourceText} fixed
+          render={({ pageNumber, totalPages }) => pageNumber === totalPages ? SOURCE_TEXT : ""}
+        />
       </Page>
     </Document>
   );
@@ -1862,7 +1932,7 @@ function GrammarTablePDF({
  * Deep-replace all ß → ss in string values of an object/array.
  * Used for Swiss German (CH) PDF variant.
  */
-function replaceEszett<T>(data: T): T {
+export function replaceEszett<T>(data: T): T {
   if (typeof data === "string") return data.replace(/ß/g, "ss") as unknown as T;
   if (Array.isArray(data)) return data.map(replaceEszett) as unknown as T;
   if (data && typeof data === "object") {
@@ -1877,7 +1947,7 @@ function replaceEszett<T>(data: T): T {
 
 // ─── Cover page via satori (JSX → SVG → PNG) ───────────────
 
-interface CoverSvgProps {
+export interface CoverSvgProps {
   subtitle: string;
   title: string;
   tenseInfo: string;
@@ -1890,7 +1960,7 @@ interface CoverSvgProps {
 }
 
 /** Render cover page to SVG string using satori, then convert to PNG buffer via sharp. */
-async function renderCoverPng(props: CoverSvgProps): Promise<Buffer> {
+export async function renderCoverPng(props: CoverSvgProps): Promise<Buffer> {
   const { subtitle, title, tenseInfo, settings, worksheetId, bigLogoDataUri, flagDataUri, ribbonLabel, ribbonColor } = props;
   const now = new Date();
   const year = now.getFullYear();
@@ -2104,6 +2174,9 @@ export async function POST(
 
   const format = _req.nextUrl.searchParams.get("format"); // "cover" for title page image
   const includeTitlePage = _req.nextUrl.searchParams.get("titlePage") !== "false"; // default true
+  // Optional override for simplified flag (used by collection ZIP generator)
+  const simplifiedParam = _req.nextUrl.searchParams.get("simplified");
+  const simplifiedOverride = simplifiedParam !== null ? simplifiedParam === "true" : undefined;
 
   // ── Cover page image (portrait PNG) ──
   if (format === "cover") {
@@ -2116,7 +2189,7 @@ export async function POST(
       let coverRibbonLabel = "";
       let coverRibbonColor = "";
       if (tableType === "verb-conjugation") {
-        const simplified = settings.simplified ?? false;
+        const simplified = simplifiedOverride ?? (settings.simplified ?? false);
         const activeTenses: VerbTense[] = simplified
           ? TENSES.filter((t) => (settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false })[t])
           : [];
@@ -2153,7 +2226,8 @@ export async function POST(
       });
 
       const shortId = worksheet.id.slice(0, 8);
-      const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
+      const effectiveSimplified = simplifiedOverride ?? (settings.simplified ?? false);
+      const exSuffix = tableType === "verb-conjugation" && !effectiveSimplified ? "_EX" : "";
       const filename = `${shortId}${exSuffix}_cover_${locale === "NEUTRAL" ? "DACH" : locale}.png`;
 
       return new NextResponse(new Uint8Array(pngBuffer), {
@@ -2209,7 +2283,7 @@ export async function POST(
             worksheetId={worksheet.id}
             bigLogoDataUri={bigLogoDataUri}
             iconDataUri={iconDataUri}
-            simplified={settings.simplified ?? false}
+            simplified={simplifiedOverride ?? (settings.simplified ?? false)}
             simplifiedTenses={settings.simplifiedTenses ?? { praesens: true, perfekt: false, praeteritum: false }}
             showIrregularHighlights={settings.showIrregularHighlights ?? false}
             includeTitlePage={includeTitlePage}
@@ -2289,7 +2363,8 @@ export async function POST(
     }
 
     const shortId = worksheet.id.slice(0, 8);
-    const exSuffix = tableType === "verb-conjugation" && !(settings.simplified ?? false) ? "_EX" : "";
+    const effectiveSimplified = simplifiedOverride ?? (settings.simplified ?? false);
+    const exSuffix = tableType === "verb-conjugation" && !effectiveSimplified ? "_EX" : "";
     const filename = `${shortId}${exSuffix}_${locale === "NEUTRAL" ? "DACH" : locale}.pdf`;
 
     return new NextResponse(Buffer.from(buffer), {

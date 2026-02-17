@@ -71,6 +71,7 @@ import {
   Plus,
   Trash2,
   Upload,
+  Package,
 } from "lucide-react";
 import {
   Dialog,
@@ -867,6 +868,16 @@ function SettingsPanel() {
               checked={state.settings.alphabeticalOrder ?? true}
               onCheckedChange={(v) =>
                 dispatch({ type: "UPDATE_SETTINGS", payload: { alphabeticalOrder: v } })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("insertEmptyTables")}</Label>
+            <Switch
+              checked={state.settings.insertEmptyTables ?? false}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { insertEmptyTables: v } })
               }
             />
           </div>
@@ -2185,6 +2196,7 @@ function EditorToolbar() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPptx, setIsGeneratingPptx] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+  const [isGeneratingCollection, setIsGeneratingCollection] = useState(false);
   const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
     open: boolean;
     engine?: "puppeteer" | "react-pdf";
@@ -2321,6 +2333,41 @@ function EditorToolbar() {
       console.error("Cover image download failed:", err);
     } finally {
       setIsGeneratingCover(false);
+    }
+  }, [state.documentId, t]);
+
+  const handleDownloadCollection = useCallback(async () => {
+    if (!state.documentId) {
+      alert(t("saveFirst"));
+      return;
+    }
+    setIsGeneratingCollection(true);
+    try {
+      const res = await authFetch(
+        `/api/worksheets/${state.documentId}/grammar-table-collection`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(`Collection generation failed: ${errorMsg}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const shortId = state.documentId.slice(0, 16);
+      a.download = `${shortId}_collection.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Collection download failed:", err);
+    } finally {
+      setIsGeneratingCollection(false);
     }
   }, [state.documentId, t]);
 
@@ -2486,6 +2533,30 @@ function EditorToolbar() {
             Title page as portrait PNG image
           </TooltipContent>
         </Tooltip>
+
+        {state.tableType === "verb-conjugation" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCollection}
+                disabled={isGeneratingCollection || !state.documentId || !state.tableData}
+                className="gap-2 border-dashed"
+              >
+                {isGeneratingCollection ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Package className="h-4 w-4" />
+                )}
+                {t("generateCollection")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t("generateCollectionTooltip")}
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         <Separator orientation="vertical" className="h-6" />
 
