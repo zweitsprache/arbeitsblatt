@@ -422,6 +422,13 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
   },
 };
 
+// ─── CH overrides for Swiss locale ──────────────────────────
+/** Per-block, per-field Swiss German text overrides.
+ *  Keyed by blockId → fieldPath (dot-notation) → override text.
+ *  Example: { "abc123": { "question": "Welches Velo…", "options.1.text": "parkieren" } }
+ */
+export type ChOverrides = Record<string, Record<string, string>>;
+
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
   pageSize: "a4" | "letter";
@@ -440,6 +447,7 @@ export interface WorksheetSettings {
   fontFamily: string;
   brand: Brand;
   brandSettings: BrandSettings;
+  chOverrides?: ChOverrides;
 }
 
 // ─── Worksheet document ─────────────────────────────────────

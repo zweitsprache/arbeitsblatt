@@ -9,6 +9,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -67,6 +74,10 @@ export function LibraryDashboard() {
   const [searchResults, setSearchResults] = useState<LibraryItem[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
+    open: boolean;
+    item?: LibraryItem;
+  }>({ open: false });
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -112,28 +123,39 @@ export function LibraryDashboard() {
     return () => clearTimeout(timer);
   }, [search, typeFilter]);
 
-  const handleDownload = async (item: LibraryItem) => {
+  const openDownload = (item: LibraryItem) => {
+    if (item.type === "worksheet" || item.type === "grammar-table") {
+      setPdfLocaleDialog({ open: true, item });
+    } else {
+      handleDownload(item);
+    }
+  };
+
+  const handleDownload = async (item: LibraryItem, locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
+
     setDownloadingId(item.id);
     try {
       // For worksheets/cards/flashcards, use the worksheet PDF endpoint
       // For grammar tables, use the grammar table PDF endpoint
       let pdfUrl: string;
       if (item.type === "grammar-table") {
-        pdfUrl = `/api/worksheets/${item.id}/pdf?type=grammar-table`;
+        pdfUrl = `/api/worksheets/${item.id}/pdf?type=grammar-table&locale=${locale}`;
       } else if (item.type === "ebook") {
         pdfUrl = `/api/ebooks/${item.id}/pdf`;
       } else {
-        pdfUrl = `/api/worksheets/${item.id}/pdf`;
+        pdfUrl = `/api/worksheets/${item.id}/pdf-v2?locale=${locale}`;
       }
 
-      const res = await fetch(pdfUrl);
+      const res = await fetch(pdfUrl, { method: "POST" });
       if (!res.ok) throw new Error("PDF download failed");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${item.title || "download"}.pdf`;
+      const shortId = item.id.slice(0, 16);
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = `${shortId}_${fileSuffix}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -310,7 +332,7 @@ export function LibraryDashboard() {
                       size="sm"
                       variant="outline"
                       className="gap-1.5 h-7 text-xs px-2.5"
-                      onClick={() => handleDownload(item)}
+                      onClick={() => openDownload(item)}
                       disabled={isDownloading}
                     >
                       {isDownloading ? (
@@ -327,6 +349,50 @@ export function LibraryDashboard() {
           })}
         </div>
       )}
+
+      {/* PDF Locale Picker Dialog */}
+      <Dialog
+        open={pdfLocaleDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setPdfLocaleDialog({ open: false });
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const item = pdfLocaleDialog.item;
+                setPdfLocaleDialog({ open: false });
+                if (item) handleDownload(item, "DE");
+              }}
+            >
+              {"🇩🇪 Deutschland (ß)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const item = pdfLocaleDialog.item;
+                setPdfLocaleDialog({ open: false });
+                if (item) handleDownload(item, "CH");
+              }}
+            >
+              {"🇨🇭 Schweiz (ss)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const item = pdfLocaleDialog.item;
+                setPdfLocaleDialog({ open: false });
+                if (item) handleDownload(item, "NEUTRAL");
+              }}
+            >
+              {"🌐 Neutral"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

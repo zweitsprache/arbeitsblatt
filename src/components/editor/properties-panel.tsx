@@ -48,13 +48,137 @@ import {
   WorksheetBlock,
   BlockVisibility,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
+
+// ─── CH Override-aware input wrapper ────────────────────────
+
+/**
+ * A text input that supports CH locale overrides.
+ * - In DE mode: normal input → dispatches UPDATE_BLOCK
+ * - In CH mode: input edits the CH override, shows DE base text reference,
+ *   has amber left border + clear button when override exists
+ */
+function ChInput({
+  blockId,
+  fieldPath,
+  baseValue,
+  onBaseChange,
+  className,
+  placeholder,
+  multiline,
+}: {
+  blockId: string;
+  fieldPath: string;
+  baseValue: string;
+  onBaseChange: (value: string) => void;
+  className?: string;
+  placeholder?: string;
+  multiline?: boolean;
+}) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const isChMode = state.localeMode === "CH";
+  const overrides = state.settings.chOverrides;
+  const hasOverride = hasChOverride(blockId, fieldPath, overrides);
+  const effectiveValue = getEffectiveValue(baseValue, blockId, fieldPath, state.localeMode, overrides);
+
+  if (!isChMode) {
+    // DE mode: normal input
+    if (multiline) {
+      return (
+        <textarea
+          value={baseValue}
+          onChange={(e) => onBaseChange(e.target.value)}
+          className={className || "w-full border rounded-md p-2 text-xs min-h-[80px] resize-y"}
+          placeholder={placeholder}
+        />
+      );
+    }
+    return (
+      <Input
+        value={baseValue}
+        onChange={(e) => onBaseChange(e.target.value)}
+        className={className}
+        placeholder={placeholder}
+      />
+    );
+  }
+
+  // CH mode
+  const handleChange = (value: string) => {
+    // If text matches auto-replaced value, don't store an override
+    const autoReplaced = replaceEszett(baseValue);
+    if (value === autoReplaced) {
+      dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId, fieldPath } });
+    } else {
+      dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId, fieldPath, value } });
+    }
+  };
+
+  const clearOverride = () => {
+    dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId, fieldPath } });
+  };
+
+  const wrapperClass = hasOverride
+    ? "border-l-2 border-l-amber-400 pl-1"
+    : "";
+
+  const inputEl = multiline ? (
+    <textarea
+      value={effectiveValue}
+      onChange={(e) => handleChange(e.target.value)}
+      className={`${className || "w-full border rounded-md p-2 text-xs min-h-[80px] resize-y"} ${hasOverride ? "bg-amber-50/50" : ""}`}
+      placeholder={placeholder}
+    />
+  ) : (
+    <div className="flex items-center gap-1">
+      <Input
+        value={effectiveValue}
+        onChange={(e) => handleChange(e.target.value)}
+        className={`${className || ""} ${hasOverride ? "bg-amber-50/50" : ""} flex-1`}
+        placeholder={placeholder}
+      />
+      {hasOverride && (
+        <button
+          type="button"
+          onClick={clearOverride}
+          className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-amber-500 hover:text-red-500 shrink-0"
+          title={t("chOverrideRemove")}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={wrapperClass}>
+      {inputEl}
+      {hasOverride && multiline && (
+        <div className="flex justify-end mt-0.5">
+          <button
+            type="button"
+            onClick={clearOverride}
+            className="text-[10px] text-amber-500 hover:text-red-500"
+          >
+            ✕ {t("chOverrideRemove")}
+          </button>
+        </div>
+      )}
+      {/* Show DE base text as reference */}
+      <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate" title={baseValue}>
+        {"🇩🇪 "}{baseValue.length > 60 ? baseValue.slice(0, 60) + "…" : baseValue}
+      </p>
+    </div>
+  );
+}
 
 // ─── Block-specific property editors ────────────────────────
 
@@ -66,12 +190,14 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
-        <Input
-          value={block.content}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="content"
+          baseValue={block.content}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { content: e.target.value } },
+              payload: { id: block.id, updates: { content: v } },
             })
           }
         />
@@ -806,12 +932,14 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
-        <Input
-          value={block.question}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="question"
+          baseValue={block.question}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { question: e.target.value } },
+              payload: { id: block.id, updates: { question: v } },
             })
           }
         />
@@ -840,11 +968,15 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
               className="h-3.5 w-3.5"
               title={t("markAsCorrect")}
             />
-            <Input
-              value={opt.text}
-              onChange={(e) => updateOption(i, { text: e.target.value })}
-              className="flex-1 h-8 text-xs"
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`options.${i}.text`}
+                baseValue={opt.text}
+                onBaseChange={(v) => updateOption(i, { text: v })}
+                className="h-8 text-xs"
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -888,12 +1020,14 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
-        <Input
-          value={block.question}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="question"
+          baseValue={block.question}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { question: e.target.value } },
+              payload: { id: block.id, updates: { question: v } },
             })
           }
         />
@@ -928,15 +1062,17 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
         <p className="text-xs text-muted-foreground mb-1">
           {t("fillInBlankHelp")}
         </p>
-        <textarea
-          value={block.content}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="content"
+          baseValue={block.content}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { content: e.target.value } },
+              payload: { id: block.id, updates: { content: v } },
             })
           }
-          className="w-full border rounded-md p-2 text-xs min-h-[80px] resize-y"
+          multiline
         />
       </div>
     </div>
@@ -1024,12 +1160,14 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
@@ -1039,19 +1177,27 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("pairs")}</Label>
         {block.pairs.map((pair, i) => (
           <div key={pair.id} className="flex items-center gap-1">
-            <Input
-              value={pair.left}
-              onChange={(e) => updatePair(i, { left: e.target.value })}
-              className="flex-1 h-8 text-xs"
-              placeholder={t("left")}
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`pairs.${i}.left`}
+                baseValue={pair.left}
+                onBaseChange={(v) => updatePair(i, { left: v })}
+                className="h-8 text-xs"
+                placeholder={t("left")}
+              />
+            </div>
             <span className="text-xs text-muted-foreground">→</span>
-            <Input
-              value={pair.right}
-              onChange={(e) => updatePair(i, { right: e.target.value })}
-              className="flex-1 h-8 text-xs"
-              placeholder={t("right")}
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`pairs.${i}.right`}
+                baseValue={pair.right}
+                onBaseChange={(v) => updatePair(i, { right: v })}
+                className="h-8 text-xs"
+                placeholder={t("right")}
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -1194,12 +1340,14 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
@@ -1209,19 +1357,27 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryTerms")}</Label>
         {block.pairs.map((pair, i) => (
           <div key={pair.id} className="flex items-center gap-1">
-            <Input
-              value={pair.term}
-              onChange={(e) => updatePair(i, { term: e.target.value })}
-              className="flex-1 h-8 text-xs"
-              placeholder={t("glossaryTerm")}
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`pairs.${i}.term`}
+                baseValue={pair.term}
+                onBaseChange={(v) => updatePair(i, { term: v })}
+                className="h-8 text-xs"
+                placeholder={t("glossaryTerm")}
+              />
+            </div>
             <span className="text-xs text-muted-foreground">→</span>
-            <Input
-              value={pair.definition}
-              onChange={(e) => updatePair(i, { definition: e.target.value })}
-              className="flex-1 h-8 text-xs"
-              placeholder={t("glossaryDefinition")}
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`pairs.${i}.definition`}
+                baseValue={pair.definition}
+                onBaseChange={(v) => updatePair(i, { definition: v })}
+                className="h-8 text-xs"
+                placeholder={t("glossaryDefinition")}
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -1905,12 +2061,14 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
@@ -1921,11 +2079,15 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
         {sortedItems.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
-            <Input
-              value={item.text}
-              onChange={(e) => updateItem(i, { text: e.target.value })}
-              className="flex-1 h-8 text-xs"
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${i}.text`}
+                baseValue={item.text}
+                onBaseChange={(v) => updateItem(i, { text: v })}
+                className="h-8 text-xs"
+              />
+            </div>
             <div className="flex flex-col">
               <button
                 className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
@@ -1966,6 +2128,9 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
 
   // Migrate legacy content to items on first render
   const items: InlineChoiceItem[] = React.useMemo(
@@ -2025,6 +2190,33 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
     });
   };
 
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newItems = lines.map((line) => ({
+      id: `ic${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      content: line.trim(),
+    }));
+
+    const finalItems = csvMode === "append"
+      ? [...items, ...newItems]
+      : newItems;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: finalItems } },
+    });
+    setCsvText("");
+  };
+
   return (
     <div className="space-y-3">
       <div className="space-y-2">
@@ -2054,11 +2246,16 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
                 <ArrowUpDown className="h-2.5 w-2.5" />
               </Button>
             </div>
-            <textarea
-              value={item.content}
-              onChange={(e) => updateItem(i, e.target.value)}
-              className="flex-1 border rounded-md p-1.5 text-xs min-h-[40px] resize-y font-mono"
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${i}.content`}
+                baseValue={item.content}
+                onBaseChange={(v) => updateItem(i, v)}
+                className="border rounded-md p-1.5 text-xs min-h-[40px] resize-y font-mono"
+                multiline
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -2073,6 +2270,49 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
         </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelpInlineChoices")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y font-mono"
+          placeholder={t("csvImportPlaceholderInlineChoices")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
       </div>
       <Separator />
       <div>
@@ -2201,29 +2441,35 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
       </div>
       <Separator />
-      {block.categories.map((cat) => {
+      {block.categories.map((cat, catIndex) => {
         const catItems = block.items.filter((item) =>
           cat.correctItems.includes(item.id)
         );
         return (
           <div key={cat.id} className="space-y-2">
             <div className="flex items-center gap-1">
-              <Input
-                value={cat.label}
-                onChange={(e) => updateCategoryLabel(cat.id, e.target.value)}
-                className="flex-1 h-8 text-xs font-semibold"
-              />
+              <div className="flex-1">
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`categories.${catIndex}.label`}
+                  baseValue={cat.label}
+                  onBaseChange={(v) => updateCategoryLabel(cat.id, v)}
+                  className="h-8 text-xs font-semibold"
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -2237,11 +2483,15 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
             {catItems.map((item) => (
               <div key={item.id} className="flex items-center gap-1 pl-3">
                 <span className="text-xs text-muted-foreground shrink-0">•</span>
-                <Input
-                  value={item.text}
-                  onChange={(e) => updateItemText(item.id, e.target.value)}
-                  className="flex-1 h-7 text-xs"
-                />
+                <div className="flex-1">
+                  <ChInput
+                    blockId={block.id}
+                    fieldPath={`items.${block.items.indexOf(item)}.text`}
+                    baseValue={item.text}
+                    onBaseChange={(v) => updateItemText(item.id, v)}
+                    className="h-7 text-xs"
+                  />
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -2375,11 +2625,15 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
         {block.words.map((word, i) => (
           <div key={i} className="flex items-center gap-1">
-            <Input
-              value={word}
-              onChange={(e) => updateWord(i, e.target.value.toUpperCase())}
-              className="flex-1 h-8 text-xs uppercase"
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`words.${i}`}
+                baseValue={word}
+                onBaseChange={(v) => updateWord(i, v.toUpperCase())}
+                className="h-8 text-xs uppercase"
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -2448,12 +2702,14 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
@@ -2487,11 +2743,15 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
         {block.words.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
-            <Input
-              value={item.word}
-              onChange={(e) => updateWord(i, e.target.value)}
-              className="flex-1 h-8 text-xs"
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`words.${i}.word`}
+                baseValue={item.word}
+                onBaseChange={(v) => updateWord(i, v)}
+                className="h-8 text-xs"
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -2557,12 +2817,14 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
-        <Input
-          value={block.instruction}
-          onChange={(e) =>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: e.target.value } },
+              payload: { id: block.id, updates: { instruction: v } },
             })
           }
         />
@@ -2575,12 +2837,16 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
         </p>
         {block.sentences.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
-            <Input
-              value={item.sentence}
-              onChange={(e) => updateSentence(i, e.target.value)}
-              className="flex-1 h-8 text-xs font-mono"
-              placeholder={t("fixSentencePlaceholder")}
-            />
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.sentence`}
+                baseValue={item.sentence}
+                onBaseChange={(v) => updateSentence(i, v)}
+                className="h-8 text-xs font-mono"
+                placeholder={t("fixSentencePlaceholder")}
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"

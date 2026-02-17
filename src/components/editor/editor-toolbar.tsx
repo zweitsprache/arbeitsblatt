@@ -15,6 +15,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -26,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { countChOverrides } from "@/lib/locale-utils";
 import { Label } from "@/components/ui/label";
 import {
   Save,
@@ -57,6 +59,10 @@ export function EditorToolbar() {
   const [copied, setCopied] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
+    open: boolean;
+    preview?: boolean;
+  }>({ open: false });
 
   // Get current brand settings with fallbacks
   const currentBrandSettings: BrandSettings = {
@@ -73,7 +79,7 @@ export function EditorToolbar() {
     });
   };
 
-  const handleDownloadPdf = async (preview = false) => {
+  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
@@ -81,7 +87,7 @@ export function EditorToolbar() {
     const setLoading = preview ? setIsGeneratingPreview : setIsGeneratingPdf;
     setLoading(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf`, {
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v2?locale=${locale}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preview }),
@@ -95,7 +101,11 @@ export function EditorToolbar() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${state.title}${preview ? ' (Preview)' : ''}.pdf`;
+      const shortId = state.worksheetId.slice(0, 16);
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = preview
+        ? `${shortId}_preview_${fileSuffix}.pdf`
+        : `${shortId}_${fileSuffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -209,6 +219,31 @@ export function EditorToolbar() {
             </TooltipTrigger>
             <TooltipContent>{t("brandSettings")}</TooltipContent>
           </Tooltip>
+        </div>
+
+        {/* DE / CH locale toggle */}
+        <div className="flex items-center bg-muted rounded-lg p-0.5">
+          <Button
+            variant={state.localeMode === "DE" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 px-2.5 gap-1 text-xs"
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
+          >
+            {"🇩🇪"} DE
+          </Button>
+          <Button
+            variant={state.localeMode === "CH" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 px-2.5 gap-1 text-xs"
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
+          >
+            {"🇨🇭"} CH
+            {countChOverrides(state.settings.chOverrides) > 0 && (
+              <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px] bg-amber-100 text-amber-700">
+                {countChOverrides(state.settings.chOverrides)}
+              </Badge>
+            )}
+          </Button>
         </div>
 
         {/* Mode toggle */}
@@ -333,7 +368,7 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={() => handleDownloadPdf(true)}
+              onClick={() => setPdfLocaleDialog({ open: true, preview: true })}
               disabled={isGeneratingPreview || isGeneratingPdf}
             >
               {isGeneratingPreview ? (
@@ -352,7 +387,7 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={() => handleDownloadPdf(false)}
+              onClick={() => setPdfLocaleDialog({ open: true, preview: false })}
               disabled={isGeneratingPdf || isGeneratingPreview}
             >
               {isGeneratingPdf ? (
@@ -368,6 +403,48 @@ export function EditorToolbar() {
 
       {/* Print Preview Dialog */}
       <PrintPreview open={showPrintPreview} onOpenChange={setShowPrintPreview} />
+
+      {/* PDF Locale Picker Dialog */}
+      <Dialog
+        open={pdfLocaleDialog.open}
+        onOpenChange={(open) => setPdfLocaleDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const preview = pdfLocaleDialog.preview ?? false;
+                setPdfLocaleDialog({ open: false });
+                handleDownloadPdf(preview, "DE");
+              }}
+            >
+              {"🇩🇪 Deutschland (ß)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const preview = pdfLocaleDialog.preview ?? false;
+                setPdfLocaleDialog({ open: false });
+                handleDownloadPdf(preview, "CH");
+              }}
+            >
+              {"🇨🇭 Schweiz (ss)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                const preview = pdfLocaleDialog.preview ?? false;
+                setPdfLocaleDialog({ open: false });
+                handleDownloadPdf(preview, "NEUTRAL");
+              }}
+            >
+              {"🌐 Neutral"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Online Preview Dialog */}
       <Dialog open={showOnlinePreview} onOpenChange={setShowOnlinePreview}>

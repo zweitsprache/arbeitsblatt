@@ -59,6 +59,7 @@ Font.register({
   fonts: [
     { src: fontDataUri("EncodeSans-Regular.ttf"), fontWeight: 400 },
     { src: fontDataUri("EncodeSans-Medium.ttf"), fontWeight: 500 },
+    { src: fontDataUri("EncodeSans-SemiBold.ttf"), fontWeight: 600 },
     { src: fontDataUri("EncodeSans-Bold.ttf"), fontWeight: 700 },
   ],
 });

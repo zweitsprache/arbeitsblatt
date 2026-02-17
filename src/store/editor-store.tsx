@@ -11,7 +11,10 @@ import {
   BLOCK_LIBRARY,
   DEFAULT_SETTINGS,
   BlockVisibility,
+  ChOverrides,
 } from "@/types/worksheet";
+
+export type LocaleMode = "DE" | "CH";
 
 // ─── State ───────────────────────────────────────────────────
 interface EditorState {
@@ -22,6 +25,7 @@ interface EditorState {
   settings: WorksheetSettings;
   selectedBlockId: string | null;
   viewMode: ViewMode;
+  localeMode: LocaleMode;
   isDirty: boolean;
   isSaving: boolean;
   published: boolean;
@@ -35,6 +39,7 @@ const initialState: EditorState = {
   settings: DEFAULT_SETTINGS,
   selectedBlockId: null,
   viewMode: "print",
+  localeMode: "DE",
   isDirty: false,
   isSaving: false,
   published: false,
@@ -56,6 +61,10 @@ type EditorAction =
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "MARK_SAVED" }
   | { type: "SET_PUBLISHED"; payload: boolean }
+  | { type: "SET_LOCALE_MODE"; payload: LocaleMode }
+  | { type: "SET_CH_OVERRIDE"; payload: { blockId: string; fieldPath: string; value: string } }
+  | { type: "CLEAR_CH_OVERRIDE"; payload: { blockId: string; fieldPath: string } }
+  | { type: "CLEAR_BLOCK_CH_OVERRIDES"; payload: string }
   | { type: "DUPLICATE_IN_COLUMN"; payload: { parentBlockId: string; colIndex: number; block: WorksheetBlock; afterIndex: number } }
   | { type: "MOVE_BLOCK_TO_COLUMN"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
   | { type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP"; payload: { blockId: string; insertAfterBlockId?: string } }
@@ -219,6 +228,63 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "SET_PUBLISHED":
       return { ...state, published: action.payload, isDirty: true };
+
+    case "SET_LOCALE_MODE":
+      return { ...state, localeMode: action.payload };
+
+    case "SET_CH_OVERRIDE": {
+      const { blockId, fieldPath, value } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: {
+            ...existing,
+            [blockId]: {
+              ...existing[blockId],
+              [fieldPath]: value,
+            },
+          },
+        },
+        isDirty: true,
+      };
+    }
+
+    case "CLEAR_CH_OVERRIDE": {
+      const { blockId, fieldPath } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      const blockOverrides = { ...existing[blockId] };
+      delete blockOverrides[fieldPath];
+      const newOverrides = { ...existing };
+      if (Object.keys(blockOverrides).length === 0) {
+        delete newOverrides[blockId];
+      } else {
+        newOverrides[blockId] = blockOverrides;
+      }
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+        },
+        isDirty: true,
+      };
+    }
+
+    case "CLEAR_BLOCK_CH_OVERRIDES": {
+      const existing = state.settings.chOverrides || {};
+      const newOverrides = { ...existing };
+      delete newOverrides[action.payload];
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+        },
+        isDirty: true,
+      };
+    }
 
     case "DUPLICATE_IN_COLUMN": {
       const { parentBlockId, colIndex, block: newBlock, afterIndex } = action.payload;

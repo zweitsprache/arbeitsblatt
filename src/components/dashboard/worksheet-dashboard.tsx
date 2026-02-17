@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -102,6 +103,11 @@ export function WorksheetDashboard() {
   const [moveWorksheetId, setMoveWorksheetId] = useState<string | null>(null);
   const [moveTargetFolders, setMoveTargetFolders] = useState<FolderItem[]>([]);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
+    open: boolean;
+    worksheetId?: string;
+    worksheetTitle?: string;
+  }>({ open: false });
 
   const fetchContents = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -229,10 +235,10 @@ export function WorksheetDashboard() {
     }
   };
 
-  const downloadPdf = async (worksheetId: string, worksheetTitle: string) => {
+  const downloadPdf = async (worksheetId: string, worksheetTitle: string, locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
     setGeneratingPdfId(worksheetId);
     try {
-      const res = await authFetch(`/api/worksheets/${worksheetId}/pdf`, {
+      const res = await authFetch(`/api/worksheets/${worksheetId}/pdf-v2?locale=${locale}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preview: false }),
@@ -246,7 +252,9 @@ export function WorksheetDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${worksheetTitle}.pdf`;
+      const shortId = worksheetId.slice(0, 16);
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = `${shortId}_${fileSuffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -538,7 +546,13 @@ export function WorksheetDashboard() {
                           {t("moveToFolder")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => downloadPdf(ws.id, ws.title)}
+                          onClick={() =>
+                            setPdfLocaleDialog({
+                              open: true,
+                              worksheetId: ws.id,
+                              worksheetTitle: ws.title,
+                            })
+                          }
                           disabled={generatingPdfId === ws.id}
                         >
                           {generatingPdfId === ws.id ? (
@@ -666,6 +680,51 @@ export function WorksheetDashboard() {
                 {t("noFoldersAvailable")}
               </p>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Locale Picker Dialog */}
+      <Dialog
+        open={pdfLocaleDialog.open}
+        onOpenChange={(open) => setPdfLocaleDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                setPdfLocaleDialog({ open: false });
+                if (pdfLocaleDialog.worksheetId) {
+                  downloadPdf(pdfLocaleDialog.worksheetId, pdfLocaleDialog.worksheetTitle || "", "DE");
+                }
+              }}
+            >
+              {"🇩🇪 Deutschland (ß)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                setPdfLocaleDialog({ open: false });
+                if (pdfLocaleDialog.worksheetId) {
+                  downloadPdf(pdfLocaleDialog.worksheetId, pdfLocaleDialog.worksheetTitle || "", "CH");
+                }
+              }}
+            >
+              {"🇨🇭 Schweiz (ss)"}
+            </Button>
+            <Button className="flex-1 gap-2" variant="outline"
+              onClick={() => {
+                setPdfLocaleDialog({ open: false });
+                if (pdfLocaleDialog.worksheetId) {
+                  downloadPdf(pdfLocaleDialog.worksheetId, pdfLocaleDialog.worksheetTitle || "", "NEUTRAL");
+                }
+              }}
+            >
+              {"🌐 Neutral"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

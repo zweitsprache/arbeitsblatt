@@ -1203,11 +1203,12 @@ function renderInlineChoiceViewLine(
                     disabled={showResults}
                   >
                     <span
-                      className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                      className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
                         isSelected
                           ? "border-primary bg-primary"
                           : "border-muted-foreground/40"
                       }`}
+                      style={{ position: 'relative', top: 2 }}
                     />
                     {label}
                   </button>
@@ -1225,8 +1226,8 @@ function renderInlineChoiceViewLine(
             const label = capitalise(opt.startsWith("*") ? opt.slice(1) : opt);
             return (
               <span key={oi} style={{ marginRight: oi < options.length - 1 ? 6 : 0 }}>
-                <span className="inline-block border-2 border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-1px', borderRadius: 2 }} />
-                <span className="ml-1">{label}</span>
+                <span className="inline-block border-[1.5px] border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-3px', borderRadius: 2 }} />
+                <span className="ml-1 font-semibold">{label}</span>
               </span>
             );
           })}
@@ -1256,9 +1257,9 @@ function InlineChoicesView({
   const choiceCounter = { value: 0 };
 
   return (
-    <div className="leading-loose space-y-1">
+    <div>
       {items.map((item, idx) => (
-        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-1.5">
+        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-2">
           <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
             {String(idx + 1).padStart(2, "0")}
           </span>
@@ -1285,7 +1286,15 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   return parts.map((p, i) => {
     const m = p.match(/^<sup>([^<]*)<\/sup>$/);
     if (m) {
-      return <sup key={i} className="text-[0.6em] text-muted-foreground ml-0.5">{m[1]}</sup>;
+      return (
+        <span
+          key={i}
+          className="text-muted-foreground"
+          style={{ fontSize: '0.6em', position: 'relative', top: '-0.5em', marginLeft: 2, lineHeight: 0 }}
+        >
+          {m[1]}
+        </span>
+      );
     }
     return <React.Fragment key={i}>{p}</React.Fragment>;
   });

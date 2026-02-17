@@ -196,7 +196,15 @@ function renderWithSup(text: string): React.ReactNode[] {
   return parts.map((p, i) => {
     const supMatch = p.match(/^<sup>([^<]*)<\/sup>$/);
     if (supMatch) {
-      return <sup key={i} className="text-[0.6em] text-muted-foreground ml-0.5">{supMatch[1]}</sup>;
+      return (
+        <span
+          key={i}
+          className="text-muted-foreground"
+          style={{ fontSize: '0.6em', position: 'relative', top: '-0.5em', marginLeft: 2, lineHeight: 0 }}
+        >
+          {supMatch[1]}
+        </span>
+      );
     }
     return <React.Fragment key={i}>{p}</React.Fragment>;
   });

@@ -34,6 +34,8 @@ import {
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
+import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
+import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload } from "lucide-react";
@@ -1335,18 +1337,19 @@ function renderInlineChoiceLine(content: string): React.ReactNode[] {
               <span key={oi} className="inline-flex items-center">
                 {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
                 <span
-                  className={`inline-flex items-center gap-0.5 ${
+                  className={`inline-flex items-center gap-0.5 font-semibold ${
                     isCorrect
                       ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
                       : ""
                   }`}
                 >
                   <span
-                    className={`inline-block w-3 h-3 rounded-full border-2 shrink-0 ${
+                    className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
                       isCorrect
                         ? "border-green-500 bg-green-500"
                         : "border-muted-foreground/40"
                     }`}
+                    style={{ position: 'relative', top: 2 }}
                   />
                   <span>{label}</span>
                 </span>
@@ -1371,9 +1374,9 @@ function InlineChoicesRenderer({
   const items = migrateInlineChoicesBlock(block);
 
   return (
-    <div className="leading-relaxed space-y-1">
+    <div>
       {items.map((item, idx) => (
-        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-1.5">
+        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-2">
           <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
             {String(idx + 1).padStart(2, "0")}
           </span>
@@ -1390,7 +1393,15 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   return parts.map((p, i) => {
     const m = p.match(/^<sup>([^<]*)<\/sup>$/);
     if (m) {
-      return <sup key={i} className="text-[0.6em] text-muted-foreground ml-0.5">{m[1]}</sup>;
+      return (
+        <span
+          key={i}
+          className="text-muted-foreground"
+          style={{ fontSize: '0.6em', position: 'relative', top: '-0.5em', marginLeft: 2, lineHeight: 0 }}
+        >
+          {m[1]}
+        </span>
+      );
     }
     return <React.Fragment key={i}>{p}</React.Fragment>;
   });
@@ -2427,7 +2438,7 @@ function ColumnsRenderer({
 
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
-  block,
+  block: rawBlock,
   mode,
 }: {
   block: WorksheetBlock;
@@ -2435,7 +2446,23 @@ export function BlockRenderer({
 }) {
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
+  const { state } = useEditor();
   const interactive = mode === "online";
+
+  // Apply CH overrides when in CH locale mode
+  const block = React.useMemo(() => {
+    if (state.localeMode !== "CH") return rawBlock;
+    const overrides = state.settings.chOverrides?.[rawBlock.id];
+    // First apply automatic ß→ss, then layer manual overrides on top
+    let effective = replaceEszett(rawBlock);
+    if (overrides) {
+      for (const [fieldPath, value] of Object.entries(overrides)) {
+        effective = setByPath(effective, fieldPath, value) as WorksheetBlock;
+      }
+    }
+    // Preserve the original id/type so block identity isn't affected
+    return { ...effective, id: rawBlock.id, type: rawBlock.type } as WorksheetBlock;
+  }, [rawBlock, state.localeMode, state.settings.chOverrides]);
 
   switch (block.type) {
     case "heading":
