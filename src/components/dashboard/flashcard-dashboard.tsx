@@ -29,9 +29,11 @@ import {
   Pencil,
   Trash2,
   X,
+  TableProperties,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import { GenerateFromGrammarTableModal } from "@/components/flashcard-editor/generate-from-grammar-table-modal";
 
 interface FlashcardSetItem {
   id: string;
@@ -54,6 +56,7 @@ export function FlashcardDashboard() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<FlashcardSetItem[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
 
   const fetchFlashcards = useCallback(async () => {
     setLoading(true);
@@ -121,12 +124,22 @@ export function FlashcardDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
-        <Link href="/editor/flashcards">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t("newFlashcards")}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setGenerateModalOpen(true)}
+          >
+            <TableProperties className="h-4 w-4" />
+            {t("generateFromTable")}
           </Button>
-        </Link>
+          <Link href="/editor/flashcards">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("newFlashcards")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
@@ -254,6 +267,11 @@ export function FlashcardDashboard() {
           ))}
         </div>
       )}
+
+      <GenerateFromGrammarTableModal
+        open={generateModalOpen}
+        onOpenChange={setGenerateModalOpen}
+      />
     </div>
   );
 }

@@ -30,6 +30,8 @@ import {
   DEFAULT_VERB_PREPOSITION_INPUT,
   GrammarTableInput,
   THIRD_PERSON_KEYS,
+  VERB_MODUS_LABELS,
+  VerbModus,
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -820,6 +822,27 @@ function SettingsPanel() {
 
       {state.tableType === "verb-conjugation" && (
         <>
+          <div className="space-y-1">
+            <Label className="text-sm">{t("verbModus")}</Label>
+            <Select
+              value={state.settings.verbModus ?? "indikativ"}
+              onValueChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { verbModus: v as VerbModus } })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(VERB_MODUS_LABELS) as VerbModus[]).map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {VERB_MODUS_LABELS[m].de}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center justify-between">
             <Label className="text-sm">{t("simplified")}</Label>
             <Switch

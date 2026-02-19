@@ -28,10 +28,40 @@ import {
   AlignVerticalJustifyStart,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
+  ImageDown,
 } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
 import { Slider } from "@/components/ui/slider";
+
+// ─── Helpers ─────────────────────────────────────────────────
+
+/** Render text with {{hl}}…{{/hl}}, {{sup}}…{{/sup}}, and {{verb}} markers as React elements */
+function renderHighlightedText(text: string): React.ReactNode[] {
+  const parts = text.split(/(\{\{hl\}\}.*?\{\{\/hl\}\}|\{\{sup\}\}.*?\{\{\/sup\}\}|\{\{verb\}\})/);
+  return parts.map((part, i) => {
+    const hlMatch = part.match(/^\{\{hl\}\}(.*?)\{\{\/hl\}\}$/);
+    if (hlMatch) {
+      return (
+        <span key={i} className="bg-yellow-200 px-px rounded-sm">
+          {hlMatch[1]}
+        </span>
+      );
+    }
+    const supMatch = part.match(/^\{\{sup\}\}(.*?)\{\{\/sup\}\}$/);
+    if (supMatch) {
+      return (
+        <sup key={i} className="text-[0.65em] text-muted-foreground font-normal">
+          {supMatch[1]}
+        </sup>
+      );
+    }
+    if (part === "{{verb}}") {
+      return <React.Fragment key={i} />;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
 
 // ─── Flashcard side editor ───────────────────────────────────
 function FlashcardSideEditor({
@@ -178,8 +208,13 @@ function FlashcardSideEditor({
               paddingBottom: side.textPosition === "bottom" ? "4px" : undefined,
             }}
           >
-            <span className="text-xs text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words">
-              {side.text}
+            <span className="text-xs text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words whitespace-pre-line">
+              {side.text.split("\n").map((line, j) => (
+                <span key={j} className={j === 0 ? "font-semibold" : ""}>
+                  {j > 0 && <br />}
+                  {renderHighlightedText(line)}
+                </span>
+              ))}
             </span>
           </div>
         )}
@@ -354,6 +389,37 @@ function FlashcardEditorInner({
   const t = useTranslations("flashcardEditor");
   const tc = useTranslations("common");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+
+  const handleDownloadCover = useCallback(async () => {
+    if (!state.worksheetId) {
+      alert(t("saveFirst"));
+      return;
+    }
+    setIsGeneratingCover(true);
+    try {
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-cover`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(t("pdfFailed", { error: err.error }));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const shortId = state.worksheetId.slice(0, 16);
+      a.download = `${shortId}_flashcard_cover.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Cover download failed:", err);
+    } finally {
+      setIsGeneratingCover(false);
+    }
+  }, [state.worksheetId, t]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!state.worksheetId) {
@@ -433,6 +499,25 @@ function FlashcardEditorInner({
             {tc("unsaved")}
           </Badge>
         )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDownloadCover}
+              disabled={isGeneratingCover || !state.worksheetId || state.cards.length === 0}
+              className="gap-1.5"
+            >
+              {isGeneratingCover ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageDown className="h-4 w-4" />
+              )}
+              {t("downloadCover")}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("downloadCoverTooltip")}</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

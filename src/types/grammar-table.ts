@@ -95,6 +95,15 @@ export interface AdjectiveDeclinationTable {
 
 // ─── Grammar Table Document ──────────────────────────────────
 
+export type VerbModus = "indikativ" | "konjunktiv_ii" | "konjunktiv_i" | "imperativ";
+
+export const VERB_MODUS_LABELS: Record<VerbModus, { de: string; en: string }> = {
+  indikativ: { de: "Indikativ", en: "Indicative" },
+  konjunktiv_ii: { de: "Konjunktiv II", en: "Subjunctive II" },
+  konjunktiv_i: { de: "Konjunktiv I", en: "Subjunctive I" },
+  imperativ: { de: "Imperativ", en: "Imperative" },
+};
+
 export interface GrammarTableSettings {
   showNotes: boolean;
   showPrepositions: boolean;
@@ -113,6 +122,8 @@ export interface GrammarTableSettings {
   coverImages: string[];
   /** Show border around cover images */
   coverImageBorder: boolean;
+  /** Verb modus for conjugation tables (default: indikativ) */
+  verbModus: VerbModus;
   /** Sort verbs alphabetically (default true). When false, use input order. */
   alphabeticalOrder: boolean;
   /** Insert empty tables so students can fill in their own verb conjugation.
@@ -148,6 +159,7 @@ export const DEFAULT_GRAMMAR_TABLE_SETTINGS: GrammarTableSettings = {
   simplified: false,
   simplifiedTenses: { praesens: true, perfekt: false, praeteritum: false },
   showIrregularHighlights: false,
+  verbModus: "indikativ",
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
   contentTitle: "",

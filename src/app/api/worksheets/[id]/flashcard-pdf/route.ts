@@ -28,10 +28,47 @@ function escapeHtml(str: string): string {
     .replace(/\n/g, "<br>");
 }
 
-function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: string, row: number, col: number): string {
+/** Escape HTML and make the first line semibold, render {{hl}}…{{/hl}} as yellow highlight, {{sup}}…{{/sup}} as superscript */
+function escapeHtmlBoldFirst(str: string): string {
+  const lines = str.split("\n");
+  return lines
+    .map((line, i) => {
+      const escaped = line
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#FEF08A;padding:0 1px;border-radius:1px;">$1</span>')
+        .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
+        .replace(/\{\{verb\}\}/g, "");
+      return i === 0 ? `<strong>${escaped}</strong>` : escaped;
+    })
+    .join("<br>");
+}
+
+/** Escape HTML for back pages: pronoun regular, verb form semibold, sup always regular */
+function escapeHtmlBackPage(str: string): string {
+  const lines = str.split("\n");
+  return lines
+    .map((line) => {
+      const escaped = line
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#FEF08A;padding:0 1px;border-radius:1px;">$1</span>')
+        .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
+        .replace(/\{\{verb\}\}/g, '</span><span style="font-weight:600;">');
+      return `<span>${escaped}</span>`;
+    })
+    .join("<br>");
+}
+
+function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: string, row: number, col: number, pageSide: "front" | "back"): string {
   let borderStyle = "";
   if (isCuttingLine) {
-    const b = "0.5px dashed #ccc";
+    const borderColor = pageSide === "back" ? "transparent" : "#ccc";
+    const b = `0.5px dashed ${borderColor}`;
     borderStyle = `border-right:${b};border-bottom:${b};`;
     if (col === 0) borderStyle += `border-left:${b};`;
     if (row === 0) borderStyle += `border-top:${b};`;
@@ -60,12 +97,12 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
   const justify = justifyMap[side.textPosition ?? "center"];
 
   const textHtml = side.text
-    ? `<div style="font-size:11pt;line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${escapeHtml(side.text)}</div>`
+    ? `<div style="font-size:11pt;line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text)}</div>`
     : "";
 
   return `<div style="position:relative;width:${CARD_W}mm;height:${CARD_H}mm;${borderStyle}box-sizing:border-box;overflow:hidden;">
     <img src="${logoUrl}" style="position:absolute;top:2mm;right:2mm;width:3mm;height:3mm;opacity:1;display:block;z-index:2;" />
-    <div style="position:absolute;top:10.875mm;left:4mm;width:66mm;height:37.125mm;display:flex;flex-direction:column;align-items:center;justify-content:${justify};overflow:hidden;border-radius:1mm;">
+    <div style="position:absolute;top:0;left:4mm;width:66mm;height:${CARD_H}mm;display:flex;flex-direction:column;align-items:center;justify-content:${justify};overflow:hidden;border-radius:1mm;">
       ${imageHtml}
       ${textHtml}
     </div>
@@ -74,13 +111,15 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
 
 function buildPageHtml(
   cards: FlashcardItem[],
-  pageIndex: number, // 0-based, always the front page index
+  pageIndex: number,
   side: "front" | "back",
-  logoUrl: string
+  logoUrl: string,
+  headerHtml: string,
+  footerHtml: string
 ): string {
   const start = pageIndex * CARDS_PER_PAGE;
   const pageCards = cards.slice(start, start + CARDS_PER_PAGE);
-  const isCuttingLine = side === "front";
+  const isCuttingLine = true;
 
   let gridHtml = "";
   for (let row = 0; row < ROWS; row++) {
@@ -93,12 +132,27 @@ function buildPageHtml(
 
       if (card) {
         const sideData = side === "front" ? card.front : card.back;
-        gridHtml += renderCardCell(sideData, isCuttingLine, logoUrl, row, col);
+        // Treat blank cards (no text, no image) as empty cells
+        const isBlank = !sideData.text && !sideData.image;
+        if (isBlank) {
+          let emptyBorder = "";
+          if (isCuttingLine) {
+            const borderColor = side === "back" ? "transparent" : "#ccc";
+            const b = `0.5px dashed ${borderColor}`;
+            emptyBorder = `border-right:${b};border-bottom:${b};`;
+            if (col === 0) emptyBorder += `border-left:${b};`;
+            if (row === 0) emptyBorder += `border-top:${b};`;
+          }
+          gridHtml += `<div style="width:${CARD_W}mm;height:${CARD_H}mm;${emptyBorder}box-sizing:border-box;"></div>`;
+        } else {
+          gridHtml += renderCardCell(sideData, isCuttingLine, logoUrl, row, col, side);
+        }
       } else {
         // Empty cell
         let emptyBorder = "";
         if (isCuttingLine) {
-          const b = "0.5px dashed #ccc";
+          const borderColor = side === "back" ? "transparent" : "#ccc";
+          const b = `0.5px dashed ${borderColor}`;
           emptyBorder = `border-right:${b};border-bottom:${b};`;
           if (col === 0) emptyBorder += `border-left:${b};`;
           if (row === 0) emptyBorder += `border-top:${b};`;
@@ -110,23 +164,35 @@ function buildPageHtml(
   }
 
   return `<div class="page">
+    ${headerHtml}
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:${PAGE_W}mm;height:${PAGE_H}mm;">
       <div style="display:flex;flex-direction:column;">
         ${gridHtml}
       </div>
     </div>
+    ${footerHtml}
   </div>`;
 }
 
-function buildFullHtml(cards: FlashcardItem[], logoUrl: string): string {
+function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string): string {
   const totalFrontPages = Math.ceil(cards.length / CARDS_PER_PAGE);
+  const currentYear = new Date().getFullYear();
+  const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const headerHtml = `<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;padding:10mm 15mm 0 15mm;z-index:10;">
+    <img src="${logoUrl}" style="width:6mm;height:auto;" />
+  </div>`;
+
+  const footerHtml = `<div style="position:absolute;bottom:0;left:0;right:0;font-size:7pt;font-family:'Encode Sans',sans-serif;color:#666;padding:0 15mm 5mm 15mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:10;">
+    <div style="text-align:left;line-height:1.4;">&copy; ${currentYear} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten</div>
+    <div style="text-align:right;line-height:1.4;">${worksheetId}<br/>${currentDate}</div>
+  </div>`;
+
   let pagesHtml = "";
 
   for (let i = 0; i < totalFrontPages; i++) {
-    // Front page (odd page in print: 1, 3, 5...)
-    pagesHtml += buildPageHtml(cards, i, "front", logoUrl);
-    // Back page (even page in print: 2, 4, 6...)
-    pagesHtml += buildPageHtml(cards, i, "back", logoUrl);
+    pagesHtml += buildPageHtml(cards, i, "front", logoUrl, headerHtml, footerHtml);
+    pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml);
   }
 
   return `<!DOCTYPE html>
@@ -155,6 +221,7 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string): string {
     height: ${PAGE_H}mm;
     page-break-after: always;
     overflow: hidden;
+    position: relative;
   }
   .page:last-child {
     page-break-after: auto;
@@ -195,7 +262,7 @@ export async function POST(
   const logoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
   const logoSvgRaw = fs.readFileSync(logoPath, "utf-8");
   const logoDataUri = `data:image/svg+xml,${encodeURIComponent(logoSvgRaw)}`;
-  const html = buildFullHtml(cards, logoDataUri);
+  const html = buildFullHtml(cards, logoDataUri, worksheet.id);
 
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);

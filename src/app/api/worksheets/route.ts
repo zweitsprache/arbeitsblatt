@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
       slug: true,
       published: true,
       blocks: true,
+      settings: true,
       folderId: true,
       createdAt: true,
       updatedAt: true,
