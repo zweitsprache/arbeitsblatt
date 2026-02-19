@@ -14,6 +14,7 @@ import {
   MultipleChoiceBlock,
   FillInBlankBlock,
   MatchingBlock,
+  TwoColumnFillBlock,
   GlossaryBlock,
   OpenResponseBlock,
   WordBankBlock,
@@ -31,6 +32,8 @@ import {
   VerbTableRow,
   ArticleTrainingBlock,
   ArticleAnswer,
+  ChartBlock,
+  NumberedLabelBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -38,16 +41,60 @@ import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-ut
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
+import dynamic from "next/dynamic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { BlockVisibility } from "@/types/worksheet";
 
+// ─── Handwriting helper ──────────────────────────────────────
+/** Check whether a string contains ++…++ handwriting markers */
+function hasHandwriting(text: string): boolean {
+  return /\+\+.+?\+\+/.test(text);
+}
+/** Parse ++text++ markers and render as handwriting-styled spans */
+function renderHandwriting(text: string): React.ReactNode {
+  const parts = text.split(/(\+\+.*?\+\+)/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (part.startsWith("++") && part.endsWith("++")) {
+      const inner = part.slice(2, -2);
+      return (
+        <span
+          key={i}
+          className="text-blue-500"
+          style={{ fontFamily: "var(--font-handwriting)", fontSize: "1.15em" }}
+        >
+          {inner}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 // ─── Heading ─────────────────────────────────────────────────
+
+// Helper: collect all numbered-label blocks in document order (top-level + inside columns)
+function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; startNumber: number }[] {
+  const result: { id: string; startNumber: number }[] = [];
+  for (const b of blocks) {
+    if (b.type === "numbered-label") result.push({ id: b.id, startNumber: b.startNumber });
+    if (b.type === "columns") {
+      for (const col of b.children) {
+        for (const child of col) {
+          if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
+        }
+      }
+    }
+  }
+  return result;
+}
+
 function HeadingRenderer({ block }: { block: HeadingBlock }) {
   const { dispatch } = useEditor();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
@@ -764,6 +811,78 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
   );
 }
 
+// ─── Two-Column Fill ─────────────────────────────────────────
+function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
+  const t = useTranslations("blockRenderer");
+
+  // Collect fill-side values for word bank
+  const wordBankItems = block.items
+    .map((item) => (block.fillSide === "left" ? item.left : item.right))
+    .filter(Boolean);
+
+  // Column ratio → grid-template-columns
+  const gridCols = block.colRatio === "1-2" ? "1fr 2fr"
+    : block.colRatio === "2-1" ? "2fr 1fr"
+    : "1fr 1fr";
+
+  return (
+    <div className="space-y-3">
+      <p className="text-base text-muted-foreground">{block.instruction}</p>
+      {/* Word Bank */}
+      {block.showWordBank && wordBankItems.length > 0 && (
+        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
+          <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
+          <div className="flex flex-wrap gap-2">
+            {[...wordBankItems]
+              .sort(() => Math.random() - 0.5)
+              .map((text, i) => (
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
+                  {text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div className="grid" style={{ gridTemplateColumns: gridCols, gap: "0 24px" }}>
+        {block.items.map((item, i) => (
+          <React.Fragment key={item.id}>
+            {/* Left cell */}
+            <div
+              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+            >
+              {block.fillSide === "left" ? (
+                hasHandwriting(item.left) ? (
+                  <span className="flex-1">{renderHandwriting(item.left)}</span>
+                ) : (
+                  <span className="flex-1 border-b border-dashed border-muted-foreground/40">&nbsp;</span>
+                )
+              ) : (
+                <span className="flex-1">{item.left}</span>
+              )}
+            </div>
+            {/* Right cell */}
+            <div
+              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+            >
+              {block.fillSide === "right" ? (
+                hasHandwriting(item.right) ? (
+                  <span className="flex-1">{renderHandwriting(item.right)}</span>
+                ) : (
+                  <span className="flex-1 border-b border-dashed border-muted-foreground/40">&nbsp;</span>
+                )
+              ) : (
+                <span className="flex-1">{item.right}</span>
+              )}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Glossary ────────────────────────────────────────────────
 function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
   return (
@@ -1318,21 +1437,44 @@ function OrderItemsRenderer({
 }
 
 // ─── Inline Choices ─────────────────────────────────────────
-function renderInlineChoiceLine(content: string): React.ReactNode[] {
-  const parts = content.split(/(\{\{choice:[^}]+\}\})/g);
-  // Track whether any visible text appeared before the current part
-  let hasTextBefore = false;
-  return parts.map((part, i) => {
-    const match = part.match(/\{\{choice:(.+)\}\}/);
+
+/** Parse inline choice content into alternating text/choice segments. */
+function parseInlineChoiceSegments(content: string) {
+  const parts = content.split(/(\{\{(?:choice:)?[^}]+\}\})/g);
+  const segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[] }> = [];
+  parts.forEach((part) => {
+    const match = part.match(/\{\{(?:choice:)?(.+)\}\}/);
     if (match) {
-      const options = match[1].split("|");
+      const rawOptions = match[1].split("|");
+      const starIdx = rawOptions.findIndex((o) => o.startsWith("*"));
+      const options = starIdx >= 0
+        ? [rawOptions[starIdx].slice(1), ...rawOptions.filter((_, idx) => idx !== starIdx).map((o) => o.startsWith("*") ? o.slice(1) : o)]
+        : rawOptions;
+      segments.push({ type: "choice", options });
+    } else {
+      segments.push({ type: "text", value: part });
+    }
+  });
+  return segments;
+}
+
+/** Reconstruct content string from segments. */
+function serializeInlineChoiceSegments(segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[] }>): string {
+  return segments.map((s) => s.type === "choice" ? `{{${s.options.join("|")}}}` : s.value).join("");
+}
+
+/** Render a read-only inline choice line (used as fallback / for interactive mode). */
+function renderInlineChoiceLine(content: string): React.ReactNode[] {
+  const segments = parseInlineChoiceSegments(content);
+  let hasTextBefore = false;
+  return segments.map((seg, i) => {
+    if (seg.type === "choice") {
       const atStart = !hasTextBefore;
       return (
         <span key={i} className="inline-flex items-center gap-1 mx-0.5">
-          {options.map((opt, oi) => {
-            const isCorrect = opt.startsWith("*");
-            const raw = isCorrect ? opt.slice(1) : opt;
-            const label = atStart ? raw.charAt(0).toUpperCase() + raw.slice(1) : raw;
+          {seg.options.map((opt, oi) => {
+            const isCorrect = oi === 0;
+            const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
             return (
               <span key={oi} className="inline-flex items-center">
                 {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
@@ -1359,9 +1501,111 @@ function renderInlineChoiceLine(content: string): React.ReactNode[] {
         </span>
       );
     }
-    if (part.trim().length > 0) hasTextBefore = true;
-    return <span key={i}>{renderTextWithSup(part)}</span>;
+    if (seg.value.trim().length > 0) hasTextBefore = true;
+    return <span key={i}>{renderTextWithSup(seg.value)}</span>;
   });
+}
+
+/** Editable inline choice line — text segments are contentEditable, choice chips are read-only. */
+function EditableInlineChoiceLine({
+  content,
+  onChange,
+}: {
+  content: string;
+  onChange: (newContent: string) => void;
+}) {
+  const segments = React.useMemo(() => parseInlineChoiceSegments(content), [content]);
+  const segmentsRef = React.useRef(segments);
+  segmentsRef.current = segments;
+
+  // Track whether any visible text appeared before each segment
+  let hasTextBefore = false;
+  const textBefore: boolean[] = [];
+  segments.forEach((seg) => {
+    textBefore.push(hasTextBefore);
+    if (seg.type === "text" && seg.value.trim().length > 0) hasTextBefore = true;
+  });
+
+  const handleTextBlur = React.useCallback(
+    (textIndex: number, e: React.FocusEvent<HTMLSpanElement>) => {
+      const newText = e.currentTarget.textContent || "";
+      const segs = segmentsRef.current;
+      let ti = 0;
+      const updated = segs.map((seg) => {
+        if (seg.type === "text") {
+          if (ti === textIndex) {
+            ti++;
+            return { ...seg, value: newText };
+          }
+          ti++;
+        }
+        return seg;
+      });
+      const newContent = serializeInlineChoiceSegments(updated);
+      if (newContent !== content) {
+        onChange(newContent);
+      }
+    },
+    [content, onChange],
+  );
+
+  let textIdx = 0;
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.type === "choice") {
+          const atStart = !textBefore[i];
+          return (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 mx-0.5 cursor-default"
+              contentEditable={false}
+            >
+              {seg.options.map((opt, oi) => {
+                const isCorrect = oi === 0;
+                const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
+                return (
+                  <span key={oi} className="inline-flex items-center">
+                    {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
+                    <span
+                      className={`inline-flex items-center gap-0.5 font-semibold ${
+                        isCorrect
+                          ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
+                          : ""
+                      }`}
+                    >
+                      <span
+                        className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
+                          isCorrect
+                            ? "border-green-500 bg-green-500"
+                            : "border-muted-foreground/40"
+                        }`}
+                        style={{ position: 'relative', top: 2 }}
+                      />
+                      <span>{label}</span>
+                    </span>
+                  </span>
+                );
+              })}
+            </span>
+          );
+        }
+        const currentTextIdx = textIdx;
+        textIdx++;
+        return (
+          <span
+            key={i}
+            contentEditable
+            suppressContentEditableWarning
+            className="outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+            onBlur={(e) => handleTextBlur(currentTextIdx, e)}
+          >
+            {renderTextWithSup(seg.value)}
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 function InlineChoicesRenderer({
@@ -1371,16 +1615,99 @@ function InlineChoicesRenderer({
   block: InlineChoicesBlock;
   interactive: boolean;
 }) {
+  const { state, dispatch } = useEditor();
   const items = migrateInlineChoicesBlock(block);
+  const activeIdx = state.activeItemIndex;
+
+  // For mutations, always use the raw (DE) block from the store so we never
+  // persist CH-converted text (ß→ss) back into the canonical data.
+  const rawBlock = state.blocks.find((b) => b.id === block.id) as InlineChoicesBlock | undefined;
+  const rawItems = rawBlock ? migrateInlineChoicesBlock(rawBlock) : items;
+
+  const updateItemContent = React.useCallback(
+    (index: number, newContent: string) => {
+      const newItems = [...rawItems];
+      newItems[index] = { ...newItems[index], content: newContent };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    },
+    [rawItems, dispatch, block.id],
+  );
+
+  const handleRowClick = React.useCallback(
+    (index: number) => {
+      if (!interactive) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: index });
+      }
+    },
+    [dispatch, interactive],
+  );
+
+  const moveItem = React.useCallback(
+    (index: number, direction: -1 | 1) => {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= rawItems.length) return;
+      const newItems = [...rawItems];
+      [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+      // Keep the moved item active
+      if (activeIdx === index) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: newIndex });
+      }
+    },
+    [rawItems, dispatch, block.id, activeIdx],
+  );
 
   return (
     <div>
       {items.map((item, idx) => (
-        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-2">
+        <div
+          key={item.id || idx}
+          className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+            !interactive && activeIdx === idx
+              ? "bg-blue-50 ring-1 ring-blue-200"
+              : "hover:bg-muted/30"
+          }`}
+          onClick={() => handleRowClick(idx)}
+        >
           <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
             {String(idx + 1).padStart(2, "0")}
           </span>
-          <span className="flex-1">{renderInlineChoiceLine(item.content)}</span>
+          <span className="flex-1">
+            {interactive ? (
+              renderInlineChoiceLine(item.content)
+            ) : (
+              <EditableInlineChoiceLine
+                content={item.content}
+                onChange={(c) => updateItemContent(idx, c)}
+              />
+            )}
+          </span>
+          {!interactive && (
+            <div className="flex flex-col shrink-0" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(idx, -1)}
+                disabled={idx === 0}
+              >
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(idx, 1)}
+                disabled={idx === items.length - 1}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -1639,10 +1966,10 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
             cat.correctItems.includes(item.id)
           );
           return (
-            <div key={cat.id} className="rounded-lg border border-border overflow-hidden">
+            <div key={cat.id} className="rounded-md border border-border overflow-hidden">
               <div className="bg-muted px-3 py-2">
                 <span
-                  className="text-sm font-semibold outline-none block"
+                  className="font-semibold outline-none block"
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={(e) =>
@@ -1711,7 +2038,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
 
 // ─── Unscramble Words ───────────────────────────────────────
 function scrambleWord(word: string, keepFirst: boolean, lowercase: boolean): string {
-  let letters = word.split("");
+  let letters = word.replace(/\s+/g, "").split("");
   let firstLetter = "";
   if (keepFirst && letters.length > 1) {
     firstLetter = letters[0];
@@ -1793,7 +2120,14 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
       </div>
 
       <div className="space-y-2">
-        {block.words.map((item, i) => {
+        {(() => {
+          const orderedWords = block.itemOrder
+            ? block.itemOrder
+                .map((id) => block.words.find((w) => w.id === id))
+                .filter((w): w is NonNullable<typeof w> => !!w)
+                .concat(block.words.filter((w) => !block.itemOrder!.includes(w.id)))
+            : block.words;
+          return orderedWords.map((item, i) => {
           const scrambled = scrambleWord(item.word, block.keepFirstLetter, block.lowercaseAll);
           return (
             <div
@@ -1803,7 +2137,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-mono text-base tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+              <span className="text-base tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
                 {scrambled}
               </span>
               <span className="text-muted-foreground text-xs">→</span>
@@ -1829,7 +2163,8 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
               </button>
             </div>
           );
-        })}
+        });
+        })()}
       </div>
       <button
         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -2436,6 +2771,53 @@ function ColumnsRenderer({
   );
 }
 
+// ─── Chart ───────────────────────────────────────────────────
+const ChartContent = dynamic(
+  () => import("@/components/chart/chart-view").then((m) => m.ChartContent),
+  { ssr: false, loading: () => <div className="w-full h-[300px] bg-muted/30 animate-pulse rounded" /> }
+);
+
+function ChartRenderer({ block }: { block: ChartBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+
+  const handleTitleChange = (title: string) => {
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { title } } });
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Editable title */}
+      <input
+        type="text"
+        value={block.title || ""}
+        onChange={(e) => handleTitleChange(e.target.value)}
+        placeholder={t("chartTitlePlaceholder")}
+        className="w-full text-center text-lg font-semibold bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+      />
+      <ChartContent block={block} />
+    </div>
+  );
+}
+
+// ─── Numbered Label ─────────────────────────────────────────
+function NumberedLabelRenderer({ block }: { block: NumberedLabelBlock }) {
+  const { state, dispatch } = useEditor();
+
+  // Compute the ordinal position of this block among all numbered-label blocks
+  const allNL = React.useMemo(() => collectNumberedLabelBlocks(state.blocks), [state.blocks]);
+  const index = allNL.findIndex((b) => b.id === block.id);
+  const displayNumber = String(block.startNumber + (index >= 0 ? index : 0)).padStart(2, "0");
+
+  return (
+    <div className="rounded bg-slate-100 px-2 py-1">
+      <span className="font-semibold text-slate-800" style={{ paddingLeft: '2em', textIndent: '-2em', display: 'block' }}>
+        {block.prefix}{displayNumber}{block.suffix ? `\u2003${block.suffix}` : ''}
+      </span>
+    </div>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -2485,6 +2867,8 @@ export function BlockRenderer({
       return <FillInBlankRenderer block={block} interactive={interactive} />;
     case "matching":
       return <MatchingRenderer block={block} />;
+    case "two-column-fill":
+      return <TwoColumnFillRenderer block={block} />;
     case "glossary":
       return <GlossaryRenderer block={block} />;
     case "open-response":
@@ -2511,6 +2895,10 @@ export function BlockRenderer({
       return <FixSentencesRenderer block={block} />;
     case "verb-table":
       return <VerbTableRenderer block={block} />;
+    case "chart":
+      return <ChartRenderer block={block} />;
+    case "numbered-label":
+      return <NumberedLabelRenderer block={block} />;
     case "columns":
       return <ColumnsRenderer block={block} mode={mode} />;
     default:

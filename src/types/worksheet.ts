@@ -29,7 +29,10 @@ export type BlockType =
   | "verb-table"
   | "text-cards"
   | "glossary"
-  | "article-training";
+  | "article-training"
+  | "chart"
+  | "numbered-label"
+  | "two-column-fill";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -147,6 +150,24 @@ export interface MatchingBlock extends BlockBase {
   type: "matching";
   instruction: string;
   pairs: MatchingPair[];
+  extendedRows?: boolean;
+}
+
+// ─── Two-column fill block ──────────────────────────────────
+export interface TwoColumnFillItem {
+  id: string;
+  left: string;
+  right: string;
+}
+
+export interface TwoColumnFillBlock extends BlockBase {
+  type: "two-column-fill";
+  instruction: string;
+  items: TwoColumnFillItem[];
+  fillSide: "left" | "right";
+  colRatio?: "1-1" | "1-2" | "2-1";
+  extendedRows?: boolean;
+  showWordBank?: boolean;
 }
 
 // ─── Glossary block ─────────────────────────────────────────
@@ -229,11 +250,12 @@ export interface OrderItemsBlock extends BlockBase {
 }
 
 // ─── Inline Choices block ────────────────────────────────────
-// Each item is a sentence with inline choices marked as {{choice:option1|option2|*correctOption|option3}}
-// The correct option is prefixed with *
+// Each item is a sentence with inline choices marked as {{correct|wrong1|wrong2}}
+// The FIRST option is always the correct answer (randomised on render).
+// Legacy syntax {{choice:*correct|wrong1|wrong2}} is still supported for backward compat.
 export interface InlineChoiceItem {
   id: string;
-  content: string; // e.g. "Er {{choice:*geht|gehe|gehst}} zur Schule."
+  content: string; // e.g. "Er {{geht|gehe|gehst}} zur Schule." — first option is correct
 }
 
 export interface InlineChoicesBlock extends BlockBase {
@@ -246,14 +268,39 @@ export interface InlineChoicesBlock extends BlockBase {
 /**
  * Migrate legacy InlineChoicesBlock that only has `content` (single string)
  * into the new `items` array format. Each line becomes one item.
+ * Also normalises legacy {{choice:*correct|wrong}} syntax to {{correct|wrong}}.
  */
 export function migrateInlineChoicesBlock(block: InlineChoicesBlock): InlineChoiceItem[] {
-  if (block.items && block.items.length > 0) return block.items;
+  if (block.items && block.items.length > 0) {
+    return block.items.map((item) => ({
+      ...item,
+      content: migrateChoiceSyntaxInline(item.content),
+    }));
+  }
   if (!block.content) return [];
   return block.content.split("\n").filter((line) => line.trim().length > 0).map((line, i) => ({
     id: `ic${Date.now()}-${i}`,
-    content: line,
+    content: migrateChoiceSyntaxInline(line),
   }));
+}
+
+/**
+ * Convert legacy {{choice:*correct|wrong1|wrong2}} to {{correct|wrong1|wrong2}}.
+ * Moves the *-prefixed option to index 0 and strips both `choice:` and `*`.
+ * Idempotent — already-new-syntax strings pass through unchanged.
+ */
+function migrateChoiceSyntaxInline(content: string): string {
+  return content.replace(/\{\{choice:([^}]+)\}\}/g, (_match, inner: string) => {
+    const opts = inner.split("|");
+    const starIdx = opts.findIndex((o: string) => o.startsWith("*"));
+    if (starIdx >= 0) {
+      const correct = opts[starIdx].slice(1);
+      const rest = opts.filter((_: string, i: number) => i !== starIdx);
+      return `{{${[correct, ...rest].join("|")}}}`;
+    }
+    // No star — just strip the choice: prefix
+    return `{{${opts.join("|")}}}`;
+  });
 }
 
 // ─── Word Search block ──────────────────────────────────────
@@ -284,6 +331,7 @@ export interface SortingCategoriesBlock extends BlockBase {
   instruction: string;
   categories: SortingCategory[];
   items: SortingItem[];
+  showWritingLines: boolean;
 }
 
 // ─── Unscramble Words block ─────────────────────────────────
@@ -298,6 +346,7 @@ export interface UnscrambleWordsBlock extends BlockBase {
   words: UnscrambleWordItem[];
   keepFirstLetter: boolean; // keep first letter at correct position
   lowercaseAll: boolean; // show all letters in lowercase
+  itemOrder?: string[]; // persisted shuffled order of word IDs
 }
 
 // ─── Fix Sentences block ────────────────────────────────────
@@ -333,6 +382,36 @@ export interface VerbTableBlock extends BlockBase {
   pluralRows: VerbTableRow[];
 }
 
+// ─── Chart block ─────────────────────────────────────────────
+export type ChartType = "bar" | "pie" | "line";
+
+export interface ChartDataPoint {
+  id: string;
+  label: string;
+  value: number;
+  color?: string;
+}
+
+export interface ChartBlock extends BlockBase {
+  type: "chart";
+  chartType: ChartType;
+  title?: string;
+  data: ChartDataPoint[];
+  showLegend: boolean;
+  showValues: boolean;
+  showGrid: boolean;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+}
+
+// ─── Numbered Label block ────────────────────────────────────
+export interface NumberedLabelBlock extends BlockBase {
+  type: "numbered-label";
+  startNumber: number;
+  prefix: string;
+  suffix: string;
+}
+
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
@@ -358,7 +437,10 @@ export type WorksheetBlock =
   | FixSentencesBlock
   | VerbTableBlock
   | GlossaryBlock
-  | ArticleTrainingBlock;
+  | ArticleTrainingBlock
+  | ChartBlock
+  | NumberedLabelBlock
+  | TwoColumnFillBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -448,6 +530,10 @@ export interface WorksheetSettings {
   brand: Brand;
   brandSettings: BrandSettings;
   chOverrides?: ChOverrides;
+  coverSubtitle: string;       // Subtitle shown on the cover page
+  coverInfoText: string;       // Info text shown below the cover images
+  coverImages: string[];       // Up to 4 cover images for the title page
+  coverImageBorder: boolean;   // Show border around cover images
 }
 
 // ─── Worksheet document ─────────────────────────────────────
@@ -476,6 +562,10 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   fontFamily: "Asap Condensed, sans-serif",
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
+  coverSubtitle: "Arbeitsblatt",
+  coverInfoText: "",
+  coverImages: [],
+  coverImageBorder: false,
 };
 
 // ─── Block library definitions ──────────────────────────────
@@ -694,6 +784,31 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "p2", left: "Item 2", right: "Match 2" },
         { id: "p3", left: "Item 3", right: "Match 3" },
       ],
+      extendedRows: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "two-column-fill",
+    label: "Two-Column Fill",
+    description: "Two columns where students fill in one side",
+    labelKey: "twoColumnFill",
+    descriptionKey: "twoColumnFillDesc",
+    icon: "Columns2",
+    category: "interactive",
+    translations: { de: { label: "Zwei-Spalten-Ausfüllen", description: "Zwei Spalten, eine Seite ausfüllen" } },
+    defaultData: {
+      type: "two-column-fill",
+      instruction: "Fill in the missing items.",
+      items: [
+        { id: "i1", left: "Item 1", right: "Answer 1" },
+        { id: "i2", left: "Item 2", right: "Answer 2" },
+        { id: "i3", left: "Item 3", right: "Answer 3" },
+      ],
+      fillSide: "right",
+      colRatio: "1-1",
+      extendedRows: false,
+      showWordBank: false,
       visibility: "both",
     },
   },
@@ -781,7 +896,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "inline-choices",
       items: [
-        { id: "ic-default-1", content: "In {{choice:1889|*1988|1898}} he was born in London." },
+        { id: "ic-default-1", content: "In {{1988|1889|1898}} he was born in London." },
       ],
       visibility: "both",
     },
@@ -816,7 +931,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Sortieren", description: "Begriffe in Kategorien einordnen" } },
     defaultData: {
       type: "sorting-categories",
-      instruction: "Sort the following items into the correct categories.",
+      instruction: "",
       categories: [
         { id: "cat1", label: "Category A", correctItems: ["si1", "si2"] },
         { id: "cat2", label: "Category B", correctItems: ["si3", "si4"] },
@@ -827,6 +942,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "si3", text: "Item 3" },
         { id: "si4", text: "Item 4" },
       ],
+      showWritingLines: true,
       visibility: "both",
     },
   },
@@ -841,7 +957,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Wörter entwirren", description: "Buchstaben in die richtige Reihenfolge bringen" } },
     defaultData: {
       type: "unscramble-words",
-      instruction: "Unscramble the letters to form the correct word.",
+      instruction: "",
       words: [
         { id: "uw1", word: "school" },
         { id: "uw2", word: "teacher" },
@@ -849,6 +965,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       ],
       keepFirstLetter: false,
       lowercaseAll: false,
+      itemOrder: undefined,
       visibility: "both",
     },
   },
@@ -936,6 +1053,50 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "at2", text: "Katze", correctArticle: "die" },
         { id: "at3", text: "Haus", correctArticle: "das" },
       ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "chart",
+    label: "Chart",
+    description: "Bar, pie, or line chart",
+    labelKey: "chart",
+    descriptionKey: "chartDesc",
+    icon: "BarChart3",
+    category: "content",
+    translations: { de: { label: "Diagramm", description: "Balken-, Kreis- oder Liniendiagramm" } },
+    defaultData: {
+      type: "chart",
+      chartType: "bar",
+      title: "",
+      data: [
+        { id: "d1", label: "A", value: 40, color: "#6366f1" },
+        { id: "d2", label: "B", value: 70, color: "#8b5cf6" },
+        { id: "d3", label: "C", value: 55, color: "#a78bfa" },
+        { id: "d4", label: "D", value: 90, color: "#c4b5fd" },
+      ],
+      showLegend: false,
+      showValues: true,
+      showGrid: true,
+      xAxisLabel: "",
+      yAxisLabel: "",
+      visibility: "both",
+    },
+  },
+  {
+    type: "numbered-label",
+    label: "Numbered Label",
+    description: "Auto-incrementing numbered label with optional text",
+    labelKey: "numberedLabel",
+    descriptionKey: "numberedLabelDesc",
+    icon: "Hash",
+    category: "content",
+    translations: { de: { label: "Nummerierung", description: "Fortlaufende Nummerierung mit optionalem Text" } },
+    defaultData: {
+      type: "numbered-label",
+      startNumber: 1,
+      prefix: "",
+      suffix: "",
       visibility: "both",
     },
   },

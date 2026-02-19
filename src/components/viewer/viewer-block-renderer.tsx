@@ -13,6 +13,7 @@ import {
   MultipleChoiceBlock,
   FillInBlankBlock,
   MatchingBlock,
+  TwoColumnFillBlock,
   GlossaryBlock,
   OpenResponseBlock,
   WordBankBlock,
@@ -29,11 +30,74 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   VerbTableBlock,
+  ChartBlock,
+  NumberedLabelBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
+
+// ─── Handwriting helper ──────────────────────────────────────
+/** Check whether a string contains ++…++ handwriting markers */
+function hasHandwriting(text: string): boolean {
+  return /\+\+.+?\+\+/.test(text);
+}
+/** Parse ++text++ markers and render as handwriting-styled spans */
+function renderHandwriting(text: string): React.ReactNode {
+  const parts = text.split(/(\+\+.*?\+\+)/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (part.startsWith("++") && part.endsWith("++")) {
+      const inner = part.slice(2, -2);
+      return (
+        <span
+          key={i}
+          className="text-blue-500"
+          style={{ fontFamily: "var(--font-handwriting)", fontSize: "1.15em" }}
+        >
+          {inner}
+        </span>
+      );
+    }
+    return part;
+  });
+}
 
 // ─── Static blocks ──────────────────────────────────────────
+
+// Helper: collect all numbered-label blocks in document order (top-level + inside columns)
+function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; startNumber: number }[] {
+  const result: { id: string; startNumber: number }[] = [];
+  for (const b of blocks) {
+    if (b.type === "numbered-label") result.push({ id: b.id, startNumber: b.startNumber });
+    if (b.type === "columns") {
+      for (const col of b.children) {
+        for (const child of col) {
+          if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; allBlocks?: WorksheetBlock[] }) {
+  let displayNumber: string;
+  if (allBlocks) {
+    const all = collectNumberedLabelBlocks(allBlocks);
+    const idx = all.findIndex((b) => b.id === block.id);
+    displayNumber = String(block.startNumber + (idx >= 0 ? idx : 0)).padStart(2, "0");
+  } else {
+    displayNumber = String(block.startNumber).padStart(2, "0");
+  }
+  return (
+    <div className="rounded bg-slate-100 px-2 py-1">
+      <span className="font-semibold text-slate-800" style={{ paddingLeft: '2em', textIndent: '-2em', display: 'block' }}>
+        {block.prefix}{displayNumber}{block.suffix ? `\u2003${block.suffix}` : ''}
+      </span>
+    </div>
+  );
+}
 
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
@@ -83,7 +147,7 @@ function ImageView({ block }: { block: ImageBlock }) {
         style={block.width ? { width: block.width } : undefined}
       />
       {block.caption && (
-        <figcaption className="text-sm text-muted-foreground mt-1 text-center">
+        <figcaption className="text-muted-foreground mt-1 text-center">
           {block.caption}
         </figcaption>
       )}
@@ -107,7 +171,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
         <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
-              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
                 {item.text}
               </span>
             ))}
@@ -138,7 +202,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
                 />
               </div>
             )}
-            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
               {block.showWritingLines ? (
                 <div className="space-y-0.5 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
@@ -186,7 +250,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
         <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
-              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
                 {item.caption}
               </span>
             ))}
@@ -202,7 +266,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
             <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
               {item.text && <span>{item.text}</span>}
             </div>
-            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
               {block.showWritingLines ? (
                 <div className="space-y-0 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
@@ -236,12 +300,14 @@ function MultipleChoiceView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: MultipleChoiceBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
@@ -267,7 +333,7 @@ function MultipleChoiceView({
           const isCorrect = opt.isCorrect;
 
           let optionClass =
-            "flex items-center gap-3 p-3 rounded-lg border transition-colors";
+            "flex items-center gap-3 p-3 rounded border transition-colors";
 
           if (showResults) {
             if (isCorrect) {
@@ -311,12 +377,14 @@ function MultipleChoiceView({
                     <div className="h-2 w-2 rounded-full bg-white" />
                   )}
                 </div>
+              ) : showSolutions && isCorrect ? (
+                <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 shrink-0" />
               ) : block.allowMultiple ? (
                 <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300" />
               ) : (
                 <input type="radio" name={`mc-${block.id}`} disabled className="h-4 w-4 border-gray-300" />
               )}
-              <span className="text-base flex-1">{opt.text}</span>
+              <span className={`flex-1${showSolutions && isCorrect ? ' text-green-800 font-semibold' : ''}`}>{opt.text}</span>
               {showResults && isCorrect && (
                 <span className="text-xs font-medium text-green-600">{t("correctResult")}</span>
               )}
@@ -337,12 +405,14 @@ function FillInBlankView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: FillInBlankBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
@@ -390,11 +460,22 @@ function FillInBlankView({
               </span>
             );
           }
+          if (showSolutions) {
+            return (
+              <span
+                key={i}
+                className="bg-green-100 text-green-800 font-semibold px-2 mx-1"
+                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
+              >
+                {correctAnswer}
+              </span>
+            );
+          }
           return (
             <span
               key={i}
               className="bg-gray-100 min-w-[80px] px-2 mx-1"
-              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 2 }}
+              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
             >
               <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
                 {String(blankIndex).padStart(2, "0")}
@@ -414,12 +495,14 @@ function MatchingView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: MatchingBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
@@ -509,7 +592,8 @@ function MatchingView({
             {block.pairs.map((pair, i) => (
               <div
                 key={pair.id}
-                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
                 <span
                   style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
@@ -518,7 +602,15 @@ function MatchingView({
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex-1">{pair.left}</span>
-                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                {showSolutions ? (
+                  <span
+                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                  >
+                    {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
+                  </span>
+                ) : (
+                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                )}
               </div>
             ))}
           </div>
@@ -527,7 +619,8 @@ function MatchingView({
             {shuffledRight.map((pair, i) => (
               <div
                 key={`r-${pair.id}`}
-                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
                 <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
                 <span className="flex-1">{pair.right}</span>
@@ -585,7 +678,7 @@ function MatchingView({
                 key={pair.id}
                 onClick={() => handleLeftClick(pair.id)}
                 disabled={!interactive || showResults}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left
+                className={`w-full flex items-center gap-3 p-3 rounded border transition-all text-left
                   ${borderClass} ${bgClass}
                   ${interactive && !showResults ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
@@ -627,7 +720,7 @@ function MatchingView({
                 key={`r-${pair.id}`}
                 onClick={() => handleRightClick(pair.id)}
                 disabled={!interactive || showResults || !activeLeftId}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left
+                className={`w-full flex items-center gap-3 p-3 rounded border transition-all text-left
                   ${borderClass} ${bgClass}
                   ${interactive && !showResults && activeLeftId ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
@@ -650,6 +743,173 @@ function MatchingView({
           {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
         </p>
       )}
+    </div>
+  );
+}
+
+function TwoColumnFillView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showSolutions = false,
+}: {
+  block: TwoColumnFillBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showSolutions?: boolean;
+}) {
+  const answers = (answer as Record<string, string> | undefined) || {};
+
+  const handleChange = (itemId: string, value: string) => {
+    if (!interactive) return;
+    onAnswer({ ...answers, [itemId]: value });
+  };
+
+  // Collect fill-side values for word bank (shuffled)
+  const shuffledWordBank = useMemo(() => {
+    if (!block.showWordBank) return [];
+    return block.items
+      .map((item) => (block.fillSide === "left" ? item.left : item.right))
+      .filter(Boolean)
+      .sort(() => Math.random() - 0.5);
+  }, [block.items, block.showWordBank, block.fillSide]);
+
+  // Column ratio → grid-template-columns
+  const gridCols = block.colRatio === "1-2" ? "1fr 2fr"
+    : block.colRatio === "2-1" ? "2fr 1fr"
+    : "1fr 1fr";
+
+  // Print / non-interactive mode
+  if (!interactive) {
+    return (
+      <div className="space-y-2">
+        {block.instruction && (
+          <p className="text-muted-foreground">{block.instruction}</p>
+        )}
+        {/* Word Bank */}
+        {block.showWordBank && shuffledWordBank.length > 0 && (
+          <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+            <div className="flex flex-wrap gap-2">
+              {shuffledWordBank.map((text, i) => (
+                <span key={i} className="px-2 py-0.5 bg-background rounded border">
+                  {text}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="grid" style={{ gridTemplateColumns: gridCols, gap: "0 24px" }}>
+          {block.items.map((item, i) => (
+            <React.Fragment key={item.id}>
+              {/* Left cell */}
+              <div
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+              >
+                {block.fillSide === "left" ? (
+                  hasHandwriting(item.left) ? (
+                    <span className="flex-1">{renderHandwriting(item.left)}</span>
+                  ) : showSolutions ? (
+                    <span className="flex-1 text-green-600 font-medium">{item.left}</span>
+                  ) : (
+                    <span className="flex-1 border-b border-dashed border-muted-foreground/30" style={{ minHeight: "1.5em" }}>&nbsp;</span>
+                  )
+                ) : (
+                  <span className="flex-1">{item.left}</span>
+                )}
+              </div>
+              {/* Right cell */}
+              <div
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+              >
+                {block.fillSide === "right" ? (
+                  hasHandwriting(item.right) ? (
+                    <span className="flex-1">{renderHandwriting(item.right)}</span>
+                  ) : showSolutions ? (
+                    <span className="flex-1 text-green-600 font-medium">{item.right}</span>
+                  ) : (
+                    <span className="flex-1 border-b border-dashed border-muted-foreground/30" style={{ minHeight: "1.5em" }}>&nbsp;</span>
+                  )
+                ) : (
+                  <span className="flex-1">{item.right}</span>
+                )}
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Online / interactive mode
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="text-muted-foreground">{block.instruction}</p>
+      )}
+      {/* Word Bank */}
+      {block.showWordBank && shuffledWordBank.length > 0 && (
+        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+          <div className="flex flex-wrap gap-2">
+            {shuffledWordBank.map((text, i) => (
+              <span key={i} className="px-2 py-0.5 bg-background rounded border">
+                {text}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid" style={{ gridTemplateColumns: gridCols, gap: "0 24px" }}>
+        {block.items.map((item, i) => (
+          <React.Fragment key={item.id}>
+            {/* Left cell */}
+            <div
+              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+            >
+              {block.fillSide === "left" ? (
+                hasHandwriting(item.left) ? (
+                  <span className="flex-1">{renderHandwriting(item.left)}</span>
+                ) : (
+                  <input
+                    type="text"
+                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-sm px-1 py-0.5 focus:border-primary"
+                    value={answers[item.id] || ""}
+                    onChange={(e) => handleChange(item.id, e.target.value)}
+                    placeholder="…"
+                  />
+                )
+              ) : (
+                <span className="flex-1">{item.left}</span>
+              )}
+            </div>
+            {/* Right cell */}
+            <div
+              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+            >
+              {block.fillSide === "right" ? (
+                hasHandwriting(item.right) ? (
+                  <span className="flex-1">{renderHandwriting(item.right)}</span>
+                ) : (
+                  <input
+                    type="text"
+                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-sm px-1 py-0.5 focus:border-primary"
+                    value={answers[item.id] || ""}
+                    onChange={(e) => handleChange(item.id, e.target.value)}
+                    placeholder="…"
+                  />
+                )
+              ) : (
+                <span className="flex-1">{item.right}</span>
+              )}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 }
@@ -701,7 +961,7 @@ function OpenResponseView({
       <p className="font-medium">{block.question}</p>
       {interactive ? (
         <textarea
-          className="w-full border rounded-lg p-3 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          className="w-full border rounded p-3 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           rows={block.lines}
           value={(answer as string) || ""}
           onChange={(e) => onAnswer(e.target.value)}
@@ -721,7 +981,7 @@ function OpenResponseView({
 function WordBankView({ block }: { block: WordBankBlock }) {
   const tb = useTranslations("blockRenderer");
   return (
-    <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4">
+    <div className="border-2 border-dashed border-muted-foreground/20 rounded p-4">
       <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
         {tb("wordBank")}
       </p>
@@ -729,7 +989,7 @@ function WordBankView({ block }: { block: WordBankBlock }) {
         {block.words.map((word, i) => (
           <span
             key={i}
-            className="px-3 py-1.5 bg-muted rounded-full text-base font-medium"
+            className="px-3 py-1.5 bg-muted rounded font-medium"
           >
             {word}
           </span>
@@ -778,12 +1038,14 @@ function TrueFalseMatrixView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: TrueFalseMatrixBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("viewer");
@@ -835,6 +1097,8 @@ function TrueFalseMatrixView({
                     >
                       {selected === true && "✓"}
                     </button>
+                  ) : showSolutions && stmt.correctAnswer ? (
+                    <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
                   ) : (
                     <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
                   )}
@@ -855,6 +1119,8 @@ function TrueFalseMatrixView({
                     >
                       {selected === false && "✓"}
                     </button>
+                  ) : showSolutions && !stmt.correctAnswer ? (
+                    <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
                   ) : (
                     <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
                   )}
@@ -879,12 +1145,14 @@ function ArticleTrainingView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: ArticleTrainingBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const answers = (answer as Record<string, ArticleAnswer | null> | undefined) || {};
@@ -939,6 +1207,8 @@ function ArticleTrainingView({
                       >
                         {selected === a && "✓"}
                       </button>
+                    ) : showSolutions && item.correctArticle === a ? (
+                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
                     ) : (
                       <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
                     )}
@@ -949,7 +1219,11 @@ function ArticleTrainingView({
                 </td>
                 {block.showWritingLine && (
                   <td className="py-2 px-2">
-                    <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
+                    {showSolutions ? (
+                      <span className="text-green-800 font-semibold text-sm">{item.correctArticle} {item.text}</span>
+                    ) : (
+                      <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
+                    )}
                   </td>
                 )}
               </tr>
@@ -972,14 +1246,18 @@ function ColumnsView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
   primaryColor,
+  allBlocks,
 }: {
   block: ColumnsBlock;
   mode: ViewMode;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
   primaryColor?: string;
+  allBlocks?: WorksheetBlock[];
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
   return (
@@ -999,7 +1277,9 @@ function ColumnsView({
                 onAnswer({ ...answers, [childBlock.id]: value })
               }
               showResults={showResults}
+              showSolutions={showSolutions}
               primaryColor={primaryColor}
+              allBlocks={allBlocks}
             />
           ))}
         </div>
@@ -1015,12 +1295,14 @@ function OrderItemsView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: OrderItemsBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   // Answer is an array of item IDs in user-chosen order
@@ -1091,6 +1373,10 @@ function OrderItemsView({
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
+              ) : showSolutions ? (
+                <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {item.correctPosition}
+                </span>
               ) : (
                 <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
               )}
@@ -1137,6 +1423,31 @@ function OrderItemsView({
 
 // ─── Inline Choices View ─────────────────────────────────────
 
+/** Simple numeric hash for deterministic shuffle seeds. */
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    hash = ((hash << 5) - hash + c) | 0;
+  }
+  return hash;
+}
+
+/** Deterministic Fisher-Yates shuffle using a simple LCG PRNG. */
+function seededShuffleArr<T>(arr: T[], seed: number): { item: T; originalIndex: number }[] {
+  const indexed = arr.map((item, i) => ({ item, originalIndex: i }));
+  let s = seed;
+  const random = () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+  for (let i = indexed.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+  }
+  return indexed;
+}
+
 /** Render one inline-choices line with interactive/print mode support. */
 function renderInlineChoiceViewLine(
   content: string,
@@ -1145,31 +1456,39 @@ function renderInlineChoiceViewLine(
   selections: Record<string, string>,
   onAnswer: (value: unknown) => void,
   showResults: boolean,
-  choiceCounter: { value: number }
+  choiceCounter: { value: number },
+  showSolutions = false,
 ): React.ReactNode[] {
-  const parts = content.split(/(\{\{choice:[^}]+\}\})/g);
+  const parts = content.split(/(\{\{(?:choice:)?[^}]+\}\})/g);
   // Track whether any visible text appeared before the current part
   let hasTextBefore = false;
   return parts.map((part, i) => {
-    const match = part.match(/\{\{choice:(.+)\}\}/);
+    const match = part.match(/\{\{(?:choice:)?(.+)\}\}/);
     if (match) {
-      const options = match[1].split("|");
+      const rawOptions = match[1].split("|");
       const atStart = !hasTextBefore;
       const capitalise = (s: string) => atStart ? s.charAt(0).toUpperCase() + s.slice(1) : s;
       const key = `choice-${choiceCounter.value}`;
       choiceCounter.value++;
       const selectedValue = selections[key] || "";
 
-      const correctLabel = capitalise(options
-        .find((o) => o.startsWith("*"))
-        ?.slice(1) || "");
+      // Normalise: if any option has *, move it to first; otherwise first = correct
+      const starIdx = rawOptions.findIndex((o) => o.startsWith("*"));
+      const options = starIdx >= 0
+        ? [rawOptions[starIdx].slice(1), ...rawOptions.filter((_, idx) => idx !== starIdx).map((o) => o.startsWith("*") ? o.slice(1) : o)]
+        : rawOptions;
+      // options[0] is always correct now
+
+      // Deterministic shuffle for display so students can't exploit position
+      const seed = hashCode(`${lineKey}-${i}`);
+      const shuffled = seededShuffleArr(options, seed);
 
       if (interactive) {
         return (
           <span key={`${lineKey}-${i}`} className="inline-flex items-center gap-1 mx-0.5">
-            {options.map((opt, oi) => {
-              const isCorrectOpt = opt.startsWith("*");
-              const label = capitalise(isCorrectOpt ? opt.slice(1) : opt);
+            {shuffled.map((sh, oi) => {
+              const isCorrectOpt = sh.originalIndex === 0;
+              const label = capitalise(sh.item);
               const isSelected = selectedValue === label;
 
               let btnClass =
@@ -1219,15 +1538,35 @@ function renderInlineChoiceViewLine(
         );
       }
 
-      // Print mode: show squares
+      // Print mode: show squares (also shuffled for fairness)
+      const printShuffled = seededShuffleArr(options, seed);
       return (
-        <span key={`${lineKey}-${i}`} className="mx-0.5">
-          {options.map((opt, oi) => {
-            const label = capitalise(opt.startsWith("*") ? opt.slice(1) : opt);
+        <span key={`${lineKey}-${i}`} style={{ marginLeft: 2, marginRight: 2 }}>
+          {printShuffled.map((sh, oi) => {
+            const isCorrectOpt = sh.originalIndex === 0;
+            const label = capitalise(sh.item);
+            const filled = showSolutions && isCorrectOpt;
             return (
-              <span key={oi} style={{ marginRight: oi < options.length - 1 ? 6 : 0 }}>
-                <span className="inline-block border-[1.5px] border-muted-foreground/30" style={{ width: 12, height: 12, verticalAlign: '-3px', borderRadius: 2 }} />
-                <span className="ml-1 font-semibold">{label}</span>
+              <span key={oi} style={{ marginRight: oi < printShuffled.length - 1 ? 6 : 0 }}>
+                <span
+                  className="inline-block rounded border-2"
+                  style={{
+                    width: 20,
+                    height: 20,
+                    verticalAlign: '-5px',
+                    borderColor: filled ? '#16a34a' : 'rgba(115,115,115,0.3)',
+                    backgroundColor: filled ? '#16a34a' : 'transparent',
+                  }}
+                />
+                <span
+                  className="font-semibold"
+                  style={{
+                    marginLeft: 3,
+                    ...(filled ? { color: '#16a34a' } : {}),
+                  }}
+                >
+                  {label}
+                </span>
               </span>
             );
           })}
@@ -1245,22 +1584,34 @@ function InlineChoicesView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
+  mode = "online",
 }: {
   block: InlineChoicesBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
+  mode?: ViewMode;
 }) {
   const selections = (answer as Record<string, string> | undefined) || {};
   const items = migrateInlineChoicesBlock(block);
   const choiceCounter = { value: 0 };
+  const isPrint = mode === "print";
 
   return (
     <div>
       {items.map((item, idx) => (
-        <div key={item.id || idx} className="flex items-center gap-3 border-b last:border-b-0 py-2">
-          <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
+        <div
+          key={item.id || idx}
+          className="flex items-center border-b last:border-b-0"
+          style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+        >
+          <span
+            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
+            style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+          >
             {String(idx + 1).padStart(2, "0")}
           </span>
           <span className="flex-1">
@@ -1271,7 +1622,8 @@ function InlineChoicesView({
               selections,
               onAnswer,
               showResults,
-              choiceCounter
+              choiceCounter,
+              showSolutions,
             )}
           </span>
         </div>
@@ -1369,7 +1721,7 @@ function WordSearchView({
                   return (
                     <td
                       key={ci}
-                      className={`text-center text-base font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-semibold'}
+                      className={`text-center font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-semibold'}
                         ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
                         ${isSelected ? "bg-primary/20 text-primary" : ""}`}
                       style={cellStyle}
@@ -1396,12 +1748,14 @@ function SortingCategoriesView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: SortingCategoriesBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
@@ -1447,8 +1801,10 @@ function SortingCategoriesView({
 
   const getItemById = (id: string) => block.items.find((item) => item.id === id);
 
-  // Print mode: show all items as chips + empty category boxes
+  // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
+    // Compute max items per category for writing lines
+    const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
     return (
       <div className="space-y-3">
         {block.instruction && (
@@ -1458,7 +1814,7 @@ function SortingCategoriesView({
           {shuffledItems.map((item) => (
             <span
               key={item.id}
-              className="px-3 py-1.5 rounded-lg border border-border text-base"
+              className="px-3 py-1 rounded border border-border"
             >
               {item.text}
             </span>
@@ -1466,11 +1822,28 @@ function SortingCategoriesView({
         </div>
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
           {block.categories.map((cat) => (
-            <div key={cat.id} className="rounded-lg border border-border overflow-hidden">
+            <div key={cat.id} className="rounded border border-border overflow-hidden">
               <div className="bg-muted px-3 py-2">
-                <span className="text-sm font-semibold">{cat.label}</span>
+                <span className="font-semibold">{cat.label}</span>
               </div>
-              <div className="p-2 min-h-[100px]" />
+              <div className="px-2 pt-1 pb-4 min-h-[100px]">
+                {showSolutions ? (
+                  <div className="space-y-1 pt-1">
+                    {cat.correctItems.map((itemId) => {
+                      const item = block.items.find((it) => it.id === itemId);
+                      return item ? (
+                        <div key={itemId} className="text-green-800 font-semibold text-sm">{item.text}</div>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 && (
+                  <div className="space-y-0.5">
+                    {Array.from({ length: maxItemsPerCat }).map((_, i) => (
+                      <div key={i} className="h-9" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -1489,7 +1862,7 @@ function SortingCategoriesView({
           {displayUnsorted.map((item) => (
             <span
               key={item.id}
-              className={`px-3 py-1.5 rounded-lg border border-border text-base cursor-grab transition-colors
+              className={`px-3 py-1 rounded border border-border cursor-grab transition-colors
                 ${dragItem === item.id ? "bg-primary/10 border-primary" : "hover:bg-accent"}`}
               draggable
               onDragStart={() => setDragItem(item.id)}
@@ -1507,7 +1880,7 @@ function SortingCategoriesView({
           return (
             <div
               key={cat.id}
-              className="rounded-lg border border-border overflow-hidden transition-shadow"
+              className="rounded border border-border overflow-hidden transition-shadow"
               onDragOver={(e) => {
                 e.preventDefault();
                 e.currentTarget.classList.add("ring-2", "ring-primary");
@@ -1525,7 +1898,7 @@ function SortingCategoriesView({
               }}
             >
               <div className="bg-muted px-3 py-2">
-                <span className="text-sm font-semibold">{cat.label}</span>
+                <span className="font-semibold">{cat.label}</span>
               </div>
               <div className="p-2 space-y-1.5 min-h-[60px]">
                 {catItemIds.map((itemId) => {
@@ -1543,7 +1916,7 @@ function SortingCategoriesView({
                       key={item.id}
                       className={`flex items-center gap-2 p-2 rounded border transition-colors ${borderClass} ${bgClass}`}
                     >
-                      <span className="text-base flex-1">{item.text}</span>
+                      <span className="flex-1">{item.text}</span>
                       {!showResults && (
                         <button
                           className="p-0.5 hover:bg-muted rounded text-muted-foreground"
@@ -1586,7 +1959,7 @@ function scrambleWordDeterministic(
   lowercase: boolean,
   seed: number
 ): string {
-  let letters = word.split("");
+  let letters = word.replace(/\s+/g, "").split("");
   let firstLetter = "";
   if (keepFirst && letters.length > 1) {
     firstLetter = letters[0];
@@ -1611,6 +1984,7 @@ function UnscrambleWordsView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -1618,6 +1992,7 @@ function UnscrambleWordsView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
@@ -1637,13 +2012,21 @@ function UnscrambleWordsView({
   // Compute max word length for consistent arrow alignment
   const maxWordLength = Math.max(...block.words.map((item) => item.word.length), 0);
 
+  // Use persisted itemOrder if available
+  const orderedWords = block.itemOrder
+    ? block.itemOrder
+        .map((id) => block.words.find((w) => w.id === id))
+        .filter((w): w is NonNullable<typeof w> => !!w)
+        .concat(block.words.filter((w) => !block.itemOrder!.includes(w.id)))
+    : block.words;
+
   return (
     <div className="space-y-2">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
       <div>
-        {block.words.map((item, i) => {
+        {orderedWords.map((item, i) => {
           const scrambled = scrambleWordDeterministic(
             item.word,
             block.keepFirstLetter,
@@ -1672,7 +2055,7 @@ function UnscrambleWordsView({
               <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-mono font-semibold select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.62}em` }}>
+              <span className="font-semibold select-none shrink-0 inline-block text-left tracking-widest" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
               <span className="text-muted-foreground">→</span>
@@ -1702,6 +2085,8 @@ function UnscrambleWordsView({
                     </span>
                   )}
                 </div>
+              ) : showSolutions ? (
+                <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : (
                 <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3, minWidth: 80 }}>
                   &nbsp;
@@ -1735,6 +2120,7 @@ function FixSentencesView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -1742,6 +2128,7 @@ function FixSentencesView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
@@ -1869,7 +2256,7 @@ function FixSentencesView({
                           </div>
                         )}
                         <span
-                          className={`px-2.5 py-1 rounded border text-sm font-medium ${
+                          className={`px-2.5 py-1 rounded border font-medium ${
                             showResults
                               ? part === correctParts[pi]
                                 ? "bg-green-100 border-green-300 text-green-800"
@@ -1882,9 +2269,11 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  {isPrint && (
+                  {isPrint && showSolutions ? (
+                    <div className="mt-2 text-green-800 font-semibold text-sm">{correctParts.join(" ")}</div>
+                  ) : isPrint ? (
                     <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
-                  )}
+                  ) : null}
                   {showResults && !isFullyCorrect && (
                     <p className="text-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
@@ -2101,6 +2490,23 @@ function VerbTableView({
   );
 }
 
+// ─── Chart View ──────────────────────────────────────────────
+const ChartContent = dynamic(
+  () => import("@/components/chart/chart-view").then((m) => m.ChartContent),
+  { ssr: false, loading: () => <div className="w-full h-[300px] bg-muted/30 animate-pulse rounded" /> }
+);
+
+function ChartView({ block }: { block: ChartBlock }) {
+  return (
+    <div className="space-y-2">
+      {block.title && (
+        <p className="text-center font-semibold">{block.title}</p>
+      )}
+      <ChartContent block={block} />
+    </div>
+  );
+}
+
 // ─── Main Renderer ──────────────────────────────────────────
 
 export function ViewerBlockRenderer({
@@ -2109,14 +2515,18 @@ export function ViewerBlockRenderer({
   answer,
   onAnswer,
   showResults = false,
+  showSolutions = false,
   primaryColor = "#1a1a1a",
+  allBlocks,
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
   answer?: unknown;
   onAnswer?: (value: unknown) => void;
   showResults?: boolean;
+  showSolutions?: boolean;
   primaryColor?: string;
+  allBlocks?: WorksheetBlock[];
 }) {
   const interactive = mode === "online";
   const noop = () => {};
@@ -2144,6 +2554,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "fill-in-blank":
@@ -2154,6 +2565,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "matching":
@@ -2164,6 +2576,17 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
+        />
+      );
+    case "two-column-fill":
+      return (
+        <TwoColumnFillView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showSolutions={showSolutions}
         />
       );
     case "glossary":
@@ -2193,6 +2616,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "article-training":
@@ -2203,6 +2627,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "order-items":
@@ -2213,6 +2638,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "inline-choices":
@@ -2223,6 +2649,8 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
+          mode={mode}
         />
       );
     case "word-search":
@@ -2243,6 +2671,7 @@ export function ViewerBlockRenderer({
           answer={answer ?? undefined}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "unscramble-words":
@@ -2254,6 +2683,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "fix-sentences":
@@ -2265,6 +2695,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
         />
       );
     case "verb-table":
@@ -2279,6 +2710,10 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
         />
       );
+    case "chart":
+      return <ChartView block={block} />;
+    case "numbered-label":
+      return <NumberedLabelView block={block} allBlocks={allBlocks} />;
     case "columns":
       return (
         <ColumnsView
@@ -2287,7 +2722,9 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
           primaryColor={primaryColor}
+          allBlocks={allBlocks}
         />
       );
     default:

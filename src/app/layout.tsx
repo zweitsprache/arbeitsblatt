@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Asap_Condensed, Encode_Sans, Merriweather } from "next/font/google";
+import { Asap_Condensed, Encode_Sans, Merriweather, Shadows_Into_Light_Two } from "next/font/google";
 import "./globals.css";
 
 const asapCondensed = Asap_Condensed({
@@ -20,6 +20,12 @@ const merriweather = Merriweather({
   weight: ["300", "400", "700"],
 });
 
+const shadowsIntoLightTwo = Shadows_Into_Light_Two({
+  variable: "--font-handwriting",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 export const metadata: Metadata = {
   title: "Arbeitsblatt — Worksheet Builder",
   description: "Create and share worksheets for print and online",
@@ -33,7 +39,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body
-        className={`${asapCondensed.variable} ${encodeSans.variable} ${merriweather.variable} ${asapCondensed.className} antialiased`}
+        className={`${asapCondensed.variable} ${encodeSans.variable} ${merriweather.variable} ${shadowsIntoLightTwo.variable} ${asapCondensed.className} antialiased`}
       >
         {children}
       </body>

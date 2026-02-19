@@ -204,6 +204,7 @@ export function PrintPreview({
 
 .worksheet-block-multiple-choice,
 .worksheet-block-matching,
+.worksheet-block-two-column-fill,
 .worksheet-block-glossary,
 .worksheet-block-true-false-matrix,
 .worksheet-block-article-training,
@@ -314,7 +315,7 @@ p { widows: 2; orphans: 2; }
           {visibleBlocks.map((block, i) => (
             <div key={block.id} data-block-measure={i}>
               <div className={`worksheet-block worksheet-block-${block.type}`}>
-                <ViewerBlockRenderer block={block} mode="print" />
+                <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} />
               </div>
             </div>
           ))}
@@ -421,7 +422,7 @@ p { widows: 2; orphans: 2; }
                             key={block.id}
                             className={`worksheet-block worksheet-block-${block.type}`}
                           >
-                            <ViewerBlockRenderer block={block} mode="print" />
+                            <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} />
                           </div>
                         );
                       })

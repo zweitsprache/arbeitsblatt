@@ -24,6 +24,7 @@ interface EditorState {
   blocks: WorksheetBlock[];
   settings: WorksheetSettings;
   selectedBlockId: string | null;
+  activeItemIndex: number | null;
   viewMode: ViewMode;
   localeMode: LocaleMode;
   isDirty: boolean;
@@ -38,6 +39,7 @@ const initialState: EditorState = {
   blocks: [],
   settings: DEFAULT_SETTINGS,
   selectedBlockId: null,
+  activeItemIndex: null,
   viewMode: "print",
   localeMode: "DE",
   isDirty: false,
@@ -55,6 +57,7 @@ type EditorAction =
   | { type: "MOVE_BLOCK"; payload: { activeId: string; overId: string; position?: "above" | "below" } }
   | { type: "REORDER_BLOCKS"; payload: WorksheetBlock[] }
   | { type: "SELECT_BLOCK"; payload: string | null }
+  | { type: "SET_ACTIVE_ITEM"; payload: number | null }
   | { type: "SET_VIEW_MODE"; payload: ViewMode }
   | { type: "UPDATE_SETTINGS"; payload: Partial<WorksheetSettings> }
   | { type: "SET_BLOCK_VISIBILITY"; payload: { id: string; visibility: BlockVisibility } }
@@ -197,7 +200,15 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, blocks: action.payload, isDirty: true };
 
     case "SELECT_BLOCK":
-      return { ...state, selectedBlockId: action.payload };
+      return {
+        ...state,
+        selectedBlockId: action.payload,
+        // Only reset active item when switching to a different block
+        activeItemIndex: action.payload !== state.selectedBlockId ? null : state.activeItemIndex,
+      };
+
+    case "SET_ACTIVE_ITEM":
+      return { ...state, activeItemIndex: action.payload };
 
     case "SET_VIEW_MODE":
       return { ...state, viewMode: action.payload };

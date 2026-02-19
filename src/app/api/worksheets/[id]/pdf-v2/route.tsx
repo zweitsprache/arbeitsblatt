@@ -474,26 +474,70 @@ function RichText({ children, style, baseFontSize }: { children: string; style?:
   );
 }
 
-/* Rich HTML text rendered from segments */
+/* Rich HTML text rendered from segments — supports paragraph spacing */
 function HtmlText({ html, style, baseFontSize }: { html: string; style?: Style | Style[]; baseFontSize: number }) {
-  const segments = parseHtmlToSegments(html);
-  if (segments.length === 0) return null;
+  // Split HTML by paragraphs first, then parse segments within each
+  // Handle both <p>...</p> blocks and bare text
+  const paragraphs = html
+    .split(/<\/p>\s*/gi)
+    .map((p) => p.replace(/<p[^>]*>/gi, "").trim())
+    .filter((p) => p.length > 0);
+
+  // If no <p> tags were found, treat as single block
+  if (paragraphs.length <= 1) {
+    const segments = parseHtmlToSegments(html);
+    if (segments.length === 0) return null;
+    return (
+      <Text style={[{ lineHeight: 1.5 }, ...(Array.isArray(style) ? style : style ? [style] : [])]}>
+        {segments.map((seg, i) => (
+          <Text
+            key={i}
+            style={{
+              fontWeight: seg.bold ? 700 : undefined,
+              fontStyle: seg.italic ? "italic" : undefined,
+              textDecoration: seg.underline ? "underline" : seg.strikethrough ? "line-through" : undefined,
+              fontSize: seg.sup ? baseFontSize * 0.6 : undefined,
+            }}
+          >
+            {seg.text}
+          </Text>
+        ))}
+      </Text>
+    );
+  }
+
+  // Multiple paragraphs: render each with bottom margin
   return (
-    <Text style={style}>
-      {segments.map((seg, i) => (
-        <Text
-          key={i}
-          style={{
-            fontWeight: seg.bold ? 700 : undefined,
-            fontStyle: seg.italic ? "italic" : undefined,
-            textDecoration: seg.underline ? "underline" : seg.strikethrough ? "line-through" : undefined,
-            fontSize: seg.sup ? baseFontSize * 0.6 : undefined,
-          }}
-        >
-          {seg.text}
-        </Text>
-      ))}
-    </Text>
+    <View>
+      {paragraphs.map((pHtml, pi) => {
+        const segments = parseHtmlToSegments(pHtml);
+        if (segments.length === 0) return null;
+        return (
+          <Text
+            key={pi}
+            style={[
+              { lineHeight: 1.5 },
+              ...(Array.isArray(style) ? style : style ? [style] : []),
+              pi < paragraphs.length - 1 ? { marginBottom: baseFontSize * 0.6 } : {},
+            ]}
+          >
+            {segments.map((seg, i) => (
+              <Text
+                key={i}
+                style={{
+                  fontWeight: seg.bold ? 700 : undefined,
+                  fontStyle: seg.italic ? "italic" : undefined,
+                  textDecoration: seg.underline ? "underline" : seg.strikethrough ? "line-through" : undefined,
+                  fontSize: seg.sup ? baseFontSize * 0.6 : undefined,
+                }}
+              >
+                {seg.text}
+              </Text>
+            ))}
+          </Text>
+        );
+      })}
+    </View>
   );
 }
 
@@ -516,6 +560,25 @@ function LetterBadge({ letter, s }: { letter: string; s: S }) {
 function EmptySquare({ s }: { s: S }) {
   return <View style={s.emptySquare} />;
 }
+
+/** Green filled square for solution key */
+function FilledSquare() {
+  return (
+    <View
+      style={{
+        width: 12,
+        height: 12,
+        borderRadius: 3,
+        backgroundColor: "#22c55e",
+        borderWidth: 1,
+        borderColor: "#16a34a",
+      }}
+    />
+  );
+}
+
+/** Solution text styling constant */
+const solutionTextStyle = { color: "#166534", fontWeight: 600 as const };
 
 function SmallSquare({ s }: { s: S }) {
   return <View style={s.smallSquare} />;
@@ -545,13 +608,96 @@ function TextBlockPdf({
   if (hasImage) {
     const imgUri = imageMap[block.imageSrc!];
     const isLeft = block.imageAlign !== "right";
+
+    // Simulate CSS float: split paragraphs so that some sit beside the image
+    // and overflow paragraphs render full-width below
+    const paragraphs = block.content
+      .split(/<\/p>\s*/gi)
+      .map((p) => p.replace(/<p[^>]*>/gi, "").trim())
+      .filter((p) => p.length > 0);
+
+    // Heuristic: show at most 3 paragraphs beside the image, rest below
+    const beside = paragraphs.slice(0, 3);
+    const below = paragraphs.slice(3);
+
+    const imgStyle = {
+      width: `${imageScale}%`,
+      objectFit: "contain" as const,
+      flexShrink: 0,
+    };
+    const marginStyle = isLeft
+      ? { marginRight: 10 }
+      : { marginLeft: 10 };
+
     return (
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        {isLeft && <Image src={imgUri} style={{ width: `${imageScale}%` }} />}
-        <View style={{ flex: 1 }}>
-          <HtmlText html={block.content} baseFontSize={baseFontSize} />
+      <View>
+        {/* Row: image + first paragraphs side by side */}
+        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          {isLeft && <Image src={imgUri} style={{ ...imgStyle, ...marginStyle }} />}
+          <View style={{ flex: 1 }}>
+            {beside.map((pHtml, pi) => {
+              const segments = parseHtmlToSegments(pHtml);
+              if (segments.length === 0) return null;
+              return (
+                <Text
+                  key={pi}
+                  style={{
+                    lineHeight: 1.5,
+                    ...(pi < beside.length - 1 || below.length > 0 ? { marginBottom: baseFontSize * 0.6 } : {}),
+                  }}
+                >
+                  {segments.map((seg, i) => (
+                    <Text
+                      key={i}
+                      style={{
+                        fontWeight: seg.bold ? 700 : undefined,
+                        fontStyle: seg.italic ? "italic" : undefined,
+                        textDecoration: seg.underline ? "underline" : seg.strikethrough ? "line-through" : undefined,
+                        fontSize: seg.sup ? baseFontSize * 0.6 : undefined,
+                      }}
+                    >
+                      {seg.text}
+                    </Text>
+                  ))}
+                </Text>
+              );
+            })}
+          </View>
+          {!isLeft && <Image src={imgUri} style={{ ...imgStyle, ...marginStyle }} />}
         </View>
-        {!isLeft && <Image src={imgUri} style={{ width: `${imageScale}%` }} />}
+
+        {/* Remaining paragraphs at full width */}
+        {below.length > 0 && (
+          <View>
+            {below.map((pHtml, pi) => {
+              const segments = parseHtmlToSegments(pHtml);
+              if (segments.length === 0) return null;
+              return (
+                <Text
+                  key={pi}
+                  style={{
+                    lineHeight: 1.5,
+                    ...(pi < below.length - 1 ? { marginBottom: baseFontSize * 0.6 } : {}),
+                  }}
+                >
+                  {segments.map((seg, i) => (
+                    <Text
+                      key={i}
+                      style={{
+                        fontWeight: seg.bold ? 700 : undefined,
+                        fontStyle: seg.italic ? "italic" : undefined,
+                        textDecoration: seg.underline ? "underline" : seg.strikethrough ? "line-through" : undefined,
+                        fontSize: seg.sup ? baseFontSize * 0.6 : undefined,
+                      }}
+                    >
+                      {seg.text}
+                    </Text>
+                  ))}
+                </Text>
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   }
@@ -714,31 +860,37 @@ function DividerBlockPdf({ block }: { block: DividerBlock }) {
   );
 }
 
-function MultipleChoiceBlockPdf({ block, s }: { block: MultipleChoiceBlock; s: S }) {
+function MultipleChoiceBlockPdf({ block, s, showSolutions = false }: { block: MultipleChoiceBlock; s: S; showSolutions?: boolean }) {
   return (
     <View>
       {block.question && <Text style={s.instruction}>{block.question}</Text>}
-      {block.options.map((opt, i) => (
-        <View key={opt.id} style={[s.row, i === block.options.length - 1 ? { borderBottomWidth: 0 } : {}]}>
-          <NumberBadge n={i + 1} s={s} />
-          {/* Empty radio/checkbox circle */}
-          <View
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: block.allowMultiple ? 2 : 5,
-              borderWidth: 1.5,
-              borderColor: "#9ca3af80",
-            }}
-          />
-          <Text style={{ flex: 1 }}>{opt.text}</Text>
-        </View>
-      ))}
+      {block.options.map((opt, i) => {
+        const filled = showSolutions && opt.isCorrect;
+        return (
+          <View key={opt.id} style={[s.row, i === block.options.length - 1 ? { borderBottomWidth: 0 } : {}]}>
+            <NumberBadge n={i + 1} s={s} />
+            {filled ? (
+              <FilledSquare />
+            ) : (
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: block.allowMultiple ? 2 : 5,
+                  borderWidth: 1.5,
+                  borderColor: "#9ca3af80",
+                }}
+              />
+            )}
+            <Text style={{ flex: 1, ...(filled ? solutionTextStyle : {}) }}>{opt.text}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
-function FillInBlankBlockPdf({ block, s, baseFontSize }: { block: FillInBlankBlock; s: S; baseFontSize: number }) {
+function FillInBlankBlockPdf({ block, s, baseFontSize, showSolutions = false }: { block: FillInBlankBlock; s: S; baseFontSize: number; showSolutions?: boolean }) {
   // Parse content to extract text and blanks
   const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
   let blankIndex = 0;
@@ -750,6 +902,13 @@ function FillInBlankBlockPdf({ block, s, baseFontSize }: { block: FillInBlankBlo
           const match = part.match(/\{\{blank:(.+)\}\}/);
           if (match) {
             blankIndex++;
+            if (showSolutions) {
+              return (
+                <Text key={i} style={{ backgroundColor: "#dcfce7", ...solutionTextStyle }}>
+                  {" "}{match[1]}{" "}
+                </Text>
+              );
+            }
             return (
               <Text key={i}>
                 <Text
@@ -774,8 +933,13 @@ function FillInBlankBlockPdf({ block, s, baseFontSize }: { block: FillInBlankBlo
   );
 }
 
-function MatchingBlockPdf({ block, s }: { block: MatchingBlock; s: S }) {
+function MatchingBlockPdf({ block, s, showSolutions = false }: { block: MatchingBlock; s: S; showSolutions?: boolean }) {
   const shuffled = seededShuffle(block.pairs, block.id);
+  // Build a map from pair.id → letter in the shuffled right column
+  const pairToLetter: Record<string, string> = {};
+  shuffled.forEach((pair, i) => {
+    pairToLetter[pair.id] = String.fromCharCode(65 + i);
+  });
   return (
     <View>
       {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
@@ -786,7 +950,13 @@ function MatchingBlockPdf({ block, s }: { block: MatchingBlock; s: S }) {
             <View key={pair.id} style={[s.row, i === block.pairs.length - 1 ? { borderBottomWidth: 0 } : {}]}>
               <NumberBadge n={i + 1} s={s} />
               <Text style={{ flex: 1 }}>{pair.left}</Text>
-              <EmptySquare s={s} />
+              {showSolutions ? (
+                <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: "#22c55e", borderWidth: 1, borderColor: "#16a34a", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 7, fontWeight: 700, color: "#ffffff" }}>{pairToLetter[pair.id]}</Text>
+                </View>
+              ) : (
+                <EmptySquare s={s} />
+              )}
             </View>
           ))}
         </View>
@@ -868,7 +1038,7 @@ function NumberLineBlockPdf({ block, s }: { block: NumberLineBlock; s: S }) {
   );
 }
 
-function TrueFalseMatrixBlockPdf({ block, s }: { block: TrueFalseMatrixBlock; s: S }) {
+function TrueFalseMatrixBlockPdf({ block, s, showSolutions = false }: { block: TrueFalseMatrixBlock; s: S; showSolutions?: boolean }) {
   return (
     <View>
       {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
@@ -888,10 +1058,10 @@ function TrueFalseMatrixBlockPdf({ block, s }: { block: TrueFalseMatrixBlock; s:
           <NumberBadge n={i + 1} s={s} />
           <Text style={{ flex: 1 }}>{stmt.text}</Text>
           <View style={{ width: 40, alignItems: "center" }}>
-            <EmptySquare s={s} />
+            {showSolutions && stmt.correctAnswer ? <FilledSquare /> : <EmptySquare s={s} />}
           </View>
           <View style={{ width: 40, alignItems: "center" }}>
-            <EmptySquare s={s} />
+            {showSolutions && !stmt.correctAnswer ? <FilledSquare /> : <EmptySquare s={s} />}
           </View>
         </View>
       ))}
@@ -899,7 +1069,7 @@ function TrueFalseMatrixBlockPdf({ block, s }: { block: TrueFalseMatrixBlock; s:
   );
 }
 
-function ArticleTrainingBlockPdf({ block, s }: { block: ArticleTrainingBlock; s: S }) {
+function ArticleTrainingBlockPdf({ block, s, showSolutions = false }: { block: ArticleTrainingBlock; s: S; showSolutions?: boolean }) {
   const articles = ["der", "das", "die"];
   return (
     <View>
@@ -921,12 +1091,16 @@ function ArticleTrainingBlockPdf({ block, s }: { block: ArticleTrainingBlock; s:
           <NumberBadge n={i + 1} s={s} />
           {articles.map((a) => (
             <View key={a} style={{ width: 32, alignItems: "center" }}>
-              <EmptySquare s={s} />
+              {showSolutions && item.correctArticle === a ? <FilledSquare /> : <EmptySquare s={s} />}
             </View>
           ))}
           <Text style={{ flex: 1, paddingLeft: 4 }}>{item.text}</Text>
           {block.showWritingLine && (
-            <View style={{ width: 80, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", height: 14 }} />
+            showSolutions ? (
+              <Text style={{ width: 80, ...solutionTextStyle, fontSize: 8 }}>{item.correctArticle} {item.text}</Text>
+            ) : (
+              <View style={{ width: 80, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", height: 14 }} />
+            )
           )}
         </View>
       ))}
@@ -934,14 +1108,20 @@ function ArticleTrainingBlockPdf({ block, s }: { block: ArticleTrainingBlock; s:
   );
 }
 
-function OrderItemsBlockPdf({ block, s }: { block: OrderItemsBlock; s: S }) {
+function OrderItemsBlockPdf({ block, s, showSolutions = false }: { block: OrderItemsBlock; s: S; showSolutions?: boolean }) {
   const shuffled = seededShuffle(block.items, block.id);
   return (
     <View>
       {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
       {shuffled.map((item, i) => (
         <View key={item.id} style={[s.row, i === shuffled.length - 1 ? { borderBottomWidth: 0 } : {}]}>
-          <EmptySquare s={s} />
+          {showSolutions ? (
+            <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: "#22c55e", borderWidth: 1, borderColor: "#16a34a", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 7, fontWeight: 700, color: "#ffffff" }}>{item.correctPosition}</Text>
+            </View>
+          ) : (
+            <EmptySquare s={s} />
+          )}
           <Text style={{ flex: 1 }}>{item.text}</Text>
         </View>
       ))}
@@ -949,14 +1129,14 @@ function OrderItemsBlockPdf({ block, s }: { block: OrderItemsBlock; s: S }) {
   );
 }
 
-function InlineChoicesBlockPdf({ block, s, baseFontSize }: { block: InlineChoicesBlock; s: S; baseFontSize: number }) {
+function InlineChoicesBlockPdf({ block, s, baseFontSize, showSolutions = false }: { block: InlineChoicesBlock; s: S; baseFontSize: number; showSolutions?: boolean }) {
   const items = migrateInlineChoicesBlock(block);
 
   return (
     <View>
       {items.map((item, idx) => {
         // Parse the content to extract text and choice markers
-        const parts = item.content.split(/(\{\{choice:[^}]+\}\})/g);
+        const parts = item.content.split(/(\{\{(?:choice:)?[^}]+\}\})/g);
         let hasTextBefore = false;
 
         // Build segments: each is either a text node or a choice group (rendered as View row)
@@ -964,19 +1144,50 @@ function InlineChoicesBlockPdf({ block, s, baseFontSize }: { block: InlineChoice
         // with mixed Text segments and choice View groups.
         const segments: React.ReactNode[] = [];
         parts.forEach((part, i) => {
-          const match = part.match(/\{\{choice:(.+)\}\}/);
+          const match = part.match(/\{\{(?:choice:)?(.+)\}\}/);
           if (match) {
-            const options = match[1].split("|");
+            const rawOptions = match[1].split("|");
             const atStart = !hasTextBefore;
+
+            // Normalise: if any option has *, move it to first; otherwise first = correct
+            const starIdx = rawOptions.findIndex((o: string) => o.startsWith("*"));
+            const options = starIdx >= 0
+              ? [rawOptions[starIdx].slice(1), ...rawOptions.filter((_: string, idx: number) => idx !== starIdx).map((o: string) => o.startsWith("*") ? o.slice(1) : o)]
+              : rawOptions;
+            // options[0] is always correct now
+
+            // Deterministic shuffle for PDF so order varies
+            let seed = 0;
+            const seedStr = `${item.id || idx}-${i}`;
+            for (let si = 0; si < seedStr.length; si++) {
+              seed = ((seed << 5) - seed + seedStr.charCodeAt(si)) | 0;
+            }
+            const shuffled = options.map((opt: string, oi: number) => ({ item: opt, originalIndex: oi }));
+            let ss = seed;
+            for (let si = shuffled.length - 1; si > 0; si--) {
+              ss = (ss * 1664525 + 1013904223) & 0xffffffff;
+              const j = Math.floor(((ss >>> 0) / 0xffffffff) * (si + 1));
+              [shuffled[si], shuffled[j]] = [shuffled[j], shuffled[si]];
+            }
+
+            // Show all options — consistent with T/F: emptySquare centered, same gap
             segments.push(
-              <View key={`c${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginHorizontal: 2 }}>
-                {options.map((opt, oi) => {
-                  const raw = opt.startsWith("*") ? opt.slice(1) : opt;
+              <View key={`c${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 2 }}>
+                {shuffled.map((sh: { item: string; originalIndex: number }, oi: number) => {
+                  const isCorrect = sh.originalIndex === 0;
+                  const raw = sh.item;
                   const label = atStart ? raw.charAt(0).toUpperCase() + raw.slice(1) : raw;
+                  const filled = showSolutions && isCorrect;
                   return (
-                    <View key={oi} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                      <View style={s.smallSquare} />
-                      <Text style={{ fontWeight: 600 }}>{label}</Text>
+                    <View key={oi} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                      <View style={filled
+                        ? { width: 12, height: 12, borderRadius: 3, backgroundColor: "#22c55e", borderWidth: 1, borderColor: "#16a34a" }
+                        : s.emptySquare
+                      } />
+                      <Text style={{
+                        fontWeight: 600,
+                        ...(filled ? { color: "#166534" } : {}),
+                      }}>{label}</Text>
                     </View>
                   );
                 })}
@@ -1060,9 +1271,12 @@ function WordSearchBlockPdf({ block, s }: { block: WordSearchBlock; s: S }) {
   );
 }
 
-function SortingCategoriesBlockPdf({ block, s }: { block: SortingCategoriesBlock; s: S }) {
+function SortingCategoriesBlockPdf({ block, s, showSolutions = false }: { block: SortingCategoriesBlock; s: S; showSolutions?: boolean }) {
   const shuffledItems = seededShuffle(block.items, block.id);
   const colWidth = `${Math.floor(100 / block.categories.length) - 1}%`;
+  // Build item ID → text lookup
+  const itemMap: Record<string, string> = {};
+  block.items.forEach((item) => { itemMap[item.id] = item.text; });
   return (
     <View>
       {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
@@ -1079,7 +1293,13 @@ function SortingCategoriesBlockPdf({ block, s }: { block: SortingCategoriesBlock
             <View style={{ backgroundColor: "#f3f4f6", paddingHorizontal: 8, paddingVertical: 4 }}>
               <Text style={{ fontSize: 8, fontWeight: 600 }}>{cat.label}</Text>
             </View>
-            <View style={{ minHeight: 60, padding: 6 }} />
+            <View style={{ minHeight: 60, padding: 6 }}>
+              {showSolutions && cat.correctItems.map((itemId) => (
+                <Text key={itemId} style={{ fontSize: 7, ...solutionTextStyle, marginBottom: 2 }}>
+                  {itemMap[itemId] || itemId}
+                </Text>
+              ))}
+            </View>
           </View>
         ))}
       </View>
@@ -1087,7 +1307,7 @@ function SortingCategoriesBlockPdf({ block, s }: { block: SortingCategoriesBlock
   );
 }
 
-function UnscrambleWordsBlockPdf({ block, s }: { block: UnscrambleWordsBlock; s: S }) {
+function UnscrambleWordsBlockPdf({ block, s, showSolutions = false }: { block: UnscrambleWordsBlock; s: S; showSolutions?: boolean }) {
   const maxLen = Math.max(...block.words.map((w) => w.word.length), 0);
   const monoWidth = maxLen * 5; // approximate width for monospace
 
@@ -1106,7 +1326,11 @@ function UnscrambleWordsBlockPdf({ block, s }: { block: UnscrambleWordsBlock; s:
             <NumberBadge n={i + 1} s={s} />
             <Text style={{ fontFamily: "Asap Condensed", fontWeight: 600, width: monoWidth }}>{scrambled}</Text>
             <Text style={{ color: "#6b7280" }}>→</Text>
-            <View style={{ flex: 1, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", borderBottomStyle: "dashed", height: 14 }} />
+            {showSolutions ? (
+              <Text style={{ flex: 1, ...solutionTextStyle }}>{item.word}</Text>
+            ) : (
+              <View style={{ flex: 1, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", borderBottomStyle: "dashed", height: 14 }} />
+            )}
           </View>
         );
       })}
@@ -1114,7 +1338,7 @@ function UnscrambleWordsBlockPdf({ block, s }: { block: UnscrambleWordsBlock; s:
   );
 }
 
-function FixSentencesBlockPdf({ block, s }: { block: FixSentencesBlock; s: S }) {
+function FixSentencesBlockPdf({ block, s, showSolutions = false }: { block: FixSentencesBlock; s: S; showSolutions?: boolean }) {
   return (
     <View>
       {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
@@ -1148,8 +1372,12 @@ function FixSentencesBlockPdf({ block, s }: { block: FixSentencesBlock; s: S }) 
                     </Text>
                   ))}
                 </View>
-                {/* Writing line */}
-                <View style={{ marginTop: 6, height: 14, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", borderBottomStyle: "dashed" }} />
+                {/* Writing line or solution */}
+                {showSolutions ? (
+                  <Text style={{ marginTop: 6, ...solutionTextStyle, fontSize: 8 }}>{parts.join(" ")}</Text>
+                ) : (
+                  <View style={{ marginTop: 6, height: 14, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", borderBottomStyle: "dashed" }} />
+                )}
               </View>
             </View>
           </View>
@@ -1227,12 +1455,14 @@ function ColumnsBlockPdf({
   baseFontSize,
   imageMap,
   primaryColor,
+  showSolutions = false,
 }: {
   block: ColumnsBlock;
   s: S;
   baseFontSize: number;
   imageMap: Record<string, string>;
   primaryColor: string;
+  showSolutions?: boolean;
 }) {
   const cols = block.columns || 2;
   const colWidth = `${Math.floor(100 / cols) - 1}%`;
@@ -1248,6 +1478,7 @@ function ColumnsBlockPdf({
                 baseFontSize={baseFontSize}
                 imageMap={imageMap}
                 primaryColor={primaryColor}
+                showSolutions={showSolutions}
               />
             </View>
           ))}
@@ -1265,12 +1496,14 @@ function BlockPdf({
   baseFontSize,
   imageMap,
   primaryColor,
+  showSolutions = false,
 }: {
   block: WorksheetBlock;
   s: S;
   baseFontSize: number;
   imageMap: Record<string, string>;
   primaryColor: string;
+  showSolutions?: boolean;
 }) {
   switch (block.type) {
     case "heading":
@@ -1288,11 +1521,11 @@ function BlockPdf({
     case "divider":
       return <DividerBlockPdf block={block} />;
     case "multiple-choice":
-      return <MultipleChoiceBlockPdf block={block} s={s} />;
+      return <MultipleChoiceBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "fill-in-blank":
-      return <FillInBlankBlockPdf block={block} s={s} baseFontSize={baseFontSize} />;
+      return <FillInBlankBlockPdf block={block} s={s} baseFontSize={baseFontSize} showSolutions={showSolutions} />;
     case "matching":
-      return <MatchingBlockPdf block={block} s={s} />;
+      return <MatchingBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "glossary":
       return <GlossaryBlockPdf block={block} s={s} />;
     case "open-response":
@@ -1302,25 +1535,25 @@ function BlockPdf({
     case "number-line":
       return <NumberLineBlockPdf block={block} s={s} />;
     case "true-false-matrix":
-      return <TrueFalseMatrixBlockPdf block={block} s={s} />;
+      return <TrueFalseMatrixBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "article-training":
-      return <ArticleTrainingBlockPdf block={block} s={s} />;
+      return <ArticleTrainingBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "order-items":
-      return <OrderItemsBlockPdf block={block} s={s} />;
+      return <OrderItemsBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "inline-choices":
-      return <InlineChoicesBlockPdf block={block} s={s} baseFontSize={baseFontSize} />;
+      return <InlineChoicesBlockPdf block={block} s={s} baseFontSize={baseFontSize} showSolutions={showSolutions} />;
     case "word-search":
       return <WordSearchBlockPdf block={block} s={s} />;
     case "sorting-categories":
-      return <SortingCategoriesBlockPdf block={block} s={s} />;
+      return <SortingCategoriesBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "unscramble-words":
-      return <UnscrambleWordsBlockPdf block={block} s={s} />;
+      return <UnscrambleWordsBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "fix-sentences":
-      return <FixSentencesBlockPdf block={block} s={s} />;
+      return <FixSentencesBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "verb-table":
       return <VerbTableBlockPdf block={block} s={s} primaryColor={primaryColor} />;
     case "columns":
-      return <ColumnsBlockPdf block={block} s={s} baseFontSize={baseFontSize} imageMap={imageMap} primaryColor={primaryColor} />;
+      return <ColumnsBlockPdf block={block} s={s} baseFontSize={baseFontSize} imageMap={imageMap} primaryColor={primaryColor} showSolutions={showSolutions} />;
     default:
       return null;
   }
@@ -1337,6 +1570,7 @@ function WorksheetPdf({
   brandSettings,
   logoDataUri,
   imageMap,
+  showSolutions = false,
 }: {
   title: string;
   worksheetId: string;
@@ -1346,6 +1580,7 @@ function WorksheetPdf({
   brandSettings: BrandSettings;
   logoDataUri: string;
   imageMap: Record<string, string>;
+  showSolutions?: boolean;
 }) {
   const s = createStyles(settings, brandFonts);
   const baseFontSize = settings.fontSize * 0.75;
@@ -1423,6 +1658,22 @@ function WorksheetPdf({
           </View>
         )}
 
+        {/* ─── Solutions badge (fixed, top-left, every page — aligned with header/logo Y) ─── */}
+        {showSolutions && (
+          <View
+            fixed
+            style={{
+              position: "absolute",
+              top: mm(15),
+              left: mm(settings.margins.left + 5),
+            }}
+          >
+            <View style={{ backgroundColor: "#dcfce7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 0.5, borderColor: "#86efac" }}>
+              <Text style={{ fontSize: 7, fontWeight: 600, color: "#166534" }}>Lösung</Text>
+            </View>
+          </View>
+        )}
+
         {/* ─── Body Content ─── */}
         {visibleBlocks.map((block, i) => (
           <View key={block.id} style={i < visibleBlocks.length - 1 ? s.blockGap : {}}>
@@ -1432,6 +1683,7 @@ function WorksheetPdf({
               baseFontSize={baseFontSize}
               imageMap={imageMap}
               primaryColor={primaryColor}
+              showSolutions={showSolutions}
             />
           </View>
         ))}
@@ -1453,6 +1705,7 @@ export async function POST(
   const { id } = await params;
   const locale = req.nextUrl.searchParams.get("locale") as "DE" | "CH" | "NEUTRAL" | null;
   const isSwiss = locale === "CH";
+  const showSolutions = req.nextUrl.searchParams.get("solutions") === "1";
 
   const worksheet = await prisma.worksheet.findFirst({
     where: { id, userId } as Parameters<typeof prisma.worksheet.findFirst>[0] extends { where?: infer W } ? W : never,
@@ -1532,7 +1785,7 @@ export async function POST(
     }
 
     console.log(
-      `[Worksheet PDF v2] Generating react-pdf for "${pdfTitle}" (${pdfBlocks.length} blocks, brand=${brand}, locale=${locale || "DE"})`,
+      `[Worksheet PDF v2] Generating react-pdf for "${pdfTitle}" (${pdfBlocks.length} blocks, brand=${brand}, locale=${locale || "DE"}, solutions=${showSolutions})`,
     );
 
     const buffer = Buffer.from(
@@ -1546,6 +1799,7 @@ export async function POST(
           brandSettings={pdfBrandSettings}
           logoDataUri={logoDataUri}
           imageMap={imageMap}
+          showSolutions={showSolutions}
         />,
       ),
     );

@@ -14,12 +14,14 @@ export function WorksheetViewer({
   settings,
   mode,
   worksheetId,
+  showSolutions = false,
 }: {
   title: string;
   blocks: WorksheetBlock[];
   settings: WorksheetSettings;
   mode: ViewMode;
   worksheetId?: string;
+  showSolutions?: boolean;
 }) {
   const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -194,6 +196,23 @@ export function WorksheetViewer({
       {mode === "print" ? (
         /* Print mode: table thead/tfoot for repeating header & footer */
         <>
+          {showSolutions && (
+            <div style={{
+              position: "fixed",
+              top: "15mm",
+              left: "20mm",
+              backgroundColor: "#16a34a",
+              color: "white",
+              fontSize: "8pt",
+              fontWeight: 600,
+              padding: "2px 10px",
+              borderRadius: 4,
+              zIndex: 1000,
+              fontFamily: brandFonts.headerFooterFont,
+            }}>
+              Lösung
+            </div>
+          )}
           {showPrintFooter && (
             <div className="print-footer-fixed">
               <div>
@@ -249,7 +268,7 @@ export function WorksheetViewer({
                           key={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} />
                         </div>
                       ))}
                     </div>
@@ -295,6 +314,7 @@ export function WorksheetViewer({
                     onAnswer={(value) => updateAnswer(block.id, value)}
                     showResults={showResults}
                     primaryColor={brandFonts.primaryColor}
+                    allBlocks={visibleBlocks}
                   />
                 </div>
               ))}

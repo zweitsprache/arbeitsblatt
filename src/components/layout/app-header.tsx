@@ -1,12 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routing } from "@/i18n/routing";
-import { UserButton } from "@neondatabase/auth/react";
+
+const UserButton = dynamic(
+  () =>
+    import("@neondatabase/auth/react").then((mod) => ({
+      default: mod.UserButton,
+    })),
+  { ssr: false },
+);
 
 const localeLabels: Record<string, string> = {
   de: "DE",

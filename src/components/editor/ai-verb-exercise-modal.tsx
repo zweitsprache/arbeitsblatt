@@ -434,18 +434,14 @@ export function AiVerbExerciseModal({
   // Build inline-choices items and apply to block
   const buildInlineChoicesItems = useCallback(() => {
     return generatedItems.map((item, i) => {
-      const options = shuffle([
-        { text: item.correctForm, correct: true },
-        ...item.distractors.map((d) => ({ text: d, correct: false })),
-      ]);
+      // New syntax: first option = correct, randomised on render
+      const distractors = item.distractors;
 
-      const choiceParts = options
-        .map((o) => (o.correct ? `*${o.text}` : o.text))
-        .join("|");
+      const choiceParts = [item.correctForm, ...distractors].join("|");
 
       let sentence = item.sentence.replace(
         /___/,
-        `{{choice:${choiceParts}}}`
+        `{{${choiceParts}}}`
       );
 
       // Disambiguate sie/Sie at sentence start

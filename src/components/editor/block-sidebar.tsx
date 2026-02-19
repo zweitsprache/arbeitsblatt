@@ -28,6 +28,9 @@ import {
   TableProperties,
   LayoutGrid,
   BookA,
+  BarChart3,
+  Hash,
+  BookOpen,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -52,6 +55,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   TableProperties,
   LayoutGrid,
   BookA,
+  BarChart3,
+  Hash,
+  BookOpen,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

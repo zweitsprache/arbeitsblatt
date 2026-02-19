@@ -2078,14 +2078,16 @@ export async function renderCoverPng(props: CoverSvgProps): Promise<Buffer> {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer — matches worksheet print footer layout (left + right, no page numbering) */}
       <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 11 }}>
-        <span style={{ fontFamily: "Encode Sans", fontSize: 14, color: "#666666", lineHeight: 1.4 }}>
-          {`© ${year} lingostar | Marcel Allenspach`}
-        </span>
-        <span style={{ fontFamily: "Encode Sans", fontSize: 14, color: "#666666", textAlign: "right" as const, lineHeight: 1.4 }}>
-          {`${worksheetId}  ·  ${dateStr}`}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", fontFamily: "Encode Sans", fontSize: 14, color: "#666666", lineHeight: 1.4 }}>
+          <span>{`© ${year} lingostar | Marcel Allenspach`}</span>
+          <span>Alle Rechte vorbehalten</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", fontFamily: "Encode Sans", fontSize: 14, color: "#666666", textAlign: "right" as const, lineHeight: 1.4, alignItems: "flex-end" }}>
+          <span>{worksheetId.toUpperCase()}</span>
+          <span>{dateStr}</span>
+        </div>
       </div>
     </div>
   );

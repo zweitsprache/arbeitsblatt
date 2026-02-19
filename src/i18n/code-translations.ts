@@ -1,15 +1,14 @@
 /**
  * Block-label fallback: when new block types are added in code (BLOCK_LIBRARY)
- * but haven't been uploaded to i18nexus yet, we derive labels from the
- * BLOCK_LIBRARY definitions so the UI doesn't show raw translation keys.
+ * but don't yet have entries in the JSON translation files, we derive labels
+ * from the BLOCK_LIBRARY definitions so the UI doesn't show raw translation keys.
  *
- * All "real" translations now live in i18nexus and are pulled into
- * src/messages/{locale}.json. JSON values always take precedence over
- * these fallbacks; this file just prevents blank labels for brand-new blocks.
+ * Translations live in src/messages/{locale}.json (edited directly).
+ * JSON values always take precedence over these fallbacks; this file just
+ * prevents blank labels for brand-new blocks.
  *
  * HOW TO ADD NEW TRANSLATIONS:
- * 1. Add them in the i18nexus dashboard (or edit the JSON and run
- *    `npm run i18n:import:all` then `npm run i18n:pull`)
+ * 1. Edit src/messages/de.json and src/messages/en.json directly
  * 2. Use `useTranslations("yourNamespace")` in your component as usual
  * 3. Run `npm run i18n:validate` to verify both locales are in sync
  */
@@ -40,7 +39,7 @@ export function mergeCodeTranslations(
 ): Record<string, unknown> {
   const result = { ...messages };
 
-  // Merge block translations (fallback for new block types not yet in i18nexus)
+  // Merge block translations (fallback for new block types not yet in JSON files)
   const existingBlocks = (result.blocks ?? {}) as TranslationMap;
   const codeBlocks = getBlockTranslations(locale);
   result.blocks = { ...codeBlocks, ...existingBlocks };

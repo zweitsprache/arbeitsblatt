@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useTranslations } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
+import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import {
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { countChOverrides } from "@/lib/locale-utils";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Save,
   Printer,
@@ -45,6 +47,7 @@ import {
   ExternalLink,
   X,
   Loader2,
+  ImageDown,
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
@@ -59,10 +62,31 @@ export function EditorToolbar() {
   const [copied, setCopied] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+
+  // CH-aware title
+  const isChMode = state.localeMode === "CH";
+  const titleHasOverride = hasChOverride("_worksheet", "title", state.settings.chOverrides);
+  const displayTitle = getEffectiveValue(state.title, "_worksheet", "title", state.localeMode, state.settings.chOverrides);
+
+  const handleTitleChange = (value: string) => {
+    if (isChMode) {
+      const autoReplaced = replaceEszett(state.title);
+      if (value === autoReplaced) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title", value } });
+      }
+    } else {
+      dispatch({ type: "SET_TITLE", payload: value });
+    }
+  };
   const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
     open: boolean;
     preview?: boolean;
+    mode?: "pdf" | "cover";
   }>({ open: false });
+  const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
 
   // Get current brand settings with fallbacks
   const currentBrandSettings: BrandSettings = {
@@ -79,7 +103,7 @@ export function EditorToolbar() {
     });
   };
 
-  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
+  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE", outputMode: "worksheet" | "solutions" | "both" = "worksheet") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
@@ -87,7 +111,10 @@ export function EditorToolbar() {
     const setLoading = preview ? setIsGeneratingPreview : setIsGeneratingPdf;
     setLoading(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v2?locale=${locale}`, {
+      const params = new URLSearchParams({ locale });
+      if (outputMode === "solutions") params.set("solutions", "1");
+      if (outputMode === "both") params.set("both", "1");
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v3?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preview }),
@@ -103,9 +130,10 @@ export function EditorToolbar() {
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
       const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      const modeSuffix = outputMode === "solutions" ? "_solutions" : outputMode === "both" ? "_complete" : "";
       a.download = preview
-        ? `${shortId}_preview_${fileSuffix}.pdf`
-        : `${shortId}_${fileSuffix}.pdf`;
+        ? `${shortId}_preview_${fileSuffix}${modeSuffix}.pdf`
+        : `${shortId}_${fileSuffix}${modeSuffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -119,6 +147,42 @@ export function EditorToolbar() {
   const shareUrl = state.slug
     ? `${window.location.origin}/worksheet/${state.slug}`
     : null;
+
+  const handleDownloadCover = async (locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
+    if (!state.worksheetId) {
+      alert(t("saveFirst"));
+      return;
+    }
+    setIsGeneratingCover(true);
+    try {
+      const res = await authFetch(
+        `/api/worksheets/${state.worksheetId}/cover?locale=${locale}`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(t("pdfFailed", { error: errorMsg }));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const shortId = state.worksheetId.slice(0, 16);
+      const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      a.download = `${shortId}_cover_${fileSuffix}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Cover download error:", err);
+    } finally {
+      setIsGeneratingCover(false);
+    }
+  };
 
   const handlePublish = async () => {
     const willPublish = !state.published;
@@ -171,16 +235,43 @@ export function EditorToolbar() {
     }
   };
 
+  const handleLocaleClick = async (locale: "DE" | "CH" | "NEUTRAL") => {
+    const mode = pdfLocaleDialog.mode;
+    const preview = pdfLocaleDialog.preview ?? false;
+    const outputMode = pdfOutputMode;
+    setPdfLocaleDialog({ open: false });
+    setPdfOutputMode("worksheet");
+    if (mode === "cover") {
+      handleDownloadCover(locale);
+    } else {
+      handleDownloadPdf(preview, locale, outputMode);
+    }
+  };
+
   return (
     <>
       <div className="h-14 bg-background flex items-center px-4 gap-2 shrink-0">
         {/* Title */}
-        <Input
-          value={state.title}
-          onChange={(e) => dispatch({ type: "SET_TITLE", payload: e.target.value })}
-          className="max-w-[560px] h-8 font-medium"
-          placeholder={t("titlePlaceholder")}
-        />
+        <div className="flex items-center gap-1 max-w-[560px]">
+          <Input
+            value={displayTitle}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            className={`h-8 font-medium flex-1 ${
+              isChMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
+            }`}
+            placeholder={t("titlePlaceholder")}
+          />
+          {isChMode && titleHasOverride && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } })}
+              className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-amber-500 hover:text-red-500 shrink-0"
+              title={t("clearChTitle")}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
 
         {state.isDirty && (
           <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
@@ -224,17 +315,17 @@ export function EditorToolbar() {
         {/* DE / CH locale toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
           <Button
-            variant={state.localeMode === "DE" ? "secondary" : "ghost"}
+            variant={state.localeMode === "DE" ? "default" : "ghost"}
             size="sm"
-            className="h-7 px-2.5 gap-1 text-xs"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "DE" ? "shadow-sm" : ""}`}
             onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
           >
             {"🇩🇪"} DE
           </Button>
           <Button
-            variant={state.localeMode === "CH" ? "secondary" : "ghost"}
+            variant={state.localeMode === "CH" ? "default" : "ghost"}
             size="sm"
-            className="h-7 px-2.5 gap-1 text-xs"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "CH" ? "shadow-sm" : ""}`}
             onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
           >
             {"🇨🇭"} CH
@@ -367,8 +458,28 @@ export function EditorToolbar() {
             <Button
               variant="outline"
               size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setPdfLocaleDialog({ open: true, mode: "cover" })}
+              disabled={isGeneratingCover || !state.worksheetId}
+            >
+              {isGeneratingCover ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ImageDown className="h-3.5 w-3.5" />
+              )}
+              Cover
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("downloadCover")}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8"
-              onClick={() => setPdfLocaleDialog({ open: true, preview: true })}
+              onClick={() => setPdfLocaleDialog({ open: true, preview: true, mode: "pdf" })}
               disabled={isGeneratingPreview || isGeneratingPdf}
             >
               {isGeneratingPreview ? (
@@ -387,7 +498,7 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={() => setPdfLocaleDialog({ open: true, preview: false })}
+              onClick={() => setPdfLocaleDialog({ open: true, preview: false, mode: "pdf" })}
               disabled={isGeneratingPdf || isGeneratingPreview}
             >
               {isGeneratingPdf ? (
@@ -416,33 +527,52 @@ export function EditorToolbar() {
           </DialogHeader>
           <div className="flex gap-3 pt-2">
             <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => {
-                const preview = pdfLocaleDialog.preview ?? false;
-                setPdfLocaleDialog({ open: false });
-                handleDownloadPdf(preview, "DE");
-              }}
+              onClick={() => handleLocaleClick("DE")}
             >
               {"🇩🇪 Deutschland (ß)"}
             </Button>
             <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => {
-                const preview = pdfLocaleDialog.preview ?? false;
-                setPdfLocaleDialog({ open: false });
-                handleDownloadPdf(preview, "CH");
-              }}
+              onClick={() => handleLocaleClick("CH")}
             >
               {"🇨🇭 Schweiz (ss)"}
             </Button>
             <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => {
-                const preview = pdfLocaleDialog.preview ?? false;
-                setPdfLocaleDialog({ open: false });
-                handleDownloadPdf(preview, "NEUTRAL");
-              }}
+              onClick={() => handleLocaleClick("NEUTRAL")}
             >
               {"🌐 Neutral"}
             </Button>
           </div>
+          {pdfLocaleDialog.mode !== "cover" && (
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="text-sm font-medium">{t("pdfContent")}</Label>
+            <div className="flex gap-2">
+              <Button
+                variant={pdfOutputMode === "worksheet" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setPdfOutputMode("worksheet")}
+              >
+                {t("pdfWorksheetOnly")}
+              </Button>
+              <Button
+                variant={pdfOutputMode === "solutions" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setPdfOutputMode("solutions")}
+              >
+                {t("pdfSolutionsOnly")}
+              </Button>
+              <Button
+                variant={pdfOutputMode === "both" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setPdfOutputMode("both")}
+              >
+                {t("pdfBoth")}
+              </Button>
+            </div>
+          </div>
+          )}
         </DialogContent>
       </Dialog>
 
