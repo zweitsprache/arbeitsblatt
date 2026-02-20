@@ -48,20 +48,30 @@ type FlashcardAction =
   | { type: "MARK_SAVED" }
   | { type: "SET_PUBLISHED"; payload: boolean };
 
+// ─── Helpers ─────────────────────────────────────────────────
+function isBlankCard(card: FlashcardItem): boolean {
+  return !card.front.text && !card.front.image && !card.back.text && !card.back.image;
+}
+
 // ─── Reducer ─────────────────────────────────────────────────
 function flashcardReducer(state: FlashcardState, action: FlashcardAction): FlashcardState {
   switch (action.type) {
-    case "LOAD":
+    case "LOAD": {
+      const mergedSettings = { ...DEFAULT_FLASHCARD_SETTINGS, ...action.payload.settings };
+      const cards = mergedSettings.padEmptyCards
+        ? action.payload.cards
+        : action.payload.cards.filter((c) => !isBlankCard(c));
       return {
         ...state,
         worksheetId: action.payload.id,
         title: action.payload.title,
         slug: action.payload.slug,
-        cards: action.payload.cards,
-        settings: { ...DEFAULT_FLASHCARD_SETTINGS, ...action.payload.settings },
+        cards,
+        settings: mergedSettings,
         published: action.payload.published,
         isDirty: false,
       };
+    }
 
     case "SET_TITLE":
       return { ...state, title: action.payload, isDirty: true };
@@ -101,12 +111,20 @@ function flashcardReducer(state: FlashcardState, action: FlashcardAction): Flash
     case "SELECT_CARD":
       return { ...state, selectedCardId: action.payload };
 
-    case "UPDATE_SETTINGS":
+    case "UPDATE_SETTINGS": {
+      const newSettings = { ...state.settings, ...action.payload };
+      // When padEmptyCards is turned off, strip blank cards from state
+      const newCards =
+        action.payload.padEmptyCards === false
+          ? state.cards.filter((c) => !isBlankCard(c))
+          : state.cards;
       return {
         ...state,
-        settings: { ...state.settings, ...action.payload },
+        cards: newCards,
+        settings: newSettings,
         isDirty: true,
       };
+    }
 
     case "SET_SAVING":
       return { ...state, isSaving: action.payload };

@@ -14,6 +14,7 @@ export interface FlashcardSide {
   textPosition?: "top" | "center" | "bottom";
   fontSize?: number; // pt size for PDF, default 11
   fontWeight?: "normal" | "bold";
+  textColor?: string; // hex color override, default is black
 }
 
 // ─── Flashcard document ──────────────────────────────────────
@@ -33,9 +34,11 @@ export interface FlashcardDocument {
 export interface FlashcardSettings {
   cardsPerPage: number;
   singleSided: boolean;
+  padEmptyCards: boolean;
 }
 
 export const DEFAULT_FLASHCARD_SETTINGS: FlashcardSettings = {
   cardsPerPage: 8,
   singleSided: false,
+  padEmptyCards: false,
 };

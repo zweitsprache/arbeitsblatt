@@ -223,6 +223,7 @@ function FlashcardSideEditor({
               style={{
                 fontSize: `${Math.max(7, Math.round(((side.fontSize ?? 11) / 11) * 12))}px`,
                 fontWeight: side.fontWeight === "bold" ? 700 : 400,
+                color: side.textColor || undefined,
               }}
             >
               {side.text.split("\n").map((line, j) => (
@@ -314,6 +315,28 @@ function FlashcardSideEditor({
             >
               {w === "bold" ? "B" : "N"}
             </button>
+          ))}
+          <div className="w-px h-4 bg-border mx-0.5" />
+          {[
+            { value: "", color: "#000000", label: t("textColor_default") },
+            { value: "#4A3D55", color: "#4A3D55", label: "Plum" },
+            { value: "#7A5550", color: "#7A5550", label: "Mauve" },
+            { value: "#3A4F40", color: "#3A4F40", label: "Forest" },
+            { value: "#5A4540", color: "#5A4540", label: "Bark" },
+            { value: "#3A6570", color: "#3A6570", label: "Teal" },
+            { value: "#FFFFFF", color: "#FFFFFF", label: t("textColor_white") },
+          ].map((c) => (
+            <button
+              key={c.value}
+              className={`w-[18px] h-[18px] rounded-full border-2 transition-colors shrink-0 ${
+                (side.textColor ?? "") === c.value
+                  ? "border-primary ring-1 ring-primary/30"
+                  : "border-border hover:border-primary/50"
+              }`}
+              style={{ backgroundColor: c.color }}
+              onClick={() => onChange({ ...side, textColor: c.value || undefined })}
+              title={c.label}
+            />
           ))}
         </div>
         {/* Text size slider */}
@@ -457,7 +480,8 @@ function FlashcardEditorInner({
         method: "POST",
       });
       if (!res.ok) {
-        const err = await res.json();
+        const text = await res.text();
+        const err = text ? JSON.parse(text) : { error: `HTTP ${res.status}` };
         alert(t("pdfFailed", { error: err.error }));
         return;
       }
@@ -487,7 +511,8 @@ function FlashcardEditorInner({
         method: "POST",
       });
       if (!res.ok) {
-        const err = await res.json();
+        const text = await res.text();
+        const err = text ? JSON.parse(text) : { error: `HTTP ${res.status}` };
         alert(t("pdfFailed", { error: err.error }));
         return;
       }
@@ -560,6 +585,18 @@ function FlashcardEditorInner({
           />
           <label htmlFor="single-sided" className="text-xs text-muted-foreground cursor-pointer select-none">
             {t("singleSided")}
+          </label>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Switch
+            id="pad-empty-cards"
+            checked={state.settings.padEmptyCards}
+            onCheckedChange={(checked) =>
+              dispatch({ type: "UPDATE_SETTINGS", payload: { padEmptyCards: checked } })
+            }
+          />
+          <label htmlFor="pad-empty-cards" className="text-xs text-muted-foreground cursor-pointer select-none">
+            {t("padEmptyCards")}
           </label>
         </div>
         {state.isDirty && (

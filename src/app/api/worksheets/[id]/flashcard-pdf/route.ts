@@ -13,7 +13,9 @@ const CARD_W = 74; // mm
 const CARD_H = 52; // mm
 const COLS = 3;
 const ROWS = 3;
-const CARDS_PER_PAGE = 8; // 8 cards per page, 9th grid cell always empty
+const GRID_CELLS = COLS * ROWS; // 9
+const CARDS_PER_PAGE_PADDED = 8; // grammar-table mode: 9th cell always empty
+const CARDS_PER_PAGE_FULL = GRID_CELLS; // default: use all 9 cells
 const GRID_W = COLS * CARD_W; // 222mm
 const GRID_H = ROWS * CARD_H; // 156mm
 const PAGE_W = 297; // A4 landscape
@@ -101,10 +103,11 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
 
   const fontSize = side.fontSize ?? 11;
   const fontWeightVal = side.fontWeight === "bold" ? 700 : 400;
-  const hasExplicitWeight = side.fontWeight === "bold";
+  const hasExplicitWeight = !!side.fontWeight;
+  const textColor = side.textColor || "#000";
 
   const textHtml = side.text
-    ? `<div style="font-size:${fontSize}pt;font-weight:${fontWeightVal};line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text, hasExplicitWeight)}</div>`
+    ? `<div style="font-size:${fontSize}pt;font-weight:${fontWeightVal};color:${textColor};line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text, hasExplicitWeight)}</div>`
     : "";
 
   const logoHtml = pageSide === "front"
@@ -126,10 +129,11 @@ function buildPageHtml(
   side: "front" | "back",
   logoUrl: string,
   headerHtml: string,
-  footerHtml: string
+  footerHtml: string,
+  cardsPerPage: number
 ): string {
-  const start = pageIndex * CARDS_PER_PAGE;
-  const pageCards = cards.slice(start, start + CARDS_PER_PAGE);
+  const start = pageIndex * cardsPerPage;
+  const pageCards = cards.slice(start, start + cardsPerPage);
   const isCuttingLine = true;
 
   let gridHtml = "";
@@ -185,8 +189,8 @@ function buildPageHtml(
   </div>`;
 }
 
-function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean): string {
-  const totalFrontPages = Math.ceil(cards.length / CARDS_PER_PAGE);
+function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean, cardsPerPage: number): string {
+  const totalFrontPages = Math.ceil(cards.length / cardsPerPage);
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
 
@@ -202,9 +206,9 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
   let pagesHtml = "";
 
   for (let i = 0; i < totalFrontPages; i++) {
-    pagesHtml += buildPageHtml(cards, i, "front", logoUrl, headerHtml, footerHtml);
+    pagesHtml += buildPageHtml(cards, i, "front", logoUrl, headerHtml, footerHtml, cardsPerPage);
     if (!singleSided) {
-      pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml);
+      pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml, cardsPerPage);
     }
   }
 
@@ -334,19 +338,25 @@ export async function POST(
   // The modal inserts blank cards (empty front+back) to pad each verb group
   // to page boundaries. Strip those blanks and re-pad to CARDS_PER_PAGE so
   // the layout is always correct regardless of how the data was originally saved.
-  cards = repadCards(cards, CARDS_PER_PAGE);
+  const settings = (worksheet.settings ?? {}) as { singleSided?: boolean; padEmptyCards?: boolean };
+  const cardsPerPage = settings.padEmptyCards ? CARDS_PER_PAGE_PADDED : CARDS_PER_PAGE_FULL;
+  if (settings.padEmptyCards) {
+    cards = repadCards(cards, cardsPerPage);
+  } else {
+    // Strip any stored blank cards when padding is disabled
+    cards = cards.filter((c) => !isBlankCard(c));
+  }
 
   if (isSwiss) {
     cards = replaceEszett(cards);
   }
 
-  const settings = (worksheet.settings ?? {}) as { singleSided?: boolean };
   const singleSided = settings.singleSided === true;
 
   const logoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
   const logoSvgRaw = fs.readFileSync(logoPath, "utf-8");
   const logoDataUri = `data:image/svg+xml,${encodeURIComponent(logoSvgRaw)}`;
-  const html = buildFullHtml(cards, logoDataUri, worksheet.id, singleSided);
+  const html = buildFullHtml(cards, logoDataUri, worksheet.id, singleSided, cardsPerPage);
 
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);
@@ -386,7 +396,7 @@ export async function POST(
     await browser.close();
 
     const finalPdfBytes = new Uint8Array(pdfBuffer);
-    const frontPages = Math.ceil(cards.length / CARDS_PER_PAGE);
+    const frontPages = Math.ceil(cards.length / cardsPerPage);
     const totalPages = singleSided ? frontPages : frontPages * 2;
     console.log(`[Flashcard PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages (singleSided=${singleSided})`);
 

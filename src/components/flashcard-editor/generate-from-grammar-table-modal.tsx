@@ -539,7 +539,7 @@ export function GenerateFromGrammarTableModal({
           type: "flashcards",
           title: title.trim() || t("title"),
           blocks: previewCards,
-          settings: { cardsPerPage: 8 },
+          settings: { cardsPerPage: 8, padEmptyCards: true },
           published: false,
         }),
       });
