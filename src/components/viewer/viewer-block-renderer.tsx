@@ -32,6 +32,7 @@ import {
   VerbTableBlock,
   ChartBlock,
   NumberedLabelBlock,
+  DialogueBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useTranslations } from "next-intl";
@@ -168,7 +169,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank */}
       {block.showWordBank && shuffledItems.length > 0 && (
-        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
               <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
@@ -206,7 +207,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
               {block.showWritingLines ? (
                 <div className="space-y-0.5 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -247,7 +248,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank */}
       {block.showWordBank && shuffledItems.length > 0 && (
-        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
               <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
@@ -270,7 +271,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
               {block.showWritingLines ? (
                 <div className="space-y-0 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -420,17 +421,31 @@ function FillInBlankView({
   let blankIndex = 0;
 
   return (
-    <div className="leading-loose">
+    <div className="leading-loose flex flex-wrap items-baseline">
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank:(.+)\}\}/);
         if (match) {
-          const correctAnswer = match[1].trim();
+          const raw = match[1];
+          const commaIdx = raw.lastIndexOf(",");
+          let correctAnswer: string;
+          let widthMultiplier = 1;
+          if (commaIdx !== -1) {
+            correctAnswer = raw.substring(0, commaIdx).trim();
+            const wStr = raw.substring(commaIdx + 1).trim();
+            const parsed = Number(wStr);
+            if (!isNaN(parsed)) widthMultiplier = parsed;
+          } else {
+            correctAnswer = raw.trim();
+          }
           const key = `blank-${blankIndex}`;
           blankIndex++;
           const userValue = blanks[key] || "";
           const isCorrectAnswer =
             showResults && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
           const isWrong = showResults && userValue.trim() !== "" && !isCorrectAnswer;
+          const widthStyle = widthMultiplier === 0
+            ? { flex: 1 } as React.CSSProperties
+            : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
 
           if (interactive) {
             return (
@@ -442,7 +457,7 @@ function FillInBlankView({
                   onChange={(e) =>
                     onAnswer({ ...blanks, [key]: e.target.value })
                   }
-                  className={`border-b-2 bg-transparent px-2 py-0.5 text-center focus:outline-none w-32 inline transition-colors
+                  className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline transition-colors
                     ${showResults
                       ? isCorrectAnswer
                         ? "border-green-500 text-green-700"
@@ -450,6 +465,7 @@ function FillInBlankView({
                           ? "border-red-500 text-red-700"
                           : "border-muted-foreground/40"
                       : "border-muted-foreground/40 focus:border-primary"}`}
+                  style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
                   placeholder={tb("fillInBlankPlaceholder")}
                 />
                 {showResults && isWrong && (
@@ -474,8 +490,8 @@ function FillInBlankView({
           return (
             <span
               key={i}
-              className="bg-gray-100 min-w-[80px] px-2 mx-1"
-              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
+              className="bg-gray-100 px-2 mx-1"
+              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
             >
               <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
                 {String(blankIndex).padStart(2, "0")}
@@ -595,10 +611,7 @@ function MatchingView({
                 className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <span
-                  style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                  className="font-bold text-muted-foreground bg-muted"
-                >
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex-1">{pair.left}</span>
@@ -622,12 +635,15 @@ function MatchingView({
                 className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                {showSolutions ? (
+                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
+                  </span>
+                ) : (
+                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                )}
                 <span className="flex-1">{pair.right}</span>
-                <span
-                  style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                  className="font-bold text-muted-foreground bg-muted"
-                >
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String.fromCharCode(65 + i)}
                 </span>
               </div>
@@ -790,7 +806,7 @@ function TwoColumnFillView({
         )}
         {/* Word Bank */}
         {block.showWordBank && shuffledWordBank.length > 0 && (
-          <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+          <div className="rounded p-3 border border-dashed border-muted-foreground/30">
             <div className="flex flex-wrap gap-2">
               {shuffledWordBank.map((text, i) => (
                 <span key={i} className="px-2 py-0.5 bg-background rounded border">
@@ -852,7 +868,7 @@ function TwoColumnFillView({
       )}
       {/* Word Bank */}
       {block.showWordBank && shuffledWordBank.length > 0 && (
-        <div className="bg-muted/30 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledWordBank.map((text, i) => (
               <span key={i} className="px-2 py-0.5 bg-background rounded border">
@@ -1839,7 +1855,7 @@ function SortingCategoriesView({
                 ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 && (
                   <div className="space-y-0.5">
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
-                      <div key={i} className="h-9" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                      <div key={i} className="h-9" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                     ))}
                   </div>
                 )}
@@ -2088,7 +2104,7 @@ function UnscrambleWordsView({
               ) : showSolutions ? (
                 <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : (
-                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3, minWidth: 80 }}>
+                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
                   &nbsp;
                 </span>
               )}
@@ -2272,7 +2288,7 @@ function FixSentencesView({
                   {isPrint && showSolutions ? (
                     <div className="mt-2 text-green-800 font-semibold text-sm">{correctParts.join(" ")}</div>
                   ) : isPrint ? (
-                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ) : null}
                   {showResults && !isFullyCorrect && (
                     <p className="text-xs text-green-600 mt-2">
@@ -2486,6 +2502,159 @@ function VerbTableView({
           {t("resultCount", { correct: correctCount, total: totalCount })}
         </p>
       )}
+    </div>
+  );
+}
+
+// ─── Dialogue View ───────────────────────────────────────────
+function DialogueView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+  showSolutions = false,
+  primaryColor,
+}: {
+  block: DialogueBlock;
+  interactive: boolean;
+  answer: Record<string, string>;
+  onAnswer: (a: Record<string, string>) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  primaryColor: string;
+}) {
+  const t = useTranslations("blockRenderer");
+
+  const speakerIconMap: Record<string, React.ReactNode> = {
+    triangle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <polygon points="12,3 22,21 2,21" />
+      </svg>
+    ),
+    square: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+      </svg>
+    ),
+    diamond: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <polygon points="12,2 22,12 12,22 2,12" />
+      </svg>
+    ),
+    circle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    ),
+  };
+
+  // Collect gap answers for word bank
+  const gapAnswers: string[] = [];
+  let gapIndex = 0;
+  for (const item of block.items) {
+    const matches = item.text.matchAll(/\{\{blank:([^}]+)\}\}/g);
+    for (const m of matches) {
+      const raw = m[1];
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      gapAnswers.push(answer);
+      gapIndex++;
+    }
+  }
+
+  // Render text with interactive gaps
+  let globalGapIdx = 0;
+  const renderDialogueText = (text: string) => {
+    const parts = text.split(/(\{\{blank:[^}]+\}\})/g);
+    return parts.map((part, i) => {
+      const match = part.match(/\{\{blank:(.+)\}\}/);
+      if (match) {
+        const raw = match[1];
+        const commaIdx = raw.lastIndexOf(",");
+        let correctAnswer: string;
+        let widthMultiplier = 1;
+        if (commaIdx !== -1) {
+          correctAnswer = raw.substring(0, commaIdx).trim();
+          const wStr = raw.substring(commaIdx + 1).trim();
+          const parsed = Number(wStr);
+          if (!isNaN(parsed)) widthMultiplier = parsed;
+        } else {
+          correctAnswer = raw.trim();
+        }
+        const idx = globalGapIdx++;
+        const key = `gap-${idx}`;
+        const userVal = answer?.[key] ?? "";
+        const isCorrect = userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        const widthStyle = widthMultiplier === 0
+          ? { flex: 1 } as React.CSSProperties
+          : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+
+        return interactive ? (
+          <span key={i} className="inline-block mx-1">
+            <input
+              type="text"
+              value={userVal}
+              onChange={(e) => onAnswer({ ...answer, [key]: e.target.value })}
+              placeholder="…"
+              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline ${
+                showResults
+                  ? isCorrect
+                    ? "border-green-500 text-green-700"
+                    : "border-red-500 text-red-700"
+                  : "border-gray-400 focus:border-primary"
+              }`}
+              style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+            />
+          </span>
+        ) : (
+          <span
+            key={i}
+            className={`inline-block px-2 py-0.5 text-center mx-1 ${showSolutions ? "text-green-600 text-xs font-medium" : ""}`}
+            style={{ borderBottom: '1px dashed var(--color-muted-foreground)', ...widthStyle }}
+          >
+            {showSolutions ? correctAnswer : "\u00A0"}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="text-base text-muted-foreground">{block.instruction}</p>
+      )}
+      {/* Word Bank */}
+      {block.showWordBank && gapAnswers.length > 0 && (
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
+          <div className="flex flex-wrap gap-2">
+            {[...gapAnswers]
+              .sort(() => Math.random() - 0.5)
+              .map((text, i) => (
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
+                  {text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      {/* Dialogue items */}
+      <div className="space-y-0">
+        {block.items.map((item, i) => (
+          <div key={item.id} className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}>
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="text-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {speakerIconMap[item.icon] || speakerIconMap.circle}
+            </span>
+            <div className="flex-1 flex flex-wrap items-baseline">
+              {renderDialogueText(item.text)}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2712,6 +2881,18 @@ export function ViewerBlockRenderer({
       );
     case "chart":
       return <ChartView block={block} />;
+    case "dialogue":
+      return (
+        <DialogueView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          primaryColor={primaryColor}
+        />
+      );
     case "numbered-label":
       return <NumberedLabelView block={block} allBlocks={allBlocks} />;
     case "columns":

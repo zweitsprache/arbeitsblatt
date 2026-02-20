@@ -12,6 +12,8 @@ export interface FlashcardSide {
   imageAspectRatio?: "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
   imageScale?: number; // 10-100
   textPosition?: "top" | "center" | "bottom";
+  fontSize?: number; // pt size for PDF, default 11
+  fontWeight?: "normal" | "bold";
 }
 
 // ─── Flashcard document ──────────────────────────────────────
@@ -29,10 +31,11 @@ export interface FlashcardDocument {
 
 // ─── Flashcard settings ─────────────────────────────────────
 export interface FlashcardSettings {
-  // Placeholder for future PDF layout settings
   cardsPerPage: number;
+  singleSided: boolean;
 }
 
 export const DEFAULT_FLASHCARD_SETTINGS: FlashcardSettings = {
   cardsPerPage: 8,
+  singleSided: false,
 };

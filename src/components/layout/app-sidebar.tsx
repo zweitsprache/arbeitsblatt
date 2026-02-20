@@ -126,9 +126,9 @@ export function AppSidebar() {
           collapsed ? "w-[calc(3.5rem+0.75rem)]" : "w-[calc(20rem+0.75rem)]"
         }`}
       >
-        <div className="bg-pink-950 text-white flex flex-col h-full rounded-sm border border-border shadow-sm">
+        <div className="bg-pink-950 text-white flex flex-col h-full min-h-0 rounded-sm border border-border shadow-sm">
         {/* Nav items */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
           {/* Dashboard section */}
           <SectionTitle icon={LayoutDashboard} collapsed={collapsed}>
             {t("dashboard")}

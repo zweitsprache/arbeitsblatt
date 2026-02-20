@@ -31,6 +31,7 @@ import {
   BarChart3,
   Hash,
   BookOpen,
+  MessageCircle,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -58,6 +59,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   Hash,
   BookOpen,
+  MessageCircle,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

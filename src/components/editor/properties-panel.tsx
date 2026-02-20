@@ -49,6 +49,9 @@ import {
   ChartBlock,
   ChartDataPoint,
   NumberedLabelBlock,
+  DialogueBlock,
+  DialogueItem,
+  DialogueSpeakerIcon,
   WorksheetBlock,
   BlockVisibility,
 } from "@/types/worksheet";
@@ -3415,6 +3418,212 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
   );
 }
 
+// ─── Dialogue Props ──────────────────────────────────────────
+function DialogueProps({ block }: { block: DialogueBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const iconSvgMap: Record<DialogueSpeakerIcon, React.ReactNode> = {
+    triangle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
+        <polygon points="12,3 22,21 2,21" />
+      </svg>
+    ),
+    square: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+      </svg>
+    ),
+    diamond: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
+        <polygon points="12,2 22,12 12,22 2,12" />
+      </svg>
+    ),
+    circle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 inline-block">
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    ),
+  };
+
+  const iconOptions: { value: DialogueSpeakerIcon; label: string }[] = [
+    { value: "triangle", label: "Triangle" },
+    { value: "square", label: "Square" },
+    { value: "diamond", label: "Diamond" },
+    { value: "circle", label: "Circle" },
+  ];
+
+  const updateItem = (index: number, updates: Partial<DialogueItem>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const lastIcon = block.items.length > 0
+      ? block.items[block.items.length - 1].icon
+      : "triangle";
+    const lastSpeaker = block.items.length > 0
+      ? block.items[block.items.length - 1].speaker
+      : "A";
+    // Alternate between the last two distinct speakers
+    const speakers = [...new Set(block.items.map((i) => i.speaker))];
+    const nextSpeaker = speakers.length >= 2
+      ? (lastSpeaker === speakers[0] ? speakers[1] : speakers[0])
+      : String.fromCharCode(65 + speakers.length);
+    const icons = [...new Set(block.items.map((i) => i.icon))];
+    const lastIcons = block.items.map((i) => i.icon);
+    const nextIcon = icons.length >= 2
+      ? (lastIcon === icons[0] ? icons[1] : icons[0])
+      : (iconOptions.find((o) => !icons.includes(o.value))?.value ?? "circle");
+
+    const newItems = [
+      ...block.items,
+      {
+        id: `dl${Date.now()}`,
+        speaker: nextSpeaker,
+        icon: nextIcon as DialogueSpeakerIcon,
+        text: "",
+      },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newItems = [...block.items];
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newItems.length) return;
+    [newItems[index], newItems[swapIndex]] = [newItems[swapIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWordBank")}</Label>
+        <Switch
+          checked={block.showWordBank ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t("dialogueGapHelp")}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("dialogueItems")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
+            <div className="flex items-center gap-1">
+              <Select
+                value={item.icon}
+                onValueChange={(v) => updateItem(i, { icon: v as DialogueSpeakerIcon })}
+              >
+                <SelectTrigger className="w-[44px] h-8 text-xs px-2">
+                  {iconSvgMap[item.icon] || iconSvgMap.circle}
+                </SelectTrigger>
+                <SelectContent>
+                  {iconOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span className="flex items-center gap-2">{iconSvgMap[opt.value]} {opt.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${i}.speaker`}
+                baseValue={item.speaker}
+                onBaseChange={(v) => updateItem(i, { speaker: v })}
+                className="h-8 text-xs w-16"
+                placeholder={t("dialogueSpeaker")}
+              />
+              <div className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => moveItem(i, "up")}
+                disabled={i === 0}
+              >
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => moveItem(i, "down")}
+                disabled={i === block.items.length - 1}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeItem(i)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <ChInput
+              blockId={block.id}
+              fieldPath={`items.${i}.text`}
+              baseValue={item.text}
+              onBaseChange={(v) => updateItem(i, { text: v })}
+              className="h-8 text-xs"
+              placeholder={t("dialogueTextPlaceholder")}
+            />
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Properties Panel ────────────────────────────────────────
 // ─── Chart Props ─────────────────────────────────────────────
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#818cf8", "#7c3aed", "#4f46e5", "#6d28d9"];
@@ -3974,6 +4183,8 @@ export function PropertiesPanel() {
         return <VerbTableProps block={selectedBlock} />;
       case "chart":
         return <ChartProps block={selectedBlock} />;
+      case "dialogue":
+        return <DialogueProps block={selectedBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

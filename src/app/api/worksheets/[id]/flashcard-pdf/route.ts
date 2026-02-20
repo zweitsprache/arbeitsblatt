@@ -30,8 +30,9 @@ function escapeHtml(str: string): string {
     .replace(/\n/g, "<br>");
 }
 
-/** Escape HTML and make the first line semibold, render {{hl}}…{{/hl}} as yellow highlight, {{sup}}…{{/sup}} as superscript */
-function escapeHtmlBoldFirst(str: string): string {
+/** Escape HTML and make the first line semibold, render {{hl}}…{{/hl}} as yellow highlight, {{sup}}…{{/sup}} as superscript.
+ *  When skipFirstLineBold is true (explicit fontWeight set), don't wrap the first line in <strong>. */
+function escapeHtmlBoldFirst(str: string, skipFirstLineBold = false): string {
   const lines = str.split("\n");
   return lines
     .map((line, i) => {
@@ -43,7 +44,7 @@ function escapeHtmlBoldFirst(str: string): string {
         .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#5a4540;color:#fff;font-weight:600;padding:0 2px;border-radius:2px;">$1</span>')
         .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
         .replace(/\{\{verb\}\}/g, "");
-      return i === 0 ? `<strong>${escaped}</strong>` : escaped;
+      return i === 0 && !skipFirstLineBold ? `<strong>${escaped}</strong>` : escaped;
     })
     .join("<br>");
 }
@@ -98,8 +99,12 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
   const justifyMap = { top: "flex-start", center: "center", bottom: "flex-end" };
   const justify = justifyMap[side.textPosition ?? "center"];
 
+  const fontSize = side.fontSize ?? 11;
+  const fontWeightVal = side.fontWeight === "bold" ? 700 : 400;
+  const hasExplicitWeight = side.fontWeight === "bold";
+
   const textHtml = side.text
-    ? `<div style="font-size:11pt;line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text)}</div>`
+    ? `<div style="font-size:${fontSize}pt;font-weight:${fontWeightVal};line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text, hasExplicitWeight)}</div>`
     : "";
 
   const logoHtml = pageSide === "front"
@@ -180,7 +185,7 @@ function buildPageHtml(
   </div>`;
 }
 
-function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string): string {
+function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean): string {
   const totalFrontPages = Math.ceil(cards.length / CARDS_PER_PAGE);
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -198,7 +203,9 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
 
   for (let i = 0; i < totalFrontPages; i++) {
     pagesHtml += buildPageHtml(cards, i, "front", logoUrl, headerHtml, footerHtml);
-    pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml);
+    if (!singleSided) {
+      pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml);
+    }
   }
 
   return `<!DOCTYPE html>
@@ -333,10 +340,13 @@ export async function POST(
     cards = replaceEszett(cards);
   }
 
+  const settings = (worksheet.settings ?? {}) as { singleSided?: boolean };
+  const singleSided = settings.singleSided === true;
+
   const logoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
   const logoSvgRaw = fs.readFileSync(logoPath, "utf-8");
   const logoDataUri = `data:image/svg+xml,${encodeURIComponent(logoSvgRaw)}`;
-  const html = buildFullHtml(cards, logoDataUri, worksheet.id);
+  const html = buildFullHtml(cards, logoDataUri, worksheet.id, singleSided);
 
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);
@@ -384,7 +394,9 @@ export async function POST(
     await browser.close();
 
     const finalPdfBytes = new Uint8Array(pdfBuffer);
-    console.log(`[Flashcard PDF] Generated ${finalPdfBytes.length} bytes, ${Math.ceil(cards.length / CARDS_PER_PAGE) * 2} pages`);
+    const frontPages = Math.ceil(cards.length / CARDS_PER_PAGE);
+    const totalPages = singleSided ? frontPages : frontPages * 2;
+    console.log(`[Flashcard PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages (singleSided=${singleSided})`);
 
     const shortId = worksheet.id.slice(0, 16);
     const filename = `${shortId}_${locale}.pdf`;

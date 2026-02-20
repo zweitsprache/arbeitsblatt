@@ -32,7 +32,8 @@ export type BlockType =
   | "article-training"
   | "chart"
   | "numbered-label"
-  | "two-column-fill";
+  | "two-column-fill"
+  | "dialogue";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -382,6 +383,23 @@ export interface VerbTableBlock extends BlockBase {
   pluralRows: VerbTableRow[];
 }
 
+// ─── Dialogue block ──────────────────────────────────────────
+export type DialogueSpeakerIcon = "triangle" | "square" | "diamond" | "circle";
+
+export interface DialogueItem {
+  id: string;
+  speaker: string;
+  icon: DialogueSpeakerIcon;
+  text: string; // supports {{blank:answer}} gap syntax
+}
+
+export interface DialogueBlock extends BlockBase {
+  type: "dialogue";
+  instruction: string;
+  items: DialogueItem[];
+  showWordBank: boolean;
+}
+
 // ─── Chart block ─────────────────────────────────────────────
 export type ChartType = "bar" | "pie" | "line";
 
@@ -440,7 +458,8 @@ export type WorksheetBlock =
   | ArticleTrainingBlock
   | ChartBlock
   | NumberedLabelBlock
-  | TwoColumnFillBlock;
+  | TwoColumnFillBlock
+  | DialogueBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -1080,6 +1099,26 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       showGrid: true,
       xAxisLabel: "",
       yAxisLabel: "",
+      visibility: "both",
+    },
+  },
+  {
+    type: "dialogue",
+    label: "Dialogue",
+    description: "Dialogue with speaker icons and gaps",
+    labelKey: "dialogue",
+    descriptionKey: "dialogueDesc",
+    icon: "MessageCircle",
+    category: "interactive",
+    translations: { de: { label: "Dialog", description: "Dialog mit Sprechersymbolen und Lücken" } },
+    defaultData: {
+      type: "dialogue",
+      instruction: "",
+      items: [
+        { id: "dl1", speaker: "A", icon: "triangle", text: "Hello, how are you?" },
+        { id: "dl2", speaker: "B", icon: "circle", text: "I am fine, thank you!" },
+      ],
+      showWordBank: false,
       visibility: "both",
     },
   },

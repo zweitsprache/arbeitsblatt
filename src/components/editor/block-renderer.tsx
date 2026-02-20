@@ -34,6 +34,8 @@ import {
   ArticleAnswer,
   ChartBlock,
   NumberedLabelBlock,
+  DialogueBlock,
+  DialogueSpeakerIcon,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -291,7 +293,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank Preview */}
       {block.showWordBank && block.items.some(item => item.text) && (
-        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
             {block.items
@@ -396,7 +398,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
                 {block.showWritingLines && (
                   <div className="space-y-0.5 mt-1 pb-2">
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                     ))}
                   </div>
                 )}
@@ -488,7 +490,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
     <div className="space-y-3">
       {/* Word Bank Preview */}
       {block.showWordBank && block.items.some(item => item.caption) && (
-        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
             {block.items
@@ -529,7 +531,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
                       placeholder={t("answerWord")}
                     />
                     {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 0.3 }} />
+                      <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                     ))}
                   </div>
                 ) : (
@@ -745,23 +747,40 @@ function FillInBlankRenderer({
   const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
 
   return (
-    <div className="leading-relaxed">
+    <div className="leading-relaxed flex flex-wrap items-baseline">
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank:(.+)\}\}/);
         if (match) {
+          const raw = match[1];
+          const commaIdx = raw.lastIndexOf(",");
+          let answer: string;
+          let widthMultiplier = 1;
+          if (commaIdx !== -1) {
+            answer = raw.substring(0, commaIdx).trim();
+            const wStr = raw.substring(commaIdx + 1).trim();
+            const parsed = Number(wStr);
+            if (!isNaN(parsed)) widthMultiplier = parsed;
+          } else {
+            answer = raw.trim();
+          }
+          const widthStyle = widthMultiplier === 0
+            ? { flex: 1 } as React.CSSProperties
+            : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
           return interactive ? (
             <input
               key={i}
               type="text"
               placeholder={t("fillInBlankPlaceholder")}
-              className="border-b-2 border-gray-400 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary w-28 inline"
+              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline`}
+              style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
             />
           ) : (
             <span
               key={i}
-              className="inline-block border-b-2 border-gray-400 min-w-[80px] px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs"
+              className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
+              style={widthStyle}
             >
-              {match[1]}
+              {answer}
             </span>
           );
         }
@@ -779,30 +798,30 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
   return (
     <div className="space-y-3">
       <p className="text-base text-muted-foreground">{block.instruction}</p>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
+      <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
+        <div className="space-y-0">
           {block.pairs.map((pair, i) => (
             <div
               key={pair.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-border"
+              className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="text-base flex-1">{pair.left}</span>
+              <span className="flex-1">{pair.left}</span>
             </div>
           ))}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-0">
           {shuffledRight.map((pair, i) => (
             <div
               key={`right-${pair.id}`}
-              className="flex items-center gap-3 p-3 rounded-lg border border-border"
+              className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String.fromCharCode(65 + i)}
               </span>
-              <span className="text-base flex-1">{pair.right}</span>
+              <span className="flex-1">{pair.right}</span>
             </div>
           ))}
         </div>
@@ -830,7 +849,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
       <p className="text-base text-muted-foreground">{block.instruction}</p>
       {/* Word Bank */}
       {block.showWordBank && wordBankItems.length > 0 && (
-        <div className="bg-muted/50 rounded p-3 border border-dashed border-muted-foreground/30">
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
             {[...wordBankItems]
@@ -2771,6 +2790,134 @@ function ColumnsRenderer({
   );
 }
 
+// ─── Dialogue ────────────────────────────────────────────────
+function DialogueRenderer({
+  block,
+  interactive,
+}: {
+  block: DialogueBlock;
+  interactive: boolean;
+}) {
+  const t = useTranslations("blockRenderer");
+
+  const speakerIconMap: Record<string, React.ReactNode> = {
+    triangle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <polygon points="12,3 22,21 2,21" />
+      </svg>
+    ),
+    square: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+      </svg>
+    ),
+    diamond: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <polygon points="12,2 22,12 12,22 2,12" />
+      </svg>
+    ),
+    circle: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    ),
+  };
+
+  // Collect gap answers for word bank
+  const gapAnswers: string[] = [];
+  for (const item of block.items) {
+    const matches = item.text.matchAll(/\{\{blank:([^}]+)\}\}/g);
+    for (const m of matches) {
+      const raw = m[1];
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      gapAnswers.push(answer);
+    }
+  }
+
+  // Render text with gaps
+  const renderDialogueText = (text: string) => {
+    const parts = text.split(/(\{\{blank:[^}]+\}\})/g);
+    return parts.map((part, i) => {
+      const match = part.match(/\{\{blank:(.+)\}\}/);
+      if (match) {
+        const raw = match[1];
+        // Parse optional width: {{blank:answer,N}}
+        const commaIdx = raw.lastIndexOf(",");
+        let answer: string;
+        let widthMultiplier = 1;
+        if (commaIdx !== -1) {
+          answer = raw.substring(0, commaIdx).trim();
+          const wStr = raw.substring(commaIdx + 1).trim();
+          const parsed = Number(wStr);
+          if (!isNaN(parsed)) widthMultiplier = parsed;
+        } else {
+          answer = raw.trim();
+        }
+        const widthStyle = widthMultiplier === 0
+          ? { flex: 1 } as React.CSSProperties
+          : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+        return interactive ? (
+          <input
+            key={i}
+            type="text"
+            placeholder="…"
+            className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline`}
+            style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+          />
+        ) : (
+          <span
+            key={i}
+            className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
+            style={widthStyle}
+          >
+            {answer}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="text-base text-muted-foreground">{block.instruction}</p>
+      )}
+      {/* Word Bank */}
+      {block.showWordBank && gapAnswers.length > 0 && (
+        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
+          <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
+          <div className="flex flex-wrap gap-2">
+            {[...gapAnswers]
+              .sort(() => Math.random() - 0.5)
+              .map((text, i) => (
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
+                  {text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      {/* Dialogue items */}
+      <div className="space-y-0">
+        {block.items.map((item, i) => (
+          <div key={item.id} className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}>
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="text-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {speakerIconMap[item.icon] || speakerIconMap.circle}
+            </span>
+            <div className="flex-1 flex flex-wrap items-baseline">
+              {renderDialogueText(item.text)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Chart ───────────────────────────────────────────────────
 const ChartContent = dynamic(
   () => import("@/components/chart/chart-view").then((m) => m.ChartContent),
@@ -2897,6 +3044,8 @@ export function BlockRenderer({
       return <VerbTableRenderer block={block} />;
     case "chart":
       return <ChartRenderer block={block} />;
+    case "dialogue":
+      return <DialogueRenderer block={block} interactive={interactive} />;
     case "numbered-label":
       return <NumberedLabelRenderer block={block} />;
     case "columns":

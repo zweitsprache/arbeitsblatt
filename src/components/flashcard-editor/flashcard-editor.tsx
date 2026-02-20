@@ -29,10 +29,13 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   ImageDown,
+  ALargeSmall,
+  Bold,
 } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -215,9 +218,15 @@ function FlashcardSideEditor({
               paddingBottom: side.textPosition === "bottom" ? "4px" : undefined,
             }}
           >
-            <span className="text-xs text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words whitespace-pre-line">
+            <span
+              className="text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words whitespace-pre-line"
+              style={{
+                fontSize: `${Math.max(7, Math.round(((side.fontSize ?? 11) / 11) * 12))}px`,
+                fontWeight: side.fontWeight === "bold" ? 700 : 400,
+              }}
+            >
               {side.text.split("\n").map((line, j) => (
-                <span key={j} className={j === 0 ? "font-semibold" : ""}>
+                <span key={j} className={j === 0 && (side.fontWeight ?? "normal") === "normal" ? "font-semibold" : ""}>
                   {j > 0 && <br />}
                   {renderHighlightedText(line)}
                 </span>
@@ -290,6 +299,35 @@ function FlashcardSideEditor({
               </button>
             );
           })}
+          <div className="w-px h-4 bg-border mx-0.5" />
+          {(["normal", "bold"] as const).map((w) => (
+            <button
+              key={w}
+              className={`p-1 rounded transition-colors text-[10px] leading-none min-w-[22px] ${
+                (side.fontWeight ?? "normal") === w
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+              style={{ fontWeight: w === "bold" ? 700 : 400 }}
+              onClick={() => onChange({ ...side, fontWeight: w })}
+              title={t(`fontWeight_${w}`)}
+            >
+              {w === "bold" ? "B" : "N"}
+            </button>
+          ))}
+        </div>
+        {/* Text size slider */}
+        <div className="flex items-center gap-2">
+          <ALargeSmall className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Slider
+            value={[side.fontSize ?? 11]}
+            min={6}
+            max={120}
+            step={1}
+            onValueChange={([value]) => onChange({ ...side, fontSize: value })}
+            className="flex-1"
+          />
+          <span className="text-[10px] text-muted-foreground w-10 text-right">{side.fontSize ?? 11}pt</span>
         </div>
         <textarea
           className="w-full min-h-[60px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -307,6 +345,7 @@ function FlashcardRow({
   card,
   index,
   isSelected,
+  singleSided,
   onSelect,
   onUpdate,
   onRemove,
@@ -315,6 +354,7 @@ function FlashcardRow({
   card: FlashcardItem;
   index: number;
   isSelected: boolean;
+  singleSided: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<FlashcardItem>) => void;
   onRemove: () => void;
@@ -375,12 +415,16 @@ function FlashcardRow({
           side={card.front}
           onChange={(front) => onUpdate({ front })}
         />
-        <div className="w-px bg-border self-stretch" />
-        <FlashcardSideEditor
-          label={t("back")}
-          side={card.back}
-          onChange={(back) => onUpdate({ back })}
-        />
+        {!singleSided && (
+          <>
+            <div className="w-px bg-border self-stretch" />
+            <FlashcardSideEditor
+              label={t("back")}
+              side={card.back}
+              onChange={(back) => onUpdate({ back })}
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -506,6 +550,18 @@ function FlashcardEditorInner({
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("cardCount", { count: state.cards.length })}
         </Badge>
+        <div className="flex items-center gap-1.5">
+          <Switch
+            id="single-sided"
+            checked={state.settings.singleSided}
+            onCheckedChange={(checked) =>
+              dispatch({ type: "UPDATE_SETTINGS", payload: { singleSided: checked } })
+            }
+          />
+          <label htmlFor="single-sided" className="text-xs text-muted-foreground cursor-pointer select-none">
+            {t("singleSided")}
+          </label>
+        </div>
         {state.isDirty && (
           <Badge variant="secondary" className="text-xs">
             {tc("unsaved")}
@@ -595,6 +651,7 @@ function FlashcardEditorInner({
                   card={card}
                   index={idx}
                   isSelected={state.selectedCardId === card.id}
+                  singleSided={state.settings.singleSided}
                   onSelect={() =>
                     dispatch({ type: "SELECT_CARD", payload: card.id })
                   }
