@@ -61,3 +61,13 @@ model EBook {
   @@index([folderId])
   @@index([userId])
 }
+
+model VerbCache {
+  id         String   @id @default(cuid())
+  infinitive String   @unique  // normalised: trimmed, lowercased (e.g. "sich vorstellen")
+  data       Json              // full VerbConjugationTable including highlights
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([infinitive])
+}

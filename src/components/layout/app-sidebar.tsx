@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   TableProperties,
   Store,
+  Image,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -83,6 +84,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor/grammar-tables", labelKey: "newGrammarTable", icon: Plus },
       { href: "/grammar-tables", labelKey: "grammarTableLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "covers",
+    icon: Image,
+    items: [
+      { href: "/editor/covers", labelKey: "newCover", icon: Plus },
+      { href: "/covers", labelKey: "coverLibrary", icon: Library },
     ],
   },
   {
@@ -173,12 +182,13 @@ export function AppSidebar() {
                   } else if (item.labelKey === "flashcardLibrary") {
                     isActive = pathname === "/flashcards";
                   } else if (item.labelKey === "newWorksheet") {
-                    // Exact match or /editor/[id] but not /editor/flashcards or /editor/ebook
+                    // Exact match or /editor/[id] but not /editor/flashcards or /editor/ebook or /editor/covers
                     isActive =
                       pathname === "/editor" ||
                       (pathname.startsWith("/editor/") &&
                         !pathname.startsWith("/editor/flashcards") &&
-                        !pathname.startsWith("/editor/ebook"));
+                        !pathname.startsWith("/editor/ebook") &&
+                        !pathname.startsWith("/editor/covers"));
                   } else {
                     isActive = pathname.startsWith(item.href);
                   }

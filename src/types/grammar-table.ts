@@ -323,14 +323,22 @@ export interface VerbConjugationTable {
   separablePrefix?: string;
   /** Whether the verb is reflexive (reflexiv) */
   isReflexive: boolean;
-  /** Only show 3. Person Singular & 3. Person Plural (other rows stay empty) */
+  /** @deprecated Use thirdPersonSingularOnly + thirdPersonPluralOnly instead */
   thirdPersonOnly?: boolean;
+  /** Only show 3. Person Singular (er/sie/es) — other singular rows stay empty */
+  thirdPersonSingularOnly?: boolean;
+  /** Only show 3. Person Plural (sie) — other plural rows stay empty */
+  thirdPersonPluralOnly?: boolean;
   /** Conjugations indexed by person key */
   conjugations: Record<PersonKey, PersonConjugations>;
 }
 
-/** Person keys that represent 3rd person */
-export const THIRD_PERSON_KEYS: PersonKey[] = ["er_sie_es", "sie_pl"];
+/** Person keys that represent 3rd person singular */
+export const THIRD_PERSON_SINGULAR_KEYS: PersonKey[] = ["er_sie_es"];
+/** Person keys that represent 3rd person plural */
+export const THIRD_PERSON_PLURAL_KEYS: PersonKey[] = ["sie_pl"];
+/** Person keys that represent 3rd person (both singular & plural) */
+export const THIRD_PERSON_KEYS: PersonKey[] = [...THIRD_PERSON_SINGULAR_KEYS, ...THIRD_PERSON_PLURAL_KEYS];
 
 export const DEFAULT_CONJUGATION_INPUT: ConjugationInput = {
   verbs: ["machen"],

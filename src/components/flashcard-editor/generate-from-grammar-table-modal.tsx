@@ -41,6 +41,7 @@ import {
   VerbModus,
   VERB_MODUS_LABELS,
 } from "@/types/grammar-table";
+import { getVisiblePersonKeys, isThirdPersonRestricted } from "@/lib/regular-conjugation";
 import { FlashcardItem } from "@/types/flashcard";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -211,8 +212,9 @@ function generateFlashcards(
       for (const personKey of personOrder) {
         if (!selectedPersons[personKey]) continue;
 
-        // Respect thirdPersonOnly
-        if (table.thirdPersonOnly && !THIRD_PERSON_KEYS.includes(personKey)) {
+        // Respect thirdPersonSingularOnly / thirdPersonPluralOnly
+        const visiblePersonKeys = getVisiblePersonKeys(table);
+        if (!visiblePersonKeys.includes(personKey)) {
           continue;
         }
 
@@ -263,24 +265,48 @@ function generateFlashcards(
     }
   });
 
-  // When sorting by infinitive, pad each verb group to full pages (9 cards per page)
-  // so each verb starts on a fresh page. Skip padding for other sort orders.
+  // When sorting by infinitive, pad each verb group to full pages (8 cards per page)
+  // so each verb starts on a fresh page. For 3rd-person-restricted verbs, also
+  // pad each tense to a page boundary so tenses don't mix on the same page.
   if (sortOrder === "infinitive") {
-    const PAGE_SIZE = 9;
+    const PAGE_SIZE = 8; // 8 cards per page (9th grid cell always empty)
     const result: FlashcardItem[] = [];
     let currentVerb: string | null = null;
+    let currentTense: VerbTense | null = null;
 
-    for (const c of cards) {
-      if (currentVerb !== null && c.verb !== currentVerb) {
-        const remainder = result.length % PAGE_SIZE;
-        if (remainder !== 0) {
-          const blanks = PAGE_SIZE - remainder;
-          for (let i = 0; i < blanks; i++) {
-            result.push({ id: crypto.randomUUID(), front: { text: "" }, back: { text: "" } });
-          }
+    // Build a lookup: verb name → whether it has a 3rd-person restriction
+    const restrictedVerbs = new Set(
+      tableData.filter((t) => isThirdPersonRestricted(t)).map((t) => t.input.verb)
+    );
+
+    const padToPage = () => {
+      const remainder = result.length % PAGE_SIZE;
+      if (remainder !== 0) {
+        const blanks = PAGE_SIZE - remainder;
+        for (let i = 0; i < blanks; i++) {
+          result.push({ id: crypto.randomUUID(), front: { text: "" }, back: { text: "" } });
         }
       }
+    };
+
+    for (const c of cards) {
+      // Pad on verb boundary
+      if (currentVerb !== null && c.verb !== currentVerb) {
+        padToPage();
+      }
+      // Pad on tense boundary within 3rd-person-restricted verbs
+      else if (
+        currentVerb !== null &&
+        c.verb === currentVerb &&
+        currentTense !== null &&
+        c.tense !== currentTense &&
+        restrictedVerbs.has(c.verb)
+      ) {
+        padToPage();
+      }
+
       currentVerb = c.verb;
+      currentTense = c.tense;
       result.push({
         id: crypto.randomUUID(),
         front: { text: c.front },
@@ -662,9 +688,14 @@ export function GenerateFromGrammarTableModal({
                         className="cursor-pointer text-sm"
                       >
                         {table.input.verb}
-                        {table.thirdPersonOnly && (
+                        {isThirdPersonRestricted(table) && (
                           <span className="text-xs text-muted-foreground ml-1">
-                            {t("thirdPersonOnly")}
+                            {(table.thirdPersonSingularOnly ?? table.thirdPersonOnly) &&
+                             (table.thirdPersonPluralOnly ?? table.thirdPersonOnly)
+                              ? t("thirdPersonOnly")
+                              : (table.thirdPersonSingularOnly ?? table.thirdPersonOnly)
+                                ? t("thirdPersonSingularOnly")
+                                : t("thirdPersonPluralOnly")}
                           </span>
                         )}
                       </Label>

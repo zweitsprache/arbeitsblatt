@@ -74,6 +74,7 @@ type GrammarTableAction =
   | { type: "UPDATE_CONJUGATION_INPUT"; payload: Partial<ConjugationInput> }
   | { type: "UPDATE_VERB_PREPOSITION_INPUT"; payload: Partial<VerbPrepositionInput> }
   | { type: "SET_TABLE_DATA"; payload: GrammarTableData }
+  | { type: "MERGE_TABLE_DATA"; payload: VerbConjugationTable[] }
   | { type: "CLEAR_TABLE_DATA" }
   | { type: "UPDATE_SETTINGS"; payload: Partial<GrammarTableSettings> }
   | { type: "SET_SAVING"; payload: boolean }
@@ -88,7 +89,8 @@ type GrammarTableAction =
       value: string;
     } }
   | { type: "UPDATE_INFINITIVE"; payload: { tableIndex: number; verb: string } }
-  | { type: "TOGGLE_THIRD_PERSON_ONLY"; payload: { tableIndex: number } }
+  | { type: "SET_THIRD_PERSON_SINGULAR_ONLY"; payload: { tableIndex: number; value: boolean } }
+  | { type: "SET_THIRD_PERSON_PLURAL_ONLY"; payload: { tableIndex: number; value: boolean } }
   | { type: "UPDATE_CONJUGATION_HIGHLIGHTS"; payload: {
       tableIndex: number;
       personKey: PersonKey;
@@ -155,6 +157,41 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
         tableData: action.payload,
         isDirty: true,
       };
+
+    case "MERGE_TABLE_DATA": {
+      // Merge new/updated verb tables into existing tableData by infinitive
+      const incoming = action.payload;
+      if (!incoming.length) return state;
+      const existing = (state.tableData as VerbConjugationTable[] | null) ?? [];
+      // Build a map of existing tables by normalised infinitive
+      const map = new Map<string, VerbConjugationTable>();
+      for (const t of existing) {
+        map.set(t.input.verb.trim().toLowerCase(), t);
+      }
+      // Overwrite / insert new tables
+      for (const t of incoming) {
+        map.set(t.input.verb.trim().toLowerCase(), t);
+      }
+      // Preserve the order from conjugationInput.verbs
+      const verbOrder = (state.conjugationInput?.verbs ?? []).map(v => v.trim().toLowerCase());
+      const merged: VerbConjugationTable[] = [];
+      const used = new Set<string>();
+      for (const v of verbOrder) {
+        if (v && map.has(v) && !used.has(v)) {
+          merged.push(map.get(v)!);
+          used.add(v);
+        }
+      }
+      // Append any tables not in verbOrder (safety net)
+      for (const [key, table] of map) {
+        if (!used.has(key)) merged.push(table);
+      }
+      return {
+        ...state,
+        tableData: merged,
+        isDirty: true,
+      };
+    }
 
     case "CLEAR_TABLE_DATA":
       return {
@@ -305,14 +342,26 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
       };
     }
 
-    case "TOGGLE_THIRD_PERSON_ONLY": {
-      const { tableIndex } = action.payload;
+    case "SET_THIRD_PERSON_SINGULAR_ONLY": {
+      const { tableIndex, value } = action.payload;
       if (!state.tableData || !Array.isArray(state.tableData)) return state;
       const tables = state.tableData as VerbConjugationTable[];
       if (tableIndex < 0 || tableIndex >= tables.length) return state;
       const updatedTables = tables.map((table, idx) => {
         if (idx !== tableIndex) return table;
-        return { ...table, thirdPersonOnly: !table.thirdPersonOnly };
+        return { ...table, thirdPersonSingularOnly: value, thirdPersonOnly: undefined };
+      });
+      return { ...state, tableData: updatedTables, isDirty: true };
+    }
+
+    case "SET_THIRD_PERSON_PLURAL_ONLY": {
+      const { tableIndex, value } = action.payload;
+      if (!state.tableData || !Array.isArray(state.tableData)) return state;
+      const tables = state.tableData as VerbConjugationTable[];
+      if (tableIndex < 0 || tableIndex >= tables.length) return state;
+      const updatedTables = tables.map((table, idx) => {
+        if (idx !== tableIndex) return table;
+        return { ...table, thirdPersonPluralOnly: value, thirdPersonOnly: undefined };
       });
       return { ...state, tableData: updatedTables, isDirty: true };
     }
@@ -329,7 +378,7 @@ function grammarTableReducer(state: GrammarTableState, action: GrammarTableActio
 interface GrammarTableContextValue {
   state: GrammarTableState;
   dispatch: React.Dispatch<GrammarTableAction>;
-  generate: () => Promise<void>;
+  generate: (forceRegenerate?: string[]) => Promise<void>;
   save: () => Promise<void>;
 }
 
@@ -338,27 +387,35 @@ const GrammarTableContext = createContext<GrammarTableContextValue | null>(null)
 export function GrammarTableProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(grammarTableReducer, initialState);
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (forceRegenerate?: string[]) => {
     dispatch({ type: "SET_GENERATING", payload: true });
     try {
       // Choose API endpoint based on table type
       let endpoint: string;
-      let input: DeclinationInput | ConjugationInput | VerbPrepositionInput;
+      let requestBody: Record<string, unknown>;
+
       if (state.tableType === "verb-conjugation") {
         endpoint = "/api/ai/generate-conjugation-table";
-        input = state.conjugationInput;
+        // Collect verbs already in tableData so the API can skip them
+        const existingTables = (state.tableData as VerbConjugationTable[] | null) ?? [];
+        const existingVerbs = existingTables.map(t => t.input.verb);
+        requestBody = {
+          input: state.conjugationInput,
+          existingVerbs: forceRegenerate?.length ? [] : existingVerbs,
+          forceRegenerate: forceRegenerate ?? [],
+        };
       } else if (state.tableType === "verb-preposition") {
         endpoint = "/api/ai/generate-preposition-table";
-        input = state.verbPrepositionInput;
+        requestBody = { input: state.verbPrepositionInput };
       } else {
         endpoint = "/api/ai/generate-declination-table";
-        input = state.declinationInput;
+        requestBody = { input: state.declinationInput };
       }
 
       const res = await authFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify(requestBody),
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
@@ -367,13 +424,28 @@ export function GrammarTableProvider({ children }: { children: React.ReactNode }
         return;
       }
       const data = await res.json();
-      dispatch({ type: "SET_TABLE_DATA", payload: data });
+
+      // Verb-conjugation returns { tables, fromCache, generated, failed }
+      if (state.tableType === "verb-conjugation" && data.tables) {
+        if (data.tables.length > 0) {
+          dispatch({ type: "MERGE_TABLE_DATA", payload: data.tables });
+        }
+        // Log results for debugging
+        if (data.fromCache?.length) console.log(`[Generate] ${data.fromCache.length} from cache`);
+        if (data.generated?.length) console.log(`[Generate] ${data.generated.length} AI-generated`);
+        if (data.failed?.length) {
+          console.error(`[Generate] ${data.failed.length} failed:`, data.failed);
+          alert(`Generation failed for: ${data.failed.join(", ")}`);
+        }
+      } else {
+        dispatch({ type: "SET_TABLE_DATA", payload: data });
+      }
     } catch (err) {
       console.error("Generation failed:", err);
     } finally {
       dispatch({ type: "SET_GENERATING", payload: false });
     }
-  }, [state.tableType, state.declinationInput, state.conjugationInput, state.verbPrepositionInput]);
+  }, [state.tableType, state.declinationInput, state.conjugationInput, state.verbPrepositionInput, state.tableData]);
 
   const save = useCallback(async () => {
     dispatch({ type: "SET_SAVING", payload: true });

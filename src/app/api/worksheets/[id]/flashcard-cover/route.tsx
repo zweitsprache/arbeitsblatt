@@ -8,6 +8,7 @@ import path from "path";
 import sharp from "sharp";
 import satori from "satori";
 import { readLogoAsPngDataUri } from "@/app/api/worksheets/[id]/grammar-table-pdf-v2/route";
+import { replaceEszett } from "@/lib/locale-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,9 +119,11 @@ function renderInlineMarkers(
         <span
           key={key++}
           style={{
-            backgroundColor: "#FEF08A",
-            padding: "0 1px",
-            borderRadius: 1,
+            backgroundColor: "#5a4540",
+            color: "#fff",
+            fontWeight: 600,
+            padding: "0 2px",
+            borderRadius: 2,
           }}
         >
           {match[1]}
@@ -414,6 +417,8 @@ export async function POST(
   const { userId } = result;
 
   const { id } = await params;
+  const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH";
+  const isSwiss = locale === "CH";
 
   const worksheet = await prisma.worksheet.findFirst({
     where: {
@@ -429,9 +434,13 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const cards = (worksheet.blocks ?? []) as unknown as FlashcardItem[];
+  let cards = (worksheet.blocks ?? []) as unknown as FlashcardItem[];
   if (cards.length === 0) {
     return NextResponse.json({ error: "No cards" }, { status: 400 });
+  }
+
+  if (isSwiss) {
+    cards = replaceEszett(cards);
   }
 
   try {
@@ -444,16 +453,21 @@ export async function POST(
       64,
     );
 
+    let title = worksheet.title.replace(/\s*[\u2013\u2014-]\s*Lernkarten$/i, "");
+    if (isSwiss) {
+      title = replaceEszett(title);
+    }
+
     const pngBuffer = await renderFlashcardCoverPng({
       cards,
-      title: worksheet.title.replace(/\s*[\u2013\u2014-]\s*Lernkarten$/i, ""),
+      title,
       worksheetId: worksheet.id,
       bigLogoDataUri,
       iconDataUri,
     });
 
     const shortId = worksheet.id.slice(0, 16);
-    const filename = `${shortId}_flashcard_cover.png`;
+    const filename = `${shortId}_cover_${isSwiss ? "CH" : "DE"}.png`;
 
     return new NextResponse(new Uint8Array(pngBuffer), {
       headers: {

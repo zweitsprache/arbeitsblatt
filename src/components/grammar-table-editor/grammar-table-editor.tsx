@@ -35,6 +35,7 @@ import {
 } from "@/types/grammar-table";
 import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
+import { getVisiblePersonKeys } from "@/lib/regular-conjugation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -145,13 +146,18 @@ function DeclinationInputPanel() {
 // ─── Conjugation Input Panel ─────────────────────────────────
 
 function ConjugationInputPanel() {
-  const { state, dispatch } = useGrammarTable();
+  const { state, dispatch, generate } = useGrammarTable();
   const t = useTranslations("grammarTableEditor");
   const [bulkMode, setBulkMode] = React.useState(false);
   const [bulkText, setBulkText] = React.useState("");
+  const [regeneratingVerb, setRegeneratingVerb] = React.useState<string | null>(null);
 
   // Safely get verbs array with fallback
   const verbs = state.conjugationInput?.verbs ?? [""];
+
+  // Build set of verbs that already have table data
+  const existingTables = (state.tableData as VerbConjugationTable[] | null) ?? [];
+  const generatedSet = new Set(existingTables.map(t => t.input.verb.trim().toLowerCase()));
 
   const handleVerbChange = (index: number, value: string) => {
     const newVerbs = [...verbs];
@@ -160,6 +166,15 @@ function ConjugationInputPanel() {
       type: "UPDATE_CONJUGATION_INPUT",
       payload: { verbs: newVerbs },
     });
+  };
+
+  const handleRegenerateVerb = async (verb: string) => {
+    setRegeneratingVerb(verb);
+    try {
+      await generate([verb]);
+    } finally {
+      setRegeneratingVerb(null);
+    }
   };
 
   const addVerb = () => {
@@ -249,7 +264,10 @@ function ConjugationInputPanel() {
       ) : (
         <>
           <div className="space-y-1">
-            {verbs.map((verb, index) => (
+            {verbs.map((verb, index) => {
+              const isGenerated = verb.trim() !== "" && generatedSet.has(verb.trim().toLowerCase());
+              const isRegenerating = regeneratingVerb === verb;
+              return (
               <div key={index} className="flex gap-2 items-center px-3 py-1.5 bg-muted/30 rounded-lg">
                 {isManualOrder && (
                   <div className="flex flex-col gap-0.5">
@@ -273,6 +291,9 @@ function ConjugationInputPanel() {
                     </Button>
                   </div>
                 )}
+                {isGenerated && (
+                  <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" title={t("verbGenerated")} />
+                )}
                 <div className="flex-1">
                   <Input
                     placeholder={t("verbPlaceholder")}
@@ -281,6 +302,26 @@ function ConjugationInputPanel() {
                     className="text-sm"
                   />
                 </div>
+                {isGenerated && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRegenerateVerb(verb)}
+                        disabled={isRegenerating || state.isGenerating}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      >
+                        {isRegenerating ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("regenerateVerb")}</TooltipContent>
+                  </Tooltip>
+                )}
                 {verbs.length > 1 && (
                   <Button
                     variant="ghost"
@@ -292,7 +333,8 @@ function ConjugationInputPanel() {
                   </Button>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <Button
@@ -1570,10 +1612,11 @@ interface SingleConjugationTableProps {
     ranges: [number, number][] | undefined
   ) => void;
   onInfinitiveChange: (tableIndex: number, verb: string) => void;
-  onToggleThirdPersonOnly: (tableIndex: number) => void;
+  onSetThirdPersonSingularOnly: (tableIndex: number, value: boolean) => void;
+  onSetThirdPersonPluralOnly: (tableIndex: number, value: boolean) => void;
 }
 
-function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, simplified, simplifiedTenses, onCellChange, onHighlightsChange, onInfinitiveChange, onToggleThirdPersonOnly }: SingleConjugationTableProps) {
+function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights, simplified, simplifiedTenses, onCellChange, onHighlightsChange, onInfinitiveChange, onSetThirdPersonSingularOnly, onSetThirdPersonPluralOnly }: SingleConjugationTableProps) {
   const locale = "de";
   const allTenses: VerbTense[] = ["praesens", "perfekt", "praeteritum"];
   const tenses = simplified ? allTenses.filter(t => simplifiedTenses[t]) : allTenses;
@@ -1605,11 +1648,14 @@ function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights
   const totalCols = 3 + totalTenseCols;
   
   const isThirdPersonOnly = tableData.thirdPersonOnly ?? false;
+  const visiblePersonKeys = getVisiblePersonKeys(tableData);
+  const isSingularOnly = tableData.thirdPersonSingularOnly ?? isThirdPersonOnly;
+  const isPluralOnly = tableData.thirdPersonPluralOnly ?? isThirdPersonOnly;
 
   // Helper to render a data row using static definition and AI conjugations
   const renderDataRow = (rowDef: StaticRowDef, idx: number) => {
     const personDisplay = `${rowDef.person}. Person`;
-    const isBlankRow = isThirdPersonOnly && !THIRD_PERSON_KEYS.includes(rowDef.personKey);
+    const isBlankRow = !visiblePersonKeys.includes(rowDef.personKey);
     const conjugations = isBlankRow ? undefined : tableData.conjugations?.[rowDef.personKey];
     const personKey = rowDef.personKey;
     
@@ -1862,11 +1908,19 @@ function SingleConjugationTable({ tableData, tableIndex, showIrregularHighlights
         </h2>
         <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
           <Switch
-            checked={isThirdPersonOnly}
-            onCheckedChange={() => onToggleThirdPersonOnly(tableIndex)}
+            checked={isSingularOnly}
+            onCheckedChange={(checked) => onSetThirdPersonSingularOnly(tableIndex, !!checked)}
             className="scale-75"
           />
-          nur 3. Person
+          3. Pers. Sg.
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+          <Switch
+            checked={isPluralOnly}
+            onCheckedChange={(checked) => onSetThirdPersonPluralOnly(tableIndex, !!checked)}
+            className="scale-75"
+          />
+          3. Pers. Pl.
         </label>
       </div>
 
@@ -1983,12 +2037,23 @@ function ConjugationTableView() {
     });
   }, [dispatch]);
 
-  const handleToggleThirdPersonOnly = useCallback((
-    tableIndex: number
+  const handleSetThirdPersonSingularOnly = useCallback((
+    tableIndex: number,
+    value: boolean
   ) => {
     dispatch({
-      type: "TOGGLE_THIRD_PERSON_ONLY",
-      payload: { tableIndex },
+      type: "SET_THIRD_PERSON_SINGULAR_ONLY",
+      payload: { tableIndex, value },
+    });
+  }, [dispatch]);
+
+  const handleSetThirdPersonPluralOnly = useCallback((
+    tableIndex: number,
+    value: boolean
+  ) => {
+    dispatch({
+      type: "SET_THIRD_PERSON_PLURAL_ONLY",
+      payload: { tableIndex, value },
     });
   }, [dispatch]);
 
@@ -2036,7 +2101,8 @@ function ConjugationTableView() {
           onCellChange={handleCellChange}
           onHighlightsChange={handleHighlightsChange}
           onInfinitiveChange={handleInfinitiveChange}
-          onToggleThirdPersonOnly={handleToggleThirdPersonOnly}
+          onSetThirdPersonSingularOnly={handleSetThirdPersonSingularOnly}
+          onSetThirdPersonPluralOnly={handleSetThirdPersonPluralOnly}
         />
       ))}
     </div>
@@ -2453,18 +2519,18 @@ function EditorToolbar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={generate}
+          onClick={() => generate()}
           disabled={!canGenerate || state.isGenerating}
           className="gap-2"
         >
           {state.isGenerating ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : state.tableData ? (
-            <RefreshCw className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" />
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          {state.tableData ? t("regenerate") : t("generate")}
+          {state.tableData ? t("generateNew") : t("generate")}
         </Button>
 
         <Separator orientation="vertical" className="h-6" />

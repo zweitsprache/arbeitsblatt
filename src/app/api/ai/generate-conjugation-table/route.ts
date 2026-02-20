@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { prisma } from "@/lib/prisma";
 import {
   ConjugationInput,
   VerbConjugationTable,
   PersonKey,
   PersonConjugations,
 } from "@/types/grammar-table";
-import { attachHighlights } from "@/lib/regular-conjugation";
+import { attachHighlights, normalizeInfinitive } from "@/lib/regular-conjugation";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -15,6 +16,10 @@ const client = new Anthropic({
 
 interface GenerateRequest {
   input: ConjugationInput;
+  /** Verbs already present in tableData — will be skipped unless forceRegenerate includes them */
+  existingVerbs?: string[];
+  /** Verbs to forcibly re-generate (bypass cache) */
+  forceRegenerate?: string[];
 }
 
 interface AIConjugationResponse {
@@ -154,7 +159,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = (await req.json()) as GenerateRequest;
-    const { input } = body;
+    const { input, existingVerbs = [], forceRegenerate = [] } = body;
 
     if (!input || !input.verbs || input.verbs.length === 0) {
       return NextResponse.json(
@@ -163,7 +168,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Filter out empty verbs (preserve original capitalization for nouns like "sich Sorgen machen")
+    // Filter out empty verbs (preserve original capitalization)
     const verbs = input.verbs.map(v => v.trim()).filter(v => v !== "");
     
     if (verbs.length === 0) {
@@ -173,26 +178,82 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate tables for all verbs
+    // Build lookup sets
+    const existingSet = new Set(existingVerbs.map(normalizeInfinitive));
+    const forceSet = new Set(forceRegenerate.map(normalizeInfinitive));
+
+    // Determine which verbs need processing
+    const verbsToProcess = verbs.filter(v => {
+      const norm = normalizeInfinitive(v);
+      // Always process if force-regenerating
+      if (forceSet.has(norm)) return true;
+      // Skip if already in tableData
+      if (existingSet.has(norm)) return false;
+      return true;
+    });
+
+    console.log(`[Conjugation] Request: ${verbs.length} verbs, ${existingVerbs.length} existing, ${forceRegenerate.length} forced, ${verbsToProcess.length} to process`);
+
     const tables: VerbConjugationTable[] = [];
-    for (const verb of verbs) {
+    const fromCache: string[] = [];
+    const generated: string[] = [];
+    const failed: string[] = [];
+
+    for (const verb of verbsToProcess) {
+      const norm = normalizeInfinitive(verb);
+      const shouldForce = forceSet.has(norm);
+
       try {
+        // 1. Check global cache (skip if force-regenerating)
+        if (!shouldForce) {
+          try {
+            const cached = await prisma.verbCache.findUnique({
+              where: { infinitive: norm },
+            });
+            if (cached) {
+              // Use cached data, but restore the original input.verb casing
+              const table = cached.data as unknown as VerbConjugationTable;
+              table.input = { verb };
+              tables.push(table);
+              fromCache.push(verb);
+              console.log(`[Conjugation] Cache hit: "${verb}"`);
+              continue;
+            }
+          } catch (cacheErr) {
+            // Cache read failed — fall through to AI generation
+            console.warn(`[Conjugation] Cache read failed for "${verb}":`, cacheErr);
+          }
+        }
+
+        // 2. Call AI to generate
+        console.log(`[Conjugation] Generating via AI: "${verb}"${shouldForce ? " (forced)" : ""}`);
         const table = await generateSingleVerb(verb);
         tables.push(table);
+        generated.push(verb);
+
+        // 3. Write to global cache (upsert) — non-blocking, don't let cache write failures break flow
+        try {
+          const jsonData = JSON.parse(JSON.stringify(table));
+          await prisma.verbCache.upsert({
+            where: { infinitive: norm },
+            update: { data: jsonData, updatedAt: new Date() },
+            create: { infinitive: norm, data: jsonData },
+          });
+        } catch (cacheErr) {
+          console.warn(`[Conjugation] Cache write failed for "${verb}":`, cacheErr);
+        }
       } catch (err) {
         console.error(`Failed to generate table for verb "${verb}":`, err);
+        failed.push(verb);
         // Continue with other verbs
       }
     }
 
-    if (tables.length === 0) {
-      return NextResponse.json(
-        { error: "Failed to generate any conjugation tables" },
-        { status: 500 }
-      );
-    }
+    console.log(
+      `[Conjugation] Done: ${fromCache.length} from cache, ${generated.length} AI-generated, ${failed.length} failed, ${existingVerbs.length} skipped (existing)`
+    );
 
-    return NextResponse.json(tables);
+    return NextResponse.json({ tables, fromCache, generated, failed });
   } catch (error) {
     console.error("Conjugation table generation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

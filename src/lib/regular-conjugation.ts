@@ -11,6 +11,27 @@ import type {
   VerbConjugationTable,
   TenseHighlights,
 } from "@/types/grammar-table";
+import {
+  CONJUGATION_ROWS,
+  THIRD_PERSON_SINGULAR_KEYS,
+  THIRD_PERSON_PLURAL_KEYS,
+} from "@/types/grammar-table";
+
+// ─── Normalise infinitive for cache key ──────────────────────
+
+/**
+ * Normalise a verb infinitive for use as a global cache key.
+ * Trims whitespace and lowercases.
+ * Keeps "sich" / "sich etwas" prefixes because they change the conjugation.
+ *
+ * Examples:
+ *   "  Machen "   → "machen"
+ *   "sich freuen" → "sich freuen"
+ *   "Sich Etwas Merken" → "sich etwas merken"
+ */
+export function normalizeInfinitive(verb: string): string {
+  return verb.trim().toLowerCase();
+}
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -351,4 +372,41 @@ export function attachHighlights(
   }
 
   return table;
+}
+
+// ─── Visible person keys helper ──────────────────────────────
+
+type ThirdPersonFlags = Pick<
+  VerbConjugationTable,
+  "thirdPersonOnly" | "thirdPersonSingularOnly" | "thirdPersonPluralOnly"
+>;
+
+/**
+ * Returns the PersonKey[] that should be visible for a given verb table,
+ * respecting thirdPersonSingularOnly / thirdPersonPluralOnly flags.
+ *
+ * Backwards-compatible: if only the legacy `thirdPersonOnly` is set,
+ * it is treated as both singular + plural.
+ */
+export function getVisiblePersonKeys(flags: ThirdPersonFlags): PersonKey[] {
+  const singularOnly =
+    flags.thirdPersonSingularOnly ?? flags.thirdPersonOnly ?? false;
+  const pluralOnly =
+    flags.thirdPersonPluralOnly ?? flags.thirdPersonOnly ?? false;
+
+  if (!singularOnly && !pluralOnly) {
+    return CONJUGATION_ROWS.map((r) => r.personKey);
+  }
+
+  const keys: PersonKey[] = [];
+  if (singularOnly) keys.push(...THIRD_PERSON_SINGULAR_KEYS);
+  if (pluralOnly) keys.push(...THIRD_PERSON_PLURAL_KEYS);
+  return keys;
+}
+
+/**
+ * Whether a verb table has any 3rd-person restriction active.
+ */
+export function isThirdPersonRestricted(flags: ThirdPersonFlags): boolean {
+  return getVisiblePersonKeys(flags).length < CONJUGATION_ROWS.length;
 }

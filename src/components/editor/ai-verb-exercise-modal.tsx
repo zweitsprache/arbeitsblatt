@@ -38,6 +38,7 @@ import {
   CONJUGATION_ROWS,
   TenseConjugation,
 } from "@/types/grammar-table";
+import { getVisiblePersonKeys } from "@/lib/regular-conjugation";
 
 type Step = "select-table" | "options" | "generating" | "review";
 
@@ -102,7 +103,7 @@ function collectAllForms(
   ];
 
   for (const pk of allPersonKeys) {
-    if (table.thirdPersonOnly && pk !== "er_sie_es" && pk !== "sie_pl") continue;
+    if (!getVisiblePersonKeys(table).includes(pk)) continue;
     const conj = table.conjugations?.[pk]?.[tense];
     if (!conj || !conj.main) continue;
     const form = assembleChoiceForm(conj, tense);
@@ -231,9 +232,7 @@ function buildAssignments(
   const assignments: { verb: string; personKey: PersonKey; tense: VerbTense; table: VerbConjugationTable }[] = [];
 
   for (const table of tables) {
-    const availablePersonKeys: PersonKey[] = table.thirdPersonOnly
-      ? ["er_sie_es", "sie_pl"]
-      : ["ich", "du", "Sie_sg", "er_sie_es", "wir", "ihr", "Sie_pl", "sie_pl"];
+    const availablePersonKeys: PersonKey[] = getVisiblePersonKeys(table);
 
     const shuffledPersonKeys = shuffle(availablePersonKeys);
 

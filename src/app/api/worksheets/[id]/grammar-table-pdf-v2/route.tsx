@@ -35,6 +35,7 @@ import {
   VERB_PREP_ARTICLE_LABELS,
   THIRD_PERSON_KEYS,
 } from "@/types/grammar-table";
+import { getVisiblePersonKeys } from "@/lib/regular-conjugation";
 import {
   DEFAULT_BRAND_SETTINGS,
   BrandSettings,
@@ -481,7 +482,8 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
   const hasSep =
     tableData.isSeparable && !!tableData.separablePrefix;
   const isRefl = tableData.isReflexive || false;
-  const isThirdOnly = tableData.thirdPersonOnly ?? false;
+  const isThirdOnly = getVisiblePersonKeys(tableData).length < CONJUGATION_ROWS.length;
+  const visibleKeys = getVisiblePersonKeys(tableData);
 
   const singularRows = CONJUGATION_ROWS.filter(
     (r) => r.section === "singular"
@@ -512,7 +514,7 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
             key={rd.personKey}
             rowDef={rd}
             conjugations={
-              isThirdOnly && !THIRD_PERSON_KEYS.includes(rd.personKey)
+              isThirdOnly && !visibleKeys.includes(rd.personKey)
                 ? undefined
                 : tableData.conjugations?.[rd.personKey]
             }
@@ -537,7 +539,7 @@ function VerbTable({ tableData, showHighlights }: VerbTableProps) {
             key={rd.personKey}
             rowDef={rd}
             conjugations={
-              isThirdOnly && !THIRD_PERSON_KEYS.includes(rd.personKey)
+              isThirdOnly && !visibleKeys.includes(rd.personKey)
                 ? undefined
                 : tableData.conjugations?.[rd.personKey]
             }
@@ -924,9 +926,9 @@ function SimplifiedDataRow({
       {tables.map((tbl, i) => {
         const hasSep = tbl.isSeparable && !!tbl.separablePrefix;
         const isRefl = tbl.isReflexive || false;
-        const isThirdOnly = tbl.thirdPersonOnly ?? false;
+        const tblVisibleKeys = getVisiblePersonKeys(tbl);
         const conj = tbl.conjugations?.[rowDef.personKey]?.[tense];
-        const blankRow = isThirdOnly && !THIRD_PERSON_KEYS.includes(rowDef.personKey);
+        const blankRow = tblVisibleKeys.length < CONJUGATION_ROWS.length && !tblVisibleKeys.includes(rowDef.personKey);
         return (
           <SimplifiedTenseCells
             key={i}

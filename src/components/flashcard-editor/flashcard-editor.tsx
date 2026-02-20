@@ -33,6 +33,13 @@ import {
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
 import { Slider } from "@/components/ui/slider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -390,15 +397,19 @@ function FlashcardEditorInner({
   const tc = useTranslations("common");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+  const [localeDialog, setLocaleDialog] = useState<{
+    open: boolean;
+    mode?: "cover" | "pdf";
+  }>({ open: false });
 
-  const handleDownloadCover = useCallback(async () => {
+  const handleDownloadCover = useCallback(async (locale: "DE" | "CH" = "DE") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
     }
     setIsGeneratingCover(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-cover`, {
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-cover?locale=${locale}`, {
         method: "POST",
       });
       if (!res.ok) {
@@ -411,7 +422,7 @@ function FlashcardEditorInner({
       const a = document.createElement("a");
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
-      a.download = `${shortId}_flashcard_cover.png`;
+      a.download = `${shortId}_cover_${locale}.png`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -421,14 +432,14 @@ function FlashcardEditorInner({
     }
   }, [state.worksheetId, t]);
 
-  const handleDownloadPdf = useCallback(async () => {
+  const handleDownloadPdf = useCallback(async (locale: "DE" | "CH" = "DE") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-pdf`, {
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`, {
         method: "POST",
       });
       if (!res.ok) {
@@ -440,7 +451,8 @@ function FlashcardEditorInner({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${state.title}.pdf`;
+      const shortId = state.worksheetId.slice(0, 16);
+      a.download = `${shortId}_${locale}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -504,7 +516,7 @@ function FlashcardEditorInner({
             <Button
               size="sm"
               variant="outline"
-              onClick={handleDownloadCover}
+              onClick={() => setLocaleDialog({ open: true, mode: "cover" })}
               disabled={isGeneratingCover || !state.worksheetId || state.cards.length === 0}
               className="gap-1.5"
             >
@@ -523,7 +535,7 @@ function FlashcardEditorInner({
             <Button
               size="sm"
               variant="outline"
-              onClick={handleDownloadPdf}
+              onClick={() => setLocaleDialog({ open: true, mode: "pdf" })}
               disabled={isGeneratingPdf || !state.worksheetId || state.cards.length === 0}
               className="gap-1.5"
             >
@@ -611,6 +623,45 @@ function FlashcardEditorInner({
           )}
         </div>
       </div>
+
+      {/* Locale Picker Dialog */}
+      <Dialog
+        open={localeDialog.open}
+        onOpenChange={(open) => setLocaleDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button
+              className="flex-1 gap-2"
+              variant="outline"
+              onClick={() => {
+                const mode = localeDialog.mode;
+                setLocaleDialog({ open: false });
+                if (mode === "cover") handleDownloadCover("DE");
+                else handleDownloadPdf("DE");
+              }}
+            >
+              🇩🇪 Deutschland (ß)
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              variant="outline"
+              onClick={() => {
+                const mode = localeDialog.mode;
+                setLocaleDialog({ open: false });
+                if (mode === "cover") handleDownloadCover("CH");
+                else handleDownloadPdf("CH");
+              }}
+            >
+              🇨🇭 Schweiz (ss)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -6,12 +6,14 @@ import { FlashcardItem, FlashcardSide } from "@/types/flashcard";
 import fs from "fs";
 import path from "path";
 
+import { replaceEszett } from "@/lib/locale-utils";
+
 // ─── Layout constants (mm) ──────────────────────────────────
 const CARD_W = 74; // mm
 const CARD_H = 52; // mm
 const COLS = 3;
 const ROWS = 3;
-const CARDS_PER_PAGE = COLS * ROWS; // 9
+const CARDS_PER_PAGE = 8; // 8 cards per page, 9th grid cell always empty
 const GRID_W = COLS * CARD_W; // 222mm
 const GRID_H = ROWS * CARD_H; // 156mm
 const PAGE_W = 297; // A4 landscape
@@ -38,7 +40,7 @@ function escapeHtmlBoldFirst(str: string): string {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#FEF08A;padding:0 1px;border-radius:1px;">$1</span>')
+        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#5a4540;color:#fff;font-weight:600;padding:0 2px;border-radius:2px;">$1</span>')
         .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
         .replace(/\{\{verb\}\}/g, "");
       return i === 0 ? `<strong>${escaped}</strong>` : escaped;
@@ -56,7 +58,7 @@ function escapeHtmlBackPage(str: string): string {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#FEF08A;padding:0 1px;border-radius:1px;">$1</span>')
+        .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#5a4540;color:#fff;font-weight:600;padding:0 2px;border-radius:2px;">$1</span>')
         .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
         .replace(/\{\{verb\}\}/g, '</span><span style="font-weight:600;">');
       return `<span>${escaped}</span>`;
@@ -100,8 +102,12 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
     ? `<div style="font-size:11pt;line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text)}</div>`
     : "";
 
+  const logoHtml = pageSide === "front"
+    ? `<img src="${logoUrl}" style="position:absolute;top:3mm;right:3mm;width:4.5mm;height:4.5mm;opacity:1;display:block;z-index:2;" />`
+    : "";
+
   return `<div style="position:relative;width:${CARD_W}mm;height:${CARD_H}mm;${borderStyle}box-sizing:border-box;overflow:hidden;">
-    <img src="${logoUrl}" style="position:absolute;top:2mm;right:2mm;width:3mm;height:3mm;opacity:1;display:block;z-index:2;" />
+    ${logoHtml}
     <div style="position:absolute;top:0;left:4mm;width:66mm;height:${CARD_H}mm;display:flex;flex-direction:column;align-items:center;justify-content:${justify};overflow:hidden;border-radius:1mm;">
       ${imageHtml}
       ${textHtml}
@@ -237,6 +243,61 @@ ${pagesHtml}
 </html>`;
 }
 
+// ─── Re-pad blank cards to clean page boundaries ────────────
+// Blank cards (no text, no image on both sides) are used as page-break padding
+// between verb groups. This function strips them all out, detects the groups they
+// separated, and re-inserts padding so each group starts on a fresh page of
+// `pageSize` cards.
+function isBlankCard(card: FlashcardItem): boolean {
+  return !card.front.text && !card.front.image && !card.back.text && !card.back.image;
+}
+
+function repadCards(cards: FlashcardItem[], pageSize: number): FlashcardItem[] {
+  // Split into groups separated by one or more blank cards
+  const groups: FlashcardItem[][] = [];
+  let current: FlashcardItem[] = [];
+
+  for (const card of cards) {
+    if (isBlankCard(card)) {
+      if (current.length > 0) {
+        groups.push(current);
+        current = [];
+      }
+      // discard blank
+    } else {
+      current.push(card);
+    }
+  }
+  if (current.length > 0) {
+    groups.push(current);
+  }
+
+  // Single group or no blanks found → return without padding
+  if (groups.length <= 1) {
+    return groups[0] ?? [];
+  }
+
+  // Multiple groups → re-pad each group (except the last) to pageSize boundaries
+  const result: FlashcardItem[] = [];
+  for (let g = 0; g < groups.length; g++) {
+    result.push(...groups[g]);
+    if (g < groups.length - 1) {
+      const remainder = result.length % pageSize;
+      if (remainder !== 0) {
+        const blanks = pageSize - remainder;
+        for (let i = 0; i < blanks; i++) {
+          result.push({
+            id: `pad-${g}-${i}`,
+            front: { text: "" },
+            back: { text: "" },
+          });
+        }
+      }
+    }
+  }
+  return result;
+}
+
 // POST /api/worksheets/[id]/flashcard-pdf
 export async function POST(
   _req: NextRequest,
@@ -247,6 +308,9 @@ export async function POST(
   const { userId } = result;
 
   const { id } = await params;
+  const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH";
+  const isSwiss = locale === "CH";
+
   const worksheet = await prisma.worksheet.findFirst({
     where: { id, userId } as Parameters<typeof prisma.worksheet.findFirst>[0] extends { where?: infer W } ? W : never,
   });
@@ -254,9 +318,19 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const cards = (worksheet.blocks ?? []) as unknown as FlashcardItem[];
+  let cards = (worksheet.blocks ?? []) as unknown as FlashcardItem[];
   if (cards.length === 0) {
     return NextResponse.json({ error: "No cards to export" }, { status: 400 });
+  }
+
+  // ── Normalise blank-card padding ──────────────────────────
+  // The modal inserts blank cards (empty front+back) to pad each verb group
+  // to page boundaries. Strip those blanks and re-pad to CARDS_PER_PAGE so
+  // the layout is always correct regardless of how the data was originally saved.
+  cards = repadCards(cards, CARDS_PER_PAGE);
+
+  if (isSwiss) {
+    cards = replaceEszett(cards);
   }
 
   const logoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
@@ -280,8 +354,8 @@ export async function POST(
     const page = await browser.newPage();
 
     await page.setContent(html, {
-      waitUntil: "networkidle0",
-      timeout: 30000,
+      waitUntil: "domcontentloaded",
+      timeout: 120000,
     });
 
     // Wait for fonts and images to load
@@ -312,14 +386,13 @@ export async function POST(
     const finalPdfBytes = new Uint8Array(pdfBuffer);
     console.log(`[Flashcard PDF] Generated ${finalPdfBytes.length} bytes, ${Math.ceil(cards.length / CARDS_PER_PAGE) * 2} pages`);
 
-    const safeTitle = worksheet.title
-      .replace(/[\u2013\u2014]/g, "-")
-      .replace(/[^\x20-\x7E]/g, "_");
+    const shortId = worksheet.id.slice(0, 16);
+    const filename = `${shortId}_${locale}.pdf`;
 
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
