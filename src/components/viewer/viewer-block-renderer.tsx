@@ -2886,7 +2886,7 @@ export function ViewerBlockRenderer({
         <DialogueView
           block={block}
           interactive={interactive}
-          answer={answer}
+          answer={answer as Record<string, string>}
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
