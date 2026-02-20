@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import sharp from "sharp";
 
 // Thumbnail dimensions
@@ -112,17 +112,7 @@ export async function GET(
 
 // ─── Helpers ──────────────────────────────────────────────
 
-async function launchBrowser() {
-  return puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--font-render-hinting=none",
-    ],
-  });
-}
+// launchBrowser imported from @/lib/puppeteer
 
 function getBaseUrl() {
   return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import { FlashcardItem, FlashcardSide } from "@/types/flashcard";
 import fs from "fs";
 import path from "path";
@@ -351,15 +351,7 @@ export async function POST(
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const page = await browser.newPage();
 

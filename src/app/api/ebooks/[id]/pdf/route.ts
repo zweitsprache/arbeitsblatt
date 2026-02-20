@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import { EBookSettings, DEFAULT_EBOOK_SETTINGS } from "@/types/ebook";
 import { Brand, BRAND_FONTS } from "@/types/worksheet";
 
@@ -48,15 +48,7 @@ export async function GET(
     const printUrl = `${baseUrl}/de/ebook/${ebook.slug}/print`;
     console.log(`[E-Book PDF] Generating PDF for: ${printUrl}`);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const page = await browser.newPage();
 

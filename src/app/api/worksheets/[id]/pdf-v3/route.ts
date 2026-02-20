@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import puppeteerCore from "puppeteer-core";
+import { launchBrowser } from "@/lib/puppeteer";
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 
@@ -52,7 +53,7 @@ export async function POST(
    * Handles page variable injection ({current_page} / {no_of_pages}).
    */
   async function renderPrintUrl(
-    page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteer.launch>>["newPage"]>>,
+    page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
     printUrl: string,
   ): Promise<Uint8Array> {
     await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 30000 });
@@ -106,15 +107,7 @@ export async function POST(
       return `${baseUrl}/de/worksheet/${worksheet.slug}/print${qs ? `?${qs}` : ""}`;
     };
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const page = await browser.newPage();
 

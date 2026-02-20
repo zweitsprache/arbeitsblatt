@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import { CardItem, CardSettings } from "@/types/card";
 import { DEFAULT_BRAND_SETTINGS, BrandSettings } from "@/types/worksheet";
 import fs from "fs";
@@ -294,15 +294,7 @@ export async function POST(
     const totalPages = Math.ceil(cards.length / CARDS_PER_PAGE);
     console.log(`[Card PDF] Generating PDF for ${cards.length} cards, ${totalPages} pages`);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const page = await browser.newPage();
 

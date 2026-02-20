@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 import { Brand } from "@/types/worksheet";
@@ -68,15 +68,7 @@ export async function POST(
     const printUrl = `${baseUrl}/de/worksheet/${worksheet.slug}/print`;
     console.log(`[PDF] Generating PDF for: ${printUrl}`);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const page = await browser.newPage();
 

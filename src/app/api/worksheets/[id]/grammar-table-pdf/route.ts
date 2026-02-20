@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/puppeteer";
 import { PDFDocument } from "pdf-lib";
 import {
   AdjectiveDeclinationTable,
@@ -930,15 +930,7 @@ export async function POST(
     fs.writeFileSync(debugHtmlPath, html, "utf-8");
     console.log(`[Grammar Table PDF] Debug HTML written to: ${debugHtmlPath}`);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--font-render-hinting=none",
-      ],
-    });
+    const browser = await launchBrowser();
 
     const isLingostar = brand === "lingostar";
     const now = new Date();
