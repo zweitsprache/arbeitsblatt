@@ -2,23 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { launchBrowser } from "@/lib/puppeteer";
-import { CardItem, CardSettings } from "@/types/card";
+import { CardItem, CardSettings, CardLayout } from "@/types/card";
 import { DEFAULT_BRAND_SETTINGS, BrandSettings } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
 
-// ─── Layout constants (mm) ──────────────────────────────────
-const PAGE_W = 297; // A4 landscape
-const PAGE_H = 210;
-const CARD_W = PAGE_W / 2; // 148.5mm
-const CARD_H = PAGE_H / 2; // 105mm
-const CARDS_PER_PAGE = 4;
+// ─── Layout dimensions (mm) ─────────────────────────────────
+interface LayoutDims {
+  pageW: number;
+  pageH: number;
+  cardW: number;
+  cardH: number;
+  cols: number;
+  rows: number;
+  perPage: number;
+  landscape: boolean;
+}
 
-// 5mm margins as % of card dimensions
-const MX = (5 / CARD_W) * 100; // ~3.37%
-const MY = (5 / CARD_H) * 100; // ~4.76%
-const LOGO_H = (6 / CARD_H) * 100; // ~5.71%
-const IMG_BOTTOM = (10 / CARD_H) * 100; // ~9.52%
+function getLayoutDims(layout: CardLayout): LayoutDims {
+  if (layout === "portrait-2") {
+    return { pageW: 210, pageH: 297, cardW: 210, cardH: 148.5, cols: 1, rows: 2, perPage: 2, landscape: false };
+  }
+  // landscape-4 (default)
+  return { pageW: 297, pageH: 210, cardW: 148.5, cardH: 105, cols: 2, rows: 2, perPage: 4, landscape: true };
+}
+
+// Margin helpers — computed per layout
+function margins(dims: LayoutDims) {
+  const MX = (10 / dims.cardW) * 100;
+  const MY = (10 / dims.cardH) * 100;
+  const LOGO_TOP = (7 / dims.cardH) * 100;
+  const LOGO_H = (6 / dims.cardH) * 100;
+  // Image container: 17mm from bottom, 3mm taller than 16:9
+  const contentW = dims.cardW - 2 * 10; // mm width inside margins
+  const IMG_RATIO = contentW / (contentW * 9 / 16 + 3);
+  const IMG_BOTTOM = (17 / dims.cardH) * 100;
+  const FOOTER_BOTTOM = (8 / dims.cardH) * 100;
+  return { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM };
+}
 
 function escapeHtml(str: string): string {
   return str
@@ -30,14 +51,15 @@ function escapeHtml(str: string): string {
 }
 
 /** Replace brand template variables in header/footer HTML */
-function replaceVariables(html: string, brandSettings: BrandSettings): string {
+function replaceVariables(html: string, brandSettings: BrandSettings, worksheetId = ""): string {
   const now = new Date();
   const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
   return html
     .replace(/\{current_date\}/g, dateStr)
     .replace(/\{current_year\}/g, String(now.getFullYear()))
     .replace(/\{organization\}/g, brandSettings.organization || "")
-    .replace(/\{teacher\}/g, brandSettings.teacher || "");
+    .replace(/\{teacher\}/g, brandSettings.teacher || "")
+    .replace(/\{worksheet_uuid\}/g, worksheetId.toUpperCase());
 }
 
 /**
@@ -54,26 +76,43 @@ function getObjFitCSS(ratio?: number): string {
 function renderCardSlot(
   card: CardItem | undefined,
   brandSettings: BrandSettings,
-  logoDataUri: string
+  logoDataUri: string,
+  dims: LayoutDims,
+  worksheetId: string
 ): string {
   if (!card) return `<div class="slot"></div>`;
 
-  // Brand logo — 5mm from top, 5mm from right, 6mm height
+  const { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM } = margins(dims);
+
+  // Brand logo — 7mm from top, 10mm from right, 6mm height
   const logoHTML = brandSettings.logo
-    ? `<img src="${logoDataUri}" class="logo" style="top:${MY}%;right:${MX}%;height:${LOGO_H}%" />`
+    ? `<img src="${logoDataUri}" class="logo" style="top:${LOGO_TOP}%;right:${MX}%;height:${LOGO_H}%" />`
     : "";
 
   // Header left text — 5mm from left, 5mm from top
-  const headerText = replaceVariables(brandSettings.headerRight || "", brandSettings);
+  const headerText = replaceVariables(brandSettings.headerRight || "", brandSettings, worksheetId);
   const headerHTML = headerText
     ? `<div class="header-left" style="top:${MY}%;left:${MX}%">${headerText}</div>`
     : "";
 
-  // Footer left — 5mm from left, 5mm from bottom
-  const footerText = replaceVariables(brandSettings.footerLeft || "", brandSettings);
-  const footerHTML = footerText
-    ? `<div class="footer-left" style="bottom:${MY}%;left:${MX}%">${footerText}</div>`
-    : "";
+  // Three-column footer bar (matching worksheet layout)
+  const now = new Date();
+  const year = now.getFullYear();
+  const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const footerLeftText = replaceVariables(
+    brandSettings.footerLeft || `© ${year} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`,
+    brandSettings,
+    worksheetId
+  );
+  const footerRightText = replaceVariables(
+    brandSettings.footerRight || `{worksheet_uuid}<br/>${dateStr}`,
+    brandSettings,
+    worksheetId
+  );
+  const footerHTML = `<div class="card-footer" style="bottom:${FOOTER_BOTTOM}%;left:${MX}%;right:${MX}%">
+    <div class="card-footer-left">${footerLeftText}</div>
+    <div class="card-footer-right">${footerRightText}</div>
+  </div>`;
 
   // Text size class
   const textSizeClass =
@@ -83,16 +122,16 @@ function renderCardSlot(
 
   // Text area — fills space above the image container
   const textHTML = card.text
-    ? `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / (16/9)) + 1%)">
+    ? `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
          <span>${escapeHtml(card.text)}</span>
        </div>`
     : "";
 
-  // Image container — 16:9, 5mm from left/right, 10mm from bottom
+  // Image container — 10mm from left/right, 17mm from bottom, 3mm taller than 16:9
   const imgContent = card.image
     ? `<img src="${card.image}" style="width:100%;height:100%;${getObjFitCSS(card.imageRatio)}transform:scale(${(card.imageScale ?? 100) / 100})" />`
     : "";
-  const imgHTML = `<div class="image-container" style="left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%;aspect-ratio:16/9">${imgContent}</div>`;
+  const imgHTML = `<div class="image-container" style="left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%;aspect-ratio:${IMG_RATIO}">${imgContent}</div>`;
 
   return `<div class="slot">${logoHTML}${headerHTML}${textHTML}${imgHTML}${footerHTML}</div>`;
 }
@@ -102,19 +141,26 @@ function buildPageHtml(
   pageIndex: number,
   settings: CardSettings,
   brandSettings: BrandSettings,
-  logoDataUri: string
+  logoDataUri: string,
+  dims: LayoutDims,
+  worksheetId: string
 ): string {
-  const start = pageIndex * CARDS_PER_PAGE;
-  const pageCards = cards.slice(start, start + CARDS_PER_PAGE);
+  const start = pageIndex * dims.perPage;
+  const pageCards = cards.slice(start, start + dims.perPage);
 
-  const slotsHTML = [0, 1, 2, 3]
-    .map((slot) => renderCardSlot(pageCards[slot], brandSettings, logoDataUri))
+  const slotsHTML = Array.from({ length: dims.perPage })
+    .map((_, slot) => renderCardSlot(pageCards[slot], brandSettings, logoDataUri, dims, worksheetId))
     .join("");
 
-  const cuttingLinesHTML = settings.showCuttingLines
-    ? `<div class="cut-v" style="border-left:1px ${settings.cuttingLineStyle} #ccc"></div>
-       <div class="cut-h" style="border-top:1px ${settings.cuttingLineStyle} #ccc"></div>`
-    : "";
+  let cuttingLinesHTML = "";
+  if (settings.showCuttingLines) {
+    // Horizontal center line — always present
+    cuttingLinesHTML += `<div class="cut-h" style="border-top:1px ${settings.cuttingLineStyle} #ccc"></div>`;
+    // Vertical center line — landscape-4 only
+    if (dims.cols === 2) {
+      cuttingLinesHTML += `<div class="cut-v" style="border-left:1px ${settings.cuttingLineStyle} #ccc"></div>`;
+    }
+  }
 
   return `<div class="page">
     <div class="grid">${slotsHTML}</div>
@@ -126,14 +172,18 @@ function buildFullHtml(
   cards: CardItem[],
   settings: CardSettings,
   brandSettings: BrandSettings,
-  logoDataUri: string
+  logoDataUri: string,
+  dims: LayoutDims,
+  worksheetId: string
 ): string {
-  const totalPages = Math.ceil(cards.length / CARDS_PER_PAGE);
+  const totalPages = Math.ceil(cards.length / dims.perPage);
   let pagesHtml = "";
 
   for (let i = 0; i < totalPages; i++) {
-    pagesHtml += buildPageHtml(cards, i, settings, brandSettings, logoDataUri);
+    pagesHtml += buildPageHtml(cards, i, settings, brandSettings, logoDataUri, dims, worksheetId);
   }
+
+  const orientation = dims.landscape ? "landscape" : "portrait";
 
   return `<!DOCTYPE html>
 <html>
@@ -144,12 +194,12 @@ function buildFullHtml(
 <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   @page {
-    size: A4 landscape;
+    size: A4 ${orientation};
     margin: 0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    width: ${PAGE_W}mm;
+    width: ${dims.pageW}mm;
     margin: 0;
     padding: 0;
     font-family: "Encode Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -157,8 +207,8 @@ function buildFullHtml(
     print-color-adjust: exact;
   }
   .page {
-    width: ${PAGE_W}mm;
-    height: ${PAGE_H}mm;
+    width: ${dims.pageW}mm;
+    height: ${dims.pageH}mm;
     position: relative;
     overflow: hidden;
     page-break-after: always;
@@ -170,8 +220,8 @@ function buildFullHtml(
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: repeat(${dims.cols}, 1fr);
+    grid-template-rows: repeat(${dims.rows}, 1fr);
   }
   .slot {
     position: relative;
@@ -190,13 +240,18 @@ function buildFullHtml(
     line-height: 1.3;
     color: #555;
   }
-  .footer-left {
+  .card-footer {
     position: absolute;
     z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
     font-size: 7pt;
     line-height: 1.3;
     color: #555;
   }
+  .card-footer-left { text-align: left; }
+  .card-footer-right { text-align: right; }
   .text-area {
     position: absolute;
     display: flex;
@@ -288,11 +343,14 @@ export async function POST(
     }
   }
 
-  const html = buildFullHtml(cards, settings, brandSettings, logoDataUri);
+  const layout: CardLayout = settings.layout || "landscape-4";
+  const dims = getLayoutDims(layout);
+
+  const html = buildFullHtml(cards, settings, brandSettings, logoDataUri, dims, id);
 
   try {
-    const totalPages = Math.ceil(cards.length / CARDS_PER_PAGE);
-    console.log(`[Card PDF] Generating PDF for ${cards.length} cards, ${totalPages} pages`);
+    const totalPages = Math.ceil(cards.length / dims.perPage);
+    console.log(`[Card PDF] Generating PDF for ${cards.length} cards, ${totalPages} pages, layout=${layout}`);
 
     const browser = await launchBrowser();
 
@@ -322,7 +380,7 @@ export async function POST(
 
     const pdfBuffer = await page.pdf({
       format: "A4",
-      landscape: true,
+      landscape: dims.landscape,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
       displayHeaderFooter: false,
@@ -334,14 +392,12 @@ export async function POST(
     const finalPdfBytes = new Uint8Array(pdfBuffer);
     console.log(`[Card PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages`);
 
-    const safeTitle = worksheet.title
-      .replace(/[\u2013\u2014]/g, "-")
-      .replace(/[^\x20-\x7E]/g, "_");
+    const shortId = id.slice(0, 16);
 
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
+        "Content-Disposition": `attachment; filename="${shortId}.pdf"`,
       },
     });
   } catch (error) {

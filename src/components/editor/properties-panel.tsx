@@ -28,6 +28,8 @@ import {
   MultipleChoiceBlock,
   OpenResponseBlock,
   FillInBlankBlock,
+  FillInBlankItemsBlock,
+  FillInBlankItem,
   MatchingBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -45,6 +47,7 @@ import {
   SortingCategory,
   UnscrambleWordsBlock,
   FixSentencesBlock,
+  CompleteSentencesBlock,
   VerbTableBlock,
   ChartBlock,
   ChartDataPoint,
@@ -53,6 +56,8 @@ import {
   DialogueItem,
   DialogueSpeakerIcon,
   WorksheetBlock,
+  WritingLinesBlock,
+  WritingRowsBlock,
   BlockVisibility,
 } from "@/types/worksheet";
 import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2 } from "lucide-react";
@@ -241,20 +246,137 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
 function ImageProps({ block }: { block: ImageBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+
+  const handleFileSelected = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    setIsUploading(true);
+    try {
+      const file = new File([result.blob], "image-block.png", { type: "image/png" });
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        dispatch({
+          type: "UPDATE_BLOCK",
+          payload: { id: block.id, updates: { src: data.url } },
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelected(file);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageUrl")}</Label>
-        <Input
-          value={block.src}
-          placeholder={t("imageUrlPlaceholder")}
-          onChange={(e) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { src: e.target.value } },
-            })
-          }
-        />
+        {block.src ? (
+          <div className="space-y-2">
+            <div className="relative group/img rounded overflow-hidden border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={block.src} alt={block.alt || ""} className="w-full" />
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { src: "" } },
+                  })
+                }
+                className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setBrowserOpen(true)}
+              >
+                {t("replaceImage")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+              }`}
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelected(file);
+                }}
+              />
+              {isUploading ? (
+                <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+              ) : (
+                <>
+                  <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                  <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                </>
+              )}
+            </label>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => setBrowserOpen(true)}
+            >
+              <ImagePlus className="h-3.5 w-3.5 mr-1" />
+              {t("mediaBrowser")}
+            </Button>
+            <Input
+              value={block.src}
+              placeholder={t("imageUrlPlaceholder")}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { src: e.target.value } },
+                })
+              }
+            />
+          </div>
+        )}
       </div>
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("altText")}</Label>
@@ -297,6 +419,32 @@ function ImageProps({ block }: { block: ImageBlock }) {
           }
         />
       </div>
+
+      <MediaBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelectUrl={(url) => {
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { src: url } },
+          });
+        }}
+        onSelectFile={handleFileSelected}
+      />
+
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open && cropSrc) {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
+          }
+        }}
+        onCropComplete={handleCropComplete}
+        title={t("cropImage")}
+      />
     </div>
   );
 }
@@ -870,6 +1018,68 @@ function SpacerProps({ block }: { block: SpacerBlock }) {
   );
 }
 
+function WritingLinesProps({ block }: { block: WritingLinesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfLines")}</Label>
+        <Input
+          type="number"
+          min={1}
+          max={50}
+          value={block.lineCount}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { lineCount: Math.max(1, Math.min(50, Number(e.target.value))) } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("lineSpacing")}</Label>
+        <Slider
+          value={[block.lineSpacing]}
+          min={16}
+          max={48}
+          step={2}
+          onValueChange={([v]) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { lineSpacing: v } },
+            })
+          }
+        />
+        <div className="text-xs text-muted-foreground mt-1 text-right">{block.lineSpacing}px</div>
+      </div>
+    </div>
+  );
+}
+
+function WritingRowsProps({ block }: { block: WritingRowsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  return (
+    <div>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
+      <Input
+        type="number"
+        min={1}
+        max={50}
+        value={block.rowCount}
+        onChange={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { rowCount: Math.max(1, Math.min(50, Number(e.target.value))) } },
+          })
+        }
+      />
+    </div>
+  );
+}
+
 function DividerProps({ block }: { block: DividerBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -1085,6 +1295,188 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
           }
           multiline
         />
+      </div>
+    </div>
+  );
+}
+
+function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const items = block.items;
+
+  const updateItem = (index: number, content: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], content };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItem: FillInBlankItem = {
+      id: `fib${Date.now()}`,
+      content: "{{blank:answer}}",
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: [...items, newItem] } },
+    });
+    dispatch({ type: "SET_ACTIVE_ITEM", payload: items.length });
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length <= 1) return;
+    const curActive = state.activeItemIndex;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: items.filter((_, i) => i !== index) },
+      },
+    });
+    if (curActive !== null) {
+      if (index < curActive) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: curActive - 1 });
+      } else if (index === curActive) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: Math.min(curActive, items.length - 2) });
+      }
+    }
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newItems = lines.map((line) => ({
+      id: `fib${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      content: line.trim(),
+    }));
+
+    const finalItems = csvMode === "append"
+      ? [...items, ...newItems]
+      : newItems;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: finalItems } },
+    });
+    setCsvText("");
+  };
+
+  // Active item index — clamp to valid range
+  const activeIdx = state.activeItemIndex !== null && state.activeItemIndex < items.length
+    ? state.activeItemIndex
+    : null;
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {activeIdx !== null ? (() => {
+          const i = activeIdx;
+          const item = items[i];
+          return (
+            <>
+              {/* Navigation header */}
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => dispatch({ type: "SET_ACTIVE_ITEM", payload: i - 1 })} disabled={i === 0}>
+                  <ChevronUp className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-bold text-muted-foreground bg-muted px-2 h-5 rounded flex items-center justify-center shrink-0">
+                  {String(i + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => dispatch({ type: "SET_ACTIVE_ITEM", payload: i + 1 })} disabled={i === items.length - 1}>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+                <div className="flex-1" />
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeItem(i)} disabled={items.length <= 1}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {t("fillInBlankHelp")}
+                </p>
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`items.${i}.content`}
+                  baseValue={item.content}
+                  onBaseChange={(v) => updateItem(i, v)}
+                  className="border rounded-md p-1.5 text-xs min-h-[40px] resize-y font-mono"
+                  multiline
+                />
+              </div>
+            </>
+          );
+        })() : (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            {t("clickSentenceToEdit")}
+          </p>
+        )}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">{t("showWordBank")}</Label>
+        <Switch
+          checked={block.showWordBank}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("fillInBlankItemsCsvHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y font-mono"
+          placeholder={t("fillInBlankItemsCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8" onClick={handleCsvImport}>{t("csvImportButton")}</Button>
+        </div>
       </div>
     </div>
   );
@@ -2080,6 +2472,40 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
   return (
     <div className="space-y-3">
       <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">{t("trueLabelProp")}</Label>
+            <Input
+              className="h-8 text-xs"
+              placeholder={tc("true")}
+              value={block.trueLabel || ""}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { trueLabel: e.target.value } },
+                })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">{t("falseLabelProp")}</Label>
+            <Input
+              className="h-8 text-xs"
+              placeholder={tc("false")}
+              value={block.falseLabel || ""}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { falseLabel: e.target.value } },
+                })
+              }
+            />
+          </div>
+        </div>
+      </div>
+      <Separator />
+      <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("statements")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("statementCount", { count: block.statements.length })}
@@ -2143,6 +2569,44 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
           <Sparkles className="h-4 w-4 mr-2" />
           {t("aiGenerate")}
         </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("shuffleItems")}</Label>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => {
+            const ids = block.statements.map((s) => s.id);
+            const shuffled = [...ids];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { statementOrder: shuffled } },
+            });
+          }}
+        >
+          <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
+        </Button>
+        {block.statementOrder && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-1 text-muted-foreground"
+            onClick={() => {
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { statementOrder: undefined } },
+              });
+            }}
+          >
+            {t("resetOrder")}
+          </Button>
+        )}
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
     </div>
@@ -3353,6 +3817,174 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
   );
 }
 
+function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newSentences = lines.map((line, i) => ({
+      id: `cs${Date.now()}-${i}`,
+      beginning: line.trim(),
+    }));
+
+    const sentences = csvMode === "append"
+      ? [...block.sentences, ...newSentences]
+      : newSentences;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences } },
+    });
+    setCsvText("");
+  };
+
+  const updateSentence = (index: number, beginning: string) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], beginning };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: `cs${Date.now()}`, beginning: "" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (index: number) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("completeSentencesHelp")}
+        </p>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1">
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.beginning`}
+                baseValue={item.beginning}
+                onBaseChange={(v) => updateSentence(i, v)}
+                className="h-8 text-xs"
+                placeholder={t("completeSentencePlaceholder")}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeSentence(i)}
+              disabled={block.sentences.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addSentence} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelpCompleteSentences")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholderCompleteSentences")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VerbTableProps({ block }: { block: VerbTableBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -4147,12 +4779,20 @@ export function PropertiesPanel() {
         return <SpacerProps block={selectedBlock} />;
       case "divider":
         return <DividerProps block={selectedBlock} />;
+      case "page-break":
+        return null;
+      case "writing-lines":
+        return <WritingLinesProps block={selectedBlock} />;
+      case "writing-rows":
+        return <WritingRowsProps block={selectedBlock} />;
       case "multiple-choice":
         return <MultipleChoiceProps block={selectedBlock} />;
       case "open-response":
         return <OpenResponseProps block={selectedBlock} />;
       case "fill-in-blank":
         return <FillInBlankProps block={selectedBlock} />;
+      case "fill-in-blank-items":
+        return <FillInBlankItemsProps block={selectedBlock} />;
       case "matching":
         return <MatchingProps block={selectedBlock} />;
       case "two-column-fill":
@@ -4179,6 +4819,8 @@ export function PropertiesPanel() {
         return <UnscrambleWordsProps block={selectedBlock} />;
       case "fix-sentences":
         return <FixSentencesProps block={selectedBlock} />;
+      case "complete-sentences":
+        return <CompleteSentencesProps block={selectedBlock} />;
       case "verb-table":
         return <VerbTableProps block={selectedBlock} />;
       case "chart":

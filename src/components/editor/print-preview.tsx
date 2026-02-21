@@ -214,8 +214,10 @@ export function PrintPreview({
 .worksheet-block-inline-choices,
 .worksheet-block-word-bank,
 .worksheet-block-fill-in-blank,
+.worksheet-block-fill-in-blank-items,
 .worksheet-block-unscramble-words,
-.worksheet-block-fix-sentences {
+.worksheet-block-fix-sentences,
+.worksheet-block-complete-sentences {
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -233,6 +235,15 @@ export function PrintPreview({
 .worksheet-block-heading {
   break-after: avoid;
   page-break-after: avoid;
+}
+
+.worksheet-block-page-break {
+  break-after: page;
+  page-break-after: always;
+  height: 0;
+  overflow: hidden;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 p { widows: 2; orphans: 2; }

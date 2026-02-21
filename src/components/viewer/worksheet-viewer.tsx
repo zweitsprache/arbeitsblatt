@@ -48,6 +48,7 @@ export function WorksheetViewer({
     (b) =>
       b.type === "multiple-choice" ||
       b.type === "fill-in-blank" ||
+      b.type === "fill-in-blank-items" ||
       b.type === "open-response" ||
       b.type === "true-false-matrix" ||
       b.type === "article-training" ||
@@ -123,15 +124,18 @@ export function WorksheetViewer({
                 .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
+                .worksheet-block-page-break { break-after: page; page-break-after: always; height: 0; overflow: hidden; margin: 0 !important; padding: 0 !important; }
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-true-false-matrix { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-article-training { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-fix-sentences { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-complete-sentences { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-verb-table { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-order-items { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-matching { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-fill-in-blank { break-inside: auto; page-break-inside: auto; }
+                .worksheet-block-fill-in-blank-items { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-word-search { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-inline-choices { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-image-cards { break-inside: auto; page-break-inside: auto; }

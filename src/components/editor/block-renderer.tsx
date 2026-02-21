@@ -13,6 +13,7 @@ import {
   DividerBlock,
   MultipleChoiceBlock,
   FillInBlankBlock,
+  FillInBlankItemsBlock,
   MatchingBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -28,6 +29,7 @@ import {
   SortingCategoriesBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
+  CompleteSentencesBlock,
   VerbTableBlock,
   VerbTableRow,
   ArticleTrainingBlock,
@@ -36,6 +38,9 @@ import {
   NumberedLabelBlock,
   DialogueBlock,
   DialogueSpeakerIcon,
+  PageBreakBlock,
+  WritingLinesBlock,
+  WritingRowsBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -79,6 +84,60 @@ function renderHandwriting(text: string): React.ReactNode {
   });
 }
 
+// ─── Locale-aware inline editing ────────────────────────────
+
+/**
+ * Hook for locale-aware inline editing in block renderers.
+ * In DE mode, updates go directly to the block via UPDATE_BLOCK.
+ * In CH mode, updates are routed to CH overrides so that ß→ss
+ * and other CH-specific changes don't contaminate the base DE blocks.
+ */
+function useLocaleAwareEdit() {
+  const { state, dispatch } = useEditor();
+  const isChMode = state.localeMode === "CH";
+
+  /**
+   * Update a string field in a locale-aware way.
+   * @param blockId   - Block ID
+   * @param fieldPath - Dot-path field in the block (e.g. "content", "options.2.text")
+   * @param value     - New string value
+   * @param deUpdate  - Function to execute for the DE-mode update
+   */
+  const localeUpdate = React.useCallback(
+    (blockId: string, fieldPath: string, value: string, deUpdate: () => void) => {
+      if (!isChMode) {
+        deUpdate();
+        return;
+      }
+      // CH mode → route to override system
+      // Look up the base value from the raw (untransformed) blocks
+      let rawBlock: WorksheetBlock | null = null;
+      for (const b of state.blocks) {
+        if (b.id === blockId) { rawBlock = b; break; }
+        if (b.type === "columns") {
+          for (const col of b.children) {
+            for (const c of col) {
+              if (c.id === blockId) { rawBlock = c; break; }
+            }
+            if (rawBlock) break;
+          }
+          if (rawBlock) break;
+        }
+      }
+      const baseValue = rawBlock ? String(getByPath(rawBlock, fieldPath) ?? "") : "";
+      const autoReplaced = replaceEszett(baseValue);
+      if (value === autoReplaced) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId, fieldPath } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId, fieldPath, value } });
+      }
+    },
+    [isChMode, state.blocks, dispatch],
+  );
+
+  return { isChMode, localeUpdate };
+}
+
 // ─── Heading ─────────────────────────────────────────────────
 
 // Helper: collect all numbered-label blocks in document order (top-level + inside columns)
@@ -99,6 +158,7 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
 
 function HeadingRenderer({ block }: { block: HeadingBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl" };
 
@@ -107,12 +167,12 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
       className={`${sizes[block.level]} font-bold outline-none`}
       contentEditable
       suppressContentEditableWarning
-      onBlur={(e) =>
-        dispatch({
-          type: "UPDATE_BLOCK",
-          payload: { id: block.id, updates: { content: e.currentTarget.textContent || "" } },
-        })
-      }
+      onBlur={(e) => {
+        const value = e.currentTarget.textContent || "";
+        localeUpdate(block.id, "content", value, () =>
+          dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: value } } })
+        );
+      }}
     >
       {block.content}
     </Tag>
@@ -122,6 +182,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
 // ─── Text ────────────────────────────────────────────────────
 function TextRenderer({ block }: { block: TextBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
@@ -149,10 +210,9 @@ function TextRenderer({ block }: { block: TextBlock }) {
         <RichTextEditor
           content={block.content}
           onChange={(html) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { content: html } },
-            })
+            localeUpdate(block.id, "content", html, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+            )
           }
           placeholder={t("startTyping")}
           floatingElement={imageEl}
@@ -206,6 +266,7 @@ function ImageRenderer({ block }: { block: ImageBlock }) {
 // ─── Image Cards ─────────────────────────────────────────────
 function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
@@ -431,23 +492,28 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
 // ─── Text Cards ──────────────────────────────────────────────
 function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const updateItemText = (index: number, text: string) => {
-    const newItems = [...block.items];
-    newItems[index] = { ...newItems[index], text };
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { items: newItems } },
+    localeUpdate(block.id, `items.${index}.text`, text, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], text };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
     });
   };
 
   const updateItemCaption = (index: number, caption: string) => {
-    const newItems = [...block.items];
-    newItems[index] = { ...newItems[index], caption };
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { items: newItems } },
+    localeUpdate(block.id, `items.${index}.caption`, caption, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], caption };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
     });
   };
 
@@ -593,6 +659,48 @@ function DividerRenderer({ block }: { block: DividerBlock }) {
   );
 }
 
+// ─── Page Break ──────────────────────────────────────────────
+function PageBreakRenderer({ block: _block }: { block: PageBreakBlock }) {
+  return (
+    <div className="relative flex items-center justify-center py-2">
+      <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-blue-300" />
+      <span className="relative z-10 bg-white px-3 py-0.5 text-xs font-medium text-blue-500 border border-blue-200 rounded-full">
+        Seitenumbruch
+      </span>
+    </div>
+  );
+}
+
+// ─── Writing Lines ───────────────────────────────────────────
+function WritingLinesRenderer({ block }: { block: WritingLinesBlock }) {
+  return (
+    <div>
+      {Array.from({ length: block.lineCount }).map((_, i) => (
+        <div
+          key={i}
+          style={{ height: block.lineSpacing, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Writing Rows ────────────────────────────────────────────
+function WritingRowsRenderer({ block }: { block: WritingRowsBlock }) {
+  return (
+    <div>
+      {Array.from({ length: block.rowCount }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 border-b last:border-b-0 py-2">
+          <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Multiple Choice ────────────────────────────────────────
 function MultipleChoiceRenderer({
   block,
@@ -602,6 +710,7 @@ function MultipleChoiceRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
@@ -642,13 +751,13 @@ function MultipleChoiceRenderer({
         className="font-medium outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
         contentEditable={!interactive}
         suppressContentEditableWarning
-        onBlur={(e) =>
-          !interactive &&
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: { id: block.id, updates: { question: e.currentTarget.textContent || "" } },
-          })
-        }
+        onBlur={(e) => {
+          if (interactive) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "question", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { question: value } } })
+          );
+        }}
       >
         {block.question}
       </p>
@@ -685,9 +794,12 @@ function MultipleChoiceRenderer({
                 suppressContentEditableWarning
                 className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
                 onBlur={(e) => {
-                  const newOptions = [...block.options];
-                  newOptions[i] = { ...opt, text: e.currentTarget.textContent || "" };
-                  updateOptions(newOptions);
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, `options.${i}.text`, value, () => {
+                    const newOptions = [...block.options];
+                    newOptions[i] = { ...opt, text: value };
+                    updateOptions(newOptions);
+                  });
                 }}
               >
                 {opt.text}
@@ -777,7 +889,7 @@ function FillInBlankRenderer({
           ) : (
             <span
               key={i}
-              className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
+              className={`inline-block bg-gray-100 rounded px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
               style={widthStyle}
             >
               {answer}
@@ -785,6 +897,167 @@ function FillInBlankRenderer({
           );
         }
         return <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
+// ─── Fill-in-blank Items ─────────────────────────────────────
+function FillInBlankItemsRenderer({
+  block,
+  interactive,
+}: {
+  block: FillInBlankItemsBlock;
+  interactive: boolean;
+}) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const activeIdx = state.activeItemIndex;
+
+  // For mutations, always use the raw (DE) block from the store so we never
+  // persist CH-converted text (ß→ss) back into the canonical data.
+  const rawBlock = state.blocks.find((b) => b.id === block.id) as FillInBlankItemsBlock | undefined;
+  const rawItems = rawBlock ? rawBlock.items : block.items;
+
+  const updateItemContent = React.useCallback(
+    (index: number, newContent: string) => {
+      const newItems = [...rawItems];
+      newItems[index] = { ...newItems[index], content: newContent };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    },
+    [rawItems, dispatch, block.id],
+  );
+
+  const handleRowClick = React.useCallback(
+    (index: number) => {
+      if (!interactive) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: index });
+      }
+    },
+    [dispatch, interactive],
+  );
+
+  const moveItem = React.useCallback(
+    (index: number, direction: -1 | 1) => {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= rawItems.length) return;
+      const newItems = [...rawItems];
+      [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+      if (activeIdx === index) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: newIndex });
+      }
+    },
+    [rawItems, dispatch, block.id, activeIdx],
+  );
+
+  // Extract answers for word bank
+  const wordBankAnswers = React.useMemo(() => {
+    if (!block.showWordBank) return [];
+    const answers: string[] = [];
+    for (const item of block.items) {
+      const matches = item.content.matchAll(/\{\{blank:([^,}]+)/g);
+      for (const m of matches) answers.push(m[1].trim());
+    }
+    return answers;
+  }, [block.items, block.showWordBank]);
+
+  return (
+    <div>
+      {block.showWordBank && wordBankAnswers.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3 p-2 bg-muted/40 rounded-md">
+          {wordBankAnswers.map((word, i) => (
+            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+      {block.items.map((item, idx) => {
+        // Parse {{blank:answer}} patterns
+        const parts = item.content.split(/(\{\{blank:[^}]+\}\})/g);
+
+        return (
+          <div
+            key={item.id || idx}
+            className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+              !interactive && activeIdx === idx
+                ? "bg-blue-50 ring-1 ring-blue-200"
+                : "hover:bg-muted/30"
+            }`}
+            onClick={() => handleRowClick(idx)}
+          >
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(idx + 1).padStart(2, "0")}
+            </span>
+            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
+              {parts.map((part, i) => {
+                const match = part.match(/\{\{blank:(.+)\}\}/);
+                if (match) {
+                  const raw = match[1];
+                  const commaIdx = raw.lastIndexOf(",");
+                  let answer: string;
+                  let widthMultiplier = 1;
+                  if (commaIdx !== -1) {
+                    answer = raw.substring(0, commaIdx).trim();
+                    const wStr = raw.substring(commaIdx + 1).trim();
+                    const parsed = Number(wStr);
+                    if (!isNaN(parsed)) widthMultiplier = parsed;
+                  } else {
+                    answer = raw.trim();
+                  }
+                  const widthStyle = widthMultiplier === 0
+                    ? { flex: 1 } as React.CSSProperties
+                    : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+                  return interactive ? (
+                    <input
+                      key={i}
+                      type="text"
+                      placeholder={t("fillInBlankPlaceholder")}
+                      className="border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline"
+                      style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+                    />
+                  ) : (
+                    <span
+                      key={i}
+                      className="inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs"
+                      style={widthStyle}
+                    >
+                      {answer}
+                    </span>
+                  );
+                }
+                return <span key={i}>{renderTextWithSup(part)}</span>;
+              })}
+            </span>
+            {!interactive && (
+              <div className="flex flex-col shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveItem(idx, -1)}
+                  disabled={idx === 0}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveItem(idx, 1)}
+                  disabled={idx === block.items.length - 1}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
       })}
     </div>
   );
@@ -1027,6 +1300,7 @@ function TrueFalseMatrixRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
@@ -1084,23 +1358,30 @@ function TrueFalseMatrixRenderer({
                 className="outline-none block"
                 contentEditable
                 suppressContentEditableWarning
-                onBlur={(e) =>
-                  dispatch({
-                    type: "UPDATE_BLOCK",
-                    payload: { id: block.id, updates: { statementColumnHeader: e.currentTarget.textContent || "" } },
-                  })
-                }
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, "statementColumnHeader", value, () =>
+                    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { statementColumnHeader: value } } })
+                  );
+                }}
               >
                 {block.statementColumnHeader || ""}
               </span>
             </th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
+            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</th>
+            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</th>
             <th className="w-8 p-2 border-b"></th>
           </tr>
         </thead>
         <tbody>
-          {block.statements.map((stmt, stmtIndex) => (
+          {(() => {
+            const orderedStatements = block.statementOrder
+              ? block.statementOrder
+                  .map((id) => block.statements.find((s) => s.id === id))
+                  .filter((s): s is NonNullable<typeof s> => !!s)
+                  .concat(block.statements.filter((s) => !block.statementOrder!.includes(s.id)))
+              : block.statements;
+            return orderedStatements.map((stmt, stmtIndex) => (
             <tr key={stmt.id} className="group/row border-b last:border-b-0">
               <td className="py-2 pr-2">
                 <div className="flex items-center gap-3">
@@ -1111,9 +1392,13 @@ function TrueFalseMatrixRenderer({
                   className="outline-none block flex-1"
                   contentEditable
                   suppressContentEditableWarning
-                  onBlur={(e) =>
-                    updateStatement(stmt.id, { text: e.currentTarget.textContent || "" })
-                  }
+                  onBlur={(e) => {
+                    const value = e.currentTarget.textContent || "";
+                    const idx = block.statements.findIndex((s) => s.id === stmt.id);
+                    localeUpdate(block.id, `statements.${idx}.text`, value, () =>
+                      updateStatement(stmt.id, { text: value })
+                    );
+                  }}
                 >
                   {stmt.text}
                 </span>
@@ -1155,7 +1440,8 @@ function TrueFalseMatrixRenderer({
                 </button>
               </td>
             </tr>
-          ))}
+          ));
+          })()}
         </tbody>
       </table>
 
@@ -1193,6 +1479,7 @@ function ArticleTrainingRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const articles: ArticleAnswer[] = ["der", "das", "die"];
 
@@ -1284,9 +1571,13 @@ function ArticleTrainingRenderer({
                   className="outline-none block flex-1"
                   contentEditable
                   suppressContentEditableWarning
-                  onBlur={(e) =>
-                    updateItem(item.id, { text: e.currentTarget.textContent || "" })
-                  }
+                  onBlur={(e) => {
+                    const value = e.currentTarget.textContent || "";
+                    const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                    localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                      updateItem(item.id, { text: value })
+                    );
+                  }}
                 >
                   {item.text}
                 </span>
@@ -1336,6 +1627,7 @@ function OrderItemsRenderer({
   interactive: boolean;
 }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const updateItem = (id: string, updates: Partial<{ text: string; correctPosition: number }>) => {
@@ -1396,15 +1688,12 @@ function OrderItemsRenderer({
         className="font-medium outline-none"
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) =>
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: {
-              id: block.id,
-              updates: { instruction: e.currentTarget.textContent || "" },
-            },
-          })
-        }
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
       >
         {block.instruction}
       </div>
@@ -1421,11 +1710,13 @@ function OrderItemsRenderer({
               contentEditable
               suppressContentEditableWarning
               className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-              onBlur={(e) =>
-                updateItem(item.id, {
-                  text: e.currentTarget.textContent || "",
-                })
-              }
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                  updateItem(item.id, { text: value })
+                );
+              }}
             >
               {item.text}
             </span>
@@ -1910,6 +2201,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
 // ─── Sorting Categories ─────────────────────────────────────
 function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const updateItem = (id: string, text: string) => {
@@ -1967,15 +2259,12 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
         className="font-medium outline-none"
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) =>
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: {
-              id: block.id,
-              updates: { instruction: e.currentTarget.textContent || "" },
-            },
-          })
-        }
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
       >
         {block.instruction}
       </div>
@@ -1991,21 +2280,23 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                   className="font-semibold outline-none block"
                   contentEditable
                   suppressContentEditableWarning
-                  onBlur={(e) =>
-                    dispatch({
-                      type: "UPDATE_BLOCK",
-                      payload: {
-                        id: block.id,
-                        updates: {
-                          categories: block.categories.map((c) =>
-                            c.id === cat.id
-                              ? { ...c, label: e.currentTarget.textContent || "" }
-                              : c
-                          ),
+                  onBlur={(e) => {
+                    const value = e.currentTarget.textContent || "";
+                    const catIdx = block.categories.findIndex((c) => c.id === cat.id);
+                    localeUpdate(block.id, `categories.${catIdx}.label`, value, () =>
+                      dispatch({
+                        type: "UPDATE_BLOCK",
+                        payload: {
+                          id: block.id,
+                          updates: {
+                            categories: block.categories.map((c) =>
+                              c.id === cat.id ? { ...c, label: value } : c
+                            ),
+                          },
                         },
-                      },
-                    })
-                  }
+                      })
+                    );
+                  }}
                 >
                   {cat.label}
                 </span>
@@ -2020,9 +2311,13 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                       contentEditable
                       suppressContentEditableWarning
                       className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-                      onBlur={(e) =>
-                        updateItem(item.id, e.currentTarget.textContent || "")
-                      }
+                      onBlur={(e) => {
+                        const value = e.currentTarget.textContent || "";
+                        const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                        localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                          updateItem(item.id, value)
+                        );
+                      }}
                     >
                       {item.text}
                     </span>
@@ -2075,6 +2370,7 @@ function scrambleWord(word: string, keepFirst: boolean, lowercase: boolean): str
 
 function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const updateWord = (id: string, word: string) => {
@@ -2125,15 +2421,12 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
         className="font-medium outline-none"
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) =>
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: {
-              id: block.id,
-              updates: { instruction: e.currentTarget.textContent || "" },
-            },
-          })
-        }
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
       >
         {block.instruction}
       </div>
@@ -2164,9 +2457,13 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
                 contentEditable
                 suppressContentEditableWarning
                 className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors font-medium text-green-700"
-                onBlur={(e) =>
-                  updateWord(item.id, e.currentTarget.textContent || "")
-                }
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  const arrIdx = block.words.findIndex((w) => w.id === item.id);
+                  localeUpdate(block.id, `words.${arrIdx}.word`, value, () =>
+                    updateWord(item.id, value)
+                  );
+                }}
               >
                 {item.word}
               </span>
@@ -2201,6 +2498,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
 // ─── Fix Sentences ──────────────────────────────────────────
 function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const updateSentence = (id: string, sentence: string) => {
@@ -2251,15 +2549,12 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
         className="font-medium outline-none"
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) =>
-          dispatch({
-            type: "UPDATE_BLOCK",
-            payload: {
-              id: block.id,
-              updates: { instruction: e.currentTarget.textContent || "" },
-            },
-          })
-        }
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
       >
         {block.instruction}
       </div>
@@ -2301,7 +2596,13 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
                 <input
                   type="text"
                   value={item.sentence}
-                  onChange={(e) => updateSentence(item.id, e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const arrIdx = block.sentences.findIndex((s) => s.id === item.id);
+                    localeUpdate(block.id, `sentences.${arrIdx}.sentence`, value, () =>
+                      updateSentence(item.id, value)
+                    );
+                  }}
                   className="w-full text-xs text-muted-foreground bg-transparent border-0 outline-none font-mono"
                   placeholder={t("fixSentencePlaceholder")}
                 />
@@ -2309,6 +2610,118 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
             </div>
           );
         })}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addSentence();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addSentence")}
+      </button>
+    </div>
+  );
+}
+
+// ─── Complete Sentences ─────────────────────────────────────
+function CompleteSentencesRenderer({ block }: { block: CompleteSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const updateSentence = (id: string, beginning: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.map((s) =>
+            s.id === id ? { ...s, beginning } : s
+          ),
+        },
+      },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: crypto.randomUUID(), beginning: t("newSentenceBeginning") },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (id: string) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((s) => s.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {block.instruction}
+      </div>
+
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className="group/item flex items-center gap-3 py-2 border-b last:border-b-0"
+          >
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span
+              className="outline-none block flex-1"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                  updateSentence(item.id, value)
+                );
+              }}
+            >
+              {item.beginning}
+            </span>
+            <button
+              className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                ${block.sentences.length <= 1 ? "invisible" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeSentence(item.id);
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </button>
+          </div>
+        ))}
       </div>
       <button
         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -2926,10 +3339,13 @@ const ChartContent = dynamic(
 
 function ChartRenderer({ block }: { block: ChartBlock }) {
   const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
 
   const handleTitleChange = (title: string) => {
-    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { title } } });
+    localeUpdate(block.id, "title", title, () =>
+      dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { title } } })
+    );
   };
 
   return (
@@ -3008,10 +3424,18 @@ export function BlockRenderer({
       return <SpacerRenderer block={block} />;
     case "divider":
       return <DividerRenderer block={block} />;
+    case "page-break":
+      return <PageBreakRenderer block={block} />;
+    case "writing-lines":
+      return <WritingLinesRenderer block={block} />;
+    case "writing-rows":
+      return <WritingRowsRenderer block={block} />;
     case "multiple-choice":
       return <MultipleChoiceRenderer block={block} interactive={interactive} />;
     case "fill-in-blank":
       return <FillInBlankRenderer block={block} interactive={interactive} />;
+    case "fill-in-blank-items":
+      return <FillInBlankItemsRenderer block={block} interactive={interactive} />;
     case "matching":
       return <MatchingRenderer block={block} />;
     case "two-column-fill":
@@ -3040,6 +3464,8 @@ export function BlockRenderer({
       return <UnscrambleWordsRenderer block={block} />;
     case "fix-sentences":
       return <FixSentencesRenderer block={block} />;
+    case "complete-sentences":
+      return <CompleteSentencesRenderer block={block} />;
     case "verb-table":
       return <VerbTableRenderer block={block} />;
     case "chart":

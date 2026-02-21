@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { RotateCw, ZoomIn } from "lucide-react";
+import { RotateCw, ZoomIn, RectangleHorizontal } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -33,8 +33,10 @@ export interface ImageCropDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Called with the cropped result when user confirms */
   onCropComplete: (result: CropResult) => void;
-  /** Aspect ratio for the crop area (default: 1 = square) */
+  /** Aspect ratio for the crop area (default: undefined = free) */
   aspect?: number;
+  /** Whether to show aspect ratio presets in the dialog (default: true) */
+  showAspectPresets?: boolean;
   /** Dialog title */
   title?: string;
   /** Output image format */
@@ -106,7 +108,8 @@ export function ImageCropDialog({
   open,
   onOpenChange,
   onCropComplete,
-  aspect = 1,
+  aspect,
+  showAspectPresets = true,
   title = "Bild zuschneiden",
   outputType = "image/png",
   outputQuality = 0.92,
@@ -116,6 +119,12 @@ export function ImageCropDialog({
   const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeAspect, setActiveAspect] = useState<number | undefined>(aspect);
+
+  // Sync with prop when dialog opens
+  React.useEffect(() => {
+    if (open) setActiveAspect(aspect);
+  }, [open, aspect]);
 
   const onCropCompleteInternal = useCallback(
     (_croppedArea: Area, croppedAreaPixels: Area) => {
@@ -176,7 +185,7 @@ export function ImageCropDialog({
             crop={crop}
             zoom={zoom}
             rotation={rotation}
-            aspect={aspect}
+            aspect={activeAspect}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onRotationChange={setRotation}
@@ -186,6 +195,33 @@ export function ImageCropDialog({
 
         {/* Controls */}
         <div className="space-y-3">
+          {/* Aspect ratio presets */}
+          {showAspectPresets && (
+            <div className="flex items-center gap-3">
+              <RectangleHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Label className="text-xs w-10 shrink-0">Format</Label>
+              <div className="flex gap-1 flex-1">
+                {([
+                  { label: "Frei", value: undefined },
+                  { label: "1:1", value: 1 },
+                  { label: "16:9", value: 16 / 9 },
+                  { label: "4:3", value: 4 / 3 },
+                  { label: "3:4", value: 3 / 4 },
+                  { label: "9:16", value: 9 / 16 },
+                ] as const).map((preset) => (
+                  <Button
+                    key={preset.label}
+                    variant={activeAspect === preset.value ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 text-xs px-1 h-7"
+                    onClick={() => setActiveAspect(preset.value)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Zoom */}
           <div className="flex items-center gap-3">
             <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />

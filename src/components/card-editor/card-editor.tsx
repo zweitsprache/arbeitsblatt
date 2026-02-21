@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CardProvider, useCardEditor } from "@/store/card-store";
-import { CardDocument, CardItem, getImageObjectFit } from "@/types/card";
+import { CardDocument, CardItem, CardLayout, CARDS_PER_PAGE, getImageObjectFit } from "@/types/card";
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
 import { Button } from "@/components/ui/button";
@@ -67,10 +67,18 @@ function CardPrintPreview() {
   const t = useTranslations("cardEditor");
   const { cards, settings } = state;
 
-  // Group cards into pages of 4
+  const layout = settings.layout || "landscape-4";
+  const perPage = CARDS_PER_PAGE[layout];
+  const isPortrait = layout === "portrait-2";
+
+  // Card dimensions in mm for margin calculation
+  const cardW = isPortrait ? 210 : 148.5;
+  const cardH = isPortrait ? 148.5 : 105;
+
+  // Group cards into pages
   const pages: CardItem[][] = [];
-  for (let i = 0; i < cards.length; i += 4) {
-    pages.push(cards.slice(i, i + 4));
+  for (let i = 0; i < cards.length; i += perPage) {
+    pages.push(cards.slice(i, i + perPage));
   }
 
   if (cards.length === 0) {
@@ -84,26 +92,34 @@ function CardPrintPreview() {
   return (
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground text-center">
-        {t("previewDescription")}
+        {t(isPortrait ? "previewDescriptionPortrait" : "previewDescription")}
       </p>
       {pages.map((pageCards, pageIdx) => (
         <div key={pageIdx} className="mx-auto">
-          {/* A4 landscape ratio: 297×210 */}
           <div
             className="bg-white border border-border shadow-sm mx-auto relative"
             style={{
               width: "100%",
-              maxWidth: "740px",
-              aspectRatio: "297 / 210",
+              maxWidth: isPortrait ? "520px" : "740px",
+              aspectRatio: isPortrait ? "210 / 297" : "297 / 210",
             }}
           >
-            {/* 2×2 grid */}
-            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
-              {[0, 1, 2, 3].map((slot) => {
+            {/* Grid: 2×2 for landscape, 1×2 for portrait */}
+            <div
+              className={`absolute inset-0 grid ${
+                isPortrait
+                  ? "grid-cols-1 grid-rows-2"
+                  : "grid-cols-2 grid-rows-2"
+              }`}
+            >
+              {Array.from({ length: perPage }).map((_, slot) => {
                 const card = pageCards[slot];
-                // 5mm margins as % of card dimensions (148.5mm × 105mm)
-                const mX = (5 / 148.5) * 100; // ~3.37%
-                const mY = (5 / 105) * 100;   // ~4.76%
+                const mX = (10 / cardW) * 100;
+                const mY = (10 / cardH) * 100;
+                const logoTop = (7 / cardH) * 100;
+                const contentW = cardW - 2 * 10;
+                const imgRatio = contentW / (contentW * 9 / 16 + 3);
+                const imgBottom = (17 / cardH) * 100;
                 return (
                   <div
                     key={slot}
@@ -111,16 +127,16 @@ function CardPrintPreview() {
                   >
                     {card ? (
                       <>
-                        {/* Brand logo — 4mm from top, 4mm from right, 6mm height */}
+                        {/* Brand logo — 7mm from top, 10mm from right, 6mm height */}
                         {settings.brandSettings?.logo && (
                           <img
                             src={settings.brandSettings.logo}
                             alt=""
                             className="absolute z-10 object-contain"
                             style={{
-                              top: `${mY}%`,
+                              top: `${logoTop}%`,
                               right: `${mX}%`,
-                              height: `${(6 / 105) * 100}%`,
+                              height: `${(6 / cardH) * 100}%`,
                               width: "auto",
                             }}
                           />
@@ -145,7 +161,7 @@ function CardPrintPreview() {
                               top: 0,
                               left: `${mX}%`,
                               right: `${mX}%`,
-                              bottom: `calc(${(10 / 105) * 100}% + ((100% - ${mX * 2}%) / (16/9)) + 1%)`,
+                              bottom: `calc(${imgBottom}% + ((100% - ${mX * 2}%) / ${imgRatio}) + 1%)`,
                             }}
                           >
                             <span
@@ -163,14 +179,14 @@ function CardPrintPreview() {
                             </span>
                           </div>
                         )}
-                        {/* Image container — 16:9, 5mm from left/right, 10mm from bottom */}
+                        {/* Image container — 10mm from left/right, 17mm from bottom */}
                         <div
                           className="absolute overflow-hidden rounded-[1px]"
                           style={{
                             left: `${mX}%`,
                             right: `${mX}%`,
-                            bottom: `${(10 / 105) * 100}%`,
-                            aspectRatio: "16 / 9",
+                            bottom: `${imgBottom}%`,
+                            aspectRatio: `${imgRatio}`,
                           }}
                         >
                           {card.image ? (
@@ -195,17 +211,22 @@ function CardPrintPreview() {
                             </span>
                           </div>
                         )}
-                        {/* Footer left — 5mm from left, 5mm from bottom */}
-                        {settings.brandSettings?.footerLeft && (
+                        {/* Three-column footer (matching worksheet layout) */}
+                        <div
+                          className="absolute z-10 flex justify-between items-end text-[5px] leading-tight text-gray-600"
+                          style={{
+                            bottom: `${(8 / cardH) * 100}%`,
+                            left: `${mX}%`,
+                            right: `${mX}%`,
+                          }}
+                        >
                           <div
-                            className="absolute z-10 text-[5px] leading-tight text-gray-600"
-                            style={{
-                              bottom: `${mY}%`,
-                              left: `${mX}%`,
-                            }}
-                            dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings.footerLeft, settings.brandSettings) }}
+                            dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings?.footerLeft || '', settings.brandSettings) }}
                           />
-                        )}
+                          <div className="text-right"
+                            dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings?.footerRight || '', settings.brandSettings) }}
+                          />
+                        </div>
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -222,14 +243,16 @@ function CardPrintPreview() {
             {/* Cutting lines */}
             {settings.showCuttingLines && (
               <>
-                {/* Vertical center line */}
-                <div
-                  className="absolute top-0 bottom-0 left-1/2 -translate-x-px"
-                  style={{
-                    width: "1px",
-                    borderLeft: `1px ${settings.cuttingLineStyle} #ccc`,
-                  }}
-                />
+                {/* Vertical center line — landscape only */}
+                {!isPortrait && (
+                  <div
+                    className="absolute top-0 bottom-0 left-1/2 -translate-x-px"
+                    style={{
+                      width: "1px",
+                      borderLeft: `1px ${settings.cuttingLineStyle} #ccc`,
+                    }}
+                  />
+                )}
                 {/* Horizontal center line */}
                 <div
                   className="absolute left-0 right-0 top-1/2 -translate-y-px"
@@ -324,9 +347,11 @@ function CardTile({
     onUpdate({ image: undefined, imageScale: undefined, imageRatio: undefined });
   };
 
-  // Card is in A4 landscape 2×2 grid → each card is 148.5mm × 105mm ≈ ratio 297:210
-  const pageIdx = Math.floor(index / 4) + 1;
-  const slotIdx = (index % 4) + 1;
+  // Card placement depends on layout
+  const layout = state.settings.layout || "landscape-4";
+  const perPage = CARDS_PER_PAGE[layout];
+  const pageIdx = Math.floor(index / perPage) + 1;
+  const slotIdx = (index % perPage) + 1;
 
   return (
     <div
@@ -384,27 +409,27 @@ function CardTile({
           className="relative group/img rounded overflow-hidden border border-border bg-white"
           style={{ aspectRatio: "148.5 / 105" }}
         >
-          {/* Brand logo — 5mm from top, 5mm from right, 6mm height */}
+          {/* Brand logo — 7mm from top, 10mm from right, 6mm height */}
           {state.settings.brandSettings?.logo && (
             <img
               src={state.settings.brandSettings.logo}
               alt=""
               className="absolute z-10 object-contain"
               style={{
-                top: `${(5 / 105) * 100}%`,
-                right: `${(5 / 148.5) * 100}%`,
+                top: `${(7 / 105) * 100}%`,
+                right: `${(10 / 148.5) * 100}%`,
                 height: `${(6 / 105) * 100}%`,
                 width: "auto",
               }}
             />
           )}
-          {/* Header left text — 5mm from left, 5mm from top */}
+          {/* Header left text — 10mm from left, 10mm from top */}
           {state.settings.brandSettings?.headerRight && (
             <div
               className="absolute z-10 text-[7px] leading-tight text-gray-600"
               style={{
-                top: `${(5 / 105) * 100}%`,
-                left: `${(5 / 148.5) * 100}%`,
+                top: `${(10 / 105) * 100}%`,
+                left: `${(10 / 148.5) * 100}%`,
               }}
               dangerouslySetInnerHTML={{ __html: replaceCardVariables(state.settings.brandSettings.headerRight, state.settings.brandSettings) }}
             />
@@ -414,8 +439,8 @@ function CardTile({
             className="absolute flex items-center justify-center px-2"
             style={{
               top: "2%",
-              left: `${(5 / 148.5) * 100}%`,
-              right: `${(5 / 148.5) * 100}%`,
+              left: `${(10 / 148.5) * 100}%`,
+              right: `${(10 / 148.5) * 100}%`,
               height: "20%",
             }}
           >
@@ -436,12 +461,12 @@ function CardTile({
             )}
           </div>
 
-          {/* 16:9 image container — 5mm from left/right, 10mm from bottom */}
+          {/* 16:9 image container — 10mm from left/right, 10mm from bottom */}
           <div
             className="absolute overflow-hidden rounded-sm"
             style={{
-              left: `${(5 / 148.5) * 100}%`,
-              right: `${(5 / 148.5) * 100}%`,
+              left: `${(10 / 148.5) * 100}%`,
+              right: `${(10 / 148.5) * 100}%`,
               bottom: `${(10 / 105) * 100}%`,
               aspectRatio: "16 / 9",
             }}
@@ -499,17 +524,22 @@ function CardTile({
             )}
           </div>
 
-          {/* Footer left — 5mm from left, 5mm from bottom */}
-          {state.settings.brandSettings?.footerLeft && (
+          {/* Three-column footer — 8mm from bottom */}
+          <div
+            className="absolute z-10 flex justify-between items-end text-[7px] leading-tight text-gray-600"
+            style={{
+              bottom: `${(8 / 105) * 100}%`,
+              left: `${(10 / 148.5) * 100}%`,
+              right: `${(10 / 148.5) * 100}%`,
+            }}
+          >
             <div
-              className="absolute z-10 text-[7px] leading-tight text-gray-600"
-              style={{
-                bottom: `${(5 / 105) * 100}%`,
-                left: `${(5 / 148.5) * 100}%`,
-              }}
-              dangerouslySetInnerHTML={{ __html: replaceCardVariables(state.settings.brandSettings.footerLeft, state.settings.brandSettings) }}
+              dangerouslySetInnerHTML={{ __html: replaceCardVariables(state.settings.brandSettings?.footerLeft || '', state.settings.brandSettings) }}
             />
-          )}
+            <div className="text-right"
+              dangerouslySetInnerHTML={{ __html: replaceCardVariables(state.settings.brandSettings?.footerRight || '', state.settings.brandSettings) }}
+            />
+          </div>
         </div>
 
         <input
@@ -586,6 +616,31 @@ function CardSettingsPanel() {
         <Settings2 className="h-4 w-4" />
         {t("settings")}
       </h3>
+
+      {/* Layout selector */}
+      <div className="space-y-1.5">
+        <span className="text-xs text-muted-foreground">{t("layout")}</span>
+        <div className="flex gap-1">
+          {(["landscape-4", "portrait-2"] as const).map((layout) => (
+            <button
+              key={layout}
+              className={`flex-1 text-xs px-2 py-1.5 rounded border transition-colors ${
+                (settings.layout || "landscape-4") === layout
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:border-primary/50 text-muted-foreground"
+              }`}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  payload: { layout },
+                })
+              }
+            >
+              {t(`layout_${layout}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Cutting lines toggle */}
       <label className="flex items-center gap-2 cursor-pointer">
@@ -735,7 +790,8 @@ function CardEditorInner({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${state.title || "cards"}.pdf`;
+      const shortId = state.worksheetId.slice(0, 16);
+      a.download = `${shortId}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -802,7 +858,7 @@ function CardEditorInner({
         </Badge>
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("pageCount", {
-            count: Math.max(1, Math.ceil(state.cards.length / 4)),
+            count: Math.max(1, Math.ceil(state.cards.length / CARDS_PER_PAGE[state.settings.layout || "landscape-4"])),
           })}
         </Badge>
         {state.isDirty && (

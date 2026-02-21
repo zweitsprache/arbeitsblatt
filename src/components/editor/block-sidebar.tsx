@@ -32,6 +32,8 @@ import {
   Hash,
   BookOpen,
   MessageCircle,
+  FileOutput,
+  Rows3,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -60,6 +62,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Hash,
   BookOpen,
   MessageCircle,
+  FileOutput,
+  Rows3,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

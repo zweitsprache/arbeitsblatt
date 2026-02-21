@@ -1,6 +1,9 @@
-// ─── Card layout types (2×2 image+text cards on A4 landscape) ─
+// ─── Card layout types ──────────────────────────────────────
 
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "./worksheet";
+
+/** Layout variant for card PDF export */
+export type CardLayout = "landscape-4" | "portrait-2";
 
 export interface CardItem {
   id: string;
@@ -14,12 +17,19 @@ export interface CardItem {
 }
 
 export interface CardSettings {
+  layout: CardLayout;
   showCuttingLines: boolean;
   cuttingLineStyle: "dashed" | "dotted" | "solid";
   cardPadding: number; // mm
   brand: Brand;
   brandSettings: BrandSettings;
 }
+
+/** Cards per page for each layout variant */
+export const CARDS_PER_PAGE: Record<CardLayout, number> = {
+  "landscape-4": 4,
+  "portrait-2": 2,
+};
 
 export interface CardDocument {
   id: string;
@@ -34,6 +44,7 @@ export interface CardDocument {
 }
 
 export const DEFAULT_CARD_SETTINGS: CardSettings = {
+  layout: "landscape-4",
   showCuttingLines: true,
   cuttingLineStyle: "dashed",
   cardPadding: 4,

@@ -26,6 +26,7 @@ export type BlockType =
   | "sorting-categories"
   | "unscramble-words"
   | "fix-sentences"
+  | "complete-sentences"
   | "verb-table"
   | "text-cards"
   | "glossary"
@@ -33,7 +34,11 @@ export type BlockType =
   | "chart"
   | "numbered-label"
   | "two-column-fill"
-  | "dialogue";
+  | "dialogue"
+  | "fill-in-blank-items"
+  | "page-break"
+  | "writing-lines"
+  | "writing-rows";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -140,6 +145,18 @@ export interface FillInBlankBlock extends BlockBase {
   content: string;
 }
 
+// ─── Fill-in-blank items block ──────────────────────────────
+export interface FillInBlankItem {
+  id: string;
+  content: string; // text with {{blank:answer}} gaps
+}
+
+export interface FillInBlankItemsBlock extends BlockBase {
+  type: "fill-in-blank-items";
+  items: FillInBlankItem[];
+  showWordBank: boolean;
+}
+
 // ─── Matching block ─────────────────────────────────────────
 export interface MatchingPair {
   id: string;
@@ -218,11 +235,14 @@ export interface TrueFalseMatrixBlock extends BlockBase {
   type: "true-false-matrix";
   instruction: string;
   statementColumnHeader?: string;
+  trueLabel?: string;
+  falseLabel?: string;
   statements: {
     id: string;
     text: string;
     correctAnswer: boolean; // true = True, false = False
   }[];
+  statementOrder?: string[]; // persisted shuffled order of statement IDs (Fisher-Yates)
 }
 
 // ─── Article Training block ──────────────────────────────────
@@ -362,6 +382,18 @@ export interface FixSentencesBlock extends BlockBase {
   sentences: FixSentenceItem[];
 }
 
+// ─── Complete Sentences block ───────────────────────────────
+export interface CompleteSentenceItem {
+  id: string;
+  beginning: string; // sentence beginning the user must complete
+}
+
+export interface CompleteSentencesBlock extends BlockBase {
+  type: "complete-sentences";
+  instruction: string;
+  sentences: CompleteSentenceItem[];
+}
+
 // ─── Verb Table block ───────────────────────────────────────
 export interface VerbTableRow {
   id: string;
@@ -430,6 +462,24 @@ export interface NumberedLabelBlock extends BlockBase {
   suffix: string;
 }
 
+// ─── Page Break block ────────────────────────────────────────
+export interface PageBreakBlock extends BlockBase {
+  type: "page-break";
+}
+
+// ─── Writing Lines block ─────────────────────────────────────
+export interface WritingLinesBlock extends BlockBase {
+  type: "writing-lines";
+  lineCount: number;
+  lineSpacing: number; // px height per line row
+}
+
+// ─── Writing Rows block ──────────────────────────────────────
+export interface WritingRowsBlock extends BlockBase {
+  type: "writing-rows";
+  rowCount: number;
+}
+
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
@@ -453,13 +503,18 @@ export type WorksheetBlock =
   | SortingCategoriesBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
+  | CompleteSentencesBlock
   | VerbTableBlock
   | GlossaryBlock
   | ArticleTrainingBlock
   | ChartBlock
   | NumberedLabelBlock
   | TwoColumnFillBlock
-  | DialogueBlock;
+  | DialogueBlock
+  | FillInBlankItemsBlock
+  | PageBreakBlock
+  | WritingLinesBlock
+  | WritingRowsBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -787,6 +842,26 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "fill-in-blank-items",
+    label: "Fill in the Blank (Items)",
+    description: "Numbered sentences with blanks to fill in",
+    labelKey: "fillInBlankItems",
+    descriptionKey: "fillInBlankItemsDesc",
+    icon: "TextCursorInput",
+    category: "interactive",
+    translations: { de: { label: "Lückentext (Sätze)", description: "Nummerierte Sätze mit Lücken zum Ausfüllen" } },
+    defaultData: {
+      type: "fill-in-blank-items",
+      items: [
+        { id: "fib1", content: "The {{blank:cat}} sat on the mat." },
+        { id: "fib2", content: "She {{blank:goes}} to school every day." },
+        { id: "fib3", content: "They {{blank:have}} a big house." },
+      ],
+      showWordBank: false,
+      visibility: "both",
+    },
+  },
+  {
     type: "matching",
     label: "Matching",
     description: "Match items from two columns",
@@ -1008,6 +1083,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "complete-sentences",
+    label: "Complete Sentences",
+    description: "Complete sentence beginnings",
+    labelKey: "completeSentences",
+    descriptionKey: "completeSentencesDesc",
+    icon: "TextCursorInput",
+    category: "interactive",
+    translations: { de: { label: "Sätze vervollständigen", description: "Satzanfänge vervollständigen" } },
+    defaultData: {
+      type: "complete-sentences",
+      instruction: "Vervollständige die Sätze.",
+      sentences: [
+        { id: "cs1", beginning: "Ich gehe gerne …" },
+        { id: "cs2", beginning: "Am Wochenende …" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
     type: "verb-table",
     label: "Verb Table",
     description: "Conjugation table for verbs",
@@ -1136,6 +1230,51 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       startNumber: 1,
       prefix: "",
       suffix: "",
+      visibility: "both",
+    },
+  },
+  {
+    type: "page-break",
+    label: "Page Break",
+    description: "Force a page break in print/PDF",
+    labelKey: "pageBreak",
+    descriptionKey: "pageBreakDesc",
+    icon: "FileOutput",
+    category: "layout",
+    translations: { de: { label: "Seitenumbruch", description: "Seitenumbruch im Druck/PDF erzwingen" } },
+    defaultData: {
+      type: "page-break",
+      visibility: "print",
+    },
+  },
+  {
+    type: "writing-lines",
+    label: "Writing Lines",
+    description: "Dashed lines for handwriting",
+    labelKey: "writingLines",
+    descriptionKey: "writingLinesDesc",
+    icon: "PenLine",
+    category: "layout",
+    translations: { de: { label: "Schreiblinien", description: "Gestrichelte Linien zum Schreiben" } },
+    defaultData: {
+      type: "writing-lines",
+      lineCount: 5,
+      lineSpacing: 24,
+      visibility: "both",
+    },
+  },
+  {
+    type: "writing-rows",
+    label: "Writing Rows",
+    description: "Numbered rows with writing lines",
+    labelKey: "writingRows",
+    descriptionKey: "writingRowsDesc",
+    icon: "Rows3",
+    category: "layout",
+    translations: { de: { label: "Schreibzeilen", description: "Nummerierte Zeilen mit Schreiblinien" } },
+    defaultData: {
+      type: "writing-rows",
+      rowCount: 5,
       visibility: "both",
     },
   },

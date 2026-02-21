@@ -41,6 +41,7 @@ import {
   SortingCategoriesBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
+  CompleteSentencesBlock,
   VerbTableBlock,
   WorksheetSettings,
   DEFAULT_SETTINGS,
@@ -1038,6 +1039,17 @@ function NumberLineBlockPdf({ block, s }: { block: NumberLineBlock; s: S }) {
   );
 }
 
+/** Render {{blank}} as a visual gap in react-pdf Text nodes (matching fill-in-blank style) */
+function renderTfBlanksPdf(text: string): React.ReactNode {
+  if (!text.includes("{{blank}}")) return text;
+  const parts = text.split("{{blank}}");
+  return parts.flatMap((part, i) =>
+    i < parts.length - 1
+      ? [part, <Text key={i} style={{ backgroundColor: "#f3f4f6", color: "#f3f4f6" }}>{" _____________ "}</Text>]
+      : [part]
+  );
+}
+
 function TrueFalseMatrixBlockPdf({ block, s, showSolutions = false }: { block: TrueFalseMatrixBlock; s: S; showSolutions?: boolean }) {
   return (
     <View>
@@ -1046,17 +1058,17 @@ function TrueFalseMatrixBlockPdf({ block, s, showSolutions = false }: { block: T
       <View style={[s.row, { borderBottomWidth: 1 }]}>
         <Text style={{ flex: 1, fontWeight: 700 }}>{block.statementColumnHeader || ""}</Text>
         <View style={{ width: 40, alignItems: "center" }}>
-          <Text style={{ fontSize: 8, fontWeight: 500, color: "#6b7280" }}>R</Text>
+          <Text style={{ fontSize: 8, fontWeight: 500, color: "#6b7280" }}>{block.trueLabel || "R"}</Text>
         </View>
         <View style={{ width: 40, alignItems: "center" }}>
-          <Text style={{ fontSize: 8, fontWeight: 500, color: "#6b7280" }}>F</Text>
+          <Text style={{ fontSize: 8, fontWeight: 500, color: "#6b7280" }}>{block.falseLabel || "F"}</Text>
         </View>
       </View>
       {/* Rows */}
       {block.statements.map((stmt, i) => (
         <View key={stmt.id} style={[s.row, i === block.statements.length - 1 ? { borderBottomWidth: 0 } : {}]}>
           <NumberBadge n={i + 1} s={s} />
-          <Text style={{ flex: 1 }}>{stmt.text}</Text>
+          <Text style={{ flex: 1 }}>{renderTfBlanksPdf(stmt.text)}</Text>
           <View style={{ width: 40, alignItems: "center" }}>
             {showSolutions && stmt.correctAnswer ? <FilledSquare /> : <EmptySquare s={s} />}
           </View>
@@ -1387,6 +1399,27 @@ function FixSentencesBlockPdf({ block, s, showSolutions = false }: { block: FixS
   );
 }
 
+function CompleteSentencesBlockPdf({ block, s }: { block: CompleteSentencesBlock; s: S }) {
+  return (
+    <View>
+      {block.instruction && <Text style={s.instruction}>{block.instruction}</Text>}
+      {block.sentences.map((item, i) => (
+        <View key={item.id} style={{ paddingVertical: 4 }} wrap={false}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+            <View style={{ marginTop: 3 }}>
+              <NumberBadge n={i + 1} s={s} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text>{item.beginning}</Text>
+              <View style={{ marginTop: 6, height: 14, borderBottomWidth: 0.5, borderBottomColor: "#9ca3af50", borderBottomStyle: "dashed" }} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function VerbTableBlockPdf({
   block,
   s,
@@ -1550,6 +1583,8 @@ function BlockPdf({
       return <UnscrambleWordsBlockPdf block={block} s={s} showSolutions={showSolutions} />;
     case "fix-sentences":
       return <FixSentencesBlockPdf block={block} s={s} showSolutions={showSolutions} />;
+    case "complete-sentences":
+      return <CompleteSentencesBlockPdf block={block} s={s} />;
     case "verb-table":
       return <VerbTableBlockPdf block={block} s={s} primaryColor={primaryColor} />;
     case "columns":

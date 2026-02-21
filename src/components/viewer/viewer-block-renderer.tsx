@@ -12,6 +12,7 @@ import {
   DividerBlock,
   MultipleChoiceBlock,
   FillInBlankBlock,
+  FillInBlankItemsBlock,
   MatchingBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -29,10 +30,14 @@ import {
   SortingCategoriesBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
+  CompleteSentencesBlock,
   VerbTableBlock,
   ChartBlock,
   NumberedLabelBlock,
   DialogueBlock,
+  PageBreakBlock,
+  WritingLinesBlock,
+  WritingRowsBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useTranslations } from "next-intl";
@@ -293,6 +298,45 @@ function DividerView({ block }: { block: DividerBlock }) {
   return <hr style={{ borderStyle: block.style }} />;
 }
 
+function PageBreakView({ block: _block }: { block: PageBreakBlock }) {
+  return <div style={{ breakAfter: "page", pageBreakAfter: "always" }} />;
+}
+
+function WritingLinesView({ block }: { block: WritingLinesBlock }) {
+  return (
+    <div>
+      {Array.from({ length: block.lineCount }).map((_, i) => (
+        <div
+          key={i}
+          style={{ height: block.lineSpacing, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WritingRowsView({ block }: { block: WritingRowsBlock }) {
+  return (
+    <div>
+      {Array.from({ length: block.rowCount }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center border-b last:border-b-0"
+          style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+        >
+          <span
+            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
+            style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+          >
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Interactive blocks ─────────────────────────────────────
 
 function MultipleChoiceView({
@@ -500,6 +544,162 @@ function FillInBlankView({
           );
         }
         return <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
+function FillInBlankItemsView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+  showSolutions = false,
+  mode = "online",
+}: {
+  block: FillInBlankItemsBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  mode?: ViewMode;
+}) {
+  const tb = useTranslations("blockRenderer");
+  const blanks = (answer as Record<string, string> | undefined) || {};
+  const isPrint = mode === "print";
+
+  // Extract answers for word bank
+  const wordBankAnswers = useMemo(() => {
+    if (!block.showWordBank) return [];
+    const answers: string[] = [];
+    for (const item of block.items) {
+      const matches = item.content.matchAll(/\{\{blank:([^,}]+)/g);
+      for (const m of matches) answers.push(m[1].trim());
+    }
+    // Shuffle based on block id (deterministic)
+    const arr = [...answers];
+    let seed = 0;
+    for (let i = 0; i < block.id.length; i++) {
+      seed = ((seed << 5) - seed + block.id.charCodeAt(i)) | 0;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 16807 + 0) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [block.items, block.showWordBank, block.id]);
+
+  return (
+    <div>
+      {block.showWordBank && wordBankAnswers.length > 0 && (
+        <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-md" style={{ gap: 8 }}>
+          {wordBankAnswers.map((word, i) => (
+            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+      {block.items.map((item, idx) => {
+        const parts = item.content.split(/(\{\{blank:[^}]+\}\})/g);
+        let blankInItem = 0;
+
+        return (
+          <div
+            key={item.id || idx}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+          >
+            <span
+              className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
+              style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+            >
+              {String(idx + 1).padStart(2, "0")}
+            </span>
+            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
+              {parts.map((part, i) => {
+                const match = part.match(/\{\{blank:(.+)\}\}/);
+                if (match) {
+                  const raw = match[1];
+                  const commaIdx = raw.lastIndexOf(",");
+                  let correctAnswer: string;
+                  let widthMultiplier = 1;
+                  if (commaIdx !== -1) {
+                    correctAnswer = raw.substring(0, commaIdx).trim();
+                    const wStr = raw.substring(commaIdx + 1).trim();
+                    const parsed = Number(wStr);
+                    if (!isNaN(parsed)) widthMultiplier = parsed;
+                  } else {
+                    correctAnswer = raw.trim();
+                  }
+                  const key = `blank-${idx}-${blankInItem}`;
+                  blankInItem++;
+                  const userValue = blanks[key] || "";
+                  const isCorrectAnswer =
+                    showResults && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
+                  const isWrong = showResults && userValue.trim() !== "" && !isCorrectAnswer;
+                  const widthStyle = widthMultiplier === 0
+                    ? { flex: 1 } as React.CSSProperties
+                    : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+
+                  if (interactive) {
+                    return (
+                      <span key={i} className="inline-block relative mx-1">
+                        <input
+                          type="text"
+                          value={userValue}
+                          disabled={showResults}
+                          onChange={(e) =>
+                            onAnswer({ ...blanks, [key]: e.target.value })
+                          }
+                          className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline transition-colors
+                            ${showResults
+                              ? isCorrectAnswer
+                                ? "border-green-500 text-green-700"
+                                : isWrong
+                                  ? "border-red-500 text-red-700"
+                                  : "border-muted-foreground/40"
+                              : "border-muted-foreground/40 focus:border-primary"}`}
+                          style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+                          placeholder={tb("fillInBlankPlaceholder")}
+                        />
+                        {showResults && isWrong && (
+                          <span className="block text-xs text-green-600 text-center mt-0.5">
+                            {correctAnswer}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  }
+                  if (showSolutions) {
+                    return (
+                      <span
+                        key={i}
+                        className="bg-green-100 text-green-800 font-semibold px-2 mx-1"
+                        style={{ display: 'inline', verticalAlign: 'baseline', borderRadius: 4 }}
+                      >
+                        {correctAnswer}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span
+                      key={i}
+                      className="bg-gray-100 mx-1 border-b border-muted-foreground/30"
+                      style={{ display: 'inline-block', verticalAlign: 'baseline', borderRadius: 2, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+                    >
+                      &nbsp;
+                    </span>
+                  );
+                }
+                return <span key={i}>{renderTextWithSup(part)}</span>;
+              })}
+            </span>
+          </div>
+        );
       })}
     </div>
   );
@@ -1048,6 +1248,17 @@ function NumberLineView({ block }: { block: NumberLineBlock }) {
   );
 }
 
+/** Render {{blank}} placeholders as visual gaps inside T/F statement text (matching fill-in-blank style) */
+function renderTfBlanks(text: string): React.ReactNode {
+  if (!text.includes("{{blank}}")) return text;
+  const parts = text.split("{{blank}}");
+  return parts.flatMap((part, i) =>
+    i < parts.length - 1
+      ? [part, <span key={i} className="bg-gray-100 px-2 mx-1" style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, minWidth: 80 }}>&nbsp;</span>]
+      : [part]
+  );
+}
+
 function TrueFalseMatrixView({
   block,
   interactive,
@@ -1078,12 +1289,19 @@ function TrueFalseMatrixView({
         <thead>
           <tr>
             <th className="text-left py-2 pr-2 border-b font-bold text-foreground">{block.statementColumnHeader || ""}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("true")}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{tc("false")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</th>
           </tr>
         </thead>
         <tbody>
-          {block.statements.map((stmt, stmtIndex) => {
+          {(() => {
+            const orderedStatements = block.statementOrder
+              ? block.statementOrder
+                  .map((id) => block.statements.find((s) => s.id === id))
+                  .filter((s): s is NonNullable<typeof s> => !!s)
+                  .concat(block.statements.filter((s) => !block.statementOrder!.includes(s.id)))
+              : block.statements;
+            return orderedStatements.map((stmt, stmtIndex) => {
             const selected = answers[stmt.id];
             const isCorrect = selected === stmt.correctAnswer;
 
@@ -1094,7 +1312,7 @@ function TrueFalseMatrixView({
                     <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
-                    <span className="flex-1">{stmt.text}</span>
+                    <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                   </div>
                 </td>
                 <td className="p-2 text-center">
@@ -1143,7 +1361,8 @@ function TrueFalseMatrixView({
                 </td>
               </tr>
             );
-          })}
+          });
+          })()}
         </tbody>
       </table>
       {showResults && (
@@ -2320,6 +2539,54 @@ function FixSentencesView({
   );
 }
 
+// ─── Complete Sentences View ───────────────────────────────────
+function CompleteSentencesView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+}: {
+  block: CompleteSentencesBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+}) {
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+
+  return (
+    <div className="space-y-2">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className="flex items-center gap-3 py-2 border-b last:border-b-0"
+          >
+            <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="shrink-0">{item.beginning}</span>
+            {interactive ? (
+              <input
+                type="text"
+                value={userAnswers[item.id] || ""}
+                onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
+                className="flex-1 border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 focus:outline-none focus:border-primary"
+              />
+            ) : (
+              <div className="flex-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Verb Table View ────────────────────────────────────────
 function VerbTableView({
   block,
@@ -2715,6 +2982,12 @@ export function ViewerBlockRenderer({
       return <SpacerView block={block} />;
     case "divider":
       return <DividerView block={block} />;
+    case "page-break":
+      return <PageBreakView block={block} />;
+    case "writing-lines":
+      return <WritingLinesView block={block} />;
+    case "writing-rows":
+      return <WritingRowsView block={block} />;
     case "multiple-choice":
       return (
         <MultipleChoiceView
@@ -2735,6 +3008,18 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+        />
+      );
+    case "fill-in-blank-items":
+      return (
+        <FillInBlankItemsView
+          block={block}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          mode={mode}
         />
       );
     case "matching":
@@ -2865,6 +3150,16 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+        />
+      );
+    case "complete-sentences":
+      return (
+        <CompleteSentencesView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
         />
       );
     case "verb-table":
