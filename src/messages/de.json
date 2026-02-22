@@ -263,6 +263,7 @@
     "cardCount": "{count} Karten",
     "cardNumber": "Karte {number}",
     "cardPadding": "Kartenabstand",
+    "centerTextYOffset": "Text Y-Versatz",
     "deleteCard": "Karte löschen",
     "downloadPdf": "PDF herunterladen",
     "downloadPdfTooltip": "PDF generieren und herunterladen",

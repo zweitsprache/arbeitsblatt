@@ -263,6 +263,7 @@
     "cardCount": "{count} cards",
     "cardNumber": "Card {number}",
     "cardPadding": "Card spacing",
+    "centerTextYOffset": "Text Y offset",
     "deleteCard": "Delete card",
     "downloadPdf": "Download PDF",
     "downloadPdfTooltip": "Generate and download PDF",

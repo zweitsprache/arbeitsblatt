@@ -78,7 +78,8 @@ function renderCardSlot(
   brandSettings: BrandSettings,
   logoDataUri: string,
   dims: LayoutDims,
-  worksheetId: string
+  worksheetId: string,
+  settings: CardSettings
 ): string {
   if (!card) return `<div class="slot"></div>`;
 
@@ -130,7 +131,8 @@ function renderCardSlot(
          <span>${escapeHtml(card.text)}</span>
        </div>`;
     } else if (textPosition === "center") {
-      textHTML = `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%;z-index:20">
+      const yOff = settings.centerTextYOffset ?? 0;
+      textHTML = `<div class="text-area-center ${textSizeClass}" style="top:${50 + yOff}%;left:50%;transform:translate(-50%,-50%);width:60%;z-index:20">
          <span class="text-center-bg">${escapeHtml(card.text)}</span>
        </div>`;
     } else {
@@ -163,7 +165,7 @@ function buildPageHtml(
   const pageCards = cards.slice(start, start + dims.perPage);
 
   const slotsHTML = Array.from({ length: dims.perPage })
-    .map((_, slot) => renderCardSlot(pageCards[slot], brandSettings, logoDataUri, dims, worksheetId))
+    .map((_, slot) => renderCardSlot(pageCards[slot], brandSettings, logoDataUri, dims, worksheetId, settings))
     .join("");
 
   let cuttingLinesHTML = "";
@@ -272,6 +274,12 @@ function buildFullHtml(
     align-items: center;
     justify-content: center;
     padding: 0 2mm;
+  }
+  .text-area-center {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .text-area span {
     text-align: center;

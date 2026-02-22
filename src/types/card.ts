@@ -21,6 +21,7 @@ export interface CardSettings {
   showCuttingLines: boolean;
   cuttingLineStyle: "dashed" | "dotted" | "solid";
   cardPadding: number; // mm
+  centerTextYOffset: number; // percent offset from center (-50 to 50)
   brand: Brand;
   brandSettings: BrandSettings;
 }
@@ -48,6 +49,7 @@ export const DEFAULT_CARD_SETTINGS: CardSettings = {
   showCuttingLines: true,
   cuttingLineStyle: "dashed",
   cardPadding: 4,
+  centerTextYOffset: 0,
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
 };

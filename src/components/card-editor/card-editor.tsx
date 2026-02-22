@@ -184,17 +184,17 @@ function CardPrintPreview() {
                         )}
                         {card.text && card.textPosition === "center" && (
                           <div
-                            className="flex items-center justify-center px-2 pointer-events-none z-20"
+                            className="flex items-center justify-center pointer-events-none z-20"
                             style={{
                               position: "absolute",
-                              top: 0,
-                              left: `${mX}%`,
-                              right: `${mX}%`,
-                              bottom: `${imgBottom}%`,
+                              top: `${50 + (settings.centerTextYOffset ?? 0)}%`,
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              width: "60%",
                             }}
                           >
                             <span
-                              className={`text-center leading-tight max-w-[90%] break-words px-2 py-1 rounded ${
+                              className={`text-center leading-tight break-words px-2 py-1 rounded ${
                                 card.textSize === "sm"
                                   ? "text-[6px]"
                                   : card.textSize === "lg"
@@ -520,17 +520,17 @@ function CardTile({
           )}
           {card.textPosition === "center" && (
             <div
-              className="absolute flex items-center justify-center px-2 z-20"
+              className="absolute flex items-center justify-center z-20"
               style={{
-                top: 0,
-                bottom: 0,
-                left: `${(10 / 148.5) * 100}%`,
-                right: `${(10 / 148.5) * 100}%`,
+                top: `${50 + (state.settings.centerTextYOffset ?? 0)}%`,
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "60%",
               }}
             >
               {card.text && (
                 <span
-                  className={`text-center leading-tight max-w-[90%] break-words px-2 py-1 rounded ${
+                  className={`text-center leading-tight break-words px-2 py-1 rounded ${
                     card.textSize === "sm"
                       ? "text-[9px]"
                       : card.textSize === "lg"
@@ -840,6 +840,29 @@ function CardSettingsPanel() {
         />
         <span className="text-xs text-muted-foreground w-8 text-right">
           {settings.cardPadding}mm
+        </span>
+      </div>
+
+      {/* Center text Y offset */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground shrink-0">
+          {t("centerTextYOffset")}
+        </span>
+        <Slider
+          value={[settings.centerTextYOffset ?? 0]}
+          min={-50}
+          max={50}
+          step={1}
+          onValueChange={([value]) =>
+            dispatch({
+              type: "UPDATE_SETTINGS",
+              payload: { centerTextYOffset: value },
+            })
+          }
+          className="flex-1"
+        />
+        <span className="text-xs text-muted-foreground w-8 text-right">
+          {settings.centerTextYOffset ?? 0}%
         </span>
       </div>
     </div>
