@@ -3,7 +3,7 @@ import chromium from "@sparticuz/chromium-min";
 
 // Remote URL for the chromium binary (must match the installed @sparticuz/chromium-min version)
 const CHROMIUM_PACK_URL =
-  "https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar";
+  "https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar";
 
 /**
  * Launch a headless Chrome browser.
