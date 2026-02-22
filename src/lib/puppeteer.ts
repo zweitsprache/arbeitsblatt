@@ -17,9 +17,17 @@ export async function launchBrowser() {
     chromium.setGraphicsMode = false;
   }
 
+  // chromium.args includes --headless='shell' with LITERAL single quotes.
+  // When passed directly as process args (not through a shell), Chrome receives
+  // the actual quote characters, which it doesn't understand. We strip that flag
+  // and let puppeteer set the correct --headless=shell via { headless: "shell" }.
+  const prodArgs = isProduction
+    ? chromium.args.filter((arg: string) => !arg.startsWith("--headless"))
+    : [];
+
   return puppeteer.launch({
     args: isProduction
-      ? chromium.args
+      ? prodArgs
       : [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -34,8 +42,6 @@ export async function launchBrowser() {
         : process.platform === "win32"
           ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
           : "/usr/bin/google-chrome",
-    // chromium-min downloads chrome-headless-shell, which only works in 'shell'
-    // mode. Using headless: true would add --headless=new which it doesn't support.
-    headless: isProduction ? ("shell" as const) : true,
+    headless: "shell" as const,
   });
 }

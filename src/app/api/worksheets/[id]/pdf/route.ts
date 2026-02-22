@@ -32,7 +32,7 @@ export async function POST(
     // No body or invalid JSON — not a preview
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
 
   // Determine font based on brand
   const worksheetSettings = worksheet.settings as Record<string, unknown> | null;

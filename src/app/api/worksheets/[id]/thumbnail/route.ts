@@ -115,7 +115,7 @@ export async function GET(
 // launchBrowser imported from @/lib/puppeteer
 
 function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
 }
 
 async function screenshotToWebp(screenshot: Uint8Array, isLandscape: boolean): Promise<string> {
