@@ -45,3 +45,33 @@ export async function launchBrowser() {
     headless: "shell" as const,
   });
 }
+
+/**
+ * Fetch an image URL and return it as a data URI (base64-encoded).
+ * Returns empty string on failure so the card renders without the image.
+ * Used to inline external images into HTML before passing to `page.setContent()`
+ * — headless Chrome on Vercel Lambda cannot reliably fetch external URLs.
+ */
+export async function fetchImageAsDataUri(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`[fetchImageAsDataUri] HTTP ${response.status} for ${url}`);
+      return "";
+    }
+
+    const contentType = response.headers.get("content-type") || "image/png";
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch (error) {
+    console.warn(
+      `[fetchImageAsDataUri] Error: ${url}`,
+      error instanceof Error ? error.message : error
+    );
+    return "";
+  }
+}

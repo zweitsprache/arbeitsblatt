@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { launchBrowser } from "@/lib/puppeteer";
+import { launchBrowser, fetchImageAsDataUri } from "@/lib/puppeteer";
 import { FlashcardItem, FlashcardSide } from "@/types/flashcard";
 import fs from "fs";
 import path from "path";
@@ -349,6 +349,32 @@ export async function POST(
 
   if (isSwiss) {
     cards = replaceEszett(cards);
+  }
+
+  // Convert external image URLs to data URIs so headless Chrome on Vercel
+  // does not need to fetch them over the network (which fails in Lambda).
+  const allImageUrls = cards.flatMap(c =>
+    [c.front.image, c.back.image].filter(Boolean)
+  ) as string[];
+  const uniqueImageUrls = [...new Set(allImageUrls)];
+  if (uniqueImageUrls.length > 0) {
+    console.log(`[Flashcard PDF] Fetching ${uniqueImageUrls.length} images as data URIs...`);
+    const dataUris = await Promise.all(uniqueImageUrls.map(url => fetchImageAsDataUri(url)));
+    const imageMap = new Map<string, string>();
+    uniqueImageUrls.forEach((url, i) => {
+      if (dataUris[i]) imageMap.set(url, dataUris[i]);
+    });
+    cards = cards.map(card => ({
+      ...card,
+      front: {
+        ...card.front,
+        image: card.front.image ? (imageMap.get(card.front.image) || card.front.image) : card.front.image,
+      },
+      back: {
+        ...card.back,
+        image: card.back.image ? (imageMap.get(card.back.image) || card.back.image) : card.back.image,
+      },
+    }));
   }
 
   const singleSided = settings.singleSided === true;

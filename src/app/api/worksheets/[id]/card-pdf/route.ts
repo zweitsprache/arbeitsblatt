@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { launchBrowser } from "@/lib/puppeteer";
+import { launchBrowser, fetchImageAsDataUri } from "@/lib/puppeteer";
 import { CardItem, CardSettings, CardLayout } from "@/types/card";
 import { DEFAULT_BRAND_SETTINGS, BrandSettings } from "@/types/worksheet";
 import fs from "fs";
@@ -344,7 +344,7 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const cards = (worksheet.blocks ?? []) as unknown as CardItem[];
+  let cards = (worksheet.blocks ?? []) as unknown as CardItem[];
   const settings = (worksheet.settings ?? {}) as unknown as CardSettings;
   if (cards.length === 0) {
     return NextResponse.json({ error: "No cards to export" }, { status: 400 });
@@ -371,6 +371,22 @@ export async function POST(
     }
   }
 
+  // Convert external image URLs to data URIs so headless Chrome on Vercel
+  // does not need to fetch them over the network (which fails in Lambda).
+  const imageUrls = [...new Set(cards.filter(c => c.image).map(c => c.image!))];
+  if (imageUrls.length > 0) {
+    console.log(`[Card PDF] Fetching ${imageUrls.length} images as data URIs...`);
+    const dataUris = await Promise.all(imageUrls.map(url => fetchImageAsDataUri(url)));
+    const imageMap = new Map<string, string>();
+    imageUrls.forEach((url, i) => {
+      if (dataUris[i]) imageMap.set(url, dataUris[i]);
+    });
+    cards = cards.map(card => ({
+      ...card,
+      image: card.image ? (imageMap.get(card.image) || card.image) : card.image,
+    }));
+  }
+
   const layout: CardLayout = settings.layout || "landscape-4";
   const dims = getLayoutDims(layout);
 
@@ -385,8 +401,8 @@ export async function POST(
     const page = await browser.newPage();
 
     await page.setContent(html, {
-      waitUntil: "networkidle0",
-      timeout: 30000,
+      waitUntil: "load",
+      timeout: 60000,
     });
 
     // Wait for fonts and images to load
