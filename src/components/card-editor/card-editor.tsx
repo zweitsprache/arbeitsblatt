@@ -184,17 +184,18 @@ function CardPrintPreview() {
                         )}
                         {card.text && card.textPosition === "center" && (
                           <div
-                            className="flex items-center justify-center pointer-events-none z-20"
+                            className="pointer-events-none z-20 rounded px-2 py-1"
                             style={{
                               position: "absolute",
                               top: `${50 + (settings.centerTextYOffset ?? 0)}%`,
                               left: "50%",
                               transform: "translate(-50%, -50%)",
                               width: "60%",
+                              backgroundColor: "rgba(255,255,255,0.9)",
                             }}
                           >
                             <span
-                              className={`text-center leading-tight break-words px-2 py-1 rounded ${
+                              className={`block text-center leading-tight break-words ${
                                 card.textSize === "sm"
                                   ? "text-[6px]"
                                   : card.textSize === "lg"
@@ -203,7 +204,6 @@ function CardPrintPreview() {
                                   ? "text-xs"
                                   : "text-[8px]"
                               }`}
-                              style={{ backgroundColor: "rgba(255,255,255,0.9)" }}
                             >
                               {card.text}
                             </span>
@@ -520,17 +520,18 @@ function CardTile({
           )}
           {card.textPosition === "center" && (
             <div
-              className="absolute flex items-center justify-center z-20"
+              className="absolute z-20 rounded px-2 py-1"
               style={{
                 top: `${50 + (state.settings.centerTextYOffset ?? 0)}%`,
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 width: "60%",
+                backgroundColor: "rgba(255,255,255,0.9)",
               }}
             >
               {card.text && (
                 <span
-                  className={`text-center leading-tight break-words px-2 py-1 rounded ${
+                  className={`block text-center leading-tight break-words ${
                     card.textSize === "sm"
                       ? "text-[9px]"
                       : card.textSize === "lg"
@@ -539,7 +540,6 @@ function CardTile({
                       ? "text-base font-medium"
                       : "text-xs"
                   }`}
-                  style={{ backgroundColor: "rgba(255,255,255,0.9)" }}
                 >
                   {card.text}
                 </span>
