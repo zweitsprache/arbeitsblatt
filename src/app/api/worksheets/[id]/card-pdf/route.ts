@@ -412,7 +412,7 @@ export async function POST(
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
       displayHeaderFooter: false,
-      preferCSSPageSize: true,
+      preferCSSPageSize: false,
     });
 
     await browser.close();
