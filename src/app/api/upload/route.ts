@@ -2,6 +2,16 @@ import { put, del } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Next.js App Router: increase body size limit for uploads
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 // POST /api/upload — upload a file
 export async function POST(req: NextRequest) {
   const result = await requireAuth();
@@ -34,11 +44,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Max file size: 10MB
-  const maxSize = 10 * 1024 * 1024;
+  // Max file size: 30MB
+  const maxSize = 30 * 1024 * 1024;
   if (file.size > maxSize) {
     return NextResponse.json(
-      { error: "File too large. Maximum size is 10MB" },
+      { error: "File too large. Maximum size is 30MB" },
       { status: 400 }
     );
   }
