@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { upload as blobUpload } from "@vercel/blob/client";
 
 interface UploadResult {
   url: string;
   pathname: string;
   contentType: string;
-  size: number;
 }
 
 interface UseUploadReturn {
@@ -23,21 +23,18 @@ export function useUpload(): UseUploadReturn {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
+      // Client-side upload: bypasses server body size limit
+      const blob = await blobUpload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        multipart: file.size > 4 * 1024 * 1024, // Use multipart for files > 4MB
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Upload failed");
-      }
-
-      return await response.json();
+      return {
+        url: blob.url,
+        pathname: blob.pathname,
+        contentType: blob.contentType,
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
       setError(message);

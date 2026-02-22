@@ -1,75 +1,47 @@
-import { put, del } from "@vercel/blob";
+import { del } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Allowed content types for upload
+const ALLOWED_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
+  "audio/webm",
+];
 
-// Next.js App Router: increase body size limit for uploads
-export const maxDuration = 60;
-export const dynamic = "force-dynamic";
-
-// POST /api/upload — upload a file
+// POST /api/upload — handle client-side blob upload token generation & completion
 export async function POST(req: NextRequest) {
   const result = await requireAuth();
   if (result instanceof NextResponse) return result;
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-
-  if (!file) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
-  }
-
-  // Validate file type
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "image/svg+xml",
-    "audio/mpeg",
-    "audio/wav",
-    "audio/ogg",
-    "audio/webm",
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json(
-      { error: "File type not allowed" },
-      { status: 400 }
-    );
-  }
-
-  // Max file size: 30MB
-  const maxSize = 30 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return NextResponse.json(
-      { error: "File too large. Maximum size is 30MB" },
-      { status: 400 }
-    );
-  }
+  const body = (await req.json()) as HandleUploadBody;
 
   try {
-    const blob = await put(file.name, file, {
-      access: "public",
-      addRandomSuffix: true,
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: ALLOWED_CONTENT_TYPES,
+        maximumSizeInBytes: 30 * 1024 * 1024, // 30MB
+        addRandomSuffix: true,
+      }),
+      onUploadCompleted: async () => {
+        // Could update database here if needed
+      },
     });
-
-    return NextResponse.json({
-      url: blob.url,
-      pathname: blob.pathname,
-      contentType: blob.contentType,
-      size: file.size,
-    });
+    return NextResponse.json(jsonResponse);
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file" },
-      { status: 500 }
+      { error: "Failed to handle upload" },
+      { status: 400 }
     );
   }
 }
