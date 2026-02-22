@@ -17,9 +17,16 @@ export async function launchBrowser() {
     chromium.setGraphicsMode = false;
   }
 
+  // Filter out --headless='shell' from chromium.args — the old headless mode
+  // does NOT support Page.printToPDF in Chrome 143+. We let puppeteer set
+  // --headless=new via the headless option instead.
+  const prodArgs = isProduction
+    ? chromium.args.filter((arg: string) => !arg.startsWith("--headless"))
+    : [];
+
   return puppeteer.launch({
     args: isProduction
-      ? chromium.args
+      ? prodArgs
       : [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -33,9 +40,6 @@ export async function launchBrowser() {
         : process.platform === "win32"
           ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
           : "/usr/bin/google-chrome",
-    // In production, chromium.args already includes --headless='shell'.
-    // Setting headless: true here would add --headless=new which conflicts
-    // and causes "Printing failed" errors. Only set headless locally.
-    headless: isProduction ? false : true,
+    headless: true,
   });
 }
