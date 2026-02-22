@@ -511,9 +511,12 @@ function FlashcardEditorInner({
         method: "POST",
       });
       if (!res.ok) {
-        const text = await res.text();
-        const err = text ? JSON.parse(text) : { error: `HTTP ${res.status}` };
-        alert(t("pdfFailed", { error: err.error }));
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(t("pdfFailed", { error: errorMsg }));
         return;
       }
       const blob = await res.blob();

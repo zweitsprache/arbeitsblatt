@@ -117,7 +117,7 @@ function TextView({ block }: { block: TextBlock }) {
       style={{
         float: block.imageAlign === "right" ? "right" : "left",
         width: `${block.imageScale ?? 30}%`,
-        margin: block.imageAlign === "right" ? "0 0 8px 12px" : "0 12px 8px 0",
+        margin: block.imageAlign === "right" ? "4px 0 8px 12px" : "4px 12px 8px 0",
         flexShrink: 0,
       }}
     >

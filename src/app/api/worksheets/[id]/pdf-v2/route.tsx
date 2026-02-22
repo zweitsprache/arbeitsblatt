@@ -627,8 +627,8 @@ function TextBlockPdf({
       flexShrink: 0,
     };
     const marginStyle = isLeft
-      ? { marginRight: 10 }
-      : { marginLeft: 10 };
+      ? { marginRight: 10, marginTop: 4 }
+      : { marginLeft: 10, marginTop: 4 };
 
     return (
       <View>

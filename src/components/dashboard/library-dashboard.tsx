@@ -146,8 +146,15 @@ export function LibraryDashboard() {
         pdfUrl = `/api/worksheets/${item.id}/pdf-v2?locale=${locale}`;
       }
 
-      const res = await fetch(pdfUrl, { method: "POST" });
-      if (!res.ok) throw new Error("PDF download failed");
+      const res = await authFetch(pdfUrl, { method: "POST" });
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        throw new Error(errorMsg);
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

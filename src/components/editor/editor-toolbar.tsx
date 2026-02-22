@@ -120,8 +120,12 @@ export function EditorToolbar() {
         body: JSON.stringify({ preview }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        alert(t("pdfFailed", { error: err.error }));
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch { /* response wasn't JSON */ }
+        alert(t("pdfFailed", { error: errorMsg }));
         return;
       }
       const blob = await res.blob();
