@@ -120,12 +120,26 @@ function renderCardSlot(
     card.textSize === "lg" ? "text-lg" :
     card.textSize === "xl" ? "text-xl" : "text-md";
 
-  // Text area — fills space above the image container
-  const textHTML = card.text
-    ? `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
+  const textPosition = card.textPosition || "top";
+
+  // Text area — position depends on textPosition
+  let textHTML = "";
+  if (card.text) {
+    if (textPosition === "top") {
+      textHTML = `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
          <span>${escapeHtml(card.text)}</span>
-       </div>`
-    : "";
+       </div>`;
+    } else if (textPosition === "center") {
+      textHTML = `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%;z-index:20">
+         <span class="text-center-bg">${escapeHtml(card.text)}</span>
+       </div>`;
+    } else {
+      // bottom
+      textHTML = `<div class="text-area ${textSizeClass}" style="top:calc(100% - ${IMG_BOTTOM}%);left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%">
+         <span>${escapeHtml(card.text)}</span>
+       </div>`;
+    }
+  }
 
   // Image container — 10mm from left/right, 17mm from bottom, 3mm taller than 16:9
   const imgContent = card.image
@@ -264,6 +278,12 @@ function buildFullHtml(
     line-height: 1.3;
     max-width: 95%;
     word-break: break-word;
+  }
+  .text-area span.text-center-bg {
+    background-color: rgba(255,255,255,0.9);
+    padding: 2mm 3mm;
+    border-radius: 2px;
+    max-width: 90%;
   }
   .text-sm span { font-size: 8pt; }
   .text-md span { font-size: 10pt; }

@@ -44,6 +44,9 @@ import {
   Settings,
   Settings2,
   Download,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
 } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { Slider } from "@/components/ui/slider";
@@ -152,8 +155,8 @@ function CardPrintPreview() {
                             dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings.headerRight, settings.brandSettings) }}
                           />
                         )}
-                        {/* Text area — fills space above the image container */}
-                        {card.text && (
+                        {/* Text area — position depends on textPosition */}
+                        {card.text && (card.textPosition || "top") === "top" && (
                           <div
                             className="flex items-center justify-center px-2 pointer-events-none"
                             style={{
@@ -162,6 +165,59 @@ function CardPrintPreview() {
                               left: `${mX}%`,
                               right: `${mX}%`,
                               bottom: `calc(${imgBottom}% + ((100% - ${mX * 2}%) / ${imgRatio}) + 1%)`,
+                            }}
+                          >
+                            <span
+                              className={`text-center leading-tight max-w-[95%] break-words ${
+                                card.textSize === "sm"
+                                  ? "text-[6px]"
+                                  : card.textSize === "lg"
+                                  ? "text-[10px]"
+                                  : card.textSize === "xl"
+                                  ? "text-xs"
+                                  : "text-[8px]"
+                              }`}
+                            >
+                              {card.text}
+                            </span>
+                          </div>
+                        )}
+                        {card.text && card.textPosition === "center" && (
+                          <div
+                            className="flex items-center justify-center px-2 pointer-events-none z-20"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: `${mX}%`,
+                              right: `${mX}%`,
+                              bottom: `${imgBottom}%`,
+                            }}
+                          >
+                            <span
+                              className={`text-center leading-tight max-w-[90%] break-words px-2 py-1 rounded ${
+                                card.textSize === "sm"
+                                  ? "text-[6px]"
+                                  : card.textSize === "lg"
+                                  ? "text-[10px]"
+                                  : card.textSize === "xl"
+                                  ? "text-xs"
+                                  : "text-[8px]"
+                              }`}
+                              style={{ backgroundColor: "rgba(255,255,255,0.9)" }}
+                            >
+                              {card.text}
+                            </span>
+                          </div>
+                        )}
+                        {card.text && card.textPosition === "bottom" && (
+                          <div
+                            className="flex items-center justify-center px-2 pointer-events-none"
+                            style={{
+                              position: "absolute",
+                              left: `${mX}%`,
+                              right: `${mX}%`,
+                              top: `calc(100% - ${imgBottom}%)`,
+                              bottom: `${imgBottom}%`,
                             }}
                           >
                             <span
@@ -434,32 +490,89 @@ function CardTile({
               dangerouslySetInnerHTML={{ __html: replaceCardVariables(state.settings.brandSettings.headerRight, state.settings.brandSettings) }}
             />
           )}
-          {/* Text area above image */}
-          <div
-            className="absolute flex items-center justify-center px-2"
-            style={{
-              top: "2%",
-              left: `${(10 / 148.5) * 100}%`,
-              right: `${(10 / 148.5) * 100}%`,
-              height: "20%",
-            }}
-          >
-            {card.text && (
-              <span
-                className={`text-center leading-tight max-w-[95%] break-words ${
-                  card.textSize === "sm"
-                    ? "text-[9px]"
-                    : card.textSize === "lg"
-                    ? "text-sm"
-                    : card.textSize === "xl"
-                    ? "text-base font-medium"
-                    : "text-xs"
-                }`}
-              >
-                {card.text}
-              </span>
-            )}
-          </div>
+          {/* Text area — position depends on textPosition */}
+          {(card.textPosition || "top") === "top" && (
+            <div
+              className="absolute flex items-center justify-center px-2"
+              style={{
+                top: "2%",
+                left: `${(10 / 148.5) * 100}%`,
+                right: `${(10 / 148.5) * 100}%`,
+                height: "20%",
+              }}
+            >
+              {card.text && (
+                <span
+                  className={`text-center leading-tight max-w-[95%] break-words ${
+                    card.textSize === "sm"
+                      ? "text-[9px]"
+                      : card.textSize === "lg"
+                      ? "text-sm"
+                      : card.textSize === "xl"
+                      ? "text-base font-medium"
+                      : "text-xs"
+                  }`}
+                >
+                  {card.text}
+                </span>
+              )}
+            </div>
+          )}
+          {card.textPosition === "center" && (
+            <div
+              className="absolute flex items-center justify-center px-2 z-20"
+              style={{
+                top: 0,
+                bottom: 0,
+                left: `${(10 / 148.5) * 100}%`,
+                right: `${(10 / 148.5) * 100}%`,
+              }}
+            >
+              {card.text && (
+                <span
+                  className={`text-center leading-tight max-w-[90%] break-words px-2 py-1 rounded ${
+                    card.textSize === "sm"
+                      ? "text-[9px]"
+                      : card.textSize === "lg"
+                      ? "text-sm"
+                      : card.textSize === "xl"
+                      ? "text-base font-medium"
+                      : "text-xs"
+                  }`}
+                  style={{ backgroundColor: "rgba(255,255,255,0.9)" }}
+                >
+                  {card.text}
+                </span>
+              )}
+            </div>
+          )}
+          {card.textPosition === "bottom" && (
+            <div
+              className="absolute flex items-center justify-center px-2"
+              style={{
+                left: `${(10 / 148.5) * 100}%`,
+                right: `${(10 / 148.5) * 100}%`,
+                bottom: "2%",
+                height: "15%",
+              }}
+            >
+              {card.text && (
+                <span
+                  className={`text-center leading-tight max-w-[95%] break-words ${
+                    card.textSize === "sm"
+                      ? "text-[9px]"
+                      : card.textSize === "lg"
+                      ? "text-sm"
+                      : card.textSize === "xl"
+                      ? "text-base font-medium"
+                      : "text-xs"
+                  }`}
+                >
+                  {card.text}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* 16:9 image container — 10mm from left/right, 10mm from bottom */}
           <div
@@ -590,6 +703,31 @@ function CardTile({
                 {size.toUpperCase()}
               </button>
             ))}
+            <div className="w-px h-4 bg-border mx-1" />
+            {/* Text position */}
+            {(["top", "center", "bottom"] as const).map((pos) => {
+              const Icon = pos === "top" ? AlignStartVertical : pos === "center" ? AlignCenterVertical : AlignEndVertical;
+              return (
+                <Tooltip key={pos}>
+                  <TooltipTrigger asChild>
+                    <button
+                      className={`p-1 rounded transition-colors ${
+                        (card.textPosition ?? "top") === pos
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpdate({ textPosition: pos });
+                      }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t(`textPosition_${pos}`)}</TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <textarea
             className="w-full min-h-[48px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
