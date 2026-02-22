@@ -33,6 +33,9 @@ export async function launchBrowser() {
         : process.platform === "win32"
           ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
           : "/usr/bin/google-chrome",
-    headless: true,
+    // In production, chromium.args already includes --headless='shell'.
+    // Setting headless: true here would add --headless=new which conflicts
+    // and causes "Printing failed" errors. Only set headless locally.
+    headless: isProduction ? false : true,
   });
 }
