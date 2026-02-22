@@ -14,7 +14,6 @@ export async function launchBrowser() {
   const isProduction = process.env.NODE_ENV === "production";
 
   if (isProduction) {
-    chromium.setHeadlessMode = true;
     chromium.setGraphicsMode = false;
   }
 
