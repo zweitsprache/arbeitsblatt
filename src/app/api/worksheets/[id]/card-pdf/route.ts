@@ -365,7 +365,7 @@ export async function GET(
       ...card,
       text: card.text ? card.text.replace(/ß/g, "ss") : card.text,
     }));
-    // Apply manual CH overrides from settings
+    // Apply manual CH overrides from settings (text + image)
     const chOverrides = settings.chOverrides;
     if (chOverrides) {
       cards = cards.map(card => {
@@ -374,6 +374,8 @@ export async function GET(
         return {
           ...card,
           text: overrides.text !== undefined ? overrides.text : card.text,
+          image: overrides.image !== undefined ? (overrides.image || undefined) : card.image,
+          imageRatio: overrides.imageRatio !== undefined ? parseFloat(overrides.imageRatio) : card.imageRatio,
         };
       });
     }

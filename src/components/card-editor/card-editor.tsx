@@ -251,6 +251,12 @@ function CardPrintPreview() {
                           );
                         })()}
                         {/* Image container — 10mm from left/right, 17mm from bottom */}
+                        {(() => {
+                          const chImg = state.settings.chOverrides?.[card.id]?.["image"];
+                          const chImgRatio = state.settings.chOverrides?.[card.id]?.["imageRatio"];
+                          const effImage = state.localeMode === "CH" && chImg !== undefined ? chImg : card.image;
+                          const effImageRatio = state.localeMode === "CH" && chImgRatio !== undefined ? parseFloat(chImgRatio) : card.imageRatio;
+                          return (
                         <div
                           className="absolute overflow-hidden rounded-[1px]"
                           style={{
@@ -260,13 +266,13 @@ function CardPrintPreview() {
                             aspectRatio: `${imgRatio}`,
                           }}
                         >
-                          {card.image ? (
+                          {effImage ? (
                             <img
-                              src={card.image}
+                              src={effImage}
                               alt=""
                               className="w-full h-full"
                               style={{
-                                ...getImageObjectFit(card.imageRatio),
+                                ...getImageObjectFit(effImageRatio),
                                 transform: `scale(${(card.imageScale ?? 100) / 100})`,
                               }}
                             />
@@ -274,8 +280,10 @@ function CardPrintPreview() {
                             <div className="w-full h-full bg-muted/20 border border-dashed border-border/40" />
                           )}
                         </div>
+                          );
+                        })()}
                         {/* Empty card placeholder */}
-                        {!card.image && !card.text && (
+                        {!card.image && !card.text && state.localeMode === "DE" && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-muted-foreground/30 text-[7px]">
                               {t("emptyCard")}
@@ -365,10 +373,18 @@ function CardTile({
   onDuplicate: () => void;
 }) {
   const t = useTranslations("cardEditor");
-  const { state } = useCardEditor();
+  const { state, dispatch } = useCardEditor();
   const { upload, isUploading } = useUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const isChMode = state.localeMode === "CH";
+
+  // Effective image for current locale
+  const chImageOverride = state.settings.chOverrides?.[card.id]?.["image"];
+  const chImageRatioOverride = state.settings.chOverrides?.[card.id]?.["imageRatio"];
+  const effectiveImage = isChMode && chImageOverride !== undefined ? chImageOverride : card.image;
+  const effectiveImageRatio = isChMode && chImageRatioOverride !== undefined ? parseFloat(chImageRatioOverride) : card.imageRatio;
+  const hasImageChOverride = chImageOverride !== undefined;
 
   const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -381,7 +397,12 @@ function CardTile({
         img.onerror = () => resolve(1);
         img.src = result.url;
       });
-      onUpdate({ image: result.url, imageRatio: ratio });
+      if (isChMode) {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "image", value: result.url } });
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "imageRatio", value: String(ratio) } });
+      } else {
+        onUpdate({ image: result.url, imageRatio: ratio });
+      }
     } catch (err) {
       console.error("[CardEditor] Upload error:", err);
     }
@@ -415,7 +436,18 @@ function CardTile({
   };
 
   const removeImage = () => {
-    onUpdate({ image: undefined, imageScale: undefined, imageRatio: undefined });
+    if (isChMode) {
+      // In CH mode: if there's a CH override, remove it; if no override exists,
+      // set an empty string override to hide the DE image for CH
+      if (hasImageChOverride) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "image" } });
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "imageRatio" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "image", value: "" } });
+      }
+    } else {
+      onUpdate({ image: undefined, imageScale: undefined, imageRatio: undefined });
+    }
   };
 
   // Card placement depends on layout
@@ -602,14 +634,14 @@ function CardTile({
               aspectRatio: "16 / 9",
             }}
           >
-            {card.image ? (
+            {effectiveImage ? (
               <>
                 <img
-                  src={card.image}
+                  src={effectiveImage}
                   alt=""
                   className="w-full h-full"
                   style={{
-                    ...getImageObjectFit(card.imageRatio),
+                    ...getImageObjectFit(effectiveImageRatio),
                     transform: `scale(${(card.imageScale ?? 100) / 100})`,
                   }}
                 />
@@ -622,6 +654,11 @@ function CardTile({
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
+                {isChMode && hasImageChOverride && (
+                  <div className="absolute top-1.5 left-1.5 z-10 px-1 py-0.5 rounded text-[8px] bg-amber-100 text-amber-700 font-medium">
+                    🇨🇭 CH
+                  </div>
+                )}
               </>
             ) : (
               <div
@@ -684,7 +721,7 @@ function CardTile({
         />
 
         {/* Image controls */}
-        {card.image && (
+        {effectiveImage && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground shrink-0">
               {t("imageScale")}
