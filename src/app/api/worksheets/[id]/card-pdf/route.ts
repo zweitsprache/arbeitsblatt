@@ -138,7 +138,7 @@ function renderCardSlot(
     } else if (textPosition === "center") {
       const yOff = settings.centerTextYOffset ?? 0;
       const centerW = dims.landscape ? "60%" : "80%";
-      textHTML = `<div class="text-area-center ${textSizeClass}" style="top:${50 + yOff}%;left:50%;transform:translate(-50%,-50%);width:${centerW};z-index:20">`;
+      textHTML = `<div class="text-area-center ${textSizeClass}" style="top:${50 + yOff}%;left:50%;transform:translate(-50%,-50%);width:${centerW};z-index:20">
          <span>${escapeHtml(card.text)}</span>
        </div>`;
     } else {
