@@ -389,6 +389,7 @@ export async function GET(
         if (!base64Data) return raw;
         const inputBuffer = Buffer.from(base64Data, "base64");
         const resizedBuffer = await sharp(inputBuffer)
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
           .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
           .jpeg({ quality: 80 })
           .toBuffer();
