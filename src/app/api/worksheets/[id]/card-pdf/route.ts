@@ -41,7 +41,9 @@ function margins(dims: LayoutDims) {
   const IMG_RATIO = contentW / (contentW * 9 / 16 + 3);
   const IMG_BOTTOM = (17 / dims.cardH) * 100;
   const FOOTER_BOTTOM = (8 / dims.cardH) * 100;
-  return { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM };
+  // 5mm nudge for text areas on landscape-4 layout
+  const TEXT_TOP_OFFSET = (5 / dims.cardH) * 100;
+  return { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM, TEXT_TOP_OFFSET };
 }
 
 function escapeHtml(str: string): string {
@@ -86,7 +88,7 @@ function renderCardSlot(
 ): string {
   if (!card) return `<div class="slot"></div>`;
 
-  const { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM } = margins(dims);
+  const { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM, TEXT_TOP_OFFSET } = margins(dims);
 
   // Brand logo — 7mm from top, 10mm from right, 6mm height
   const logoHTML = brandSettings.logo
@@ -130,7 +132,7 @@ function renderCardSlot(
   let textHTML = "";
   if (card.text) {
     if (textPosition === "top") {
-      textHTML = `<div class="text-area ${textSizeClass}" style="top:0;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
+      textHTML = `<div class="text-area ${textSizeClass}" style="top:${TEXT_TOP_OFFSET}%;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
          <span>${escapeHtml(card.text)}</span>
        </div>`;
     } else if (textPosition === "center") {
@@ -140,7 +142,7 @@ function renderCardSlot(
        </div>`;
     } else {
       // bottom
-      textHTML = `<div class="text-area ${textSizeClass}" style="top:calc(100% - ${IMG_BOTTOM}%);left:${MX}%;right:${MX}%;bottom:${IMG_BOTTOM}%">
+      textHTML = `<div class="text-area ${textSizeClass}" style="top:calc(100% - ${IMG_BOTTOM}% + ${TEXT_TOP_OFFSET}%);left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% - ${TEXT_TOP_OFFSET}%)">
          <span>${escapeHtml(card.text)}</span>
        </div>`;
     }
