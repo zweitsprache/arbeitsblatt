@@ -939,9 +939,7 @@ function CardEditorInner({
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/card-pdf`, {
-        method: "POST",
-      });
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/card-pdf`);
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}`;
         try {

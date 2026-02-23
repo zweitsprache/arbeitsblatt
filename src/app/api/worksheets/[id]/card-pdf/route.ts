@@ -327,8 +327,8 @@ ${pagesHtml}
 </html>`;
 }
 
-// POST /api/worksheets/[id]/card-pdf
-export async function POST(
+// GET /api/worksheets/[id]/card-pdf
+export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {

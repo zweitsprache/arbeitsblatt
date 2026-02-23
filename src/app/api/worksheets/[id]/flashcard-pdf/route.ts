@@ -309,8 +309,8 @@ function repadCards(cards: FlashcardItem[], pageSize: number): FlashcardItem[] {
   return result;
 }
 
-// POST /api/worksheets/[id]/flashcard-pdf
-export async function POST(
+// GET /api/worksheets/[id]/flashcard-pdf
+export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {

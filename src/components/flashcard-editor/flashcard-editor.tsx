@@ -507,9 +507,7 @@ function FlashcardEditorInner({
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`, {
-        method: "POST",
-      });
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`);
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}`;
         try {
