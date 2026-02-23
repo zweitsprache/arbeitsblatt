@@ -6,6 +6,9 @@ import { CardItem, CardSettings, CardLayout } from "@/types/card";
 import { DEFAULT_BRAND_SETTINGS, BrandSettings } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
+
+export const maxDuration = 60;
 
 // ─── Layout dimensions (mm) ─────────────────────────────────
 interface LayoutDims {
@@ -373,10 +376,28 @@ export async function GET(
 
   // Convert external image URLs to data URIs so headless Chrome on Vercel
   // does not need to fetch them over the network (which fails in Lambda).
+  // Images are resized to max 1200px to prevent Vercel Lambda memory exhaustion.
   const imageUrls = [...new Set(cards.filter(c => c.image).map(c => c.image!))];
   if (imageUrls.length > 0) {
     console.log(`[Card PDF] Fetching ${imageUrls.length} images as data URIs...`);
-    const dataUris = await Promise.all(imageUrls.map(url => fetchImageAsDataUri(url)));
+    const dataUris = await Promise.all(imageUrls.map(async (url) => {
+      try {
+        const raw = await fetchImageAsDataUri(url);
+        if (!raw) return "";
+        // Decode the data URI, resize with sharp, re-encode
+        const base64Data = raw.split(",")[1];
+        if (!base64Data) return raw;
+        const inputBuffer = Buffer.from(base64Data, "base64");
+        const resizedBuffer = await sharp(inputBuffer)
+          .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        return `data:image/jpeg;base64,${resizedBuffer.toString("base64")}`;
+      } catch (e) {
+        console.warn(`[Card PDF] Image resize failed for ${url}:`, e instanceof Error ? e.message : e);
+        return fetchImageAsDataUri(url);
+      }
+    }));
     const imageMap = new Map<string, string>();
     imageUrls.forEach((url, i) => {
       if (dataUris[i]) imageMap.set(url, dataUris[i]);
@@ -392,17 +413,18 @@ export async function GET(
 
   const html = buildFullHtml(cards, settings, brandSettings, logoDataUri, dims, id);
 
-  try {
-    const totalPages = Math.ceil(cards.length / dims.perPage);
-    console.log(`[Card PDF] Generating PDF for ${cards.length} cards, ${totalPages} pages, layout=${layout}`);
+  const totalPages = Math.ceil(cards.length / dims.perPage);
+  console.log(`[Card PDF] Generating PDF for ${cards.length} cards, ${totalPages} pages, layout=${layout}`);
 
-    const browser = await launchBrowser();
+  let browser;
+  try {
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
 
     await page.setContent(html, {
-      waitUntil: "load",
-      timeout: 60000,
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
     });
 
     // Wait for fonts and images to load
@@ -431,8 +453,6 @@ export async function GET(
       preferCSSPageSize: false,
     });
 
-    await browser.close();
-
     const finalPdfBytes = new Uint8Array(pdfBuffer);
     console.log(`[Card PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages`);
 
@@ -451,5 +471,9 @@ export async function GET(
       { error: `PDF generation failed: ${message}` },
       { status: 500 }
     );
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
   }
 }
