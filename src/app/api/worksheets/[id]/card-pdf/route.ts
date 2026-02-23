@@ -298,10 +298,10 @@ function buildFullHtml(
     line-height: 1.3;
     word-break: break-word;
   }
-  .text-sm span { font-size: 8pt; }
-  .text-md span { font-size: 10pt; }
-  .text-lg span { font-size: 13pt; }
-  .text-xl span { font-size: 16pt; font-weight: 500; }
+  .text-sm span { font-size: ${dims.landscape ? '8pt' : '16pt'}; }
+  .text-md span { font-size: ${dims.landscape ? '10pt' : '20pt'}; }
+  .text-lg span { font-size: ${dims.landscape ? '13pt' : '26pt'}; }
+  .text-xl span { font-size: ${dims.landscape ? '16pt' : '32pt'}; font-weight: 500; }
   .image-container {
     position: absolute;
     overflow: hidden;
