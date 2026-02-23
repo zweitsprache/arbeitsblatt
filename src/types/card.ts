@@ -1,6 +1,6 @@
 // ─── Card layout types ──────────────────────────────────────
 
-import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "./worksheet";
+import { Brand, BrandSettings, ChOverrides, DEFAULT_BRAND_SETTINGS } from "./worksheet";
 
 /** Layout variant for card PDF export */
 export type CardLayout = "landscape-4" | "portrait-2";
@@ -24,6 +24,7 @@ export interface CardSettings {
   centerTextYOffset: number; // percent offset from center (-50 to 50)
   brand: Brand;
   brandSettings: BrandSettings;
+  chOverrides?: ChOverrides;
 }
 
 /** Cards per page for each layout variant */

@@ -7,6 +7,7 @@ import { CardProvider, useCardEditor } from "@/store/card-store";
 import { CardDocument, CardItem, CardLayout, CARDS_PER_PAGE, getImageObjectFit } from "@/types/card";
 import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
+import { replaceEszett, getEffectiveValue, hasChOverride, countChOverrides } from "@/lib/locale-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Save,
   Plus,
@@ -156,7 +164,11 @@ function CardPrintPreview() {
                           />
                         )}
                         {/* Text area — position depends on textPosition */}
-                        {card.text && (card.textPosition || "top") === "top" && (
+                        {(() => {
+                          const effectiveText = card ? getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides) : "";
+                          return (
+                            <>
+                        {effectiveText && (card.textPosition || "top") === "top" && (
                           <div
                             className="flex items-center justify-center px-2 pointer-events-none"
                             style={{
@@ -178,11 +190,11 @@ function CardPrintPreview() {
                                   : "text-[8px]"
                               }`}
                             >
-                              {card.text}
+                              {effectiveText}
                             </span>
                           </div>
                         )}
-                        {card.text && card.textPosition === "center" && (
+                        {effectiveText && card.textPosition === "center" && (
                           <div
                             className="pointer-events-none z-20 rounded px-2 py-1"
                             style={{
@@ -205,11 +217,11 @@ function CardPrintPreview() {
                                   : "text-[8px]"
                               }`}
                             >
-                              {card.text}
+                              {effectiveText}
                             </span>
                           </div>
                         )}
-                        {card.text && card.textPosition === "bottom" && (
+                        {effectiveText && card.textPosition === "bottom" && (
                           <div
                             className="flex items-center justify-center px-2 pointer-events-none"
                             style={{
@@ -231,10 +243,13 @@ function CardPrintPreview() {
                                   : "text-[8px]"
                               }`}
                             >
-                              {card.text}
+                              {effectiveText}
                             </span>
                           </div>
                         )}
+                            </>
+                          );
+                        })()}
                         {/* Image container — 10mm from left/right, 17mm from bottom */}
                         <div
                           className="absolute overflow-hidden rounded-[1px]"
@@ -461,6 +476,9 @@ function CardTile({
       {/* Card content */}
       <div className="p-4 space-y-3">
         {/* Card preview — matches print layout: text top, 16:9 image bottom with 4mm margins */}
+        {(() => {
+          const effectiveText = getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides);
+          return (
         <div
           className="relative group/img rounded overflow-hidden border border-border bg-white"
           style={{ aspectRatio: "148.5 / 105" }}
@@ -501,7 +519,7 @@ function CardTile({
                 height: "20%",
               }}
             >
-              {card.text && (
+              {effectiveText && (
                 <span
                   className={`text-center leading-tight max-w-[95%] break-words ${
                     card.textSize === "sm"
@@ -513,7 +531,7 @@ function CardTile({
                       : "text-xs"
                   }`}
                 >
-                  {card.text}
+                  {effectiveText}
                 </span>
               )}
             </div>
@@ -529,7 +547,7 @@ function CardTile({
                 backgroundColor: "rgba(255,255,255,0.9)",
               }}
             >
-              {card.text && (
+              {effectiveText && (
                 <span
                   className={`block text-center leading-tight break-words ${
                     card.textSize === "sm"
@@ -541,7 +559,7 @@ function CardTile({
                       : "text-xs"
                   }`}
                 >
-                  {card.text}
+                  {effectiveText}
                 </span>
               )}
             </div>
@@ -556,7 +574,7 @@ function CardTile({
                 height: "15%",
               }}
             >
-              {card.text && (
+              {effectiveText && (
                 <span
                   className={`text-center leading-tight max-w-[95%] break-words ${
                     card.textSize === "sm"
@@ -568,7 +586,7 @@ function CardTile({
                       : "text-xs"
                   }`}
                 >
-                  {card.text}
+                  {effectiveText}
                 </span>
               )}
             </div>
@@ -654,6 +672,8 @@ function CardTile({
             />
           </div>
         </div>
+          );
+        })()}
 
         <input
           ref={fileInputRef}
@@ -730,12 +750,46 @@ function CardTile({
             })}
           </div>
           <textarea
-            className="w-full min-h-[48px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className={`w-full min-h-[48px] resize-y rounded-md border border-input px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+              state.localeMode === "CH" && hasChOverride(card.id, "text", state.settings.chOverrides)
+                ? "bg-amber-50/50 border-l-2 border-l-amber-400"
+                : "bg-background"
+            }`}
             placeholder={t("textPlaceholder")}
-            value={card.text}
+            value={getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides)}
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onUpdate({ text: e.target.value })}
+            onChange={(e) => {
+              if (state.localeMode === "CH") {
+                const autoReplaced = replaceEszett(card.text);
+                if (e.target.value === autoReplaced) {
+                  dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text" } });
+                } else {
+                  dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text", value: e.target.value } });
+                }
+              } else {
+                onUpdate({ text: e.target.value });
+              }
+            }}
           />
+          {state.localeMode === "CH" && (
+            <div className="flex items-center gap-1">
+              {hasChOverride(card.id, "text", state.settings.chOverrides) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text" } });
+                  }}
+                  className="text-[10px] text-amber-500 hover:text-red-500"
+                >
+                  ✕ {t("chOverrideRemove")}
+                </button>
+              )}
+              <p className="text-[10px] text-muted-foreground/60 truncate" title={card.text}>
+                {"🇩🇪 "}{card.text.length > 60 ? card.text.slice(0, 60) + "…" : (card.text || "–")}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -924,7 +978,7 @@ function CardEditorInner({
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "p") {
         e.preventDefault();
-        handleDownloadPdf();
+        handleDownloadPdf(state.localeMode, true);
       }
     };
     window.addEventListener("keydown", handler);
@@ -932,14 +986,18 @@ function CardEditorInner({
   }, [save]);
 
   // Download PDF via server-side Puppeteer generation
-  const handleDownloadPdf = useCallback(async () => {
+  const handleDownloadPdf = useCallback(async (locale: "DE" | "CH" = "DE", withText = true) => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/card-pdf`);
+      const params = new URLSearchParams();
+      if (locale === "CH") params.set("ch", "1");
+      if (!withText) params.set("notext", "1");
+      const qs = params.toString();
+      const res = await authFetch(`/api/worksheets/${state.worksheetId}/card-pdf${qs ? `?${qs}` : ""}`);
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}`;
         try {
@@ -954,7 +1012,9 @@ function CardEditorInner({
       const a = document.createElement("a");
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
-      a.download = `${shortId}.pdf`;
+      const layoutSuffix = (state.settings.layout || "landscape-4") === "landscape-4" ? "2x2" : "1x2";
+      const textSuffix = withText ? "WT" : "NT";
+      a.download = `${shortId}_${layoutSuffix}_${textSuffix}_${locale}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -962,7 +1022,7 @@ function CardEditorInner({
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [state.worksheetId, state.title, t]);
+  }, [state.worksheetId, state.settings.layout, t]);
 
   return (
     <div className="flex flex-col h-full">
@@ -1015,6 +1075,31 @@ function CardEditorInner({
           </Tooltip>
         </div>
 
+        {/* DE / CH locale toggle */}
+        <div className="flex items-center bg-muted rounded-lg p-0.5">
+          <Button
+            variant={state.localeMode === "DE" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "DE" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
+          >
+            {"🇩🇪"} DE
+          </Button>
+          <Button
+            variant={state.localeMode === "CH" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "CH" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
+          >
+            {"🇨🇭"} CH
+            {countChOverrides(state.settings.chOverrides) > 0 && (
+              <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px] bg-amber-100 text-amber-700">
+                {countChOverrides(state.settings.chOverrides)}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
         <div className="flex-1" />
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("cardCount", { count: state.cards.length })}
@@ -1029,12 +1114,11 @@ function CardEditorInner({
             {tc("unsaved")}
           </Badge>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               size="sm"
               variant="outline"
-              onClick={handleDownloadPdf}
               disabled={isGeneratingPdf || !state.worksheetId || state.cards.length === 0}
               className="gap-1.5"
             >
@@ -1045,11 +1129,23 @@ function CardEditorInner({
               )}
               {t("downloadPdf")}
             </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {t("downloadPdfTooltip")}
-          </TooltipContent>
-        </Tooltip>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => handleDownloadPdf("DE", true)}>
+              {"🇩🇪"} DE – {t("pdfWithText")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDownloadPdf("DE", false)}>
+              {"🇩🇪"} DE – {t("pdfNoText")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleDownloadPdf("CH", true)}>
+              {"🇨🇭"} CH – {t("pdfWithText")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDownloadPdf("CH", false)}>
+              {"🇨🇭"} CH – {t("pdfNoText")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

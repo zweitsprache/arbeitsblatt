@@ -9,6 +9,8 @@ import {
   DEFAULT_CARD_SETTINGS,
 } from "@/types/card";
 
+export type CardLocaleMode = "DE" | "CH";
+
 // ─── State ───────────────────────────────────────────────────
 interface CardState {
   worksheetId: string | null;
@@ -20,6 +22,7 @@ interface CardState {
   isDirty: boolean;
   isSaving: boolean;
   published: boolean;
+  localeMode: CardLocaleMode;
 }
 
 const initialState: CardState = {
@@ -32,6 +35,7 @@ const initialState: CardState = {
   isDirty: false,
   isSaving: false,
   published: false,
+  localeMode: "DE",
 };
 
 // ─── Actions ─────────────────────────────────────────────────
@@ -46,7 +50,10 @@ type CardAction =
   | { type: "UPDATE_SETTINGS"; payload: Partial<CardSettings> }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "MARK_SAVED" }
-  | { type: "SET_PUBLISHED"; payload: boolean };
+  | { type: "SET_PUBLISHED"; payload: boolean }
+  | { type: "SET_LOCALE_MODE"; payload: CardLocaleMode }
+  | { type: "SET_CH_OVERRIDE"; payload: { cardId: string; fieldPath: string; value: string } }
+  | { type: "CLEAR_CH_OVERRIDE"; payload: { cardId: string; fieldPath: string } };
 
 // ─── Reducer ─────────────────────────────────────────────────
 function cardReducer(state: CardState, action: CardAction): CardState {
@@ -86,14 +93,27 @@ function cardReducer(state: CardState, action: CardAction): CardState {
         isDirty: true,
       };
 
-    case "REMOVE_CARD":
+    case "REMOVE_CARD": {
+      // Also clean up any CH overrides for the removed card
+      const existingOverrides = state.settings.chOverrides;
+      let newSettings = state.settings;
+      if (existingOverrides?.[action.payload]) {
+        const cleaned = { ...existingOverrides };
+        delete cleaned[action.payload];
+        newSettings = {
+          ...state.settings,
+          chOverrides: Object.keys(cleaned).length > 0 ? cleaned : undefined,
+        };
+      }
       return {
         ...state,
         cards: state.cards.filter((c) => c.id !== action.payload),
         selectedCardId:
           state.selectedCardId === action.payload ? null : state.selectedCardId,
+        settings: newSettings,
         isDirty: true,
       };
+    }
 
     case "REORDER_CARDS":
       return { ...state, cards: action.payload, isDirty: true };
@@ -116,6 +136,49 @@ function cardReducer(state: CardState, action: CardAction): CardState {
 
     case "SET_PUBLISHED":
       return { ...state, published: action.payload, isDirty: true };
+
+    case "SET_LOCALE_MODE":
+      return { ...state, localeMode: action.payload };
+
+    case "SET_CH_OVERRIDE": {
+      const { cardId, fieldPath, value } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: {
+            ...existing,
+            [cardId]: {
+              ...existing[cardId],
+              [fieldPath]: value,
+            },
+          },
+        },
+        isDirty: true,
+      };
+    }
+
+    case "CLEAR_CH_OVERRIDE": {
+      const { cardId, fieldPath } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      const cardOverrides = { ...existing[cardId] };
+      delete cardOverrides[fieldPath];
+      const newOverrides = { ...existing };
+      if (Object.keys(cardOverrides).length === 0) {
+        delete newOverrides[cardId];
+      } else {
+        newOverrides[cardId] = cardOverrides;
+      }
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+        },
+        isDirty: true,
+      };
+    }
 
     default:
       return state;

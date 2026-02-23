@@ -343,6 +343,9 @@ export async function GET(
   const { userId } = result;
 
   const { id } = await params;
+  const isCH = _req.nextUrl.searchParams.get("ch") === "1";
+  const noText = _req.nextUrl.searchParams.get("notext") === "1";
+
   const worksheet = await prisma.worksheet.findFirst({
     where: { id, userId } as Parameters<typeof prisma.worksheet.findFirst>[0] extends { where?: infer W } ? W : never,
   });
@@ -354,6 +357,31 @@ export async function GET(
   const settings = (worksheet.settings ?? {}) as unknown as CardSettings;
   if (cards.length === 0) {
     return NextResponse.json({ error: "No cards to export" }, { status: 400 });
+  }
+
+  // Apply CH locale: ß → ss, then apply manual CH overrides
+  if (isCH) {
+    cards = cards.map(card => ({
+      ...card,
+      text: card.text ? card.text.replace(/ß/g, "ss") : card.text,
+    }));
+    // Apply manual CH overrides from settings
+    const chOverrides = settings.chOverrides;
+    if (chOverrides) {
+      cards = cards.map(card => {
+        const overrides = chOverrides[card.id];
+        if (!overrides) return card;
+        return {
+          ...card,
+          text: overrides.text !== undefined ? overrides.text : card.text,
+        };
+      });
+    }
+  }
+
+  // Strip text from cards if noText is requested
+  if (noText) {
+    cards = cards.map(card => ({ ...card, text: "" }));
   }
 
   // Build brand settings with defaults
@@ -461,11 +489,15 @@ export async function GET(
     console.log(`[Card PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages`);
 
     const shortId = id.slice(0, 16);
+    const layoutSuffix = layout === "landscape-4" ? "2x2" : "1x2";
+    const textSuffix = noText ? "NT" : "WT";
+    const localeSuffix = isCH ? "CH" : "DE";
+    const filename = `${shortId}_${layoutSuffix}_${textSuffix}_${localeSuffix}.pdf`;
 
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${shortId}.pdf"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
