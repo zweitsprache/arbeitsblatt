@@ -385,22 +385,29 @@ export function CourseViewer({
 
       <div className="flex">
         {/* Desktop sidebar */}
-        <aside
+        <div
           className={cn(
-            "hidden lg:flex flex-col shrink-0 sticky top-0 h-screen bg-background border-r transition-all duration-300",
-            desktopSidebarOpen ? "w-80" : "w-0 overflow-hidden border-r-0"
+            "hidden lg:flex shrink-0 sticky top-0 h-screen transition-all duration-300",
+            desktopSidebarOpen ? "w-80" : "w-0 overflow-hidden"
           )}
         >
-          <SidebarNav
-            title={title}
-            structure={structure}
-            flatLessons={flatLessons}
-            selectedLessonId={selectedLessonId}
-            visitedLessons={visitedLessons}
-            onSelectLesson={handleSelectLesson}
-            onShowOverview={handleShowOverview}
-          />
-        </aside>
+          <aside
+            className={cn(
+              "flex flex-col w-80 h-[calc(100vh-2rem)] my-4 ml-4 bg-background border rounded-xl shadow-sm overflow-hidden transition-all duration-300",
+              desktopSidebarOpen ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <SidebarNav
+              title={title}
+              structure={structure}
+              flatLessons={flatLessons}
+              selectedLessonId={selectedLessonId}
+              visitedLessons={visitedLessons}
+              onSelectLesson={handleSelectLesson}
+              onShowOverview={handleShowOverview}
+            />
+          </aside>
+        </div>
 
         {/* Desktop sidebar toggle */}
         <button
