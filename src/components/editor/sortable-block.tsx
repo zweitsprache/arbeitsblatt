@@ -63,13 +63,14 @@ export function SortableBlock({
   };
 
   // Check if block should be visible in current mode
+  const visibility = block.visibility ?? "both";
   const isVisibleInMode =
-    block.visibility === "both" || block.visibility === mode;
+    visibility === "both" || visibility === mode;
 
-  const VisIcon = visibilityIcons[block.visibility];
+  const VisIcon = visibilityIcons[visibility];
 
   const cycleVisibility = () => {
-    const currentIdx = visibilityCycle.indexOf(block.visibility);
+    const currentIdx = visibilityCycle.indexOf(visibility);
     const nextIdx = (currentIdx + 1) % visibilityCycle.length;
     dispatch({
       type: "SET_BLOCK_VISIBILITY",
@@ -117,7 +118,7 @@ export function SortableBlock({
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">{tb("visibleLabel", { visibility: block.visibility })}</p>
+            <p className="text-xs">{tb("visibleLabel", { visibility })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -145,12 +146,12 @@ export function SortableBlock({
       </div>
 
       {/* Visibility badge */}
-      {block.visibility !== "both" && (
+      {visibility !== "both" && (
         <Badge
           variant="secondary"
           className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 z-10"
         >
-          {block.visibility === "print" ? tc("printOnly") : tc("onlineOnly")}
+          {visibility === "print" ? tc("printOnly") : tc("onlineOnly")}
         </Badge>
       )}
 

@@ -90,6 +90,7 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
           blocks.push({
             id: crypto.randomUUID(),
             type: "linked-blocks",
+            visibility: "both",
             worksheetId: raw.worksheetId,
             worksheetTitle: "",
             worksheetSlug: "",
