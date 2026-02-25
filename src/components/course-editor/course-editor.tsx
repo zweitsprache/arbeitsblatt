@@ -7,12 +7,12 @@ import { CourseTreeSidebar } from "./course-tree-sidebar";
 import { CourseContent } from "./course-content";
 import { CourseSettingsPanel } from "./course-settings-panel";
 import { CourseToolbar } from "./course-toolbar";
-import { PopulatedCourseDocument } from "@/types/course";
+import { CourseDocument } from "@/types/course";
 
 function EditorInner({
   initialData,
 }: {
-  initialData?: PopulatedCourseDocument | null;
+  initialData?: CourseDocument | null;
 }) {
   const { dispatch, save } = useCourse();
 
@@ -61,7 +61,7 @@ function EditorInner({
 export function CourseEditor({
   initialData,
 }: {
-  initialData?: PopulatedCourseDocument | null;
+  initialData?: CourseDocument | null;
 }) {
   return (
     <TooltipProvider>

@@ -1,10 +1,10 @@
-import { WorksheetReference } from "./ebook";
+import { WorksheetBlock } from "./worksheet";
 
 // ─── Course Lesson ──────────────────────────────────────────
 export interface CourseLesson {
   id: string;
   title: string;
-  worksheetId: string | null; // auto-created or linked worksheet
+  blocks: WorksheetBlock[];
 }
 
 // ─── Course Topic ───────────────────────────────────────────
@@ -53,29 +53,6 @@ export interface CourseDocument {
   userId: string | null;
 }
 
-// ─── Populated types (with worksheet data resolved) ─────────
-export interface PopulatedCourseLesson {
-  id: string;
-  title: string;
-  worksheet: WorksheetReference | null;
-}
-
-export interface PopulatedCourseTopic {
-  id: string;
-  title: string;
-  lessons: PopulatedCourseLesson[];
-}
-
-export interface PopulatedCourseModule {
-  id: string;
-  title: string;
-  topics: PopulatedCourseTopic[];
-}
-
-export interface PopulatedCourseDocument extends Omit<CourseDocument, "structure"> {
-  structure: PopulatedCourseModule[];
-}
-
 // ─── Default Settings ───────────────────────────────────────
 export const DEFAULT_COURSE_COVER_SETTINGS: CourseCoverSettings = {
   title: "",
@@ -94,36 +71,21 @@ export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
 
 // ─── Helpers ────────────────────────────────────────────────
 
-/** Convert populated structure to storage format (strip worksheet data, keep only IDs) */
-export function structureToStorage(modules: PopulatedCourseModule[]): CourseModule[] {
-  return modules.map((mod) => ({
-    id: mod.id,
-    title: mod.title,
-    topics: mod.topics.map((topic) => ({
-      id: topic.id,
-      title: topic.title,
-      lessons: topic.lessons.map((lesson) => ({
-        id: lesson.id,
-        title: lesson.title,
-        worksheetId: lesson.worksheet?.id ?? null,
-      })),
-    })),
-  }));
-}
-
-/** Collect all worksheet IDs from the structure */
-export function collectWorksheetIds(modules: CourseModule[]): string[] {
-  const ids: string[] = [];
+/** Collect all worksheet IDs from linked-blocks blocks in the structure */
+export function collectLinkedWorksheetIds(modules: CourseModule[]): string[] {
+  const ids = new Set<string>();
   for (const mod of modules) {
     for (const topic of mod.topics) {
       for (const lesson of topic.lessons) {
-        if (lesson.worksheetId) {
-          ids.push(lesson.worksheetId);
+        for (const block of lesson.blocks) {
+          if (block.type === "linked-blocks") {
+            ids.add(block.worksheetId);
+          }
         }
       }
     }
   }
-  return ids;
+  return Array.from(ids);
 }
 
 /** Count total lessons in a course structure */

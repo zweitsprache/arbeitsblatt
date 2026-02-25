@@ -2,14 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { CourseEditor } from "@/components/course-editor/course-editor";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
-  PopulatedCourseDocument,
+  CourseDocument,
   CourseModule,
   CourseCoverSettings,
   CourseSettings,
   DEFAULT_COURSE_SETTINGS,
   DEFAULT_COURSE_COVER_SETTINGS,
-  collectWorksheetIds,
-  PopulatedCourseModule,
 } from "@/types/course";
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -44,38 +42,14 @@ export default async function EditCoursePage({
     notFound();
   }
 
-  // Populate worksheet data for each lesson
+  // Structure now contains blocks directly — no population needed
   const structure = course.structure as unknown as CourseModule[];
-  const allWorksheetIds = collectWorksheetIds(structure);
 
-  const worksheets = await prisma.worksheet.findMany({
-    where: { id: { in: allWorksheetIds }, userId: session.user.id },
-    select: { id: true, title: true, slug: true },
-  });
-
-  const worksheetMap = new Map(worksheets.map((w) => [w.id, w]));
-
-  const populatedStructure: PopulatedCourseModule[] = structure.map((mod) => ({
-    id: mod.id,
-    title: mod.title,
-    topics: mod.topics.map((topic) => ({
-      id: topic.id,
-      title: topic.title,
-      lessons: topic.lessons.map((lesson) => ({
-        id: lesson.id,
-        title: lesson.title,
-        worksheet: lesson.worksheetId
-          ? worksheetMap.get(lesson.worksheetId) ?? null
-          : null,
-      })),
-    })),
-  }));
-
-  const doc: PopulatedCourseDocument = {
+  const doc: CourseDocument = {
     id: course.id,
     title: course.title,
     slug: course.slug,
-    structure: populatedStructure,
+    structure,
     coverSettings: {
       ...DEFAULT_COURSE_COVER_SETTINGS,
       ...(course.coverSettings as Partial<CourseCoverSettings>),

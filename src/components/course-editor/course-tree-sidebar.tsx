@@ -25,9 +25,9 @@ import { useCourse } from "@/store/course-store";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  PopulatedCourseModule,
-  PopulatedCourseTopic,
-  PopulatedCourseLesson,
+  CourseModule,
+  CourseTopic,
+  CourseLesson,
 } from "@/types/course";
 
 // ─── Lesson Item ─────────────────────────────────────────────
@@ -37,7 +37,7 @@ function LessonItem({
   topicId,
   isSelected,
 }: {
-  lesson: PopulatedCourseLesson;
+  lesson: CourseLesson;
   moduleId: string;
   topicId: string;
   isSelected: boolean;
@@ -97,7 +97,7 @@ function LessonItem({
         </span>
       )}
 
-      {lesson.worksheet && (
+      {lesson.blocks.length > 0 && (
         <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
       )}
 
@@ -148,7 +148,7 @@ function TopicItem({
   isSelected,
   selectedLessonId,
 }: {
-  topic: PopulatedCourseTopic;
+  topic: CourseTopic;
   moduleId: string;
   isSelected: boolean;
   selectedLessonId: string | null;
@@ -310,7 +310,7 @@ function ModuleItem({
   selectedTopicId,
   selectedLessonId,
 }: {
-  module: PopulatedCourseModule;
+  module: CourseModule;
   isSelected: boolean;
   selectedTopicId: string | null;
   selectedLessonId: string | null;

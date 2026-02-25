@@ -11,20 +11,37 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   FileText,
   Search,
   X,
-  ExternalLink,
-  Loader2,
   BookOpen,
+  Heading,
+  Type,
+  Link2,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
+  ExternalLink,
+  Image,
+  Minus,
 } from "lucide-react";
 import { useCourse } from "@/store/course-store";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-fetch";
-import { Link } from "@/i18n/navigation";
 import { CourseSettingsPanel } from "./course-settings-panel";
+import { v4 as uuidv4 } from "uuid";
+import { WorksheetBlock, HeadingBlock, TextBlock, LinkedBlocksBlock, SpacerBlock, DividerBlock, ImageBlock } from "@/types/worksheet";
+import { Link } from "@/i18n/navigation";
 
 interface WorksheetItem {
   id: string;
@@ -34,20 +51,262 @@ interface WorksheetItem {
   updatedAt: string;
 }
 
+// ─── Block Defaults ──────────────────────────────────────────
+
+function createBlock(type: WorksheetBlock["type"]): WorksheetBlock {
+  const base = { id: uuidv4(), visibility: "both" as const };
+  switch (type) {
+    case "heading":
+      return { ...base, type: "heading", content: "", level: 2 } as HeadingBlock;
+    case "text":
+      return { ...base, type: "text", content: "" } as TextBlock;
+    case "image":
+      return { ...base, type: "image", src: "", alt: "" } as ImageBlock;
+    case "spacer":
+      return { ...base, type: "spacer", height: 24 } as SpacerBlock;
+    case "divider":
+      return { ...base, type: "divider" } as DividerBlock;
+    default:
+      return { ...base, type: "heading", content: "", level: 2 } as HeadingBlock;
+  }
+}
+
+// ─── Block Editor Card ───────────────────────────────────────
+
+function BlockCard({
+  block,
+  index,
+  total,
+  onUpdate,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+}: {
+  block: WorksheetBlock;
+  index: number;
+  total: number;
+  onUpdate: (block: WorksheetBlock) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const t = useTranslations("course");
+
+  return (
+    <div className="group relative flex gap-2 items-start">
+      {/* Controls */}
+      <div className="flex flex-col items-center gap-0.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+        <button
+          className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+          onClick={onMoveUp}
+          disabled={index === 0}
+        >
+          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+        <button
+          className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+          onClick={onMoveDown}
+          disabled={index === total - 1}
+        >
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+        <button
+          className="p-0.5 hover:bg-destructive/10 rounded"
+          onClick={onRemove}
+        >
+          <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
+        </button>
+      </div>
+
+      {/* Block content */}
+      <div className="flex-1 border rounded-lg p-3 bg-background hover:border-primary/30 transition-colors min-w-0">
+        {block.type === "heading" && (
+          <HeadingEditor block={block as HeadingBlock} onUpdate={onUpdate} />
+        )}
+        {block.type === "text" && (
+          <TextEditor block={block as TextBlock} onUpdate={onUpdate} />
+        )}
+        {block.type === "image" && (
+          <ImageEditor block={block as ImageBlock} onUpdate={onUpdate} />
+        )}
+        {block.type === "linked-blocks" && (
+          <LinkedBlocksCard block={block as LinkedBlocksBlock} />
+        )}
+        {block.type === "divider" && (
+          <div className="flex items-center gap-2 py-1">
+            <Minus className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{t("dividerBlock")}</span>
+          </div>
+        )}
+        {block.type === "spacer" && (
+          <div className="flex items-center gap-2 py-1">
+            <span className="text-xs text-muted-foreground">
+              {t("spacerBlock")} ({(block as SpacerBlock).height}px)
+            </span>
+          </div>
+        )}
+        {/* Fallback for other block types */}
+        {!["heading", "text", "image", "linked-blocks", "divider", "spacer"].includes(block.type) && (
+          <div className="flex items-center gap-2 py-1">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground capitalize">{block.type}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline Editors ──────────────────────────────────────────
+
+function HeadingEditor({
+  block,
+  onUpdate,
+}: {
+  block: HeadingBlock;
+  onUpdate: (block: WorksheetBlock) => void;
+}) {
+  const t = useTranslations("course");
+  const sizeClasses = {
+    1: "text-2xl font-bold",
+    2: "text-xl font-semibold",
+    3: "text-lg font-medium",
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Heading className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex gap-1">
+          {([1, 2, 3] as const).map((level) => (
+            <button
+              key={level}
+              className={cn(
+                "px-1.5 py-0.5 text-xs rounded",
+                block.level === level
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+              onClick={() => onUpdate({ ...block, level })}
+            >
+              H{level}
+            </button>
+          ))}
+        </div>
+      </div>
+      <input
+        className={cn(
+          "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground/50",
+          sizeClasses[block.level]
+        )}
+        value={block.content}
+        onChange={(e) => onUpdate({ ...block, content: e.target.value })}
+        placeholder={t("headingPlaceholder")}
+      />
+    </div>
+  );
+}
+
+function TextEditor({
+  block,
+  onUpdate,
+}: {
+  block: TextBlock;
+  onUpdate: (block: WorksheetBlock) => void;
+}) {
+  const t = useTranslations("course");
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 mb-1">
+        <Type className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">{t("textBlock")}</span>
+      </div>
+      <textarea
+        className="w-full bg-transparent border rounded-md p-2 text-sm outline-none resize-y min-h-[60px] placeholder:text-muted-foreground/50 focus:border-primary/50"
+        value={block.content}
+        onChange={(e) => onUpdate({ ...block, content: e.target.value })}
+        placeholder={t("textPlaceholder")}
+        rows={3}
+      />
+    </div>
+  );
+}
+
+function ImageEditor({
+  block,
+  onUpdate,
+}: {
+  block: ImageBlock;
+  onUpdate: (block: WorksheetBlock) => void;
+}) {
+  const t = useTranslations("course");
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Image className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">{t("imageBlock")}</span>
+      </div>
+      <Input
+        value={block.src}
+        onChange={(e) => onUpdate({ ...block, src: e.target.value })}
+        placeholder={t("imageUrlPlaceholder")}
+        className="text-xs"
+      />
+      {block.src && (
+        <img
+          src={block.src}
+          alt={block.alt}
+          className="max-h-40 rounded-md border object-contain"
+        />
+      )}
+    </div>
+  );
+}
+
+function LinkedBlocksCard({ block }: { block: LinkedBlocksBlock }) {
+  const t = useTranslations("course");
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Link2 className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{block.worksheetTitle}</p>
+        <p className="text-xs text-muted-foreground">
+          {t("linkedWorksheet")} · /{block.worksheetSlug}
+        </p>
+      </div>
+      <Link
+        href={`/editor/${block.worksheetId}`}
+        target="_blank"
+      >
+        <Button variant="ghost" size="sm" className="gap-1.5">
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span className="text-xs">{t("editWorksheet")}</span>
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────
+
 export function CourseContent() {
   const t = useTranslations("course");
   const tc = useTranslations("common");
-  const { state, dispatch, getSelectedLesson, getSelectedTopic, getSelectedModule, createLessonWorksheet } =
+  const { state, dispatch, getSelectedLesson, getSelectedTopic, getSelectedModule } =
     useCourse();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [availableWorksheets, setAvailableWorksheets] = useState<WorksheetItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [creatingWorksheet, setCreatingWorksheet] = useState(false);
 
   const selectedModule = getSelectedModule();
   const selectedTopic = getSelectedTopic();
   const selectedLesson = getSelectedLesson();
+
+  // ─── Worksheet Fetch ────────────────────────────────────
 
   const fetchWorksheets = useCallback(async (searchQuery = "") => {
     setLoading(true);
@@ -79,34 +338,105 @@ export function CourseContent() {
     return () => clearTimeout(timer);
   }, [search, selectorOpen, fetchWorksheets]);
 
-  const handleAddExistingWorksheet = (worksheet: WorksheetItem) => {
-    if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId) return;
-    dispatch({
-      type: "SET_LESSON_WORKSHEET",
-      payload: {
-        moduleId: state.selectedModuleId,
-        topicId: state.selectedTopicId,
-        lessonId: state.selectedLessonId,
-        worksheet: { id: worksheet.id, title: worksheet.title, slug: worksheet.slug },
-      },
-    });
-    setSelectorOpen(false);
-  };
+  // ─── Block Actions ──────────────────────────────────────
 
-  const handleCreateWorksheet = async () => {
-    if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId || !selectedLesson) return;
-    setCreatingWorksheet(true);
-    try {
-      await createLessonWorksheet(
-        state.selectedModuleId,
-        state.selectedTopicId,
-        state.selectedLessonId,
-        selectedLesson.title
+  const addBlock = useCallback(
+    (type: WorksheetBlock["type"]) => {
+      if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId) return;
+      const block = createBlock(type);
+      dispatch({
+        type: "ADD_LESSON_BLOCK",
+        payload: {
+          moduleId: state.selectedModuleId,
+          topicId: state.selectedTopicId,
+          lessonId: state.selectedLessonId,
+          block,
+        },
+      });
+    },
+    [dispatch, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId]
+  );
+
+  const addLinkedBlocks = useCallback(
+    (worksheet: WorksheetItem) => {
+      if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId) return;
+      const block: LinkedBlocksBlock = {
+        id: uuidv4(),
+        type: "linked-blocks",
+        visibility: "both",
+        worksheetId: worksheet.id,
+        worksheetTitle: worksheet.title,
+        worksheetSlug: worksheet.slug,
+      };
+      dispatch({
+        type: "ADD_LESSON_BLOCK",
+        payload: {
+          moduleId: state.selectedModuleId,
+          topicId: state.selectedTopicId,
+          lessonId: state.selectedLessonId,
+          block,
+        },
+      });
+      setSelectorOpen(false);
+    },
+    [dispatch, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId]
+  );
+
+  const updateBlock = useCallback(
+    (updatedBlock: WorksheetBlock) => {
+      if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId || !selectedLesson) return;
+      const newBlocks = selectedLesson.blocks.map((b) =>
+        b.id === updatedBlock.id ? updatedBlock : b
       );
-    } finally {
-      setCreatingWorksheet(false);
-    }
-  };
+      dispatch({
+        type: "SET_LESSON_BLOCKS",
+        payload: {
+          moduleId: state.selectedModuleId,
+          topicId: state.selectedTopicId,
+          lessonId: state.selectedLessonId,
+          blocks: newBlocks,
+        },
+      });
+    },
+    [dispatch, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId, selectedLesson]
+  );
+
+  const removeBlock = useCallback(
+    (blockId: string) => {
+      if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId) return;
+      dispatch({
+        type: "REMOVE_LESSON_BLOCK",
+        payload: {
+          moduleId: state.selectedModuleId,
+          topicId: state.selectedTopicId,
+          lessonId: state.selectedLessonId,
+          blockId,
+        },
+      });
+    },
+    [dispatch, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId]
+  );
+
+  const moveBlock = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId || !selectedLesson) return;
+      const blocks = [...selectedLesson.blocks];
+      const [moved] = blocks.splice(fromIndex, 1);
+      blocks.splice(toIndex, 0, moved);
+      dispatch({
+        type: "SET_LESSON_BLOCKS",
+        payload: {
+          moduleId: state.selectedModuleId,
+          topicId: state.selectedTopicId,
+          lessonId: state.selectedLessonId,
+          blocks,
+        },
+      });
+    },
+    [dispatch, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId, selectedLesson]
+  );
+
+  // ─── Render States ─────────────────────────────────────
 
   // Show course settings when nothing is selected
   if (state.selectedModuleId === null) {
@@ -147,7 +477,8 @@ export function CourseContent() {
     );
   }
 
-  // Lesson selected — show content
+  // ─── Lesson Selected ───────────────────────────────────
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -164,91 +495,112 @@ export function CourseContent() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {selectedLesson.worksheet ? (
-              <Link
-                href={`/editor/${selectedLesson.worksheet.id}`}
-                target="_blank"
-              >
-                <Button variant="outline" size="sm" className="gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  {t("editWorksheet")}
-                </Button>
-              </Link>
-            ) : null}
+            <span className="text-xs text-muted-foreground">
+              {selectedLesson.blocks.length} {selectedLesson.blocks.length === 1 ? "block" : "blocks"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <ScrollArea className="flex-1 p-4">
-        {selectedLesson.worksheet ? (
-          // Lesson has a worksheet
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-background rounded-lg border">
-              <FileText className="h-6 w-6 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{selectedLesson.worksheet.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  /{selectedLesson.worksheet.slug}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/editor/${selectedLesson.worksheet.id}`}
-                  target="_blank"
-                >
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    {t("editWorksheet")}
-                  </Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => {
-                    dispatch({
-                      type: "SET_LESSON_WORKSHEET",
-                      payload: {
-                        moduleId: state.selectedModuleId!,
-                        topicId: state.selectedTopicId!,
-                        lessonId: state.selectedLessonId!,
-                        worksheet: null,
-                      },
-                    });
-                  }}
-                >
-                  {t("unlinkWorksheet")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Lesson has no worksheet — show create/attach options
+        {selectedLesson.blocks.length === 0 ? (
+          // Empty state
           <div className="text-center py-16">
             <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground mb-6">{t("noLessonContent")}</p>
             <div className="flex items-center justify-center gap-3">
               <Button
-                className="gap-2"
-                onClick={handleCreateWorksheet}
-                disabled={creatingWorksheet}
-              >
-                {creatingWorksheet ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                {t("createContent")}
-              </Button>
-              <Button
                 variant="outline"
                 className="gap-2"
                 onClick={() => setSelectorOpen(true)}
               >
-                <FileText className="h-4 w-4" />
-                {t("linkExistingWorksheet")}
+                <Link2 className="h-4 w-4" />
+                {t("linkWorksheet")}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    {t("addBlock")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={() => addBlock("heading")}>
+                    <Heading className="h-4 w-4 mr-2" />
+                    {t("headingBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addBlock("text")}>
+                    <Type className="h-4 w-4 mr-2" />
+                    {t("textBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addBlock("image")}>
+                    <Image className="h-4 w-4 mr-2" />
+                    {t("imageBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => addBlock("divider")}>
+                    <Minus className="h-4 w-4 mr-2" />
+                    {t("dividerBlock")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ) : (
+          // Block list
+          <div className="space-y-2 max-w-3xl mx-auto">
+            {selectedLesson.blocks.map((block, index) => (
+              <BlockCard
+                key={block.id}
+                block={block}
+                index={index}
+                total={selectedLesson.blocks.length}
+                onUpdate={updateBlock}
+                onRemove={() => removeBlock(block.id)}
+                onMoveUp={() => moveBlock(index, index - 1)}
+                onMoveDown={() => moveBlock(index, index + 1)}
+              />
+            ))}
+
+            {/* Add block toolbar */}
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setSelectorOpen(true)}
+              >
+                <Link2 className="h-4 w-4" />
+                {t("linkWorksheet")}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    {t("addBlock")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={() => addBlock("heading")}>
+                    <Heading className="h-4 w-4 mr-2" />
+                    {t("headingBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addBlock("text")}>
+                    <Type className="h-4 w-4 mr-2" />
+                    {t("textBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addBlock("image")}>
+                    <Image className="h-4 w-4 mr-2" />
+                    {t("imageBlock")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => addBlock("divider")}>
+                    <Minus className="h-4 w-4 mr-2" />
+                    {t("dividerBlock")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}
@@ -298,7 +650,7 @@ export function CourseContent() {
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer hover:bg-muted"
                     )}
-                    onClick={() => handleAddExistingWorksheet(worksheet)}
+                    onClick={() => addLinkedBlocks(worksheet)}
                   >
                     <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -310,7 +662,7 @@ export function CourseContent() {
                       </p>
                     </div>
                     <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4" />
+                      <Link2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}

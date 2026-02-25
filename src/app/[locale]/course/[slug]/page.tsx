@@ -6,8 +6,7 @@ import {
   CourseModule,
   DEFAULT_COURSE_SETTINGS,
   DEFAULT_COURSE_COVER_SETTINGS,
-  collectWorksheetIds,
-  PopulatedCourseModule,
+  collectLinkedWorksheetIds,
 } from "@/types/course";
 import { CourseViewer } from "@/components/viewer/course-viewer";
 
@@ -26,14 +25,18 @@ export default async function CoursePage({
   }
 
   const structure = course.structure as unknown as CourseModule[];
-  const allWorksheetIds = collectWorksheetIds(structure);
 
-  // Fetch all referenced worksheets
-  const worksheetsData = await prisma.worksheet.findMany({
-    where: { id: { in: allWorksheetIds } },
-  });
+  // Collect worksheet IDs referenced by linked-blocks blocks
+  const linkedWorksheetIds = collectLinkedWorksheetIds(structure);
 
-  // Build worksheets map
+  // Fetch all referenced worksheets for linked-blocks resolution
+  const worksheetsData = linkedWorksheetIds.length > 0
+    ? await prisma.worksheet.findMany({
+        where: { id: { in: linkedWorksheetIds } },
+      })
+    : [];
+
+  // Build worksheets map for linked-blocks resolution
   const worksheetsMap = new Map(
     worksheetsData.map((ws) => [
       ws.id,
@@ -50,31 +53,15 @@ export default async function CoursePage({
     ])
   );
 
-  // Build populated structure
-  const populatedStructure: PopulatedCourseModule[] = structure.map((mod) => ({
-    id: mod.id,
-    title: mod.title,
-    topics: mod.topics.map((topic) => ({
-      id: topic.id,
-      title: topic.title,
-      lessons: topic.lessons.map((lesson) => ({
-        id: lesson.id,
-        title: lesson.title,
-        worksheet: lesson.worksheetId
-          ? (() => {
-              const ws = worksheetsMap.get(lesson.worksheetId);
-              return ws ? { id: ws.id, title: ws.title, slug: ws.slug } : null;
-            })()
-          : null,
-      })),
-    })),
-  }));
+  const settings = course.settings as unknown as { languageLevel?: string; description?: string };
 
   return (
     <CourseViewer
       title={course.title}
-      structure={populatedStructure}
+      structure={structure}
       worksheets={worksheetsMap}
+      languageLevel={settings.languageLevel}
+      description={settings.description}
     />
   );
 }

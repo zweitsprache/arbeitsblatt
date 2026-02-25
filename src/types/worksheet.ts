@@ -38,7 +38,8 @@ export type BlockType =
   | "fill-in-blank-items"
   | "page-break"
   | "writing-lines"
-  | "writing-rows";
+  | "writing-rows"
+  | "linked-blocks";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -480,6 +481,14 @@ export interface WritingRowsBlock extends BlockBase {
   rowCount: number;
 }
 
+// ─── Linked Blocks block ─────────────────────────────────────
+export interface LinkedBlocksBlock extends BlockBase {
+  type: "linked-blocks";
+  worksheetId: string;
+  worksheetTitle: string;
+  worksheetSlug: string;
+}
+
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
@@ -514,7 +523,8 @@ export type WorksheetBlock =
   | FillInBlankItemsBlock
   | PageBreakBlock
   | WritingLinesBlock
-  | WritingRowsBlock;
+  | WritingRowsBlock
+  | LinkedBlocksBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";

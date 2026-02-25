@@ -3,16 +3,15 @@
 import React, { createContext, useContext, useReducer, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { authFetch } from "@/lib/auth-fetch";
-import { WorksheetReference } from "@/types/ebook";
+import { WorksheetBlock } from "@/types/worksheet";
 import {
   CourseCoverSettings,
   CourseSettings,
-  PopulatedCourseModule,
-  PopulatedCourseTopic,
-  PopulatedCourseLesson,
+  CourseModule,
+  CourseTopic,
+  CourseLesson,
   DEFAULT_COURSE_SETTINGS,
   DEFAULT_COURSE_COVER_SETTINGS,
-  structureToStorage,
 } from "@/types/course";
 
 // ─── State ───────────────────────────────────────────────────
@@ -20,7 +19,7 @@ interface CourseState {
   courseId: string | null;
   title: string;
   slug: string;
-  structure: PopulatedCourseModule[];
+  structure: CourseModule[];
   coverSettings: CourseCoverSettings;
   settings: CourseSettings;
   selectedModuleId: string | null;
@@ -48,27 +47,30 @@ const initialState: CourseState = {
 
 // ─── Actions ─────────────────────────────────────────────────
 type CourseAction =
-  | { type: "LOAD_COURSE"; payload: { id: string; title: string; slug: string; structure: PopulatedCourseModule[]; coverSettings: CourseCoverSettings; settings: CourseSettings; published: boolean } }
+  | { type: "LOAD_COURSE"; payload: { id: string; title: string; slug: string; structure: CourseModule[]; coverSettings: CourseCoverSettings; settings: CourseSettings; published: boolean } }
   | { type: "SET_TITLE"; payload: string }
   // Module actions
   | { type: "ADD_MODULE"; payload: { title: string } }
   | { type: "UPDATE_MODULE"; payload: { id: string; title: string } }
   | { type: "REMOVE_MODULE"; payload: string }
-  | { type: "REORDER_MODULES"; payload: PopulatedCourseModule[] }
+  | { type: "REORDER_MODULES"; payload: CourseModule[] }
   | { type: "SELECT_MODULE"; payload: string | null }
   // Topic actions
   | { type: "ADD_TOPIC"; payload: { moduleId: string; title: string } }
   | { type: "UPDATE_TOPIC"; payload: { moduleId: string; topicId: string; title: string } }
   | { type: "REMOVE_TOPIC"; payload: { moduleId: string; topicId: string } }
-  | { type: "REORDER_TOPICS"; payload: { moduleId: string; topics: PopulatedCourseTopic[] } }
+  | { type: "REORDER_TOPICS"; payload: { moduleId: string; topics: CourseTopic[] } }
   | { type: "SELECT_TOPIC"; payload: { moduleId: string; topicId: string } | null }
   // Lesson actions
   | { type: "ADD_LESSON"; payload: { moduleId: string; topicId: string; title: string } }
   | { type: "UPDATE_LESSON"; payload: { moduleId: string; topicId: string; lessonId: string; title: string } }
   | { type: "REMOVE_LESSON"; payload: { moduleId: string; topicId: string; lessonId: string } }
-  | { type: "REORDER_LESSONS"; payload: { moduleId: string; topicId: string; lessons: PopulatedCourseLesson[] } }
+  | { type: "REORDER_LESSONS"; payload: { moduleId: string; topicId: string; lessons: CourseLesson[] } }
   | { type: "SELECT_LESSON"; payload: { moduleId: string; topicId: string; lessonId: string } | null }
-  | { type: "SET_LESSON_WORKSHEET"; payload: { moduleId: string; topicId: string; lessonId: string; worksheet: WorksheetReference | null } }
+  // Lesson blocks
+  | { type: "SET_LESSON_BLOCKS"; payload: { moduleId: string; topicId: string; lessonId: string; blocks: WorksheetBlock[] } }
+  | { type: "ADD_LESSON_BLOCK"; payload: { moduleId: string; topicId: string; lessonId: string; block: WorksheetBlock; index?: number } }
+  | { type: "REMOVE_LESSON_BLOCK"; payload: { moduleId: string; topicId: string; lessonId: string; blockId: string } }
   // Settings
   | { type: "UPDATE_COVER"; payload: Partial<CourseCoverSettings> }
   | { type: "UPDATE_SETTINGS"; payload: Partial<CourseSettings> }
@@ -78,26 +80,26 @@ type CourseAction =
 
 // ─── Helpers ─────────────────────────────────────────────────
 function mapModule(
-  structure: PopulatedCourseModule[],
+  structure: CourseModule[],
   moduleId: string,
-  fn: (mod: PopulatedCourseModule) => PopulatedCourseModule
-): PopulatedCourseModule[] {
+  fn: (mod: CourseModule) => CourseModule
+): CourseModule[] {
   return structure.map((mod) => (mod.id === moduleId ? fn(mod) : mod));
 }
 
 function mapTopic(
-  mod: PopulatedCourseModule,
+  mod: CourseModule,
   topicId: string,
-  fn: (topic: PopulatedCourseTopic) => PopulatedCourseTopic
-): PopulatedCourseModule {
+  fn: (topic: CourseTopic) => CourseTopic
+): CourseModule {
   return { ...mod, topics: mod.topics.map((t) => (t.id === topicId ? fn(t) : t)) };
 }
 
 function mapLesson(
-  topic: PopulatedCourseTopic,
+  topic: CourseTopic,
   lessonId: string,
-  fn: (lesson: PopulatedCourseLesson) => PopulatedCourseLesson
-): PopulatedCourseTopic {
+  fn: (lesson: CourseLesson) => CourseLesson
+): CourseTopic {
   return { ...topic, lessons: topic.lessons.map((l) => (l.id === lessonId ? fn(l) : l)) };
 }
 
@@ -125,7 +127,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
 
     // ─── Module ────────────────────────────────────────────
     case "ADD_MODULE": {
-      const newModule: PopulatedCourseModule = {
+      const newModule: CourseModule = {
         id: uuidv4(),
         title: action.payload.title || `Module ${state.structure.length + 1}`,
         topics: [],
@@ -180,7 +182,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
 
     // ─── Topic ─────────────────────────────────────────────
     case "ADD_TOPIC": {
-      const newTopic: PopulatedCourseTopic = {
+      const newTopic: CourseTopic = {
         id: uuidv4(),
         title: action.payload.title || "New Topic",
         lessons: [],
@@ -247,10 +249,10 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
 
     // ─── Lesson ────────────────────────────────────────────
     case "ADD_LESSON": {
-      const newLesson: PopulatedCourseLesson = {
+      const newLesson: CourseLesson = {
         id: uuidv4(),
         title: action.payload.title || "New Lesson",
-        worksheet: null,
+        blocks: [],
       };
       return {
         ...state,
@@ -320,14 +322,45 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         selectedLessonId: action.payload.lessonId,
       };
 
-    case "SET_LESSON_WORKSHEET":
+    case "SET_LESSON_BLOCKS":
       return {
         ...state,
         structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
           mapTopic(mod, action.payload.topicId, (topic) =>
             mapLesson(topic, action.payload.lessonId, (lesson) => ({
               ...lesson,
-              worksheet: action.payload.worksheet,
+              blocks: action.payload.blocks,
+            }))
+          )
+        ),
+        isDirty: true,
+      };
+
+    case "ADD_LESSON_BLOCK": {
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
+          mapTopic(mod, action.payload.topicId, (topic) =>
+            mapLesson(topic, action.payload.lessonId, (lesson) => {
+              const blocks = [...lesson.blocks];
+              const index = action.payload.index ?? blocks.length;
+              blocks.splice(index, 0, action.payload.block);
+              return { ...lesson, blocks };
+            })
+          )
+        ),
+        isDirty: true,
+      };
+    }
+
+    case "REMOVE_LESSON_BLOCK":
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
+          mapTopic(mod, action.payload.topicId, (topic) =>
+            mapLesson(topic, action.payload.lessonId, (lesson) => ({
+              ...lesson,
+              blocks: lesson.blocks.filter((b) => b.id !== action.payload.blockId),
             }))
           )
         ),
@@ -371,10 +404,9 @@ interface CourseContextValue {
   addTopic: (moduleId: string, title?: string) => void;
   addLesson: (moduleId: string, topicId: string, title?: string) => void;
   save: () => Promise<void>;
-  getSelectedModule: () => PopulatedCourseModule | null;
-  getSelectedTopic: () => PopulatedCourseTopic | null;
-  getSelectedLesson: () => PopulatedCourseLesson | null;
-  createLessonWorksheet: (moduleId: string, topicId: string, lessonId: string, lessonTitle: string) => Promise<void>;
+  getSelectedModule: () => CourseModule | null;
+  getSelectedTopic: () => CourseTopic | null;
+  getSelectedLesson: () => CourseLesson | null;
 }
 
 const CourseContext = createContext<CourseContextValue | null>(null);
@@ -412,32 +444,6 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
     return topic.lessons.find((l) => l.id === state.selectedLessonId) ?? null;
   }, [state.structure, state.selectedModuleId, state.selectedTopicId, state.selectedLessonId]);
 
-  const createLessonWorksheet = useCallback(
-    async (moduleId: string, topicId: string, lessonId: string, lessonTitle: string) => {
-      if (!state.courseId) return;
-      try {
-        const res = await authFetch(`/api/courses/${state.courseId}/lesson-worksheet`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lessonTitle }),
-        });
-        const worksheet = await res.json();
-        dispatch({
-          type: "SET_LESSON_WORKSHEET",
-          payload: {
-            moduleId,
-            topicId,
-            lessonId,
-            worksheet: { id: worksheet.id, title: worksheet.title, slug: worksheet.slug },
-          },
-        });
-      } catch (err) {
-        console.error("Failed to create lesson worksheet:", err);
-      }
-    },
-    [state.courseId]
-  );
-
   const save = useCallback(async () => {
     dispatch({ type: "SET_SAVING", payload: true });
     try {
@@ -448,7 +454,7 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: state.title,
-          structure: structureToStorage(state.structure),
+          structure: state.structure,
           coverSettings: state.coverSettings,
           settings: state.settings,
           published: state.published,
@@ -463,7 +469,7 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
             id: data.id,
             title: data.title,
             slug: data.slug,
-            structure: state.structure, // Keep populated structure
+            structure: state.structure,
             coverSettings: data.coverSettings,
             settings: data.settings,
             published: data.published,
@@ -489,7 +495,6 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
         getSelectedModule,
         getSelectedTopic,
         getSelectedLesson,
-        createLessonWorksheet,
       }}
     >
       {children}
