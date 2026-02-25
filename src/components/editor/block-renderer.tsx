@@ -41,6 +41,7 @@ import {
   PageBreakBlock,
   WritingLinesBlock,
   WritingRowsBlock,
+  LinkedBlocksBlock,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -48,7 +49,7 @@ import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-ut
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -3381,6 +3382,35 @@ function NumberedLabelRenderer({ block }: { block: NumberedLabelBlock }) {
   );
 }
 
+// ─── Linked Blocks Renderer ─────────────────────────────────
+function LinkedBlocksRenderer({ block }: { block: LinkedBlocksBlock }) {
+  return (
+    <div className="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
+      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Link2 className="h-5 w-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">
+          {block.worksheetTitle || "Linked Worksheet"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Linked worksheet blocks · /{block.worksheetSlug}
+        </p>
+      </div>
+      <a
+        href={`/editor/${block.worksheetId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border hover:bg-muted transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        Edit
+      </a>
+    </div>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -3476,6 +3506,8 @@ export function BlockRenderer({
       return <NumberedLabelRenderer block={block} />;
     case "columns":
       return <ColumnsRenderer block={block} mode={mode} />;
+    case "linked-blocks":
+      return <LinkedBlocksRenderer block={block as LinkedBlocksBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">
