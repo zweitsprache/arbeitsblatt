@@ -7,6 +7,7 @@ import {
   DEFAULT_COURSE_SETTINGS,
   DEFAULT_COURSE_COVER_SETTINGS,
   collectLinkedWorksheetIds,
+  normalizeCourseStructure,
 } from "@/types/course";
 import { CourseViewer } from "@/components/viewer/course-viewer";
 
@@ -24,7 +25,9 @@ export default async function CoursePage({
     notFound();
   }
 
-  const structure = course.structure as unknown as CourseModule[];
+  const structure = normalizeCourseStructure(
+    course.structure as unknown as CourseModule[]
+  );
 
   // Collect worksheet IDs referenced by linked-blocks blocks
   const linkedWorksheetIds = collectLinkedWorksheetIds(structure);

@@ -385,7 +385,7 @@ export function CourseContent() {
   const updateBlock = useCallback(
     (updatedBlock: WorksheetBlock) => {
       if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId || !selectedLesson) return;
-      const newBlocks = selectedLesson.blocks.map((b) =>
+      const newBlocks = (selectedLesson.blocks ?? []).map((b) =>
         b.id === updatedBlock.id ? updatedBlock : b
       );
       dispatch({
@@ -420,7 +420,7 @@ export function CourseContent() {
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {
       if (!state.selectedModuleId || !state.selectedTopicId || !state.selectedLessonId || !selectedLesson) return;
-      const blocks = [...selectedLesson.blocks];
+      const blocks = [...(selectedLesson.blocks ?? [])];
       const [moved] = blocks.splice(fromIndex, 1);
       blocks.splice(toIndex, 0, moved);
       dispatch({
@@ -496,7 +496,7 @@ export function CourseContent() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {selectedLesson.blocks.length} {selectedLesson.blocks.length === 1 ? "block" : "blocks"}
+              {(selectedLesson.blocks ?? []).length} {(selectedLesson.blocks ?? []).length === 1 ? "block" : "blocks"}
             </span>
           </div>
         </div>
@@ -504,7 +504,7 @@ export function CourseContent() {
 
       {/* Content */}
       <ScrollArea className="flex-1 p-4">
-        {selectedLesson.blocks.length === 0 ? (
+        {(selectedLesson.blocks ?? []).length === 0 ? (
           // Empty state
           <div className="text-center py-16">
             <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -550,12 +550,12 @@ export function CourseContent() {
         ) : (
           // Block list
           <div className="space-y-2 max-w-3xl mx-auto">
-            {selectedLesson.blocks.map((block, index) => (
+            {(selectedLesson.blocks ?? []).map((block, index) => (
               <BlockCard
                 key={block.id}
                 block={block}
                 index={index}
-                total={selectedLesson.blocks.length}
+                total={(selectedLesson.blocks ?? []).length}
                 onUpdate={updateBlock}
                 onRemove={() => removeBlock(block.id)}
                 onMoveUp={() => moveBlock(index, index - 1)}

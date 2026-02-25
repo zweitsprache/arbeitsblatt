@@ -97,7 +97,7 @@ function LessonItem({
         </span>
       )}
 
-      {lesson.blocks.length > 0 && (
+      {(lesson.blocks ?? []).length > 0 && (
         <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
       )}
 

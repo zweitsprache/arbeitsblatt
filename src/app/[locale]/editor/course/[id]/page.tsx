@@ -8,6 +8,7 @@ import {
   CourseSettings,
   DEFAULT_COURSE_SETTINGS,
   DEFAULT_COURSE_COVER_SETTINGS,
+  normalizeCourseStructure,
 } from "@/types/course";
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -42,8 +43,10 @@ export default async function EditCoursePage({
     notFound();
   }
 
-  // Structure now contains blocks directly — no population needed
-  const structure = course.structure as unknown as CourseModule[];
+  // Structure now contains blocks directly — normalize old data if needed
+  const structure = normalizeCourseStructure(
+    course.structure as unknown as CourseModule[]
+  );
 
   const doc: CourseDocument = {
     id: course.id,

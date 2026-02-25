@@ -224,7 +224,7 @@ function SidebarNav({
                         {topic.lessons.map((lesson) => {
                           const isActive = selectedLessonId === lesson.id;
                           const isVisited = visitedLessons.has(lesson.id);
-                          const hasContent = lesson.blocks.length > 0;
+                          const hasContent = (lesson.blocks ?? []).length > 0;
 
                           return (
                             <button
@@ -290,7 +290,7 @@ export function CourseViewer({
   const resolvedBlocks = useMemo(() => {
     if (!currentFlat) return [];
     const blocks: WorksheetBlock[] = [];
-    for (const block of currentFlat.lesson.blocks) {
+    for (const block of currentFlat.lesson.blocks ?? []) {
       if (block.type === "linked-blocks") {
         const ws = worksheets.get(block.worksheetId);
         if (ws) {

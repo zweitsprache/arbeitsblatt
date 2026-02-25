@@ -342,7 +342,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
           mapTopic(mod, action.payload.topicId, (topic) =>
             mapLesson(topic, action.payload.lessonId, (lesson) => {
-              const blocks = [...lesson.blocks];
+              const blocks = [...(lesson.blocks ?? [])];
               const index = action.payload.index ?? blocks.length;
               blocks.splice(index, 0, action.payload.block);
               return { ...lesson, blocks };
@@ -360,7 +360,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
           mapTopic(mod, action.payload.topicId, (topic) =>
             mapLesson(topic, action.payload.lessonId, (lesson) => ({
               ...lesson,
-              blocks: lesson.blocks.filter((b) => b.id !== action.payload.blockId),
+              blocks: (lesson.blocks ?? []).filter((b) => b.id !== action.payload.blockId),
             }))
           )
         ),

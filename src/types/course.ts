@@ -71,13 +71,43 @@ export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
 
 // ─── Helpers ────────────────────────────────────────────────
 
+/**
+ * Normalize course structure loaded from DB.
+ * Migrates old lessons (worksheetId) → new format (blocks[]).
+ */
+export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[] {
+  return modules.map((mod) => ({
+    ...mod,
+    topics: mod.topics.map((topic) => ({
+      ...topic,
+      lessons: topic.lessons.map((lesson) => {
+        // Already migrated
+        if (Array.isArray(lesson.blocks)) return lesson;
+        // Old format: convert worksheetId → linked-blocks block
+        const raw = lesson as unknown as { id: string; title: string; worksheetId?: string | null };
+        const blocks: WorksheetBlock[] = [];
+        if (raw.worksheetId) {
+          blocks.push({
+            id: crypto.randomUUID(),
+            type: "linked-blocks",
+            worksheetId: raw.worksheetId,
+            worksheetTitle: "",
+            worksheetSlug: "",
+          });
+        }
+        return { id: raw.id, title: raw.title, blocks };
+      }),
+    })),
+  }));
+}
+
 /** Collect all worksheet IDs from linked-blocks blocks in the structure */
 export function collectLinkedWorksheetIds(modules: CourseModule[]): string[] {
   const ids = new Set<string>();
   for (const mod of modules) {
     for (const topic of mod.topics) {
       for (const lesson of topic.lessons) {
-        for (const block of lesson.blocks) {
+        for (const block of lesson.blocks ?? []) {
           if (block.type === "linked-blocks") {
             ids.add(block.worksheetId);
           }
