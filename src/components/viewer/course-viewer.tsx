@@ -475,7 +475,7 @@ function CourseOverview({
   const firstUnvisited = flatLessons.find((f) => !visitedLessons.has(f.lesson.id));
 
   return (
-    <div className="max-w-3xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
       <div className="bg-background rounded-2xl shadow-sm border overflow-hidden">
         {/* Hero */}
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 sm:px-8 py-8 sm:py-10">
@@ -592,7 +592,7 @@ function LessonContent({
   onSelectLesson: (id: string) => void;
 }) {
   return (
-    <div className="max-w-3xl mx-auto py-6 lg:py-8 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto py-6 lg:py-8 px-4 sm:px-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 flex-wrap">
         <span className="font-medium">{currentFlat.moduleTitle}</span>
@@ -640,7 +640,7 @@ function EmptyLesson({
   onSelectLesson: (id: string) => void;
 }) {
   return (
-    <div className="max-w-3xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
       <div className="bg-background rounded-2xl shadow-sm border p-8 sm:p-12 text-center">
         <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
           <FileText className="h-8 w-8 text-muted-foreground/40" />
