@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
 import {
   EBookChapter,
   EBookCoverSettings,
   EBookSettings,
+  EBookContentType,
   DEFAULT_EBOOK_SETTINGS,
   DEFAULT_EBOOK_COVER_SETTINGS,
 } from "@/types/ebook";
@@ -35,46 +35,32 @@ export default async function EBookPage({
     ...(ebook.settings as unknown as Partial<EBookSettings>),
   };
 
-  // Fetch all worksheets referenced in chapters
-  const allWorksheetIds = chapters.flatMap((ch) => ch.worksheetIds);
-  const worksheetsData = await prisma.worksheet.findMany({
-    where: { id: { in: allWorksheetIds } },
+  // Fetch item metadata (title + type only for TOC display)
+  const allItemIds = chapters.flatMap((ch) => ch.worksheetIds);
+  const itemsData = await prisma.worksheet.findMany({
+    where: { id: { in: allItemIds } },
+    select: { id: true, type: true, title: true, slug: true },
   });
-
-  // Build worksheets map
-  const worksheetsMap = new Map(
-    worksheetsData.map((ws) => [
-      ws.id,
-      {
-        id: ws.id,
-        title: ws.title,
-        slug: ws.slug,
-        blocks: ws.blocks as unknown as WorksheetBlock[],
-        settings: {
-          ...DEFAULT_SETTINGS,
-          ...(ws.settings as unknown as Partial<WorksheetSettings>),
-        },
-      },
-    ])
-  );
+  const itemMap = new Map(itemsData.map((i) => [i.id, i]));
 
   // Build populated chapters
   const populatedChapters = chapters.map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
-    worksheets: chapter.worksheetIds
+    items: chapter.worksheetIds
       .map((wId) => {
-        const ws = worksheetsMap.get(wId);
-        return ws ? { id: ws.id, title: ws.title, slug: ws.slug } : null;
+        const item = itemMap.get(wId);
+        return item
+          ? { id: item.id, title: item.title, slug: item.slug, type: (item.type || "worksheet") as EBookContentType }
+          : null;
       })
-      .filter((w): w is { id: string; title: string; slug: string } => !!w),
+      .filter((w): w is { id: string; title: string; slug: string; type: EBookContentType } => !!w),
   }));
 
   return (
     <EBookViewer
       title={ebook.title}
       chapters={populatedChapters}
-      worksheets={worksheetsMap}
       coverSettings={coverSettings}
       settings={settings}
       mode="online"

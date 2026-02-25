@@ -246,6 +246,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
 function ImageProps({ block }: { block: ImageBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const { upload } = useUpload();
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
@@ -263,19 +264,11 @@ function ImageProps({ block }: { block: ImageBlock }) {
     setIsUploading(true);
     try {
       const file = new File([result.blob], "image-block.png", { type: "image/png" });
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const uploadResult = await upload(file);
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { src: uploadResult.url } },
       });
-      if (response.ok) {
-        const data = await response.json();
-        dispatch({
-          type: "UPDATE_BLOCK",
-          payload: { id: block.id, updates: { src: data.url } },
-        });
-      }
     } catch (error) {
       console.error("Upload failed:", error);
     } finally {
@@ -2218,6 +2211,7 @@ function TextProps({ block }: { block: TextBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const { upload } = useUpload();
   const [showAiModal, setShowAiModal] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
@@ -2235,19 +2229,11 @@ function TextProps({ block }: { block: TextBlock }) {
     setIsUploading(true);
     try {
       const file = new File([result.blob], "text-image.png", { type: "image/png" });
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const uploadResult = await upload(file);
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { imageSrc: uploadResult.url } },
       });
-      if (response.ok) {
-        const data = await response.json();
-        dispatch({
-          type: "UPDATE_BLOCK",
-          payload: { id: block.id, updates: { imageSrc: data.url } },
-        });
-      }
     } catch (error) {
       console.error("Upload failed:", error);
     } finally {

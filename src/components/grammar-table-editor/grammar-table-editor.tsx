@@ -2288,7 +2288,6 @@ function EditorToolbar() {
   const [isGeneratingCollection, setIsGeneratingCollection] = useState(false);
   const [pdfLocaleDialog, setPdfLocaleDialog] = useState<{
     open: boolean;
-    engine?: "puppeteer" | "react-pdf";
     mode?: "pdf" | "cover";
   }>({ open: false });
   const [pdfIncludeTitlePage, setPdfIncludeTitlePage] = useState(true);
@@ -2315,19 +2314,15 @@ function EditorToolbar() {
         state.declinationInput?.plural?.noun
       );
 
-  const handleDownloadPdf = useCallback(async (engine?: "puppeteer" | "react-pdf", locale: "DE" | "CH" | "NEUTRAL" = "DE", titlePage = true) => {
+  const handleDownloadPdf = useCallback(async (locale: "DE" | "CH" | "NEUTRAL" = "DE", titlePage = true) => {
     if (!state.documentId) {
       alert(t("saveFirst"));
       return;
     }
     setIsGeneratingPdf(true);
     try {
-      // v2 (react-pdf) now supports both table types
-      const useV2 = engine === "react-pdf";
       const titlePageParam = titlePage ? "" : "&titlePage=false";
-      const endpoint = useV2
-        ? `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?locale=${locale}${titlePageParam}`
-        : `/api/worksheets/${state.documentId}/grammar-table-pdf?locale=${locale}`;
+      const endpoint = `/api/worksheets/${state.documentId}/grammar-table-pdf-v2?locale=${locale}${titlePageParam}`;
       const res = await authFetch(endpoint, {
         method: "POST",
       });
@@ -2566,28 +2561,6 @@ function EditorToolbar() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPdfLocaleDialog({ open: true, engine: "react-pdf" })}
-              disabled={isGeneratingPdf || !state.documentId || !state.tableData}
-              className="gap-2 border-dashed"
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4" />
-              )}
-              PDF v2
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            PDF export with react-pdf (test)
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={handleDownloadPptx}
               disabled={isGeneratingPptx || !state.documentId || !state.tableData}
               className="gap-2 border-dashed"
@@ -2702,7 +2675,7 @@ function EditorToolbar() {
                 if (mode === "cover") {
                   handleDownloadCover("DE");
                 } else {
-                  handleDownloadPdf(pdfLocaleDialog.engine, "DE", titlePage);
+                  handleDownloadPdf("DE", titlePage);
                 }
               }}
             >
@@ -2718,7 +2691,7 @@ function EditorToolbar() {
                 if (mode === "cover") {
                   handleDownloadCover("CH");
                 } else {
-                  handleDownloadPdf(pdfLocaleDialog.engine, "CH", titlePage);
+                  handleDownloadPdf("CH", titlePage);
                 }
               }}
             >
@@ -2734,7 +2707,7 @@ function EditorToolbar() {
                 if (mode === "cover") {
                   handleDownloadCover("NEUTRAL");
                 } else {
-                  handleDownloadPdf(pdfLocaleDialog.engine, "NEUTRAL", titlePage);
+                  handleDownloadPdf("NEUTRAL", titlePage);
                 }
               }}
             >

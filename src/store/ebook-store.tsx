@@ -7,7 +7,7 @@ import {
   EBookChapter,
   EBookCoverSettings,
   EBookSettings,
-  WorksheetReference,
+  ContentItemReference,
   PopulatedEBookChapter,
   DEFAULT_EBOOK_SETTINGS,
   DEFAULT_EBOOK_COVER_SETTINGS,
@@ -49,9 +49,9 @@ type EBookAction =
   | { type: "REMOVE_CHAPTER"; payload: string }
   | { type: "REORDER_CHAPTERS"; payload: PopulatedEBookChapter[] }
   | { type: "SELECT_CHAPTER"; payload: string | null }
-  | { type: "ADD_WORKSHEET_TO_CHAPTER"; payload: { chapterId: string; worksheet: WorksheetReference } }
-  | { type: "REMOVE_WORKSHEET_FROM_CHAPTER"; payload: { chapterId: string; worksheetId: string } }
-  | { type: "REORDER_WORKSHEETS"; payload: { chapterId: string; worksheets: WorksheetReference[] } }
+  | { type: "ADD_ITEM_TO_CHAPTER"; payload: { chapterId: string; item: ContentItemReference } }
+  | { type: "REMOVE_ITEM_FROM_CHAPTER"; payload: { chapterId: string; itemId: string } }
+  | { type: "REORDER_ITEMS"; payload: { chapterId: string; items: ContentItemReference[] } }
   | { type: "UPDATE_COVER"; payload: Partial<EBookCoverSettings> }
   | { type: "UPDATE_SETTINGS"; payload: Partial<EBookSettings> }
   | { type: "SET_SAVING"; payload: boolean }
@@ -82,7 +82,7 @@ function ebookReducer(state: EBookState, action: EBookAction): EBookState {
       const newChapter: PopulatedEBookChapter = {
         id: uuidv4(),
         title: action.payload.title || `Chapter ${state.chapters.length + 1}`,
-        worksheets: [],
+        items: [],
       };
       return {
         ...state,
@@ -120,34 +120,34 @@ function ebookReducer(state: EBookState, action: EBookAction): EBookState {
     case "SELECT_CHAPTER":
       return { ...state, selectedChapterId: action.payload };
 
-    case "ADD_WORKSHEET_TO_CHAPTER":
+    case "ADD_ITEM_TO_CHAPTER":
       return {
         ...state,
         chapters: state.chapters.map((ch) =>
           ch.id === action.payload.chapterId
-            ? { ...ch, worksheets: [...ch.worksheets, action.payload.worksheet] }
+            ? { ...ch, items: [...ch.items, action.payload.item] }
             : ch
         ),
         isDirty: true,
       };
 
-    case "REMOVE_WORKSHEET_FROM_CHAPTER":
+    case "REMOVE_ITEM_FROM_CHAPTER":
       return {
         ...state,
         chapters: state.chapters.map((ch) =>
           ch.id === action.payload.chapterId
-            ? { ...ch, worksheets: ch.worksheets.filter((w) => w.id !== action.payload.worksheetId) }
+            ? { ...ch, items: ch.items.filter((w) => w.id !== action.payload.itemId) }
             : ch
         ),
         isDirty: true,
       };
 
-    case "REORDER_WORKSHEETS":
+    case "REORDER_ITEMS":
       return {
         ...state,
         chapters: state.chapters.map((ch) =>
           ch.id === action.payload.chapterId
-            ? { ...ch, worksheets: action.payload.worksheets }
+            ? { ...ch, items: action.payload.items }
             : ch
         ),
         isDirty: true,
@@ -186,7 +186,7 @@ function chaptersToStorage(chapters: PopulatedEBookChapter[]): EBookChapter[] {
   return chapters.map((ch) => ({
     id: ch.id,
     title: ch.title,
-    worksheetIds: ch.worksheets.map((w) => w.id),
+    worksheetIds: ch.items.map((w) => w.id),
   }));
 }
 
@@ -195,8 +195,8 @@ interface EBookContextValue {
   state: EBookState;
   dispatch: React.Dispatch<EBookAction>;
   addChapter: (title?: string) => void;
-  addWorksheetToChapter: (chapterId: string, worksheet: WorksheetReference) => void;
-  removeWorksheetFromChapter: (chapterId: string, worksheetId: string) => void;
+  addItemToChapter: (chapterId: string, item: ContentItemReference) => void;
+  removeItemFromChapter: (chapterId: string, itemId: string) => void;
   save: () => Promise<void>;
   getSelectedChapter: () => PopulatedEBookChapter | null;
 }
@@ -210,16 +210,16 @@ export function EBookProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "ADD_CHAPTER", payload: { title: title || "" } });
   }, []);
 
-  const addWorksheetToChapter = useCallback(
-    (chapterId: string, worksheet: WorksheetReference) => {
-      dispatch({ type: "ADD_WORKSHEET_TO_CHAPTER", payload: { chapterId, worksheet } });
+  const addItemToChapter = useCallback(
+    (chapterId: string, item: ContentItemReference) => {
+      dispatch({ type: "ADD_ITEM_TO_CHAPTER", payload: { chapterId, item } });
     },
     []
   );
 
-  const removeWorksheetFromChapter = useCallback(
-    (chapterId: string, worksheetId: string) => {
-      dispatch({ type: "REMOVE_WORKSHEET_FROM_CHAPTER", payload: { chapterId, worksheetId } });
+  const removeItemFromChapter = useCallback(
+    (chapterId: string, itemId: string) => {
+      dispatch({ type: "REMOVE_ITEM_FROM_CHAPTER", payload: { chapterId, itemId } });
     },
     []
   );
@@ -275,8 +275,8 @@ export function EBookProvider({ children }: { children: React.ReactNode }) {
         state,
         dispatch,
         addChapter,
-        addWorksheetToChapter,
-        removeWorksheetFromChapter,
+        addItemToChapter,
+        removeItemFromChapter,
         save,
         getSelectedChapter,
       }}

@@ -139,11 +139,11 @@ export function LibraryDashboard() {
       // For grammar tables, use the grammar table PDF endpoint
       let pdfUrl: string;
       if (item.type === "grammar-table") {
-        pdfUrl = `/api/worksheets/${item.id}/pdf?type=grammar-table&locale=${locale}`;
+        pdfUrl = `/api/worksheets/${item.id}/grammar-table-pdf-v2?locale=${locale}`;
       } else if (item.type === "ebook") {
         pdfUrl = `/api/ebooks/${item.id}/pdf`;
       } else {
-        pdfUrl = `/api/worksheets/${item.id}/pdf-v2?locale=${locale}`;
+        pdfUrl = `/api/worksheets/${item.id}/pdf-v3?locale=${locale}`;
       }
 
       const res = await authFetch(pdfUrl, { method: "POST" });

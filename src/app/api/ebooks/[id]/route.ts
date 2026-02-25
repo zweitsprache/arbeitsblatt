@@ -20,22 +20,22 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Populate worksheet data for each chapter
+  // Populate content item data for each chapter
   const chapters = ebook.chapters as unknown as EBookChapter[];
-  const allWorksheetIds = chapters.flatMap((ch) => ch.worksheetIds);
+  const allItemIds = chapters.flatMap((ch) => ch.worksheetIds);
   
-  const worksheets = await prisma.worksheet.findMany({
-    where: { id: { in: allWorksheetIds }, userId },
-    select: { id: true, title: true, slug: true },
+  const items = await prisma.worksheet.findMany({
+    where: { id: { in: allItemIds }, userId },
+    select: { id: true, type: true, title: true, slug: true },
   });
   
-  const worksheetMap = new Map(worksheets.map((w) => [w.id, w]));
+  const itemMap = new Map(items.map((w) => [w.id, w]));
   
   const populatedChapters = chapters.map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
-    worksheets: chapter.worksheetIds
-      .map((wId) => worksheetMap.get(wId))
+    items: chapter.worksheetIds
+      .map((wId) => itemMap.get(wId))
       .filter(Boolean),
   }));
 

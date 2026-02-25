@@ -238,7 +238,7 @@ export function WorksheetDashboard() {
   const downloadPdf = async (worksheetId: string, worksheetTitle: string, locale: "DE" | "CH" | "NEUTRAL" = "DE") => {
     setGeneratingPdfId(worksheetId);
     try {
-      const res = await authFetch(`/api/worksheets/${worksheetId}/pdf-v2?locale=${locale}`, {
+      const res = await authFetch(`/api/worksheets/${worksheetId}/pdf-v3?locale=${locale}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preview: false }),

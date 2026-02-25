@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   WorksheetBlock,
   WorksheetSettings,
@@ -13,19 +14,16 @@ import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight,
-  ChevronDown,
   ChevronLeft,
   FileText,
   Menu,
-  CheckCircle2,
-  Circle,
   GraduationCap,
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -88,26 +86,290 @@ function countModuleLessons(mod: CourseModule): number {
   return mod.topics.reduce((sum, t) => sum + t.lessons.length, 0);
 }
 
-// ─── Progress Bar ────────────────────────────────────────────
+// ─── Progress Ring (concept: SVG circle with arc + number) ──
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+function ProgressRing({
+  progress,
+  number,
+}: {
+  progress: number;
+  number: string;
+}) {
+  const circumference = 2 * Math.PI * 20; // r = 20
+  const hasProgress = progress > 0;
+  const isComplete = progress === 100;
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${pct}%` }}
+    <svg width="46" height="46" viewBox="0 0 46 46" className="shrink-0">
+      {/* Background track */}
+      <circle
+        cx="23" cy="23" r="20"
+        fill="none"
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth="2.5"
+      />
+      {/* Progress arc */}
+      {hasProgress && (
+        <circle
+          cx="23" cy="23" r="20"
+          fill="none"
+          stroke={isComplete ? "#F2EDDA" : "rgba(242,237,218,0.7)"}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${(progress / 100) * circumference} ${circumference}`}
+          transform="rotate(-90 23 23)"
+          style={{ transition: "stroke-dasharray 0.5s ease" }}
         />
-      </div>
-      <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-        {completed}/{total}
+      )}
+      {/* Number */}
+      <text
+        x="23" y="24"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="text-cv-sm"
+        style={{
+          fontWeight: 500,
+          fill: isComplete
+            ? "#F2EDDA"
+            : hasProgress
+              ? "rgba(255,255,255,0.7)"
+              : "rgba(255,255,255,0.25)",
+        }}
+      >
+        {number}
+      </text>
+    </svg>
+  );
+}
+
+// ─── Viewer Lesson Item (concept styling) ────────────────────
+
+function ViewerLessonItem({
+  lesson,
+  isActive,
+  isVisited,
+  hasContent,
+  onSelect,
+}: {
+  lesson: CourseLesson;
+  isActive: boolean;
+  isVisited: boolean;
+  hasContent: boolean;
+  onSelect: () => void;
+}) {
+  const isLocked = !hasContent && !isVisited;
+
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "relative flex items-center w-full py-2.5 pl-[62px] pr-3.5 rounded-lg text-left text-cv-xl transition-colors",
+        isLocked ? "cursor-default opacity-40" : "cursor-pointer",
+        isActive ? "bg-[rgba(242,237,218,0.08)]" : "hover:bg-[rgba(255,255,255,0.03)]"
+      )}
+    >
+      {/* Title */}
+      <span
+        className={cn(
+          "flex-1 min-w-0 leading-snug truncate font-normal",
+          isActive
+            ? "text-[#f0f0f0]"
+            : isLocked
+              ? "text-white/35"
+              : "text-white/90"
+        )}
+      >
+        {lesson.title || "Untitled Lesson"}
       </span>
+
+      {/* Active indicator bar */}
+      {isActive && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3.5px] h-7 bg-[#F2EDDA] rounded-l" />
+      )}
+    </button>
+  );
+}
+
+// ─── Viewer Topic Section (animated expand) ──────────────────
+
+function ViewerTopicSection({
+  topic,
+  defaultOpen,
+  selectedLessonId,
+  visitedLessons,
+  onSelectLesson,
+}: {
+  topic: CourseModule["topics"][0];
+  defaultOpen: boolean;
+  selectedLessonId: string | null;
+  visitedLessons: Set<string>;
+  onSelectLesson: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="mb-0.5">
+      {/* Topic header */}
+      <div className="flex items-center gap-4 py-3 pl-7 pr-3.5 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.04)]">
+        <button onClick={() => setOpen(!open)} className="shrink-0">
+          <ChevronRight
+            className={cn(
+              "h-[18px] w-[18px] text-white/35 transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              open && "rotate-90"
+            )}
+          />
+        </button>
+        <button
+          onClick={() => {
+            const firstLesson = topic.lessons[0];
+            if (firstLesson) {
+              onSelectLesson(firstLesson.id);
+              setOpen(true);
+            }
+          }}
+          className="flex-1 min-w-0 text-left"
+        >
+          <span className="text-cv-base font-semibold text-white/80 leading-snug truncate block">
+            {topic.title || "Untitled Topic"}
+          </span>
+        </button>
+      </div>
+
+      {/* Lessons — animated expand */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-1 pt-1 pb-1">
+            {topic.lessons.map((lesson) => {
+              const hasContent = (lesson.blocks ?? []).length > 0;
+              return (
+                <ViewerLessonItem
+                  key={lesson.id}
+                  lesson={lesson}
+                  isActive={lesson.id === selectedLessonId}
+                  isVisited={visitedLessons.has(lesson.id)}
+                  hasContent={hasContent}
+                  onSelect={() => onSelectLesson(lesson.id)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Sidebar Navigation Content ─────────────────────────────
+// ─── Viewer Module Section (progress ring + expand) ──────────
+
+function ViewerModuleSection({
+  mod,
+  moduleIndex,
+  defaultOpen,
+  flatLessons,
+  selectedLessonId,
+  visitedLessons,
+  onSelectLesson,
+}: {
+  mod: CourseModule;
+  moduleIndex: number;
+  defaultOpen: boolean;
+  flatLessons: FlatLesson[];
+  selectedLessonId: string | null;
+  visitedLessons: Set<string>;
+  onSelectLesson: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
+  const moduleCompleted = moduleLessons.filter((f) => visitedLessons.has(f.lesson.id)).length;
+  const moduleLessonCount = moduleLessons.length;
+  const progress = moduleLessonCount > 0 ? Math.round((moduleCompleted / moduleLessonCount) * 100) : 0;
+  const isFullyComplete = progress === 100 && moduleLessonCount > 0;
+  const moduleNumber = String(moduleIndex + 1).padStart(2, "0");
+
+  // Compute per-topic progress for defaultOpen
+  const topicHasProgress = (topic: CourseModule["topics"][0]) => {
+    const visited = topic.lessons.filter((l) => visitedLessons.has(l.id)).length;
+    return visited > 0 && visited < topic.lessons.length;
+  };
+
+  return (
+    <div
+      className={cn(
+        "mb-1.5 rounded-xl transition-colors",
+        open ? "bg-[rgba(255,255,255,0.02)]" : "bg-transparent"
+      )}
+    >
+      {/* Module header */}
+      <div
+        className={cn(
+          "flex items-center gap-4 px-[18px] py-2.5 rounded-xl transition-colors",
+          !open && "hover:bg-[rgba(255,255,255,0.03)]"
+        )}
+      >
+        {/* Progress ring */}
+        <div className="shrink-0">
+          <ProgressRing progress={progress} number={moduleNumber} />
+        </div>
+
+        {/* Title — navigates to first lesson */}
+        <button
+          onClick={() => {
+            const firstLesson = mod.topics[0]?.lessons[0];
+            if (firstLesson) {
+              onSelectLesson(firstLesson.id);
+              setOpen(true);
+            }
+          }}
+          className="flex-1 min-w-0 text-left"
+        >
+          <p className="text-cv-base font-semibold text-white/[0.92] leading-snug">
+            {mod.title || "Untitled Module"}
+          </p>
+        </button>
+
+        {/* Chevron — toggles expand */}
+        <button onClick={() => setOpen(!open)} className="shrink-0">
+          <ChevronRight
+            className={cn(
+              "h-[18px] w-[18px] text-white/25 transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              open && "rotate-90"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Topics expand */}
+      <div
+        className="grid transition-[grid-template-rows] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <div className="px-2 pb-3 pl-8">
+            {/* Thin connecting line */}
+            <div className="border-l-[1.5px] border-white/[0.06] ml-1.5 pl-3">
+              {mod.topics.map((topic) => (
+                <ViewerTopicSection
+                  key={topic.id}
+                  topic={topic}
+                  defaultOpen={topicHasProgress(topic)}
+                  selectedLessonId={selectedLessonId}
+                  visitedLessons={visitedLessons}
+                  onSelectLesson={onSelectLesson}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sidebar Navigation (full concept design) ───────────────
 
 function SidebarNav({
   title,
@@ -117,6 +379,7 @@ function SidebarNav({
   visitedLessons,
   onSelectLesson,
   onShowOverview,
+  onContinue,
 }: {
   title: string;
   structure: CourseModule[];
@@ -125,142 +388,118 @@ function SidebarNav({
   visitedLessons: Set<string>;
   onSelectLesson: (id: string) => void;
   onShowOverview: () => void;
+  onContinue?: () => void;
 }) {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(
-    () => new Set(structure.map((m) => m.id))
-  );
-
-  const toggleModule = (id: string) => {
-    setExpandedModules((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lesson.id)).length;
+  const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  // Module has progress if some lessons visited but not all
+  const moduleHasProgress = (mod: CourseModule) => {
+    const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
+    const visited = moduleLessons.filter((f) => visitedLessons.has(f.lesson.id)).length;
+    return visited > 0 && visited < moduleLessons.length;
+  };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#302f2c] text-white relative overflow-hidden">
+      {/* Ambient glow */}
+      <div
+        className="absolute -top-[100px] -left-[50px] w-[300px] h-[300px] pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(242,237,218,0.04) 0%, transparent 70%)",
+        }}
+      />
+
       {/* Header */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-7 pb-6 shrink-0 relative">
+        {/* Breadcrumb */}
         <button
           onClick={onShowOverview}
-          className="flex items-center gap-2.5 w-full text-left group"
+          className="text-cv-xs font-medium text-white/25 uppercase mb-4 hover:text-white/40 transition-colors"
         >
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-            <GraduationCap className="h-5 w-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-sm leading-tight truncate group-hover:text-primary transition-colors">
-              {title}
-            </h2>
-            <p className="text-[11px] text-muted-foreground">
-              {structure.length} {structure.length === 1 ? "Module" : "Modules"} · {totalLessons} {totalLessons === 1 ? "Lesson" : "Lessons"}
+          ← Overview
+        </button>
+
+        {/* Course title */}
+        <h1 className="text-cv-2xl font-bold text-white/95 leading-snug">
+          {title}
+        </h1>
+
+        {/* Progress bar */}
+        {totalLessons > 0 && (
+          <div className="mt-5">
+            <div className="flex justify-between items-baseline mb-2">
+              <span className="text-cv-xs font-medium text-white/30 uppercase">
+                Progress
+              </span>
+              <span className="text-cv-2xl font-medium text-[#F2EDDA]">
+                {overallProgress}
+                <span className="text-cv-sm text-[rgba(242,237,218,0.5)]">%</span>
+              </span>
+            </div>
+            <div className="h-1 bg-white/[0.06] rounded overflow-hidden">
+              <div
+                className="h-full rounded transition-[width] duration-600 ease-out"
+                style={{
+                  width: `${overallProgress}%`,
+                  background: "linear-gradient(90deg, #F2EDDA, #F7F4E8)",
+                }}
+              />
+            </div>
+            <p className="text-cv-xs text-white/20 mt-1.5">
+              {completedLessons} of {totalLessons} lessons completed
             </p>
           </div>
-        </button>
-        <ProgressBar completed={completedLessons} total={totalLessons} />
+        )}
       </div>
 
-      {/* Navigation */}
-      <ScrollArea className="flex-1">
-        <nav className="p-2 space-y-1" aria-label="Course navigation">
-          {structure.map((mod, moduleIndex) => {
-            const isExpanded = expandedModules.has(mod.id);
-            const moduleLessonCount = countModuleLessons(mod);
-            const moduleCompleted = flatLessons
-              .filter((f) => f.moduleId === mod.id)
-              .filter((f) => visitedLessons.has(f.lesson.id)).length;
-            const isModuleComplete = moduleCompleted === moduleLessonCount && moduleLessonCount > 0;
+      {/* Separator */}
+      <div className="h-px bg-white/[0.06] mx-7" />
 
-            return (
-              <div key={mod.id}>
-                {/* Module header */}
-                <button
-                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-muted/80"
-                  onClick={() => toggleModule(mod.id)}
-                  aria-expanded={isExpanded}
-                >
-                  <span className={cn(
-                    "flex items-center justify-center h-5 w-5 rounded-md text-[10px] font-bold shrink-0",
-                    isModuleComplete
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {moduleIndex + 1}
-                  </span>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto p-4 pb-9 sidebar-scroll">
+        {structure.map((mod, i) => (
+          <ViewerModuleSection
+            key={mod.id}
+            mod={mod}
+            moduleIndex={i}
+            defaultOpen={moduleHasProgress(mod)}
+            flatLessons={flatLessons}
+            selectedLessonId={selectedLessonId}
+            visitedLessons={visitedLessons}
+            onSelectLesson={onSelectLesson}
+          />
+        ))}
+      </div>
 
-                  <span className="flex-1 text-sm font-medium truncate">
-                    {mod.title || "Untitled Module"}
-                  </span>
+      {/* Bottom action */}
+      {onContinue && (
+        <div className="p-5 px-7 border-t border-white/[0.06] shrink-0">
+          <button
+            onClick={onContinue}
+            className="w-full py-3.5 rounded-xl text-cv-base font-bold cursor-pointer transition-all shadow-[0_2px_12px_rgba(242,237,218,0.15)] hover:shadow-[0_4px_20px_rgba(242,237,218,0.25)] hover:-translate-y-px"
+            style={{
+              background: "linear-gradient(135deg, #F2EDDA, #D9D4C0)",
+              color: "#302f2c",
+            }}
+          >
+            Continue Learning →
+          </button>
+        </div>
+      )}
 
-                  <span className="text-[10px] text-muted-foreground tabular-nums mr-1">
-                    {moduleCompleted}/{moduleLessonCount}
-                  </span>
-
-                  {isExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  )}
-                </button>
-
-                {/* Topics & lessons */}
-                {isExpanded && (
-                  <div className="mt-0.5 mb-2 ml-[18px] border-l border-border/60 pl-0">
-                    {mod.topics.map((topic) => (
-                      <div key={topic.id} className="mt-1">
-                        {/* Topic label */}
-                        <div className="flex items-center gap-1.5 px-3 py-1">
-                          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                            {topic.title || "Untitled Topic"}
-                          </span>
-                        </div>
-
-                        {/* Lessons */}
-                        {topic.lessons.map((lesson) => {
-                          const isActive = selectedLessonId === lesson.id;
-                          const isVisited = visitedLessons.has(lesson.id);
-                          const hasContent = (lesson.blocks ?? []).length > 0;
-
-                          return (
-                            <button
-                              key={lesson.id}
-                              className={cn(
-                                "flex items-center gap-2 w-full pl-3 pr-2.5 py-1.5 text-left transition-all rounded-r-md",
-                                isActive
-                                  ? "bg-primary/10 text-primary border-l-2 border-primary -ml-px"
-                                  : "hover:bg-muted/60 border-l-2 border-transparent -ml-px",
-                                !hasContent && "opacity-50"
-                              )}
-                              onClick={() => onSelectLesson(lesson.id)}
-                            >
-                              {isVisited ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                              ) : (
-                                <Circle className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                              )}
-                              <span className={cn(
-                                "text-xs truncate flex-1",
-                                isActive && "font-medium"
-                              )}>
-                                {lesson.title || "Untitled Lesson"}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      </ScrollArea>
+      {/* Animations + scrollbar */}
+      <style>{`
+        @keyframes pulse-ring {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.08); }
+        }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+      `}</style>
     </div>
   );
 }
@@ -274,10 +513,36 @@ export function CourseViewer({
   languageLevel,
   description,
 }: CourseViewerProps) {
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [visitedLessons, setVisitedLessons] = useState<Set<string>>(new Set());
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const initialLesson = searchParams.get("lesson");
+  const didInit = useRef(false);
+
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(initialLesson);
+  const [visitedLessons, setVisitedLessons] = useState<Set<string>>(() => {
+    return initialLesson ? new Set([initialLesson]) : new Set();
+  });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+
+  // Sync URL → state on popstate (back/forward)
+  useEffect(() => {
+    if (didInit.current) return;
+    didInit.current = true;
+  }, []);
+
+  // Sync state → URL whenever selectedLessonId changes
+  useEffect(() => {
+    const current = searchParams.get("lesson");
+    if (selectedLessonId && selectedLessonId !== current) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("lesson", selectedLessonId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    } else if (!selectedLessonId && current) {
+      router.replace(pathname, { scroll: false });
+    }
+  }, [selectedLessonId, pathname, router, searchParams]);
 
   const flatLessons = useMemo(() => flattenLessons(structure), [structure]);
 
@@ -327,6 +592,13 @@ export function CourseViewer({
     setMobileNavOpen(false);
   }, []);
 
+  const firstUnvisited = flatLessons.find((f) => !visitedLessons.has(f.lesson.id));
+  const handleContinue = useCallback(() => {
+    if (firstUnvisited) {
+      handleSelectLesson(firstUnvisited.lesson.id);
+    }
+  }, [firstUnvisited, handleSelectLesson]);
+
   const completedCount = flatLessons.filter((f) => visitedLessons.has(f.lesson.id)).length;
   const pct = flatLessons.length > 0 ? Math.round((completedCount / flatLessons.length) * 100) : 0;
 
@@ -344,14 +616,14 @@ export function CourseViewer({
             <Menu className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">{title}</p>
+            <p className="text-cv-sm font-medium truncate">{title}</p>
             {currentFlat && (
-              <p className="text-[11px] text-muted-foreground truncate">
+              <p className="text-cv-xs text-muted-foreground truncate">
                 {currentFlat.lesson.title}
               </p>
             )}
           </div>
-          <Badge variant="secondary" className="shrink-0 text-[10px]">
+          <Badge variant="secondary" className="shrink-0 text-cv-micro">
             {pct}%
           </Badge>
         </div>
@@ -366,7 +638,7 @@ export function CourseViewer({
 
       {/* Mobile sidebar (Sheet drawer) */}
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="w-80 p-0" showCloseButton={false}>
+        <SheetContent side="left" className="w-[500px] p-0 border-none" showCloseButton={false}>
           <SheetHeader className="sr-only">
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>Course navigation</SheetDescription>
@@ -379,22 +651,23 @@ export function CourseViewer({
             visitedLessons={visitedLessons}
             onSelectLesson={handleSelectLesson}
             onShowOverview={handleShowOverview}
+            onContinue={firstUnvisited ? handleContinue : undefined}
           />
         </SheetContent>
       </Sheet>
 
-      <div className="flex">
+      <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row gap-4 p-4">
         {/* Desktop sidebar */}
         <div
           className={cn(
-            "hidden lg:flex shrink-0 sticky top-0 h-screen transition-all duration-300",
-            desktopSidebarOpen ? "w-80" : "w-0 overflow-hidden"
+            "hidden lg:flex shrink-0 relative transition-all duration-300",
+            desktopSidebarOpen ? "w-[500px]" : "w-0"
           )}
         >
           <aside
             className={cn(
-              "flex flex-col w-80 h-[calc(100vh-2rem)] my-4 ml-4 bg-background border rounded-xl shadow-sm overflow-hidden transition-all duration-300",
-              desktopSidebarOpen ? "opacity-100" : "opacity-0"
+              "flex flex-col w-[500px] h-full rounded-lg overflow-hidden transition-all duration-300",
+              desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
             <SidebarNav
@@ -405,56 +678,90 @@ export function CourseViewer({
               visitedLessons={visitedLessons}
               onSelectLesson={handleSelectLesson}
               onShowOverview={handleShowOverview}
+              onContinue={firstUnvisited ? handleContinue : undefined}
             />
           </aside>
+
+          {/* Sidebar toggle — anchored to sidebar edge */}
+          <button
+            className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors"
+            onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
+            aria-label={desktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {desktopSidebarOpen ? (
+              <ChevronLeft className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
 
-        {/* Desktop sidebar toggle */}
-        <button
-          className={cn(
-            "hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors",
-            desktopSidebarOpen ? "-ml-px" : "ml-0"
-          )}
-          onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
-          aria-label={desktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-        >
-          {desktopSidebarOpen ? (
-            <ChevronLeft className="h-3.5 w-3.5" />
-          ) : (
+        {/* Toggle when sidebar is hidden */}
+        {!desktopSidebarOpen && (
+          <button
+            className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-4"
+            onClick={() => setDesktopSidebarOpen(true)}
+            aria-label="Expand sidebar"
+          >
             <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </button>
+          </button>
+        )}
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0">
-          {!selectedLessonId ? (
-            <CourseOverview
-              title={title}
-              description={description}
-              languageLevel={languageLevel}
-              structure={structure}
-              flatLessons={flatLessons}
-              visitedLessons={visitedLessons}
-              onSelectLesson={handleSelectLesson}
-            />
-          ) : currentFlat && hasContent ? (
-            <LessonContent
-              currentFlat={currentFlat}
-              totalLessons={flatLessons.length}
-              blocks={resolvedBlocks}
-              prevLesson={prevLesson}
-              nextLesson={nextLesson}
-              onSelectLesson={handleSelectLesson}
-            />
-          ) : (
-            <EmptyLesson
-              title={currentFlat?.lesson.title || ""}
-              prevLesson={prevLesson}
-              nextLesson={nextLesson}
-              onSelectLesson={handleSelectLesson}
-            />
+        {/* Right column: header + content */}
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          {/* Breadcrumb header — separate container */}
+          {currentFlat && (
+            <div className="flex items-center gap-2 px-6 py-5 text-cv-sm text-muted-foreground rounded-lg border bg-background shrink-0">
+              <span className="font-medium">{currentFlat.moduleTitle}</span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-medium">{currentFlat.topicTitle}</span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-medium text-foreground">{currentFlat.lesson.title}</span>
+            </div>
           )}
-        </main>
+
+          {/* Content container */}
+          <div className="flex-1 min-h-0 rounded-lg border bg-background overflow-hidden flex justify-center">
+            <style>{`
+              .content-scroll::-webkit-scrollbar { width: 6px; background: transparent; }
+              .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 12px; }
+              .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
+              .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+              .content-scroll::-webkit-scrollbar-button { display: none; }
+              .content-scroll::-webkit-scrollbar-corner { display: none; }
+              .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+            `}</style>
+            <div className="h-full w-full max-w-5xl overflow-y-auto content-scroll pt-2 pb-2">
+              {!selectedLessonId ? (
+                <CourseOverview
+                  title={title}
+                  description={description}
+                  languageLevel={languageLevel}
+                  structure={structure}
+                  flatLessons={flatLessons}
+                  visitedLessons={visitedLessons}
+                  onSelectLesson={handleSelectLesson}
+                />
+              ) : currentFlat && hasContent ? (
+                <LessonContent
+                  currentFlat={currentFlat}
+                  totalLessons={flatLessons.length}
+                  blocks={resolvedBlocks}
+                  prevLesson={prevLesson}
+                  nextLesson={nextLesson}
+                  onSelectLesson={handleSelectLesson}
+                />
+              ) : (
+                <EmptyLesson
+                  title={currentFlat?.lesson.title || ""}
+                  prevLesson={prevLesson}
+                  nextLesson={nextLesson}
+                  onSelectLesson={handleSelectLesson}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -482,8 +789,8 @@ function CourseOverview({
   const firstUnvisited = flatLessons.find((f) => !visitedLessons.has(f.lesson.id));
 
   return (
-    <div className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
-      <div className="bg-background rounded-2xl shadow-sm border overflow-hidden">
+    <div className="py-8 lg:py-12 px-4 sm:px-6">
+      <div className="overflow-hidden">
         {/* Hero */}
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 sm:px-8 py-8 sm:py-10">
           <div className="flex items-start gap-4">
@@ -491,9 +798,9 @@ function CourseOverview({
               <GraduationCap className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
+              <h1 className="text-cv-3xl font-bold tracking-tight">{title}</h1>
               {description && (
-                <p className="text-muted-foreground mt-2 text-sm sm:text-base leading-relaxed">
+                <p className="text-muted-foreground mt-2 text-cv-base leading-relaxed">
                   {description}
                 </p>
               )}
@@ -535,17 +842,17 @@ function CourseOverview({
               >
                 <div className="flex items-start gap-3">
                   <span className={cn(
-                    "flex items-center justify-center h-7 w-7 rounded-lg text-xs font-bold shrink-0 mt-0.5",
+                    "flex items-center justify-center h-7 w-7 rounded-lg text-cv-xs font-bold shrink-0 mt-0.5",
                     isComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     {isComplete ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-base">{mod.title}</h2>
+                    <h2 className="font-semibold text-cv-base">{mod.title}</h2>
                     <div className="mt-2 space-y-1">
                       {mod.topics.map((topic) => (
                         <div key={topic.id}>
-                          <p className="text-xs font-medium text-muted-foreground mb-0.5">
+                          <p className="text-cv-xs font-medium text-muted-foreground mb-0.5">
                             {topic.title}
                           </p>
                           <div className="flex flex-wrap gap-1 ml-1">
@@ -556,7 +863,7 @@ function CourseOverview({
                                   key={lesson.id}
                                   onClick={() => onSelectLesson(lesson.id)}
                                   className={cn(
-                                    "text-[11px] px-2 py-0.5 rounded-full transition-colors",
+                                    "text-cv-xs px-2 py-0.5 rounded-full transition-colors",
                                     visited
                                       ? "bg-primary/10 text-primary hover:bg-primary/20"
                                       : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
@@ -599,24 +906,17 @@ function LessonContent({
   onSelectLesson: (id: string) => void;
 }) {
   return (
-    <div className="max-w-5xl mx-auto py-6 lg:py-8 px-4 sm:px-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 flex-wrap">
-        <span className="font-medium">{currentFlat.moduleTitle}</span>
-        <ChevronRight className="h-3 w-3 shrink-0" />
-        <span className="font-medium">{currentFlat.topicTitle}</span>
-      </div>
-
-      <div className="bg-background rounded-2xl shadow-sm border overflow-hidden">
-        <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b">
-          <p className="text-xs text-muted-foreground mb-1">
+    <div className="py-6 lg:py-8 px-4 sm:px-6">
+      <div className="overflow-hidden">
+        <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4">
+          <p className="text-cv-xs text-muted-foreground mb-1">
             Lesson {currentFlat.globalIndex + 1} of {totalLessons}
           </p>
-          <h2 className="text-xl sm:text-2xl font-bold">
+          <h2 className="text-cv-2xl font-bold">
             {currentFlat.lesson.title}
           </h2>
         </div>
-        <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-4">
+        <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-4 text-cv-base">
           {blocks.map((block) => (
             <ViewerBlockRenderer key={block.id} block={block} mode="online" />
           ))}
@@ -647,13 +947,13 @@ function EmptyLesson({
   onSelectLesson: (id: string) => void;
 }) {
   return (
-    <div className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
-      <div className="bg-background rounded-2xl shadow-sm border p-8 sm:p-12 text-center">
+    <div className="py-8 lg:py-12 px-4 sm:px-6">
+      <div className="p-8 sm:p-12 text-center">
         <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
           <FileText className="h-8 w-8 text-muted-foreground/40" />
         </div>
-        <h2 className="text-xl font-semibold mb-2">{title}</h2>
-        <p className="text-muted-foreground text-sm">
+        <h2 className="text-cv-xl font-semibold mb-2">{title}</h2>
+        <p className="text-muted-foreground text-cv-sm">
           No content available for this lesson yet.
         </p>
       </div>
@@ -682,8 +982,8 @@ function LessonNav({
         >
           <ArrowLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
           <div className="min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Previous</p>
-            <p className="text-sm font-medium truncate">{prev.lesson.title}</p>
+            <p className="text-cv-micro text-muted-foreground uppercase tracking-wider">Previous</p>
+            <p className="text-cv-sm font-medium truncate">{prev.lesson.title}</p>
           </div>
         </button>
       ) : <div className="flex-1" />}
@@ -693,8 +993,8 @@ function LessonNav({
           onClick={() => onSelect(next.lesson.id)}
         >
           <div className="min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Next</p>
-            <p className="text-sm font-medium truncate">{next.lesson.title}</p>
+            <p className="text-cv-micro text-muted-foreground uppercase tracking-wider">Next</p>
+            <p className="text-cv-sm font-medium truncate">{next.lesson.title}</p>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
         </button>

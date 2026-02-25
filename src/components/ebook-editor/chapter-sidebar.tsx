@@ -126,7 +126,7 @@ function SortableChapterItem({
             {chapter.title || t("untitledChapter")}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t("worksheetCount", { count: chapter.worksheets.length })}
+            {t("itemCount", { count: chapter.items.length })}
           </p>
         </div>
       )}

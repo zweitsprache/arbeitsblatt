@@ -10,6 +10,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-asap-condensed);
   --font-mono: var(--font-asap-condensed);
+
+  /* ── Fluid type scale for course viewer (320px → 1440px) ── */
+  --text-cv-micro: clamp(0.6875rem, 0.6607rem + 0.089vw, 0.75rem);      /* 11px → 12px */
+  --text-cv-xs:    clamp(0.8125rem, 0.7589rem + 0.179vw, 0.9375rem);     /* 13px → 15px */
+  --text-cv-sm:    clamp(0.9375rem, 0.8839rem + 0.179vw, 1.0625rem);     /* 15px → 17px */
+  --text-cv-base:  clamp(1.3125rem, 1.2589rem + 0.179vw, 1.4375rem);     /* 21px → 23px */
+  --text-cv-lg:    clamp(1.1875rem, 1.1339rem + 0.179vw, 1.3125rem);     /* 19px → 21px */
+  --text-cv-xl:    clamp(1.3125rem, 1.2054rem + 0.357vw, 1.5625rem);     /* 21px → 25px */
+  --text-cv-2xl:   clamp(1.5rem, 1.3929rem + 0.357vw, 1.75rem);          /* 24px → 28px */
+  --text-cv-3xl:   clamp(1.75rem, 1.5893rem + 0.536vw, 2.125rem);        /* 28px → 34px */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -310,6 +320,7 @@
 .canvas-scroll::-webkit-scrollbar {
   display: none;
 }
+
 
 .scrollbar-hide [data-slot="scroll-area-viewport"] {
   scrollbar-width: none;

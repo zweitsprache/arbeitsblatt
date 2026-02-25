@@ -56,7 +56,7 @@ export async function POST(
     page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
     printUrl: string,
   ): Promise<Uint8Array> {
-    await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 30000 });
+    await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 60000 });
     await page.evaluateHandle("document.fonts.ready");
     await new Promise((r) => setTimeout(r, 500));
 
@@ -161,7 +161,7 @@ export async function POST(
 
       // Navigate to the print page fresh for screenshot (use worksheet version for preview)
       const previewUrl = buildPrintUrl(false);
-      await page.goto(previewUrl, { waitUntil: "networkidle0", timeout: 30000 });
+      await page.goto(previewUrl, { waitUntil: "networkidle0", timeout: 60000 });
       await page.evaluateHandle("document.fonts.ready");
       await new Promise((r) => setTimeout(r, 500));
 

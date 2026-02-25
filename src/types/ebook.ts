@@ -95,18 +95,25 @@ export const DEFAULT_EBOOK_SETTINGS: EBookSettings = {
   showToc: true,
 };
 
-// ─── Worksheet Reference for populated data ─────────────────
-export interface WorksheetReference {
+// ─── Content item types supported in e-book chapters ────────
+export type EBookContentType = "worksheet" | "flashcards" | "cards" | "grammar-table";
+
+// ─── Content item reference for populated data ──────────────
+export interface ContentItemReference {
   id: string;
   title: string;
   slug: string;
+  type: EBookContentType;
 }
 
-// ─── Populated Chapter (with worksheet data) ────────────────
+/** @deprecated Use ContentItemReference instead */
+export type WorksheetReference = ContentItemReference;
+
+// ─── Populated Chapter (with content item data) ─────────────
 export interface PopulatedEBookChapter {
   id: string;
   title: string;
-  worksheets: WorksheetReference[];
+  items: ContentItemReference[];
 }
 
 // ─── Populated E-Book (for editor) ──────────────────────────

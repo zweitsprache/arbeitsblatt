@@ -17,6 +17,9 @@ import {
   FileText,
   Search,
   X,
+  Layers,
+  CreditCard,
+  Table2,
 } from "lucide-react";
 import { useEBook } from "@/store/ebook-store";
 import { useState, useEffect, useCallback } from "react";
@@ -38,28 +41,43 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
-import { WorksheetReference } from "@/types/ebook";
+import { ContentItemReference, EBookContentType } from "@/types/ebook";
 import { authFetch } from "@/lib/auth-fetch";
 import { CoverSettingsPanel } from "./cover-settings-panel";
 
-interface WorksheetItem {
+// ─── Content type configuration ──────────────────────────────
+const CONTENT_TYPES: { type: EBookContentType; labelKey: string; icon: React.ElementType }[] = [
+  { type: "worksheet", labelKey: "worksheets", icon: FileText },
+  { type: "flashcards", labelKey: "flashcards", icon: Layers },
+  { type: "cards", labelKey: "cards", icon: CreditCard },
+  { type: "grammar-table", labelKey: "grammarTables", icon: Table2 },
+];
+
+function getContentTypeIcon(type: EBookContentType) {
+  const config = CONTENT_TYPES.find((ct) => ct.type === type);
+  return config?.icon ?? FileText;
+}
+
+interface FetchedItem {
   id: string;
+  type: string;
   title: string;
   slug: string;
-  blocks: unknown[];
+  blocks?: unknown[];
   updatedAt: string;
 }
 
-interface SortableWorksheetItemProps {
-  worksheet: WorksheetReference;
+interface SortableContentItemProps {
+  item: ContentItemReference;
   onRemove: () => void;
 }
 
-function SortableWorksheetItem({
-  worksheet,
+function SortableContentItem({
+  item,
   onRemove,
-}: SortableWorksheetItemProps) {
-  const tc = useTranslations("common");
+}: SortableContentItemProps) {
+  const t = useTranslations("ebook");
+  const Icon = getContentTypeIcon(item.type);
   const {
     attributes,
     listeners,
@@ -67,7 +85,7 @@ function SortableWorksheetItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: worksheet.id });
+  } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -91,11 +109,13 @@ function SortableWorksheetItem({
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>
 
-      <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+      <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{worksheet.title}</p>
-        <p className="text-xs text-muted-foreground">/{worksheet.slug}</p>
+        <p className="font-medium truncate">{item.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {t(`contentType_${item.type}`)}
+        </p>
       </div>
 
       <Button
@@ -113,11 +133,12 @@ function SortableWorksheetItem({
 export function ChapterContent() {
   const t = useTranslations("ebook");
   const tc = useTranslations("common");
-  const { state, dispatch, getSelectedChapter, addWorksheetToChapter, removeWorksheetFromChapter } = useEBook();
+  const { state, dispatch, getSelectedChapter, addItemToChapter, removeItemFromChapter } = useEBook();
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const [availableWorksheets, setAvailableWorksheets] = useState<WorksheetItem[]>([]);
+  const [availableItems, setAvailableItems] = useState<FetchedItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedType, setSelectedType] = useState<EBookContentType>("worksheet");
 
   const selectedChapter = getSelectedChapter();
 
@@ -128,72 +149,74 @@ export function ChapterContent() {
     })
   );
 
-  const fetchWorksheets = useCallback(async (searchQuery = "") => {
+  const fetchItems = useCallback(async (type: EBookContentType, searchQuery = "") => {
     setLoading(true);
     try {
-      const url = searchQuery
-        ? `/api/worksheets?search=${encodeURIComponent(searchQuery)}`
-        : "/api/worksheets";
-      const res = await authFetch(url);
+      const params = new URLSearchParams({ type });
+      if (searchQuery) params.set("search", searchQuery);
+      const res = await authFetch(`/api/worksheets?${params.toString()}`);
       const data = await res.json();
-      setAvailableWorksheets(data);
+      setAvailableItems(data);
     } catch (err) {
-      console.error("Failed to fetch worksheets:", err);
+      console.error("Failed to fetch items:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Fetch when dialog opens or type changes
   useEffect(() => {
     if (selectorOpen) {
-      fetchWorksheets();
+      setSearch("");
+      fetchItems(selectedType);
     }
-  }, [selectorOpen, fetchWorksheets]);
+  }, [selectorOpen, selectedType, fetchItems]);
 
+  // Debounced search
   useEffect(() => {
     if (!selectorOpen) return;
     const timer = setTimeout(() => {
-      fetchWorksheets(search);
+      fetchItems(selectedType, search);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, selectorOpen, fetchWorksheets]);
+  }, [search, selectorOpen, selectedType, fetchItems]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!selectedChapter) return;
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = selectedChapter.worksheets.findIndex(
+      const oldIndex = selectedChapter.items.findIndex(
         (w) => w.id === active.id
       );
-      const newIndex = selectedChapter.worksheets.findIndex(
+      const newIndex = selectedChapter.items.findIndex(
         (w) => w.id === over.id
       );
-      const newWorksheets = arrayMove(
-        selectedChapter.worksheets,
+      const newItems = arrayMove(
+        selectedChapter.items,
         oldIndex,
         newIndex
       );
       dispatch({
-        type: "REORDER_WORKSHEETS",
-        payload: { chapterId: selectedChapter.id, worksheets: newWorksheets },
+        type: "REORDER_ITEMS",
+        payload: { chapterId: selectedChapter.id, items: newItems },
       });
     }
   };
 
-  const handleAddWorksheet = (worksheet: WorksheetItem) => {
+  const handleAddItem = (item: FetchedItem) => {
     if (!selectedChapter) return;
-    // Check if already added
-    if (selectedChapter.worksheets.some((w) => w.id === worksheet.id)) return;
-    addWorksheetToChapter(selectedChapter.id, {
-      id: worksheet.id,
-      title: worksheet.title,
-      slug: worksheet.slug,
+    if (selectedChapter.items.some((w) => w.id === item.id)) return;
+    addItemToChapter(selectedChapter.id, {
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      type: (item.type || selectedType) as EBookContentType,
     });
   };
 
-  const handleRemoveWorksheet = (worksheetId: string) => {
+  const handleRemoveItem = (itemId: string) => {
     if (!selectedChapter) return;
-    removeWorksheetFromChapter(selectedChapter.id, worksheetId);
+    removeItemFromChapter(selectedChapter.id, itemId);
   };
 
   // Show cover settings when no chapter is selected
@@ -209,8 +232,8 @@ export function ChapterContent() {
     );
   }
 
-  const worksheetIdsInChapter = new Set(
-    selectedChapter.worksheets.map((w) => w.id)
+  const itemIdsInChapter = new Set(
+    selectedChapter.items.map((w) => w.id)
   );
 
   return (
@@ -223,7 +246,7 @@ export function ChapterContent() {
               {selectedChapter.title || t("untitledChapter")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {t("worksheetCount", { count: selectedChapter.worksheets.length })}
+              {t("itemCount", { count: selectedChapter.items.length })}
             </p>
           </div>
           <Button
@@ -233,14 +256,14 @@ export function ChapterContent() {
             onClick={() => setSelectorOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            {t("addWorksheets")}
+            {t("addContent")}
           </Button>
         </div>
       </div>
 
-      {/* Worksheets list */}
+      {/* Items list */}
       <ScrollArea className="flex-1 p-4">
-        {selectedChapter.worksheets.length === 0 ? (
+        {selectedChapter.items.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">{t("emptyChapter")}</p>
@@ -251,7 +274,7 @@ export function ChapterContent() {
               onClick={() => setSelectorOpen(true)}
             >
               <Plus className="h-4 w-4" />
-              {t("addWorksheets")}
+              {t("addContent")}
             </Button>
           </div>
         ) : (
@@ -261,15 +284,15 @@ export function ChapterContent() {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={selectedChapter.worksheets.map((w) => w.id)}
+              items={selectedChapter.items.map((w) => w.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-2">
-                {selectedChapter.worksheets.map((worksheet) => (
-                  <SortableWorksheetItem
-                    key={worksheet.id}
-                    worksheet={worksheet}
-                    onRemove={() => handleRemoveWorksheet(worksheet.id)}
+                {selectedChapter.items.map((item) => (
+                  <SortableContentItem
+                    key={item.id}
+                    item={item}
+                    onRemove={() => handleRemoveItem(item.id)}
                   />
                 ))}
               </div>
@@ -278,12 +301,31 @@ export function ChapterContent() {
         )}
       </ScrollArea>
 
-      {/* Worksheet Selector Dialog */}
+      {/* Content Selector Dialog */}
       <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>{t("selectWorksheets")}</DialogTitle>
+            <DialogTitle>{t("selectContent")}</DialogTitle>
           </DialogHeader>
+
+          {/* Content type tabs */}
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            {CONTENT_TYPES.map(({ type, labelKey, icon: Icon }) => (
+              <button
+                key={type}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                  selectedType === type
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setSelectedType(type)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {t(labelKey)}
+              </button>
+            ))}
+          </div>
 
           {/* Search */}
           <div className="relative">
@@ -304,43 +346,44 @@ export function ChapterContent() {
             )}
           </div>
 
-          {/* Worksheets list */}
+          {/* Items list */}
           <ScrollArea className="flex-1 -mx-6 px-6">
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 {tc("loading")}
               </div>
-            ) : availableWorksheets.length === 0 ? (
+            ) : availableItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {t("noWorksheetsSelected")}
+                {t("noItemsFound")}
               </div>
             ) : (
               <div className="space-y-2 py-2">
-                {availableWorksheets.map((worksheet) => {
-                  const isAdded = worksheetIdsInChapter.has(worksheet.id);
+                {availableItems.map((item) => {
+                  const isAdded = itemIdsInChapter.has(item.id);
+                  const Icon = getContentTypeIcon((item.type || selectedType) as EBookContentType);
                   return (
                     <div
-                      key={worksheet.id}
+                      key={item.id}
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
                         isAdded
                           ? "bg-primary/5 border-primary/30"
                           : "hover:bg-muted"
                       )}
-                      onClick={() => !isAdded && handleAddWorksheet(worksheet)}
+                      onClick={() => !isAdded && handleAddItem(item)}
                     >
-                      <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{worksheet.title}</p>
+                        <p className="font-medium truncate">{item.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {Array.isArray(worksheet.blocks)
-                            ? `${worksheet.blocks.length} blocks`
-                            : "Empty"}
+                          {item.type === "worksheet" && Array.isArray(item.blocks)
+                            ? `${item.blocks.length} blocks`
+                            : t(`contentType_${(item.type || selectedType) as EBookContentType}`)}
                         </p>
                       </div>
                       {isAdded ? (
                         <span className="text-xs text-primary font-medium">
-                          Added
+                          {t("added")}
                         </span>
                       ) : (
                         <Button variant="outline" size="sm">

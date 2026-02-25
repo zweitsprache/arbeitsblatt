@@ -51,13 +51,13 @@ type CourseAction =
   | { type: "SET_TITLE"; payload: string }
   // Module actions
   | { type: "ADD_MODULE"; payload: { title: string } }
-  | { type: "UPDATE_MODULE"; payload: { id: string; title: string } }
+  | { type: "UPDATE_MODULE"; payload: { id: string; title?: string; image?: string | null } }
   | { type: "REMOVE_MODULE"; payload: string }
   | { type: "REORDER_MODULES"; payload: CourseModule[] }
   | { type: "SELECT_MODULE"; payload: string | null }
   // Topic actions
   | { type: "ADD_TOPIC"; payload: { moduleId: string; title: string } }
-  | { type: "UPDATE_TOPIC"; payload: { moduleId: string; topicId: string; title: string } }
+  | { type: "UPDATE_TOPIC"; payload: { moduleId: string; topicId: string; title?: string; image?: string | null } }
   | { type: "REMOVE_TOPIC"; payload: { moduleId: string; topicId: string } }
   | { type: "REORDER_TOPICS"; payload: { moduleId: string; topics: CourseTopic[] } }
   | { type: "SELECT_TOPIC"; payload: { moduleId: string; topicId: string } | null }
@@ -130,6 +130,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
       const newModule: CourseModule = {
         id: uuidv4(),
         title: action.payload.title || `Module ${state.structure.length + 1}`,
+        image: null,
         topics: [],
       };
       return {
@@ -147,7 +148,8 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         ...state,
         structure: mapModule(state.structure, action.payload.id, (mod) => ({
           ...mod,
-          title: action.payload.title,
+          ...(action.payload.title !== undefined && { title: action.payload.title }),
+          ...(action.payload.image !== undefined && { image: action.payload.image }),
         })),
         isDirty: true,
       };
@@ -185,6 +187,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
       const newTopic: CourseTopic = {
         id: uuidv4(),
         title: action.payload.title || "New Topic",
+        image: null,
         lessons: [],
       };
       return {
@@ -206,7 +209,8 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
           mapTopic(mod, action.payload.topicId, (topic) => ({
             ...topic,
-            title: action.payload.title,
+            ...(action.payload.title !== undefined && { title: action.payload.title }),
+            ...(action.payload.image !== undefined && { image: action.payload.image }),
           }))
         ),
         isDirty: true,

@@ -107,7 +107,7 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
 
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-xl", 2: "text-xl", 3: "text-lg" };
+  const sizes = { 1: "text-cv-xl", 2: "text-cv-xl", 3: "text-cv-lg" };
   return <Tag className={`${sizes[block.level]}`} style={block.level === 1 ? { marginBottom: -4 } : undefined}>{block.content}</Tag>;
 }
 
@@ -235,12 +235,12 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
   }, [block.items, block.showWordBank]);
 
   const sizeClasses: Record<string, string> = {
-    xs: "text-xs",
-    sm: "text-sm",
-    base: "text-base",
-    lg: "text-lg",
-    xl: "text-xl",
-    "2xl": "text-2xl",
+    xs: "text-cv-xs",
+    sm: "text-cv-sm",
+    base: "text-cv-base",
+    lg: "text-cv-lg",
+    xl: "text-cv-xl",
+    "2xl": "text-cv-2xl",
   };
 
   const alignClasses: Record<string, string> = {
@@ -325,8 +325,8 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
         >
           <span
-            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
-            style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
+            style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
           >
             {String(i + 1).padStart(2, "0")}
           </span>
@@ -410,7 +410,7 @@ function MultipleChoiceView({
                 }
               }}
             >
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
               {interactive ? (
@@ -431,10 +431,10 @@ function MultipleChoiceView({
               )}
               <span className={`flex-1${showSolutions && isCorrect ? ' text-green-800 font-semibold' : ''}`}>{opt.text}</span>
               {showResults && isCorrect && (
-                <span className="text-xs font-medium text-green-600">{t("correctResult")}</span>
+                <span className="text-cv-xs font-medium text-green-600">{t("correctResult")}</span>
               )}
               {showResults && isSelected && !isCorrect && (
-                <span className="text-xs font-medium text-red-600">{t("incorrectResult")}</span>
+                <span className="text-cv-xs font-medium text-red-600">{t("incorrectResult")}</span>
               )}
             </div>
           );
@@ -513,7 +513,7 @@ function FillInBlankView({
                   placeholder={tb("fillInBlankPlaceholder")}
                 />
                 {showResults && isWrong && (
-                  <span className="block text-xs text-green-600 text-center mt-0.5">
+                  <span className="block text-cv-xs text-green-600 text-center mt-0.5">
                     {correctAnswer}
                   </span>
                 )}
@@ -597,7 +597,7 @@ function FillInBlankItemsView({
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-md" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
-            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
+            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-cv-sm">
               {word}
             </span>
           ))}
@@ -614,8 +614,8 @@ function FillInBlankItemsView({
             style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
           >
             <span
-              className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
-              style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+              className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
+              style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
             >
               {String(idx + 1).padStart(2, "0")}
             </span>
@@ -667,7 +667,7 @@ function FillInBlankItemsView({
                           placeholder={tb("fillInBlankPlaceholder")}
                         />
                         {showResults && isWrong && (
-                          <span className="block text-xs text-green-600 text-center mt-0.5">
+                          <span className="block text-cv-xs text-green-600 text-center mt-0.5">
                             {correctAnswer}
                           </span>
                         )}
@@ -811,13 +811,13 @@ function MatchingView({
                 className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex-1">{pair.left}</span>
                 {showSolutions ? (
                   <span
-                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0"
                   >
                     {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
                   </span>
@@ -836,14 +836,14 @@ function MatchingView({
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
                 {showSolutions ? (
-                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
                     {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
                   </span>
                 ) : (
                   <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
                 )}
                 <span className="flex-1">{pair.right}</span>
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String.fromCharCode(65 + i)}
                 </span>
               </div>
@@ -861,7 +861,7 @@ function MatchingView({
         <p className="text-muted-foreground">{block.instruction}</p>
       )}
       {interactive && !showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {activeLeftId ? t("matchingInstructionActive") : t("matchingInstructionDefault")}
         </p>
       )}
@@ -898,12 +898,12 @@ function MatchingView({
                   ${borderClass} ${bgClass}
                   ${interactive && !showResults ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex-1">{pair.left}</span>
                 {color && !showResults && (
-                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
+                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-cv-micro font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
                   </span>
                 )}
@@ -940,12 +940,12 @@ function MatchingView({
                   ${borderClass} ${bgClass}
                   ${interactive && !showResults && activeLeftId ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
               >
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String.fromCharCode(65 + i)}
                 </span>
                 <span className="flex-1">{pair.right}</span>
                 {color && !showResults && (
-                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
+                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-cv-micro font-bold flex items-center justify-center shrink-0`}>
                     {colorIdx !== undefined ? colorIdx + 1 : ""}
                   </span>
                 )}
@@ -955,7 +955,7 @@ function MatchingView({
         </div>
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
         </p>
       )}
@@ -1092,7 +1092,7 @@ function TwoColumnFillView({
                 ) : (
                   <input
                     type="text"
-                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-sm px-1 py-0.5 focus:border-primary"
+                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-cv-sm px-1 py-0.5 focus:border-primary"
                     value={answers[item.id] || ""}
                     onChange={(e) => handleChange(item.id, e.target.value)}
                     placeholder="…"
@@ -1113,7 +1113,7 @@ function TwoColumnFillView({
                 ) : (
                   <input
                     type="text"
-                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-sm px-1 py-0.5 focus:border-primary"
+                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-cv-sm px-1 py-0.5 focus:border-primary"
                     value={answers[item.id] || ""}
                     onChange={(e) => handleChange(item.id, e.target.value)}
                     placeholder="…"
@@ -1198,7 +1198,7 @@ function WordBankView({ block }: { block: WordBankBlock }) {
   const tb = useTranslations("blockRenderer");
   return (
     <div className="border-2 border-dashed border-muted-foreground/20 rounded p-4">
-      <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+      <p className="text-cv-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
         {tb("wordBank")}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -1228,7 +1228,7 @@ function NumberLineView({ block }: { block: NumberLineBlock }) {
           {ticks.map((v) => (
             <div key={v} className="flex flex-col items-center">
               <div className="h-3 w-0.5 bg-foreground" />
-              <span className="text-xs mt-1 text-muted-foreground">{v}</span>
+              <span className="text-cv-xs mt-1 text-muted-foreground">{v}</span>
             </div>
           ))}
         </div>
@@ -1309,7 +1309,7 @@ function TrueFalseMatrixView({
               <tr key={stmt.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-2">
                   <div className="flex items-center gap-3">
-                    <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
+                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
                     <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
@@ -1366,7 +1366,7 @@ function TrueFalseMatrixView({
         </tbody>
       </table>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: block.statements.filter((s) => answers[s.id] === s.correctAnswer).length, total: block.statements.length })}
         </p>
       )}
@@ -1421,7 +1421,7 @@ function ArticleTrainingView({
             return (
               <tr key={item.id} className="border-b last:border-b-0">
                 <td className="p-2 text-center">
-                  <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted">
+                  <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
                     {String(idx + 1).padStart(2, "0")}
                   </span>
                 </td>
@@ -1455,7 +1455,7 @@ function ArticleTrainingView({
                 {block.showWritingLine && (
                   <td className="py-2 px-2">
                     {showSolutions ? (
-                      <span className="text-green-800 font-semibold text-sm">{item.correctArticle} {item.text}</span>
+                      <span className="text-green-800 font-semibold text-cv-sm">{item.correctArticle} {item.text}</span>
                     ) : (
                       <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
                     )}
@@ -1467,7 +1467,7 @@ function ArticleTrainingView({
         </tbody>
       </table>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: block.items.filter((item) => answers[item.id] === item.correctArticle).length, total: block.items.length })}
         </p>
       )}
@@ -1605,11 +1605,11 @@ function OrderItemsView({
               className={`flex items-center gap-3 py-2 border-b last:border-b-0 transition-colors ${borderClass} ${bgClass}`}
             >
               {interactive ? (
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </span>
               ) : showSolutions ? (
-                <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
                   {item.correctPosition}
                 </span>
               ) : (
@@ -1637,7 +1637,7 @@ function OrderItemsView({
                 </div>
               )}
               {showResults && (
-                <span className={`text-xs font-medium ${isCorrectPosition ? "text-green-600" : "text-red-600"}`}>
+                <span className={`text-cv-xs font-medium ${isCorrectPosition ? "text-green-600" : "text-red-600"}`}>
                   {isCorrectPosition ? "✓" : t("correctPosition", { position: item.correctPosition })}
                 </span>
               )}
@@ -1646,7 +1646,7 @@ function OrderItemsView({
         })}
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: displayItems.filter(
             (item, i) => item && item.correctPosition === i + 1
           ).length, total: block.items.length })}
@@ -1844,8 +1844,8 @@ function InlineChoicesView({
           style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
         >
           <span
-            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center"
-            style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
+            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
+            style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
           >
             {String(idx + 1).padStart(2, "0")}
           </span>
@@ -2067,7 +2067,7 @@ function SortingCategoriesView({
                     {cat.correctItems.map((itemId) => {
                       const item = block.items.find((it) => it.id === itemId);
                       return item ? (
-                        <div key={itemId} className="text-green-800 font-semibold text-sm">{item.text}</div>
+                        <div key={itemId} className="text-green-800 font-semibold text-cv-sm">{item.text}</div>
                       ) : null;
                     })}
                   </div>
@@ -2162,7 +2162,7 @@ function SortingCategoriesView({
                         </button>
                       )}
                       {showResults && (
-                        <span className={`text-xs font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                        <span className={`text-cv-xs font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}>
                           {isCorrect ? "✓" : "✗"}
                         </span>
                       )}
@@ -2175,7 +2175,7 @@ function SortingCategoriesView({
         })}
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
             const cat = block.categories.find((c) => c.id === catId);
             if (!cat) return total;
@@ -2287,7 +2287,7 @@ function UnscrambleWordsView({
                   : ""
               }`}
             >
-              <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
+              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="font-semibold select-none shrink-0 inline-block text-left tracking-widest" style={{ width: `${maxWordLength * 0.7}em` }}>
@@ -2315,7 +2315,7 @@ function UnscrambleWordsView({
                     placeholder="..."
                   />
                   {showResults && isWrong && (
-                    <span className="text-xs text-green-600 mt-0.5 block">
+                    <span className="text-cv-xs text-green-600 mt-0.5 block">
                       {item.word}
                     </span>
                   )}
@@ -2332,7 +2332,7 @@ function UnscrambleWordsView({
         })}
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", {
             correct: block.words.filter(
               (w) =>
@@ -2447,7 +2447,7 @@ function FixSentencesView({
               }`}
             >
               <div className="flex items-start gap-3">
-                <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }} className="font-bold text-muted-foreground bg-muted shrink-0">
+                <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
@@ -2505,12 +2505,12 @@ function FixSentencesView({
                     ))}
                   </div>
                   {isPrint && showSolutions ? (
-                    <div className="mt-2 text-green-800 font-semibold text-sm">{correctParts.join(" ")}</div>
+                    <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
                   ) : isPrint ? (
                     <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ) : null}
                   {showResults && !isFullyCorrect && (
-                    <p className="text-xs text-green-600 mt-2">
+                    <p className="text-cv-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
                     </p>
                   )}
@@ -2521,7 +2521,7 @@ function FixSentencesView({
         })}
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", {
             correct: block.sentences.filter((s) => {
               const correctParts = s.sentence.split(" | ").map((p) => p.trim());
@@ -2566,7 +2566,7 @@ function CompleteSentencesView({
             key={item.id}
             className="flex items-center gap-3 py-2 border-b last:border-b-0"
           >
-            <span style={{ width: 20, height: 20, minWidth: 20, fontSize: 9, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0">
+            <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
               {String(i + 1).padStart(2, "0")}
             </span>
             <span className="shrink-0">{item.beginning}</span>
@@ -2677,7 +2677,7 @@ function VerbTableView({
                 placeholder="…"
               />
               {showResults && isWrong && (
-                <span className="text-xs text-green-600 mt-0.5 block">{row.conjugation}</span>
+                <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation}</span>
               )}
             </span>
           ) : (
@@ -2713,7 +2713,7 @@ function VerbTableView({
                   placeholder="…"
                 />
                 {showResults && isWrong2 && (
-                  <span className="text-xs text-green-600 mt-0.5 block">{row.conjugation2}</span>
+                  <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation2}</span>
                 )}
               </span>
             ) : (
@@ -2765,7 +2765,7 @@ function VerbTableView({
         {block.pluralRows.map((row) => renderRow(row))}
       </div>
       {showResults && (
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-cv-xs text-muted-foreground mt-2">
           {t("resultCount", { correct: correctCount, total: totalCount })}
         </p>
       )}
@@ -2876,7 +2876,7 @@ function DialogueView({
         ) : (
           <span
             key={i}
-            className={`inline-block px-2 py-0.5 text-center mx-1 ${showSolutions ? "text-green-600 text-xs font-medium" : ""}`}
+            className={`inline-block px-2 py-0.5 text-center mx-1 ${showSolutions ? "text-green-600 text-cv-xs font-medium" : ""}`}
             style={{ borderBottom: '1px dashed var(--color-muted-foreground)', ...widthStyle }}
           >
             {showSolutions ? correctAnswer : "\u00A0"}
@@ -2890,7 +2890,7 @@ function DialogueView({
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <p className="text-base text-muted-foreground">{block.instruction}</p>
+        <p className="text-cv-base text-muted-foreground">{block.instruction}</p>
       )}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
@@ -2899,7 +2899,7 @@ function DialogueView({
             {[...gapAnswers]
               .sort(() => Math.random() - 0.5)
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
                   {text}
                 </span>
               ))}
@@ -2910,10 +2910,10 @@ function DialogueView({
       <div className="space-y-0">
         {block.items.map((item, i) => (
           <div key={item.id} className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}>
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+            <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="text-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
+            <span className="text-cv-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
               {speakerIconMap[item.icon] || speakerIconMap.circle}
             </span>
             <div className="flex-1 flex flex-wrap items-baseline">

@@ -11,6 +11,7 @@ export interface CourseLesson {
 export interface CourseTopic {
   id: string;
   title: string;
+  image: string | null;
   lessons: CourseLesson[];
 }
 
@@ -18,6 +19,7 @@ export interface CourseTopic {
 export interface CourseModule {
   id: string;
   title: string;
+  image: string | null;
   topics: CourseTopic[];
 }
 
@@ -78,8 +80,10 @@ export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
 export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[] {
   return modules.map((mod) => ({
     ...mod,
+    image: mod.image ?? null,
     topics: mod.topics.map((topic) => ({
       ...topic,
+      image: topic.image ?? null,
       lessons: topic.lessons.map((lesson) => {
         // Already migrated
         if (Array.isArray(lesson.blocks)) return lesson;

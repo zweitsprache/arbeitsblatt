@@ -48,7 +48,7 @@ export default async function EditEBookPage({
 
   const worksheets = await prisma.worksheet.findMany({
     where: { id: { in: allWorksheetIds }, userId: session.user.id },
-    select: { id: true, title: true, slug: true },
+    select: { id: true, title: true, slug: true, type: true },
   });
 
   const worksheetMap = new Map(worksheets.map((w) => [w.id, w]));
@@ -56,9 +56,12 @@ export default async function EditEBookPage({
   const populatedChapters = chapters.map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
-    worksheets: chapter.worksheetIds
-      .map((wId) => worksheetMap.get(wId))
-      .filter((w): w is { id: string; title: string; slug: string } => !!w),
+    items: chapter.worksheetIds
+      .map((wId) => {
+        const w = worksheetMap.get(wId);
+        return w ? { id: w.id, title: w.title, slug: w.slug, type: (w.type || "worksheet") as "worksheet" | "flashcards" | "cards" | "grammar-table" } : null;
+      })
+      .filter((w): w is NonNullable<typeof w> => !!w),
   }));
 
   const doc: PopulatedEBookDocument = {

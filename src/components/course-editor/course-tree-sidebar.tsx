@@ -20,6 +20,8 @@ import {
   Layers,
   FileText,
   Settings,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { useCourse } from "@/store/course-store";
 import { useState } from "react";
@@ -29,6 +31,8 @@ import {
   CourseTopic,
   CourseLesson,
 } from "@/types/course";
+import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
+import { useUpload } from "@/lib/use-upload";
 
 // ─── Lesson Item ─────────────────────────────────────────────
 function LessonItem({
@@ -159,6 +163,8 @@ function TopicItem({
   const [expanded, setExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(topic.title);
+  const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
+  const { upload } = useUpload();
 
   const handleSubmitRename = () => {
     if (editTitle.trim()) {
@@ -259,6 +265,15 @@ function TopicItem({
               {tc("rename")}
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageBrowserOpen(true);
+              }}
+            >
+              <ImagePlus className="h-3.5 w-3.5 mr-2" />
+              {tc("image")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className="text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
@@ -274,6 +289,45 @@ function TopicItem({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {topic.image && (
+        <div className="pl-10 pr-2 py-1">
+          <div className="relative group/img inline-block">
+            <img src={topic.image} alt="" className="h-10 rounded object-cover" />
+            <button
+              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_TOPIC",
+                  payload: { moduleId, topicId: topic.id, image: null },
+                })
+              }
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <MediaBrowserDialog
+        open={imageBrowserOpen}
+        onOpenChange={setImageBrowserOpen}
+        onSelectUrl={(url) => {
+          dispatch({
+            type: "UPDATE_TOPIC",
+            payload: { moduleId, topicId: topic.id, image: url },
+          });
+        }}
+        onSelectFile={async (file) => {
+          const result = await upload(file);
+          if (result?.url) {
+            dispatch({
+              type: "UPDATE_TOPIC",
+              payload: { moduleId, topicId: topic.id, image: result.url },
+            });
+          }
+        }}
+      />
 
       {expanded && (
         <div>
@@ -321,6 +375,8 @@ function ModuleItem({
   const [expanded, setExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(mod.title);
+  const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
+  const { upload } = useUpload();
 
   const handleSubmitRename = () => {
     if (editTitle.trim()) {
@@ -419,6 +475,15 @@ function ModuleItem({
               {tc("rename")}
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageBrowserOpen(true);
+              }}
+            >
+              <ImagePlus className="h-3.5 w-3.5 mr-2" />
+              {tc("image")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className="text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
@@ -433,6 +498,45 @@ function ModuleItem({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {mod.image && (
+        <div className="px-2 py-1">
+          <div className="relative group/img inline-block">
+            <img src={mod.image} alt="" className="h-12 rounded object-cover" />
+            <button
+              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_MODULE",
+                  payload: { id: mod.id, image: null },
+                })
+              }
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <MediaBrowserDialog
+        open={imageBrowserOpen}
+        onOpenChange={setImageBrowserOpen}
+        onSelectUrl={(url) => {
+          dispatch({
+            type: "UPDATE_MODULE",
+            payload: { id: mod.id, image: url },
+          });
+        }}
+        onSelectFile={async (file) => {
+          const result = await upload(file);
+          if (result?.url) {
+            dispatch({
+              type: "UPDATE_MODULE",
+              payload: { id: mod.id, image: result.url },
+            });
+          }
+        }}
+      />
 
       {expanded && (
         <div className="mt-0.5">

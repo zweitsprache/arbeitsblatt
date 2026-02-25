@@ -1,17 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
 import {
   EBookChapter,
   EBookCoverSettings,
   EBookSettings,
+  EBookContentType,
   DEFAULT_EBOOK_SETTINGS,
   DEFAULT_EBOOK_COVER_SETTINGS,
 } from "@/types/ebook";
 import { EBookViewer } from "@/components/viewer/ebook-viewer";
 
-// This page is used by Puppeteer for PDF rendering
+// This page is rendered by Puppeteer to produce ONLY cover + TOC pages.
+// Individual content PDFs are generated separately and merged by the PDF API route.
 export default async function PrintEBookPage({
   params,
 }: {
@@ -19,7 +20,7 @@ export default async function PrintEBookPage({
 }) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  
+
   const ebook = await prisma.eBook.findUnique({ where: { slug } });
 
   if (!ebook) {
@@ -36,46 +37,32 @@ export default async function PrintEBookPage({
     ...(ebook.settings as unknown as Partial<EBookSettings>),
   };
 
-  // Fetch all worksheets referenced in chapters
-  const allWorksheetIds = chapters.flatMap((ch) => ch.worksheetIds);
-  const worksheetsData = await prisma.worksheet.findMany({
-    where: { id: { in: allWorksheetIds } },
+  // Fetch item metadata (title + type only, no blocks needed)
+  const allItemIds = chapters.flatMap((ch) => ch.worksheetIds);
+  const itemsData = await prisma.worksheet.findMany({
+    where: { id: { in: allItemIds } },
+    select: { id: true, type: true, title: true, slug: true },
   });
+  const itemMap = new Map(itemsData.map((i) => [i.id, i]));
 
-  // Build worksheets map
-  const worksheetsMap = new Map(
-    worksheetsData.map((ws) => [
-      ws.id,
-      {
-        id: ws.id,
-        title: ws.title,
-        slug: ws.slug,
-        blocks: ws.blocks as unknown as WorksheetBlock[],
-        settings: {
-          ...DEFAULT_SETTINGS,
-          ...(ws.settings as unknown as Partial<WorksheetSettings>),
-        },
-      },
-    ])
-  );
-
-  // Build populated chapters
+  // Build populated chapters (only title + type needed for TOC)
   const populatedChapters = chapters.map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
-    worksheets: chapter.worksheetIds
+    items: chapter.worksheetIds
       .map((wId) => {
-        const ws = worksheetsMap.get(wId);
-        return ws ? { id: ws.id, title: ws.title, slug: ws.slug } : null;
+        const item = itemMap.get(wId);
+        return item
+          ? { id: item.id, title: item.title, slug: item.slug, type: (item.type || "worksheet") as EBookContentType }
+          : null;
       })
-      .filter((w): w is { id: string; title: string; slug: string } => !!w),
+      .filter((w): w is { id: string; title: string; slug: string; type: EBookContentType } => !!w),
   }));
 
   return (
     <EBookViewer
       title={ebook.title}
       chapters={populatedChapters}
-      worksheets={worksheetsMap}
       coverSettings={coverSettings}
       settings={settings}
       mode="print"

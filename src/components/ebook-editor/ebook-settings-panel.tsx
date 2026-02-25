@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -19,6 +18,7 @@ import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 
 export function EBookSettingsPanel() {
   const t = useTranslations("ebook");
+  const tb = useTranslations("toolbar");
   const { state, dispatch } = useEBook();
   const { settings } = state;
 
@@ -37,13 +37,13 @@ export function EBookSettingsPanel() {
   };
 
   return (
-    <div className="w-72 bg-background border-l flex flex-col shrink-0">
+    <div className="w-72 bg-background border-l flex flex-col shrink-0 h-full overflow-hidden">
       {/* Header */}
       <div className="p-3 border-b">
         <h2 className="font-semibold text-sm">{t("settings")}</h2>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-3 space-y-4">
           {/* Page Settings */}
           <div className="space-y-3">
@@ -298,9 +298,125 @@ export function EBookSettingsPanel() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Organization */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-organization" className="text-sm">
+                {tb("organization")}
+              </Label>
+              <Input
+                id="brand-organization"
+                value={settings.brandSettings?.organization ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      organization: e.target.value,
+                    },
+                  })
+                }
+                placeholder={tb("organizationPlaceholder")}
+              />
+            </div>
+
+            {/* Teacher */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-teacher" className="text-sm">
+                {tb("teacher")}
+              </Label>
+              <Input
+                id="brand-teacher"
+                value={settings.brandSettings?.teacher ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      teacher: e.target.value,
+                    },
+                  })
+                }
+                placeholder={tb("teacherPlaceholder")}
+              />
+            </div>
+
+            {/* Header Right */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-header-right" className="text-sm">
+                {tb("headerRight")}
+              </Label>
+              <Input
+                id="brand-header-right"
+                value={settings.brandSettings?.headerRight ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      headerRight: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            {/* Footer Left */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-footer-left" className="text-sm">
+                {tb("footerLeft")}
+              </Label>
+              <Input
+                id="brand-footer-left"
+                value={settings.brandSettings?.footerLeft ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      footerLeft: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            {/* Footer Center */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-footer-center" className="text-sm">
+                {tb("footerCenter")}
+              </Label>
+              <Input
+                id="brand-footer-center"
+                value={settings.brandSettings?.footerCenter ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      footerCenter: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            {/* Footer Right */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand-footer-right" className="text-sm">
+                {tb("footerRight")}
+              </Label>
+              <Input
+                id="brand-footer-right"
+                value={settings.brandSettings?.footerRight ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    brandSettings: {
+                      ...settings.brandSettings,
+                      footerRight: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

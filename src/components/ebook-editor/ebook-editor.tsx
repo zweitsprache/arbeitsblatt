@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EBookProvider, useEBook } from "@/store/ebook-store";
 import { ChapterSidebar } from "./chapter-sidebar";
 import { ChapterContent } from "./chapter-content";
-import { EBookSettingsPanel } from "./ebook-settings-panel";
 import { EBookToolbar } from "./ebook-toolbar";
 import { PopulatedEBookDocument } from "@/types/ebook";
+
+// Dynamic import to avoid Radix Select SSR hydration mismatch (aria-controls IDs)
+const EBookSettingsPanel = dynamic(
+  () => import("./ebook-settings-panel").then((m) => m.EBookSettingsPanel),
+  { ssr: false },
+);
 
 function EditorInner({
   initialData,

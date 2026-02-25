@@ -458,7 +458,7 @@ export async function GET(
 
     await page.setContent(html, {
       waitUntil: "domcontentloaded",
-      timeout: 30000,
+      timeout: 60000,
     });
 
     // Wait for fonts and images to load
