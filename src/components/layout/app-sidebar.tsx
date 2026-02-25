@@ -17,6 +17,7 @@ import {
   TableProperties,
   Store,
   Image,
+  GraduationCap,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -76,6 +77,14 @@ const sections: NavSection[] = [
     items: [
       { href: "/ebooks/new", labelKey: "newEbook", icon: Plus },
       { href: "/ebooks", labelKey: "ebooks", icon: Library },
+    ],
+  },
+  {
+    titleKey: "courses",
+    icon: GraduationCap,
+    items: [
+      { href: "/courses/new", labelKey: "newCourse", icon: Plus },
+      { href: "/courses", labelKey: "courseLibrary", icon: Library },
     ],
   },
   {
