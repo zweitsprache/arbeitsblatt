@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { useCourse } from "@/store/course-store";
 import { useCallback } from "react";
+import { Brand } from "@/types/worksheet";
+import { SidebarTheme } from "@/types/course";
 
 interface CourseSettingsPanelProps {
   isFullPanel?: boolean;
@@ -86,6 +88,48 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
             placeholder={t("descriptionPlaceholder")}
             rows={3}
           />
+        </div>
+
+        {/* Brand */}
+        <div className="space-y-1.5">
+          <Label htmlFor="brand" className="text-sm">
+            {t("brand")}
+          </Label>
+          <Select
+            value={settings.brand || "edoomio"}
+            onValueChange={(value: Brand) =>
+              updateSettings({ brand: value })
+            }
+          >
+            <SelectTrigger id="brand">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="edoomio">Edoomio</SelectItem>
+              <SelectItem value="lingostar">LingoStar</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Sidebar Theme */}
+        <div className="space-y-1.5">
+          <Label htmlFor="sidebar-theme" className="text-sm">
+            {t("sidebarTheme")}
+          </Label>
+          <Select
+            value={settings.sidebarTheme || "dark"}
+            onValueChange={(value: SidebarTheme) =>
+              updateSettings({ sidebarTheme: value })
+            }
+          >
+            <SelectTrigger id="sidebar-theme">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dark">{t("sidebarDark")}</SelectItem>
+              <SelectItem value="light">{t("sidebarLight")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

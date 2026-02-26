@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import { CourseModule } from "@/types/course";
-import { WorksheetBlock, WorksheetSettings } from "@/types/worksheet";
+import { CourseModule, SidebarTheme } from "@/types/course";
+import { WorksheetBlock, WorksheetSettings, Brand } from "@/types/worksheet";
 
 export interface WorksheetData {
   id: string;
@@ -17,6 +17,8 @@ export interface CourseContextValue {
   title: string;
   description?: string;
   languageLevel?: string;
+  brand: Brand;
+  sidebarTheme: SidebarTheme;
   structure: CourseModule[];
   worksheets: Record<string, WorksheetData>;
 }

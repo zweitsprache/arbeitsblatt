@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import {
   CourseModule,
+  CourseSettings,
+  DEFAULT_COURSE_SETTINGS,
   collectLinkedWorksheetIds,
   normalizeCourseStructure,
 } from "@/types/course";
@@ -60,9 +62,9 @@ export default async function CourseLayout({
     };
   }
 
-  const settings = course.settings as unknown as {
-    languageLevel?: string;
-    description?: string;
+  const settings: CourseSettings = {
+    ...DEFAULT_COURSE_SETTINGS,
+    ...(course.settings as unknown as Partial<CourseSettings>),
   };
 
   return (
@@ -72,6 +74,8 @@ export default async function CourseLayout({
         title: course.title,
         description: settings.description,
         languageLevel: settings.languageLevel,
+        brand: settings.brand || "edoomio",
+        sidebarTheme: settings.sidebarTheme || "dark",
         structure,
         worksheets,
       }}

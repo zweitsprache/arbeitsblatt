@@ -1,4 +1,4 @@
-import { WorksheetBlock } from "./worksheet";
+import { WorksheetBlock, Brand } from "./worksheet";
 
 // ─── Course Lesson ──────────────────────────────────────────
 export interface CourseLesson {
@@ -34,10 +34,14 @@ export interface CourseCoverSettings {
   textColor: string;
 }
 
+export type SidebarTheme = "dark" | "light";
+
 // ─── Course Settings ────────────────────────────────────────
 export interface CourseSettings {
   languageLevel: string;
   description: string;
+  brand: Brand;
+  sidebarTheme: SidebarTheme;
 }
 
 // ─── Course Document (storage format) ───────────────────────
@@ -69,6 +73,8 @@ export const DEFAULT_COURSE_COVER_SETTINGS: CourseCoverSettings = {
 export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
   languageLevel: "",
   description: "",
+  brand: "edoomio",
+  sidebarTheme: "dark",
 };
 
 // ─── Helpers ────────────────────────────────────────────────
