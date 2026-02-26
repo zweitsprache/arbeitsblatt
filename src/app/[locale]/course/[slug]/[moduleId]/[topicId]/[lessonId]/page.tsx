@@ -61,7 +61,7 @@ export default function LessonPage() {
   const basePath = `/${locale}/course/${slug}/${moduleId}/${topicId}`;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 lg:py-14">
+    <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Lesson header */}
         <div className="mb-8">
           <p className="text-xs text-muted-foreground mb-1">

@@ -17,6 +17,7 @@ export interface CourseContextValue {
   title: string;
   description?: string;
   languageLevel?: string;
+  image?: string | null;
   brand: Brand;
   sidebarTheme: SidebarTheme;
   structure: CourseModule[];

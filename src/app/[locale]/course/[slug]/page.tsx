@@ -23,7 +23,7 @@ export default function CourseOverviewPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 lg:py-14">
+    <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Hero */}
         <div className="mb-10">
           <div className="flex items-start gap-4 mb-4">
@@ -78,11 +78,11 @@ export default function CourseOverviewPage() {
                 className="group text-left rounded-lg border bg-background overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
               >
                 {mod.image && (
-                  <div className="w-full h-36 overflow-hidden">
+                  <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
                     <img
                       src={mod.image}
                       alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="h-full w-auto max-w-none object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
                 )}

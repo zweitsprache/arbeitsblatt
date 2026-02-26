@@ -368,6 +368,7 @@
     "backgroundColor": "Background color",
     "brand": "Brand",
     "courseInfo": "Course info",
+    "courseImageLabel": "Course image",
     "courseSettings": "Course settings",
     "courseSettingsDescription": "Configure general course settings, cover, and publishing.",
     "coverSettings": "Cover settings",
@@ -423,6 +424,13 @@
     "untitledLesson": "Untitled lesson",
     "untitledModule": "Untitled module",
     "untitledTopic": "Untitled topic"
+  },
+  "courseChat": {
+    "disclaimer": "AI responses may be inaccurate. Verify important information.",
+    "inputPlaceholder": "Ask a question…",
+    "openChat": "Open chat",
+    "subtitle": "Questions about course content",
+    "title": "Course Assistant"
   },
   "coverDashboard": {
     "createCover": "Create cover",

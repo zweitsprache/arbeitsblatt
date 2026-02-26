@@ -2,8 +2,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
-import { NeonAuthUIProvider } from "@neondatabase/auth/react";
-import { authClient } from "@/lib/auth/client";
+import { NeonAuthProvider } from "@/components/auth/neon-auth-provider";
 
 export default async function LocaleLayout({
   children,
@@ -24,12 +23,9 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <NeonAuthUIProvider
-        authClient={authClient}
-        redirectTo={`/${locale}/account/settings`}
-      >
+      <NeonAuthProvider locale={locale}>
         {children}
-      </NeonAuthUIProvider>
+      </NeonAuthProvider>
     </NextIntlClientProvider>
   );
 }

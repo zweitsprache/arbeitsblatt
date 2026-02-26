@@ -15,9 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCourse } from "@/store/course-store";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Brand } from "@/types/worksheet";
 import { SidebarTheme } from "@/types/course";
+import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
+import { useUpload } from "@/lib/use-upload";
+import { ImagePlus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CourseSettingsPanelProps {
   isFullPanel?: boolean;
@@ -28,6 +32,8 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
   const tc = useTranslations("common");
   const { state, dispatch } = useCourse();
   const { settings, coverSettings } = state;
+  const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
+  const { upload } = useUpload();
 
   const updateSettings = useCallback(
     (updates: Partial<typeof settings>) => {
@@ -87,6 +93,47 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
             onChange={(e) => updateSettings({ description: e.target.value })}
             placeholder={t("descriptionPlaceholder")}
             rows={3}
+          />
+        </div>
+
+        {/* Course Image */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            {t("courseImageLabel")}
+          </Label>
+          {settings.image ? (
+            <div className="relative group/img inline-block">
+              <img src={settings.image} alt="" className="h-20 rounded object-cover" />
+              <button
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                onClick={() => updateSettings({ image: null })}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setImageBrowserOpen(true)}
+            >
+              <ImagePlus className="h-3.5 w-3.5 mr-2" />
+              {tc("image")}
+            </Button>
+          )}
+          <MediaBrowserDialog
+            open={imageBrowserOpen}
+            onOpenChange={setImageBrowserOpen}
+            onSelectUrl={(url) => {
+              updateSettings({ image: url });
+            }}
+            onSelectFile={async (file) => {
+              const result = await upload(file);
+              if (result?.url) {
+                updateSettings({ image: result.url });
+              }
+            }}
           />
         </div>
 

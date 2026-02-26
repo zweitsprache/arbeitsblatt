@@ -40,6 +40,7 @@ export type SidebarTheme = "dark" | "light";
 export interface CourseSettings {
   languageLevel: string;
   description: string;
+  image: string | null;
   brand: Brand;
   sidebarTheme: SidebarTheme;
 }
@@ -73,6 +74,7 @@ export const DEFAULT_COURSE_COVER_SETTINGS: CourseCoverSettings = {
 export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
   languageLevel: "",
   description: "",
+  image: null,
   brand: "edoomio",
   sidebarTheme: "dark",
 };

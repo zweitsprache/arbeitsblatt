@@ -368,6 +368,7 @@
     "backgroundColor": "Hintergrundfarbe",
     "brand": "Marke",
     "courseInfo": "Kursinfos",
+    "courseImageLabel": "Kursbild",
     "courseSettings": "Kurseinstellungen",
     "courseSettingsDescription": "Allgemeine Kurseinstellungen, Cover und Veröffentlichung konfigurieren.",
     "coverSettings": "Cover-Einstellungen",
@@ -423,6 +424,13 @@
     "untitledLesson": "Unbenannte Lektion",
     "untitledModule": "Unbenanntes Modul",
     "untitledTopic": "Unbenanntes Thema"
+  },
+  "courseChat": {
+    "disclaimer": "KI-Antworten können fehlerhaft sein. Überprüfe wichtige Informationen.",
+    "inputPlaceholder": "Stelle eine Frage…",
+    "openChat": "Chat öffnen",
+    "subtitle": "Fragen zum Kursinhalt",
+    "title": "Kurs-Assistent"
   },
   "coverDashboard": {
     "createCover": "Cover erstellen",

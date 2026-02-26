@@ -10,9 +10,11 @@ import {
   ChevronRight,
   ChevronLeft,
   Menu,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CourseChatSidebar } from "./course-chat-sidebar";
 import {
   Sheet,
   SheetContent,
@@ -379,7 +381,7 @@ function SidebarModuleSection({
           }}
           className="flex-1 min-w-0 text-left"
         >
-          <p className="text-cv-sm font-semibold leading-snug" style={{ color: tk.text }}>
+          <p className="text-cv-xs font-semibold leading-snug" style={{ color: tk.text }}>
             {mod.title || "Untitled Module"}
           </p>
         </button>
@@ -442,7 +444,7 @@ function SidebarNav({
   onShowOverview: () => void;
   onContinue?: () => void;
 }) {
-  const { brand, sidebarTheme } = useCourse();
+  const { brand, sidebarTheme, image: courseImage } = useCourse();
   const tk = getSidebarTokens(sidebarTheme);
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
@@ -474,7 +476,13 @@ function SidebarNav({
         >
           ← Overview
         </button>
-        <h1 className="text-cv-lg font-bold leading-snug" style={{ color: tk.text }}>{title}</h1>
+        <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>{title}</h1>
+
+        {courseImage && (
+          <div className="mt-3 w-full overflow-hidden rounded-md">
+            <img src={courseImage} alt="" className="w-full h-auto object-contain" />
+          </div>
+        )}
 
         {totalLessons > 0 && (
           <div className="mt-3">
@@ -557,6 +565,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [visitedLessons, setVisitedLessons] = useState<Set<string>>(new Set());
 
   const flatLessons = useMemo(() => flattenLessons(structure), [structure]);
@@ -719,9 +728,9 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           </button>
         )}
 
-        {/* Right column: breadcrumb header + content */}
+        {/* Right column: breadcrumb header + content + chat */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
-          {/* Breadcrumb header */}
+          {/* Breadcrumb header (full width) */}
           <div className="flex items-center gap-2 px-4 py-3 text-cv-sm text-muted-foreground rounded-lg border bg-background shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
             {breadcrumb && (
               <>
@@ -752,26 +761,36 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             />
           </div>
 
-          {/* Content container */}
-          <div className="flex-1 min-h-0 rounded-lg border bg-background overflow-hidden">
-            <style>{`
-              .content-scroll::-webkit-scrollbar { width: 6px; background: transparent; }
-              .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 12px; }
-              .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
-              .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-              .content-scroll::-webkit-scrollbar-button { display: none; }
-              .content-scroll::-webkit-scrollbar-corner { display: none; }
-              .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
-              .course-content { font-family: ${brandFonts.bodyFont}; }
-              .course-content h1, .course-content h2, .course-content h3,
-              .course-content h4, .course-content h5, .course-content h6 {
-                font-family: ${brandFonts.headlineFont};
-                font-weight: ${brandFonts.headlineWeight};
-              }
-            `}</style>
-            <div className="h-full w-full overflow-y-auto content-scroll course-content">
-              {children}
+          {/* Content + Chat row */}
+          <div className="flex-1 min-h-0 flex flex-row gap-4">
+            {/* Content container */}
+            <div className="flex-1 min-w-0 rounded-lg border bg-background overflow-hidden">
+              <style>{`
+                .content-scroll::-webkit-scrollbar { width: 6px; background: transparent; }
+                .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 12px; }
+                .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
+                .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+                .content-scroll::-webkit-scrollbar-button { display: none; }
+                .content-scroll::-webkit-scrollbar-corner { display: none; }
+                .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+                .course-content { font-family: ${brandFonts.bodyFont}; }
+                .course-content p { font-size: 1.125rem; }
+                .course-content h1, .course-content h2, .course-content h3,
+                .course-content h4, .course-content h5, .course-content h6 {
+                  font-family: ${brandFonts.headlineFont};
+                  font-weight: ${brandFonts.headlineWeight};
+                }
+              `}</style>
+              <div className="h-full w-full overflow-y-auto content-scroll course-content">
+                {children}
+              </div>
             </div>
+
+            {/* Chat sidebar (desktop) */}
+            <CourseChatSidebar
+              open={chatSidebarOpen}
+              onClose={() => setChatSidebarOpen(false)}
+            />
           </div>
 
           {/* Footer */}
@@ -779,6 +798,17 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
           </div>
         </div>
+
+        {/* Chat toggle button (desktop, when sidebar is closed) */}
+        {!chatSidebarOpen && (
+          <button
+            onClick={() => setChatSidebarOpen(true)}
+            className="hidden lg:flex fixed bottom-8 right-8 z-30 items-center justify-center h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+            aria-label="Open chat"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -74,6 +74,7 @@ export default async function CourseLayout({
         title: course.title,
         description: settings.description,
         languageLevel: settings.languageLevel,
+        image: settings.image,
         brand: settings.brand || "edoomio",
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
