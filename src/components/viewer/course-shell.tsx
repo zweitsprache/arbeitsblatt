@@ -760,24 +760,24 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
         {/* Right column: breadcrumb header + content + chat */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* Breadcrumb header (full width) */}
-          <div className="flex items-center gap-2 px-4 py-3 text-cv-sm text-muted-foreground rounded-lg border bg-background shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+          <div className="flex items-center gap-2 pr-4 py-1.5 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
             {breadcrumb && (
               <>
-                <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground transition-colors">
+                <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
                   {breadcrumb.mod.title}
                 </button>
                 {breadcrumb.topic && (
                   <>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                    <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground transition-colors">
+                    <ChevronRight className="h-3 w-3 shrink-0" />
+                    <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
                       {breadcrumb.topic.title}
                     </button>
                   </>
                 )}
                 {breadcrumb.lesson && (
                   <>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                    <span className="font-medium text-foreground">{breadcrumb.lesson.title}</span>
+                    <ChevronRight className="h-3 w-3 shrink-0" />
+                    <span className="font-medium">{breadcrumb.lesson.title}</span>
                   </>
                 )}
               </>
@@ -786,7 +786,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <img
               src={DEFAULT_BRAND_SETTINGS[brand].logo}
               alt=""
-              className="ml-auto h-7 w-auto"
+              className="ml-auto h-6 w-auto"
             />
           </div>
 

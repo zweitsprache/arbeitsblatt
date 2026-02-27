@@ -9,6 +9,8 @@ import {
   DEFAULT_FLASHCARD_SETTINGS,
 } from "@/types/flashcard";
 
+export type FlashcardLocaleMode = "DE" | "CH";
+
 // ─── State ───────────────────────────────────────────────────
 interface FlashcardState {
   worksheetId: string | null;
@@ -20,6 +22,7 @@ interface FlashcardState {
   isDirty: boolean;
   isSaving: boolean;
   published: boolean;
+  localeMode: FlashcardLocaleMode;
 }
 
 const initialState: FlashcardState = {
@@ -32,6 +35,7 @@ const initialState: FlashcardState = {
   isDirty: false,
   isSaving: false,
   published: false,
+  localeMode: "DE",
 };
 
 // ─── Actions ─────────────────────────────────────────────────
@@ -46,7 +50,10 @@ type FlashcardAction =
   | { type: "UPDATE_SETTINGS"; payload: Partial<FlashcardSettings> }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "MARK_SAVED" }
-  | { type: "SET_PUBLISHED"; payload: boolean };
+  | { type: "SET_PUBLISHED"; payload: boolean }
+  | { type: "SET_LOCALE_MODE"; payload: FlashcardLocaleMode }
+  | { type: "SET_CH_OVERRIDE"; payload: { cardId: string; fieldPath: string; value: string } }
+  | { type: "CLEAR_CH_OVERRIDE"; payload: { cardId: string; fieldPath: string } };
 
 // ─── Helpers ─────────────────────────────────────────────────
 function isBlankCard(card: FlashcardItem): boolean {
@@ -96,14 +103,27 @@ function flashcardReducer(state: FlashcardState, action: FlashcardAction): Flash
         isDirty: true,
       };
 
-    case "REMOVE_CARD":
+    case "REMOVE_CARD": {
+      // Also clean up any CH overrides for the removed card
+      const existingOverrides = state.settings.chOverrides;
+      let newSettings = state.settings;
+      if (existingOverrides?.[action.payload]) {
+        const cleaned = { ...existingOverrides };
+        delete cleaned[action.payload];
+        newSettings = {
+          ...state.settings,
+          chOverrides: Object.keys(cleaned).length > 0 ? cleaned : undefined,
+        };
+      }
       return {
         ...state,
         cards: state.cards.filter((c) => c.id !== action.payload),
         selectedCardId:
           state.selectedCardId === action.payload ? null : state.selectedCardId,
+        settings: newSettings,
         isDirty: true,
       };
+    }
 
     case "REORDER_CARDS":
       return { ...state, cards: action.payload, isDirty: true };
@@ -134,6 +154,49 @@ function flashcardReducer(state: FlashcardState, action: FlashcardAction): Flash
 
     case "SET_PUBLISHED":
       return { ...state, published: action.payload, isDirty: true };
+
+    case "SET_LOCALE_MODE":
+      return { ...state, localeMode: action.payload };
+
+    case "SET_CH_OVERRIDE": {
+      const { cardId, fieldPath, value } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: {
+            ...existing,
+            [cardId]: {
+              ...existing[cardId],
+              [fieldPath]: value,
+            },
+          },
+        },
+        isDirty: true,
+      };
+    }
+
+    case "CLEAR_CH_OVERRIDE": {
+      const { cardId, fieldPath } = action.payload;
+      const existing = state.settings.chOverrides || {};
+      const cardOverrides = { ...existing[cardId] };
+      delete cardOverrides[fieldPath];
+      const newOverrides = { ...existing };
+      if (Object.keys(cardOverrides).length === 0) {
+        delete newOverrides[cardId];
+      } else {
+        newOverrides[cardId] = cardOverrides;
+      }
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+        },
+        isDirty: true,
+      };
+    }
 
     default:
       return state;

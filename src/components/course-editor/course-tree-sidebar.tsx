@@ -110,7 +110,7 @@ function LessonItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 shrink-0 text-muted-foreground"
+            className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreVertical className="h-3 w-3" />

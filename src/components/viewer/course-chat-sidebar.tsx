@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCourse } from "./course-context";
 import { BRAND_FONTS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -14,16 +14,152 @@ import {
   Loader2,
   BookOpen,
   Languages,
+  Lightbulb,
+  CircleHelp,
+  Check,
+  XIcon,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 
 // ─── Types ──────────────────────────────────────────────────
 
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correct: number;
+}
+
 interface ChatMessage {
   id: string;
   role: "assistant" | "user";
   content: string;
+  displayContent?: string;
+  quiz?: QuizQuestion[];
+}
+
+// ─── Quiz Block Component ───────────────────────────────────
+
+function QuizBlock({ questions }: { questions: QuizQuestion[] }) {
+  const t = useTranslations("courseChat");
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+
+  const handleSelect = (optIdx: number) => {
+    if (revealed[currentIdx]) return;
+    setAnswers((prev) => ({ ...prev, [currentIdx]: optIdx }));
+    setRevealed((prev) => ({ ...prev, [currentIdx]: true }));
+  };
+
+  const handleNext = () => {
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx((prev) => prev + 1);
+    }
+  };
+
+  const correctCount = Object.entries(answers).filter(
+    ([qIdx, optIdx]) => questions[Number(qIdx)]?.correct === optIdx
+  ).length;
+  const allDone = Object.keys(revealed).length === questions.length;
+  const isCurrentRevealed = revealed[currentIdx];
+  const isLast = currentIdx === questions.length - 1;
+
+  const handleReset = () => {
+    setAnswers({});
+    setRevealed({});
+    setCurrentIdx(0);
+  };
+
+  const q = questions[currentIdx];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold flex items-center gap-1.5">
+          <CircleHelp className="h-3.5 w-3.5" />
+          {t("quizTitle")}
+        </p>
+        <span className="text-xs text-muted-foreground">
+          {currentIdx + 1} / {questions.length}
+        </span>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium">{q.question}</p>
+        <div className="grid gap-1.5">
+          {q.options.map((opt, optIdx) => {
+            const isSelected = answers[currentIdx] === optIdx;
+            const isCorrect = q.correct === optIdx;
+
+            let btnClass =
+              "w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors ";
+            if (isCurrentRevealed) {
+              if (isCorrect) {
+                btnClass +=
+                  "border-green-500 bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300";
+              } else if (isSelected && !isCorrect) {
+                btnClass +=
+                  "border-red-500 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300";
+              } else {
+                btnClass += "opacity-50 border-border";
+              }
+            } else {
+              btnClass +=
+                "hover:bg-background/80 hover:border-primary/30 cursor-pointer border-border";
+            }
+
+            return (
+              <button
+                key={optIdx}
+                className={btnClass}
+                onClick={() => handleSelect(optIdx)}
+                disabled={isCurrentRevealed}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs font-medium">
+                    {isCurrentRevealed && isCorrect ? (
+                      <Check className="h-3 w-3 text-green-600" />
+                    ) : isCurrentRevealed && isSelected ? (
+                      <XIcon className="h-3 w-3 text-red-600" />
+                    ) : (
+                      String.fromCharCode(65 + optIdx)
+                    )}
+                  </span>
+                  {opt}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {isCurrentRevealed && !isLast && (
+        <button
+          onClick={handleNext}
+          className="w-full px-3 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          {t("quizNext")}
+        </button>
+      )}
+
+      {allDone && (
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <p className="text-sm font-medium">
+            {t("quizScore", { correct: correctCount, total: questions.length })}
+          </p>
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors"
+          >
+            <RotateCcw className="h-3 w-3" />
+            {t("quizRetry")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Chat Sidebar Component ─────────────────────────────────
@@ -42,6 +178,7 @@ export function CourseChatSidebar({
   lessonTitle,
 }: CourseChatSidebarProps) {
   const t = useTranslations("courseChat");
+  const locale = useLocale();
   const { brand, title: courseTitle } = useCourse();
   const brandFonts = BRAND_FONTS[brand || "edoomio"];
 
@@ -80,7 +217,7 @@ export function CourseChatSidebar({
     }
   }, [displayMessages]);
 
-  const sendMessage = useCallback(async (overrideText?: string) => {
+  const sendMessage = useCallback(async (overrideText?: string, displayLabel?: string) => {
     const text = (overrideText ?? inputValue).trim();
     if (!text || isStreaming || !lessonContext) return;
 
@@ -88,6 +225,7 @@ export function CourseChatSidebar({
       id: `user-${Date.now()}`,
       role: "user",
       content: text,
+      ...(displayLabel ? { displayContent: displayLabel } : {}),
     };
 
     const newMessages = [...messages, userMsg];
@@ -193,15 +331,67 @@ export function CourseChatSidebar({
 
   const handleSummary = useCallback(() => {
     if (isStreaming || noLesson) return;
-    sendMessage(t("presetSummaryPrompt"));
+    sendMessage(t("presetSummaryPrompt"), t("presetSummary"));
   }, [isStreaming, noLesson, sendMessage, t]);
 
   const handleTranslate = useCallback(() => {
     if (isStreaming || noLesson) return;
     const selected = getSelectedText();
     if (!selected) return;
-    sendMessage(t("presetTranslatePrompt", { text: selected }));
+    sendMessage(t("presetTranslatePrompt", { text: selected }), t("presetTranslate"));
   }, [isStreaming, noLesson, getSelectedText, sendMessage, t]);
+
+  const handleReflect = useCallback(() => {
+    if (isStreaming || noLesson) return;
+    const selected = getSelectedText();
+    if (!selected) return;
+    sendMessage(t("presetReflectPrompt", { text: selected }), t("presetReflect"));
+  }, [isStreaming, noLesson, getSelectedText, sendMessage, t]);
+
+  const handleQuiz = useCallback(async () => {
+    if (isStreaming || noLesson) return;
+    setIsStreaming(true);
+
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: t("presetQuizPrompt"),
+      displayContent: t("presetQuiz"),
+    };
+    const assistantId = `assistant-quiz-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { id: assistantId, role: "assistant", content: "" },
+    ]);
+
+    try {
+      const res = await authFetch("/api/ai/course-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonContext, courseTitle, lessonTitle, locale }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: t("quizReady"), quiz: data.questions }
+            : m
+        )
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, content: t("errorMessage") } : m
+        )
+      );
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [isStreaming, noLesson, lessonContext, courseTitle, lessonTitle, locale, t]);
 
   return (
     <div
@@ -249,27 +439,41 @@ export function CourseChatSidebar({
             </div>
           ) : (
             <>
-              {/* Preset prompt buttons (shown when no messages yet) */}
-              {messages.length === 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  <button
-                    onClick={handleSummary}
-                    disabled={isStreaming}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <BookOpen className="h-3 w-3" />
-                    {t("presetSummary")}
-                  </button>
-                  <button
-                    onClick={handleTranslate}
-                    disabled={isStreaming}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Languages className="h-3 w-3" />
-                    {t("presetTranslate")}
-                  </button>
-                </div>
-              )}
+              {/* Preset prompt buttons */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                <button
+                  onClick={handleSummary}
+                  disabled={isStreaming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  {t("presetSummary")}
+                </button>
+                <button
+                  onClick={handleTranslate}
+                  disabled={isStreaming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Languages className="h-3 w-3" />
+                  {t("presetTranslate")}
+                </button>
+                <button
+                  onClick={handleReflect}
+                  disabled={isStreaming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Lightbulb className="h-3 w-3" />
+                  {t("presetReflect")}
+                </button>
+                <button
+                  onClick={handleQuiz}
+                  disabled={isStreaming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CircleHelp className="h-3 w-3" />
+                  {t("presetQuiz")}
+                </button>
+              </div>
               {displayMessages.map((msg) => (
               <div
                 key={msg.id}
@@ -287,13 +491,17 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "max-w-[85%] rounded-xl px-3.5 py-2.5 text-base leading-snug",
+                    "rounded-xl px-3.5 py-2.5 text-base leading-snug",
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-muted rounded-bl-sm"
+                      ? "max-w-[85%] bg-primary text-primary-foreground rounded-br-sm"
+                      : msg.quiz
+                        ? "w-full bg-muted rounded-bl-sm"
+                        : "max-w-[85%] bg-muted rounded-bl-sm"
                   )}
                 >
-                  {msg.content ? (
+                  {msg.quiz ? (
+                    <QuizBlock questions={msg.quiz} />
+                  ) : msg.content ? (
                     msg.role === "assistant" ? (
                       <ReactMarkdown
                         components={{
@@ -308,7 +516,7 @@ export function CourseChatSidebar({
                         {msg.content}
                       </ReactMarkdown>
                     ) : (
-                      msg.content
+                      msg.displayContent ?? msg.content
                     )
                   ) : (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -322,7 +530,7 @@ export function CourseChatSidebar({
 
         {/* Input area */}
         <div className="border-t p-3">
-          <div className="flex items-end gap-2">
+          <div className="flex items-start gap-2">
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}

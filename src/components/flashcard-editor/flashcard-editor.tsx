@@ -3,11 +3,17 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { FlashcardProvider, useFlashcardEditor } from "@/store/flashcard-store";
+import { FlashcardProvider, useFlashcardEditor, FlashcardLocaleMode } from "@/store/flashcard-store";
 import { FlashcardDocument, FlashcardItem, FlashcardSide } from "@/types/flashcard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  getEffectiveValue,
+  hasChOverride,
+  countChOverrides,
+  replaceEszett,
+} from "@/lib/locale-utils";
 import {
   Tooltip,
   TooltipContent,
@@ -30,8 +36,8 @@ import {
   AlignVerticalJustifyEnd,
   ImageDown,
   ALargeSmall,
-  Bold,
 } from "lucide-react";
+import { FlashcardRichTextEditor } from "./flashcard-rich-text-editor";
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
 import { Slider } from "@/components/ui/slider";
@@ -44,44 +50,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// ─── Helpers ─────────────────────────────────────────────────
-
-/** Render text with {{hl}}…{{/hl}}, {{sup}}…{{/sup}}, and {{verb}} markers as React elements */
-function renderHighlightedText(text: string): React.ReactNode[] {
-  const parts = text.split(/(\{\{hl\}\}.*?\{\{\/hl\}\}|\{\{sup\}\}.*?\{\{\/sup\}\}|\{\{verb\}\})/);
-  return parts.map((part, i) => {
-    const hlMatch = part.match(/^\{\{hl\}\}(.*?)\{\{\/hl\}\}$/);
-    if (hlMatch) {
-      return (
-        <span key={i} className="bg-yellow-200 px-px rounded-sm">
-          {hlMatch[1]}
-        </span>
-      );
-    }
-    const supMatch = part.match(/^\{\{sup\}\}(.*?)\{\{\/sup\}\}$/);
-    if (supMatch) {
-      return (
-        <sup key={i} className="text-[0.65em] text-muted-foreground font-normal">
-          {supMatch[1]}
-        </sup>
-      );
-    }
-    if (part === "{{verb}}") {
-      return <React.Fragment key={i} />;
-    }
-    return <React.Fragment key={i}>{part}</React.Fragment>;
-  });
-}
-
 // ─── Flashcard side editor ───────────────────────────────────
 function FlashcardSideEditor({
   label,
   side,
+  cardId,
+  sideKey,
+  localeMode,
+  chOverrides,
   onChange,
+  onSetChOverride,
+  onClearChOverride,
 }: {
   label: string;
   side: FlashcardSide;
+  cardId: string;
+  sideKey: "front" | "back";
+  localeMode: FlashcardLocaleMode;
+  chOverrides?: Record<string, Record<string, string>>;
   onChange: (side: FlashcardSide) => void;
+  onSetChOverride: (cardId: string, fieldPath: string, value: string) => void;
+  onClearChOverride: (cardId: string, fieldPath: string) => void;
 }) {
   const t = useTranslations("flashcardEditor");
   const { upload, isUploading } = useUpload();
@@ -92,7 +81,11 @@ function FlashcardSideEditor({
     if (!file.type.startsWith("image/")) return;
     try {
       const result = await upload(file);
-      onChange({ ...side, image: result.url });
+      if (localeMode === "CH") {
+        onSetChOverride(cardId, `${sideKey}.image`, result.url);
+      } else {
+        onChange({ ...side, image: result.url });
+      }
     } catch (err) {
       console.error("[FlashcardEditor] Upload error:", err);
     }
@@ -126,8 +119,22 @@ function FlashcardSideEditor({
   };
 
   const removeImage = () => {
-    onChange({ ...side, image: undefined, imageAspectRatio: undefined, imageScale: undefined });
+    if (localeMode === "CH") {
+      if (hasChOverride(cardId, `${sideKey}.image`, chOverrides)) {
+        onClearChOverride(cardId, `${sideKey}.image`);
+      } else {
+        // Set empty override to hide the DE image in CH
+        onSetChOverride(cardId, `${sideKey}.image`, "");
+      }
+    } else {
+      onChange({ ...side, image: undefined, imageAspectRatio: undefined, imageScale: undefined });
+    }
   };
+
+  // Resolve effective image for display
+  const effectiveImage = localeMode === "CH"
+    ? getEffectiveValue(side.image || "", cardId, `${sideKey}.image`, localeMode, chOverrides)
+    : side.image;
 
   return (
     <div className="flex-1 space-y-2">
@@ -141,7 +148,7 @@ function FlashcardSideEditor({
         style={{ aspectRatio: "66 / 37.125" }}
       >
         {/* Image layer */}
-        {side.image ? (
+        {effectiveImage ? (
           (() => {
             const CONTAINER_RATIO = 66 / 37.125;
             const arStr = side.imageAspectRatio ?? "1:1";
@@ -158,7 +165,7 @@ function FlashcardSideEditor({
             }
             return <>
             <img
-              src={side.image}
+              src={effectiveImage}
               alt=""
               className="absolute object-cover"
               style={{
@@ -170,6 +177,11 @@ function FlashcardSideEditor({
                 borderRadius: "2px",
               }}
             />
+            {localeMode === "CH" && hasChOverride(cardId, `${sideKey}.image`, chOverrides) && (
+              <Badge variant="secondary" className="absolute top-1.5 left-1.5 text-[9px] px-1 h-4 bg-amber-100 text-amber-700 z-10">
+                🇨🇭 CH
+              </Badge>
+            )}
             <button
               className="absolute top-1.5 right-1.5 p-1 rounded-full bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
               onClick={removeImage}
@@ -207,7 +219,11 @@ function FlashcardSideEditor({
         )}
 
         {/* Text overlay — positioned like PDF */}
-        {side.text && (
+        {(() => {
+          const effectiveText = getEffectiveValue(side.text, cardId, `${sideKey}.text`, localeMode, chOverrides);
+          // Check if content has meaningful text (strip HTML tags for the check)
+          const hasContent = effectiveText && effectiveText.replace(/<[^>]*>/g, "").trim();
+          return hasContent ? (
           <div
             className="absolute inset-0 flex flex-col items-center px-2 pointer-events-none"
             style={{
@@ -218,23 +234,16 @@ function FlashcardSideEditor({
               paddingBottom: side.textPosition === "bottom" ? "4px" : undefined,
             }}
           >
-            <span
-              className="text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words whitespace-pre-line"
+            <div
+              className="text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words [&_p]:m-0"
               style={{
                 fontSize: `${Math.max(7, Math.round(((side.fontSize ?? 11) / 11) * 12))}px`,
-                fontWeight: side.fontWeight === "bold" ? 700 : 400,
-                color: side.textColor || undefined,
               }}
-            >
-              {side.text.split("\n").map((line, j) => (
-                <span key={j} className={j === 0 && (side.fontWeight ?? "normal") === "normal" ? "font-semibold" : ""}>
-                  {j > 0 && <br />}
-                  {renderHighlightedText(line)}
-                </span>
-              ))}
-            </span>
+              dangerouslySetInnerHTML={{ __html: effectiveText }}
+            />
           </div>
-        )}
+        ) : null;
+        })()}
       </div>
 
       {/* Image controls */}
@@ -301,46 +310,7 @@ function FlashcardSideEditor({
             );
           })}
           <div className="w-px h-4 bg-border mx-0.5" />
-          {(["normal", "bold"] as const).map((w) => (
-            <button
-              key={w}
-              className={`p-1 rounded transition-colors text-[10px] leading-none min-w-[22px] ${
-                (side.fontWeight ?? "normal") === w
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-              style={{ fontWeight: w === "bold" ? 700 : 400 }}
-              onClick={() => onChange({ ...side, fontWeight: w })}
-              title={t(`fontWeight_${w}`)}
-            >
-              {w === "bold" ? "B" : "N"}
-            </button>
-          ))}
-          <div className="w-px h-4 bg-border mx-0.5" />
-          {[
-            { value: "", color: "#000000", label: t("textColor_default") },
-            { value: "#4A3D55", color: "#4A3D55", label: "Plum" },
-            { value: "#7A5550", color: "#7A5550", label: "Mauve" },
-            { value: "#3A4F40", color: "#3A4F40", label: "Forest" },
-            { value: "#5A4540", color: "#5A4540", label: "Bark" },
-            { value: "#3A6570", color: "#3A6570", label: "Teal" },
-            { value: "#FFFFFF", color: "#FFFFFF", label: t("textColor_white") },
-          ].map((c) => (
-            <button
-              key={c.value}
-              className={`w-[18px] h-[18px] rounded-full border-2 transition-colors shrink-0 ${
-                (side.textColor ?? "") === c.value
-                  ? "border-primary ring-1 ring-primary/30"
-                  : "border-border hover:border-primary/50"
-              }`}
-              style={{ backgroundColor: c.color }}
-              onClick={() => onChange({ ...side, textColor: c.value || undefined })}
-              title={c.label}
-            />
-          ))}
-        </div>
-        {/* Text size slider */}
-        <div className="flex items-center gap-2">
+          {/* Text size slider */}
           <ALargeSmall className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Slider
             value={[side.fontSize ?? 11]}
@@ -352,12 +322,41 @@ function FlashcardSideEditor({
           />
           <span className="text-[10px] text-muted-foreground w-10 text-right">{side.fontSize ?? 11}pt</span>
         </div>
-        <textarea
-          className="w-full min-h-[60px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder={t("textPlaceholder")}
-          value={side.text}
-          onChange={(e) => onChange({ ...side, text: e.target.value })}
+        <FlashcardRichTextEditor
+          content={getEffectiveValue(side.text, cardId, `${sideKey}.text`, localeMode, chOverrides)}
+          onChange={(html) => {
+            if (localeMode === "CH") {
+              const autoReplaced = replaceEszett(side.text);
+              if (html === autoReplaced) {
+                onClearChOverride(cardId, `${sideKey}.text`);
+              } else {
+                onSetChOverride(cardId, `${sideKey}.text`, html);
+              }
+            } else {
+              onChange({ ...side, text: html });
+            }
+          }}
+          className={
+            localeMode === "CH" && hasChOverride(cardId, `${sideKey}.text`, chOverrides)
+              ? "border-l-2 border-l-amber-400 bg-amber-50/50"
+              : ""
+          }
         />
+        {localeMode === "CH" && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {hasChOverride(cardId, `${sideKey}.text`, chOverrides) && (
+              <button
+                className="text-[10px] text-amber-600 hover:text-amber-800 underline"
+                onClick={() => onClearChOverride(cardId, `${sideKey}.text`)}
+              >
+                ✕ {t("chOverrideRemove")}
+              </button>
+            )}
+            <p className="text-[10px] text-muted-foreground truncate">
+              {"🇩🇪 "}{side.text ? side.text.replace(/<[^>]*>/g, "").substring(0, 60) : "–"}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -369,19 +368,27 @@ function FlashcardRow({
   index,
   isSelected,
   singleSided,
+  localeMode,
+  chOverrides,
   onSelect,
   onUpdate,
   onRemove,
   onDuplicate,
+  onSetChOverride,
+  onClearChOverride,
 }: {
   card: FlashcardItem;
   index: number;
   isSelected: boolean;
   singleSided: boolean;
+  localeMode: FlashcardLocaleMode;
+  chOverrides?: Record<string, Record<string, string>>;
   onSelect: () => void;
   onUpdate: (updates: Partial<FlashcardItem>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  onSetChOverride: (cardId: string, fieldPath: string, value: string) => void;
+  onClearChOverride: (cardId: string, fieldPath: string) => void;
 }) {
   const t = useTranslations("flashcardEditor");
 
@@ -436,7 +443,13 @@ function FlashcardRow({
         <FlashcardSideEditor
           label={t("front")}
           side={card.front}
+          cardId={card.id}
+          sideKey="front"
+          localeMode={localeMode}
+          chOverrides={chOverrides}
           onChange={(front) => onUpdate({ front })}
+          onSetChOverride={onSetChOverride}
+          onClearChOverride={onClearChOverride}
         />
         {!singleSided && (
           <>
@@ -444,7 +457,13 @@ function FlashcardRow({
             <FlashcardSideEditor
               label={t("back")}
               side={card.back}
+              cardId={card.id}
+              sideKey="back"
+              localeMode={localeMode}
+              chOverrides={chOverrides}
               onChange={(back) => onUpdate({ back })}
+              onSetChOverride={onSetChOverride}
+              onClearChOverride={onClearChOverride}
             />
           </>
         )}
@@ -576,6 +595,30 @@ function FlashcardEditorInner({
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("cardCount", { count: state.cards.length })}
         </Badge>
+        {/* DE / CH locale toggle */}
+        <div className="flex items-center bg-muted rounded-lg p-0.5">
+          <Button
+            variant={state.localeMode === "DE" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "DE" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
+          >
+            {"🇩🇪"} DE
+          </Button>
+          <Button
+            variant={state.localeMode === "CH" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "CH" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
+          >
+            {"🇨🇭"} CH
+            {countChOverrides(state.settings.chOverrides) > 0 && (
+              <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px] bg-amber-100 text-amber-700">
+                {countChOverrides(state.settings.chOverrides)}
+              </Badge>
+            )}
+          </Button>
+        </div>
         <div className="flex items-center gap-1.5">
           <Switch
             id="single-sided"
@@ -690,6 +733,8 @@ function FlashcardEditorInner({
                   index={idx}
                   isSelected={state.selectedCardId === card.id}
                   singleSided={state.settings.singleSided}
+                  localeMode={state.localeMode}
+                  chOverrides={state.settings.chOverrides}
                   onSelect={() =>
                     dispatch({ type: "SELECT_CARD", payload: card.id })
                   }
@@ -703,6 +748,12 @@ function FlashcardEditorInner({
                     dispatch({ type: "REMOVE_CARD", payload: card.id })
                   }
                   onDuplicate={() => duplicateCard(card.id)}
+                  onSetChOverride={(cardId, fieldPath, value) =>
+                    dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId, fieldPath, value } })
+                  }
+                  onClearChOverride={(cardId, fieldPath) =>
+                    dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId, fieldPath } })
+                  }
                 />
               ))}
 

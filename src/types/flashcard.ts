@@ -1,3 +1,5 @@
+import { ChOverrides } from "./worksheet";
+
 // ─── Flashcard types ─────────────────────────────────────────
 
 export interface FlashcardItem {
@@ -35,6 +37,7 @@ export interface FlashcardSettings {
   cardsPerPage: number;
   singleSided: boolean;
   padEmptyCards: boolean;
+  chOverrides?: ChOverrides;
 }
 
 export const DEFAULT_FLASHCARD_SETTINGS: FlashcardSettings = {

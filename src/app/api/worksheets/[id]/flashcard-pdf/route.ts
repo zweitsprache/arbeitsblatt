@@ -106,8 +106,23 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
   const hasExplicitWeight = !!side.fontWeight;
   const textColor = side.textColor || "#000";
 
-  const textHtml = side.text
-    ? `<div style="font-size:${fontSize}pt;font-weight:${fontWeightVal};color:${textColor};line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${pageSide === "back" ? escapeHtmlBackPage(side.text) : escapeHtmlBoldFirst(side.text, hasExplicitWeight)}</div>`
+  // Detect if text is HTML (from TipTap rich text editor) or plain text (legacy format)
+  const isHtmlContent = side.text ? /^<[a-z][\s\S]*>/i.test(side.text.trim()) : false;
+  const hasTextContent = side.text && side.text.replace(/<[^>]*>/g, "").trim() !== "";
+
+  let textInner = "";
+  if (hasTextContent) {
+    if (isHtmlContent) {
+      // Rich text HTML — pass through directly, apply base styles via wrapper
+      textInner = side.text!;
+    } else {
+      // Legacy plain text with {{hl}}/{{sup}}/{{verb}} markers
+      textInner = pageSide === "back" ? escapeHtmlBackPage(side.text!) : escapeHtmlBoldFirst(side.text!, hasExplicitWeight);
+    }
+  }
+
+  const textHtml = hasTextContent
+    ? `<div style="font-size:${fontSize}pt;${isHtmlContent ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${textInner}</div>`
     : "";
 
   const logoHtml = pageSide === "front"
@@ -148,7 +163,8 @@ function buildPageHtml(
       if (card) {
         const sideData = side === "front" ? card.front : card.back;
         // Treat blank cards (no text, no image) as empty cells
-        const isBlank = !sideData.text && !sideData.image;
+        const hasText = sideData.text && sideData.text.replace(/<[^>]*>/g, "").trim() !== "";
+        const isBlank = !hasText && !sideData.image;
         if (isBlank) {
           let emptyBorder = "";
           if (isCuttingLine) {
@@ -246,6 +262,11 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
   img {
     display: block;
   }
+  /* Rich text (TipTap) content inside cards */
+  p { margin: 0; }
+  mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
+  sup { font-size: 0.65em; }
+  sub { font-size: 0.65em; }
 </style>
 </head>
 <body>
@@ -260,7 +281,8 @@ ${pagesHtml}
 // separated, and re-inserts padding so each group starts on a fresh page of
 // `pageSize` cards.
 function isBlankCard(card: FlashcardItem): boolean {
-  return !card.front.text && !card.front.image && !card.back.text && !card.back.image;
+  const isBlankText = (t?: string) => !t || t.replace(/<[^>]*>/g, "").trim() === "";
+  return isBlankText(card.front.text) && !card.front.image && isBlankText(card.back.text) && !card.back.image;
 }
 
 function repadCards(cards: FlashcardItem[], pageSize: number): FlashcardItem[] {
