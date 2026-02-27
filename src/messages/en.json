@@ -427,10 +427,18 @@
   },
   "courseChat": {
     "disclaimer": "AI responses may be inaccurate. Verify important information.",
+    "errorMessage": "Something went wrong. Please try again.",
     "inputPlaceholder": "Ask a question…",
+    "noLesson": "Select a lesson to use the course assistant.",
+    "noLessonShort": "Open a lesson first…",
     "openChat": "Open chat",
+    "presetSummary": "Summary",
+    "presetSummaryPrompt": "Summarize the content of this lesson briefly and clearly.",
+    "presetTranslate": "Translate",
+    "presetTranslatePrompt": "Translate the following text and explain key vocabulary: {text}",
     "subtitle": "Questions about course content",
-    "title": "Course Assistant"
+    "title": "Course Assistant",
+    "welcomeMessage": "👋 Hi! I'm your course assistant. Ask me anything about this lesson's content."
   },
   "coverDashboard": {
     "createCover": "Create cover",

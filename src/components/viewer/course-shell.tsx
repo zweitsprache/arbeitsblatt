@@ -5,6 +5,7 @@ import { useRouter, usePathname, useParams } from "next/navigation";
 import { CourseModule, SidebarTheme } from "@/types/course";
 import { BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { useCourse } from "./course-context";
+import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
 import {
   ChevronRight,
@@ -556,7 +557,7 @@ function SidebarNav({
 // ─── Course Shell (layout wrapper) ──────────────────────────
 
 export function CourseShell({ children }: { children: React.ReactNode }) {
-  const { title, structure, slug, brand } = useCourse();
+  const { title, structure, slug, brand, worksheets } = useCourse();
   const router = useRouter();
   const pathname = usePathname();
   const { locale } = useParams<{ locale: string }>();
@@ -578,6 +579,34 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     if (segments.length >= 6) return segments[5];
     return null;
   }, [pathname]);
+
+  // Resolve current lesson content for AI chat
+  const currentLessonData = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length < 6) return null;
+    const moduleId = segments[3];
+    const topicId = segments[4];
+    const lessonId = segments[5];
+    const mod = structure.find((m) => m.id === moduleId);
+    if (!mod) return null;
+    const topic = mod.topics.find((t) => t.id === topicId);
+    if (!topic) return null;
+    const lesson = topic.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return null;
+
+    // Resolve blocks (expand linked-blocks)
+    const resolvedBlocks = (lesson.blocks ?? []).flatMap((block) => {
+      if (block.type === "linked-blocks" && worksheets[block.worksheetId]) {
+        return worksheets[block.worksheetId].blocks;
+      }
+      return [block];
+    });
+
+    return {
+      title: lesson.title || "Untitled Lesson",
+      context: extractBlocksText(resolvedBlocks, worksheets),
+    };
+  }, [pathname, structure, worksheets]);
 
   // Mark visited
   React.useEffect(() => {
@@ -790,6 +819,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <CourseChatSidebar
               open={chatSidebarOpen}
               onClose={() => setChatSidebarOpen(false)}
+              lessonContext={currentLessonData?.context ?? ""}
+              lessonTitle={currentLessonData?.title ?? ""}
             />
           </div>
 
