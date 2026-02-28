@@ -543,6 +543,8 @@ export interface BrandFonts {
   bodyFont: string;
   headlineFont: string;
   headlineWeight: number;
+  subHeadlineFont: string;
+  subHeadlineWeight: number;
   headerFooterFont: string;
   googleFontsUrl: string;
   primaryColor: string;
@@ -574,6 +576,8 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
     bodyFont: "Asap Condensed, sans-serif",
     headlineFont: "Asap Condensed, sans-serif",
     headlineWeight: 700,
+    subHeadlineFont: "Asap Condensed, sans-serif",
+    subHeadlineWeight: 700,
     headerFooterFont: "Asap Condensed, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
     primaryColor: "#1a1a1a",
@@ -582,6 +586,8 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
     bodyFont: "Encode Sans, sans-serif",
     headlineFont: "Merriweather, serif",
     headlineWeight: 400,
+    subHeadlineFont: "Encode Sans, sans-serif",
+    subHeadlineWeight: 600,
     headerFooterFont: "Encode Sans, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
     primaryColor: "#3a4f40",

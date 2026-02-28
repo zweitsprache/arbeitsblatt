@@ -804,10 +804,14 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
                 .course-content { font-family: ${brandFonts.bodyFont}; }
                 .course-content p { font-size: 1.125rem; }
-                .course-content h1, .course-content h2, .course-content h3,
-                .course-content h4, .course-content h5, .course-content h6 {
+                .course-content h1 {
                   font-family: ${brandFonts.headlineFont};
                   font-weight: ${brandFonts.headlineWeight};
+                }
+                .course-content h2, .course-content h3,
+                .course-content h4, .course-content h5, .course-content h6 {
+                  font-family: ${brandFonts.subHeadlineFont};
+                  font-weight: ${brandFonts.subHeadlineWeight};
                 }
               `}</style>
               <div className="h-full w-full overflow-y-auto content-scroll course-content">
