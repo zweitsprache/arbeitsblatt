@@ -63,18 +63,21 @@ model EBook {
 }
 
 model Course {
-  id            String   @id @default(cuid())
-  title         String   @default("Untitled Course")
-  slug          String   @unique
-  structure     Json     @default("[]")  // Array of CourseModule objects (Module → Topic → Lesson)
-  coverSettings Json     @default("{}")  // CourseCoverSettings
-  settings      Json     @default("{}")  // CourseSettings
-  published     Boolean  @default(false)
-  thumbnail     String?  // base64 data URL of first-page preview
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  folderId      String?
-  userId        String?
+  id                 String    @id @default(cuid())
+  title              String    @default("Untitled Course")
+  slug               String    @unique
+  structure          Json      @default("[]")    // Array of CourseModule objects (Module → Topic → Lesson)
+  coverSettings      Json      @default("{}")    // CourseCoverSettings
+  settings           Json      @default("{}")    // CourseSettings
+  published          Boolean   @default(false)
+  thumbnail          String?                     // base64 data URL of first-page preview
+  translations       Json      @default("{}")    // { en: { structure, coverSettings, settings }, uk: { ... } }
+  i18nexusNamespace  String?                     // i18nexus namespace title for this course
+  translatedAt       DateTime?                   // last sync timestamp
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  folderId           String?
+  userId             String?
 
   @@index([slug])
   @@index([folderId])

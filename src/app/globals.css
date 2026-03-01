@@ -141,6 +141,13 @@
   outline: none;
 }
 
+.tiptap .nobreak,
+.tiptap [data-nobreak],
+.course-content .nobreak,
+.course-content [data-nobreak] {
+  white-space: nowrap;
+}
+
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -174,10 +181,56 @@
   margin-bottom: 0.25rem;
 }
 
+.tiptap h1.no-margin,
+.tiptap h2.no-margin,
+.tiptap h3.no-margin {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 1;
+}
+
 .tiptap p,
 .course-content p {
   margin-top: 0.25rem;
   margin-bottom: 1rem;
+}
+
+.tiptap-compact .tiptap p,
+.tiptap-compact.tiptap p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Rows text style: each <p> rendered as a table row with dividers */
+.tiptap-rows .tiptap p,
+.tiptap-rows.tiptap p,
+.tiptap-rows .ProseMirror p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0.375rem 0 0.375rem 1.25rem !important;
+  border-bottom: 1px solid #d1d5db !important;
+  position: relative;
+}
+
+.tiptap-rows .tiptap p::before,
+.tiptap-rows.tiptap p::before,
+.tiptap-rows .ProseMirror p::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.tiptap-rows .tiptap p:first-child,
+.tiptap-rows.tiptap p:first-child,
+.tiptap-rows .ProseMirror p:first-child {
+  border-top: 1px solid #d1d5db !important;
 }
 
 .tiptap p:last-child,

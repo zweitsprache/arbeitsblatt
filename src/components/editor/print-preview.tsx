@@ -326,7 +326,7 @@ p { widows: 2; orphans: 2; }
           {visibleBlocks.map((block, i) => (
             <div key={block.id} data-block-measure={i}>
               <div className={`worksheet-block worksheet-block-${block.type}`}>
-                <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} />
+                <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} brand={state.settings.brand || "edoomio"} />
               </div>
             </div>
           ))}
@@ -433,7 +433,7 @@ p { widows: 2; orphans: 2; }
                             key={block.id}
                             className={`worksheet-block worksheet-block-${block.type}`}
                           >
-                            <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} />
+                            <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} brand={state.settings.brand || "edoomio"} />
                           </div>
                         );
                       })

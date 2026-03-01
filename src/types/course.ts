@@ -45,6 +45,13 @@ export interface CourseSettings {
   sidebarTheme: SidebarTheme;
 }
 
+// ─── Course Translation ─────────────────────────────────────
+export interface CourseTranslation {
+  structure: CourseModule[];
+  coverSettings: CourseCoverSettings;
+  settings: CourseSettings;
+}
+
 // ─── Course Document (storage format) ───────────────────────
 export interface CourseDocument {
   id: string;
@@ -58,6 +65,9 @@ export interface CourseDocument {
   updatedAt: string;
   folderId: string | null;
   userId: string | null;
+  translations?: Record<string, CourseTranslation>;
+  i18nexusNamespace?: string | null;
+  translatedAt?: string | null;
 }
 
 // ─── Default Settings ───────────────────────────────────────

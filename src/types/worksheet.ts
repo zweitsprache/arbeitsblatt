@@ -39,7 +39,13 @@ export type BlockType =
   | "page-break"
   | "writing-lines"
   | "writing-rows"
-  | "linked-blocks";
+  | "linked-blocks"
+  | "text-snippet"
+  | "email-skeleton"
+  | "job-application"
+  | "dos-and-donts"
+  | "numbered-items"
+  | "logo-divider";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -56,9 +62,13 @@ export interface HeadingBlock extends BlockBase {
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "rows";
+
 export interface TextBlock extends BlockBase {
   type: "text";
   content: string; // HTML string for WYSIWYG
+  textStyle?: TextBlockStyle;
+  comment?: string;
   imageSrc?: string;
   imageAlign?: "left" | "right";
   imageScale?: number; // 10-100, percentage of container width
@@ -124,6 +134,17 @@ export interface DividerBlock extends BlockBase {
   type: "divider";
   style: "solid" | "dashed" | "dotted";
 }
+
+// ─── Logo Divider block ──────────────────────────────────────
+export interface LogoDividerBlock extends BlockBase {
+  type: "logo-divider";
+  size?: number; // px, default 32
+}
+
+export const BRAND_ICON_LOGOS: Record<Brand, string> = {
+  edoomio: "/logo/arbeitsblatt_logo_icon.svg",
+  lingostar: "/logo/lingostar_logo_icon_flat.svg",
+};
 
 // ─── Multiple-choice block ──────────────────────────────────
 export interface MultipleChoiceOption {
@@ -481,6 +502,76 @@ export interface WritingRowsBlock extends BlockBase {
   rowCount: number;
 }
 
+// ─── Text Snippet block ──────────────────────────────────────
+export interface TextSnippetBlock extends BlockBase {
+  type: "text-snippet";
+  content: string; // HTML string for WYSIWYG
+}
+
+// ─── Email Skeleton block ─────────────────────────────────────
+export type EmailSkeletonStyle = "none" | "standard" | "teal";
+
+export interface EmailAttachment {
+  id: string;
+  name: string;
+}
+
+export interface EmailSkeletonBlock extends BlockBase {
+  type: "email-skeleton";
+  from: string;
+  to: string;
+  subject: string;
+  body: string; // HTML string for WYSIWYG
+  emailStyle: EmailSkeletonStyle;
+  attachments: EmailAttachment[];
+  comment?: string;
+}
+
+// ─── Job Application block ────────────────────────────────────
+export type JobApplicationStyle = "none" | "standard" | "teal";
+
+export interface JobApplicationBlock extends BlockBase {
+  type: "job-application";
+  firstName: string;
+  applicantName: string;
+  email: string;
+  phone: string;
+  position: string;
+  message: string; // HTML string for WYSIWYG
+  applicationStyle: JobApplicationStyle;
+  comment?: string;
+}
+
+// ─── Dos and Don'ts block ────────────────────────────────────
+export interface DosAndDontsItem {
+  id: string;
+  text: string;
+}
+
+export interface DosAndDontsBlock extends BlockBase {
+  type: "dos-and-donts";
+  layout: "horizontal" | "vertical";
+  showTitles: boolean;
+  dosTitle: string;
+  dontsTitle: string;
+  dos: DosAndDontsItem[];
+  donts: DosAndDontsItem[];
+}
+
+// ─── Numbered Items block ─────────────────────────────────────
+export interface NumberedItem {
+  id: string;
+  content: string; // HTML string for WYSIWYG
+}
+
+export interface NumberedItemsBlock extends BlockBase {
+  type: "numbered-items";
+  items: NumberedItem[];
+  startNumber: number;
+  bgColor?: string;
+  borderRadius?: number;
+}
+
 // ─── Linked Blocks block ─────────────────────────────────────
 export interface LinkedBlocksBlock extends BlockBase {
   type: "linked-blocks";
@@ -524,7 +615,13 @@ export type WorksheetBlock =
   | PageBreakBlock
   | WritingLinesBlock
   | WritingRowsBlock
-  | LinkedBlocksBlock;
+  | LinkedBlocksBlock
+  | TextSnippetBlock
+  | EmailSkeletonBlock
+  | JobApplicationBlock
+  | DosAndDontsBlock
+  | NumberedItemsBlock
+  | LogoDividerBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -800,6 +897,21 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "divider",
       style: "solid",
+      visibility: "both",
+    },
+  },
+  {
+    type: "logo-divider",
+    label: "Logo Divider",
+    description: "Centered brand logo as section divider",
+    labelKey: "logoDivider",
+    descriptionKey: "logoDividerDesc",
+    icon: "Sparkle",
+    category: "layout",
+    translations: { de: { label: "Logo-Trenner", description: "Zentriertes Markenlogo als Abschnittsteiler" } },
+    defaultData: {
+      type: "logo-divider",
+      size: 24,
       visibility: "both",
     },
   },
@@ -1294,4 +1406,104 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       visibility: "both",
     },
   },
+  {
+    type: "text-snippet",
+    label: "Text Snippet",
+    description: "Text block with copy-to-clipboard",
+    labelKey: "textSnippet",
+    descriptionKey: "textSnippetDesc",
+    icon: "ClipboardCopy",
+    category: "content",
+    translations: { de: { label: "Textbaustein", description: "Textblock mit Kopieren-Funktion" } },
+    defaultData: {
+      type: "text-snippet",
+      content: "<p>Enter text here...</p>",
+      visibility: "both",
+    },
+  },
+{
+  type: "email-skeleton",
+  label: "Email",
+  description: "Simulated email message",
+  labelKey: "emailSkeleton",
+  descriptionKey: "emailSkeletonDesc",
+  icon: "Mail",
+  category: "content",
+  translations: { de: { label: "E-Mail", description: "Simulierte E-Mail-Nachricht" } },
+  defaultData: {
+    type: "email-skeleton",
+    from: "anna@example.com",
+    to: "ben@example.com",
+    subject: "Betreff",
+    body: "<p>Hallo Ben,</p><p>…</p><p>Viele Grüße<br/>Anna</p>",
+    emailStyle: "none",
+    attachments: [],
+    visibility: "both",
+  },
+},
+{
+  type: "job-application",
+  label: "Job Application",
+  description: "Simulated job application form",
+  labelKey: "jobApplication",
+  descriptionKey: "jobApplicationDesc",
+  icon: "ClipboardList",
+  category: "content",
+  translations: { de: { label: "Bewerbung", description: "Simuliertes Bewerbungsformular" } },
+  defaultData: {
+    type: "job-application",
+    firstName: "Anna",
+    applicantName: "Müller",
+    email: "anna@example.com",
+    phone: "+49 123 456789",
+    position: "Verkäufer/in",
+    message: "<p>Sehr geehrte Damen und Herren,</p><p>…</p><p>Mit freundlichen Grüßen<br/>Anna Müller</p>",
+    applicationStyle: "none",
+    visibility: "both",
+  },
+},
+{
+  type: "dos-and-donts",
+  label: "Dos & Don'ts",
+  description: "List of recommended and discouraged actions",
+  labelKey: "dosAndDonts",
+  descriptionKey: "dosAndDontsDesc",
+  icon: "ListChecks",
+  category: "content",
+  translations: { de: { label: "Dos & Don'ts", description: "Empfohlene und nicht empfohlene Handlungen" } },
+  defaultData: {
+    type: "dos-and-donts",
+    layout: "horizontal",
+    showTitles: true,
+    dosTitle: "Do",
+    dontsTitle: "Don't",
+    dos: [
+      { id: crypto.randomUUID(), text: "" },
+    ],
+    donts: [
+      { id: crypto.randomUUID(), text: "" },
+    ],
+    visibility: "both",
+  },
+},
+{
+  type: "numbered-items",
+  label: "Numbered Items",
+  description: "Numbered text items with rich content",
+  labelKey: "numberedItems",
+  descriptionKey: "numberedItemsDesc",
+  icon: "ListOrdered",
+  category: "content",
+  translations: { de: { label: "Nummerierte Punkte", description: "Nummerierte Textabschnitte" } },
+  defaultData: {
+    type: "numbered-items",
+    items: [
+      { id: crypto.randomUUID(), content: "" },
+    ],
+    startNumber: 1,
+    bgColor: "",
+    borderRadius: 8,
+    visibility: "both",
+  },
+},
 ];

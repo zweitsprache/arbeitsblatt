@@ -1,0 +1,129 @@
+/* ─── Viewer Block CSS Module ────────────────────────────────
+ * Scoped styles for viewer-block-renderer.tsx.
+ * Dynamic values use CSS custom properties (--block-color, etc.)
+ * set via inline style={{ '--block-color': color }} on the element.
+ * ──────────────────────────────────────────────────────────── */
+
+/* ─── Common / reusable ──────────────────────────────────── */
+
+.blockShadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.pill {
+  width: 44px;
+  padding-left: 12px;
+  padding-right: 12px;
+  background-color: var(--block-color);
+}
+
+.commentBox {
+  margin-top: 1.25rem;
+  background-color: #f8f8f8;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.375rem;
+  color: var(--block-color);
+  font-size: 1.125rem;
+}
+
+.twoColGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ─── Handwriting ────────────────────────────────────────── */
+
+.handwriting {
+  font-family: var(--font-handwriting);
+  font-size: 1.15em;
+}
+
+/* ─── Numbered label ─────────────────────────────────────── */
+
+.numberedLabel {
+  padding-left: 2em;
+  text-indent: -2em;
+  display: block;
+}
+
+/* ─── Text block (styled: example boxes) ─────────────────── */
+
+.textPlain {
+  overflow: hidden;
+}
+
+.styledBorder {
+  border-color: var(--block-color);
+  color: var(--block-color);
+}
+
+/* ─── Email skeleton ─────────────────────────────────────── */
+
+.emailCard {
+  border-color: var(--block-color, #e2e8f0);
+}
+
+.emailToolbar {
+  background-color: var(--block-color-bg, #f8fafc);
+  border-color: var(--block-color-border, #e2e8f0);
+}
+
+.emailIcon {
+  color: var(--block-color);
+}
+
+.emailSubject {
+  color: var(--block-color);
+}
+
+/* ─── Job application form ───────────────────────────────── */
+
+.formHeader {
+  background-color: var(--block-color-bg, #f8fafc);
+  border-color: var(--block-color-border, #e2e8f0);
+}
+
+.formHeaderLabel {
+  color: var(--block-color, #334155);
+}
+
+.fieldLabel {
+  margin-bottom: 0.25rem;
+}
+
+.fakeDropdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdownChevron {
+  flex-shrink: 0;
+}
+
+.messageArea {
+  min-height: 80px;
+}
+
+.submitButton {
+  background-color: var(--block-color, #334155);
+}
+
+/* ─── Glossary ───────────────────────────────────────────── */
+
+.glossary {
+  font-size: 1.125rem;
+}
+
+.glossaryTerm {
+  width: 25%;
+  min-width: 25%;
+  flex-shrink: 0;
+}
+
+/* Strip top margin from first <p> in tiptap content inside flex layouts */
+.tiptapFlush p:first-child {
+  margin-top: 0;
+}

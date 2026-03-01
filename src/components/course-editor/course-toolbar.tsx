@@ -13,6 +13,7 @@ import {
 import { Save, Loader2, ArrowLeft, Eye } from "lucide-react";
 import { useCourse } from "@/store/course-store";
 import { Link } from "@/i18n/navigation";
+import { CourseTranslationDialog } from "./course-translation-dialog";
 
 export function CourseToolbar() {
   const t = useTranslations("course");
@@ -54,11 +55,21 @@ export function CourseToolbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+        {/* Translations */}
+        {state.courseId && <CourseTranslationDialog />}
+
         {/* Preview */}
-        {state.courseId && state.published && (
+        {state.courseId && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link href={`/course/${state.slug}`} target="_blank">
+              <Link
+                href={
+                  state.selectedLessonId && state.selectedModuleId && state.selectedTopicId
+                    ? `/course/${state.slug}/${state.selectedModuleId}/${state.selectedTopicId}/${state.selectedLessonId}`
+                    : `/course/${state.slug}`
+                }
+                target="_blank"
+              >
                 <Button variant="outline" size="sm" className="gap-2">
                   <Eye className="h-4 w-4" />
                   {t("preview")}

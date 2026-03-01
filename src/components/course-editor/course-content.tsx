@@ -199,7 +199,7 @@ function LessonEditorInner() {
         title: selectedLesson.title,
         slug: "",
         blocks,
-        settings: DEFAULT_SETTINGS,
+        settings: { ...DEFAULT_SETTINGS, brand: courseState.settings.brand || "edoomio" },
         published: false,
       },
     });

@@ -4,6 +4,7 @@ import { setRequestLocale } from "next-intl/server";
 import {
   CourseModule,
   CourseSettings,
+  CourseTranslation,
   DEFAULT_COURSE_SETTINGS,
   collectLinkedWorksheetIds,
   normalizeCourseStructure,
@@ -24,7 +25,7 @@ export default async function CourseLayout({
 
   const course = await prisma.course.findUnique({ where: { slug } });
 
-  if (!course || !course.published) {
+  if (!course) {
     notFound();
   }
 
@@ -67,9 +68,20 @@ export default async function CourseLayout({
     ...(course.settings as unknown as Partial<CourseSettings>),
   };
 
+  // Load translations (if any were pulled from i18nexus)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTranslations = (course as any).translations as unknown;
+  const translations: Record<string, CourseTranslation> | undefined =
+    rawTranslations &&
+    typeof rawTranslations === "object" &&
+    Object.keys(rawTranslations as Record<string, unknown>).length > 0
+      ? (rawTranslations as Record<string, CourseTranslation>)
+      : undefined;
+
   return (
     <CourseProvider
       value={{
+        id: course.id,
         slug,
         title: course.title,
         description: settings.description,
@@ -79,6 +91,7 @@ export default async function CourseLayout({
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
         worksheets,
+        translations,
       }}
     >
       <CourseShell>{children}</CourseShell>

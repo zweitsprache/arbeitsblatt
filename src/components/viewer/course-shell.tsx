@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CourseChatSidebar } from "./course-chat-sidebar";
+import { CourseLanguageSwitcher } from "./course-language-switcher";
 import {
   Sheet,
   SheetContent,
@@ -566,7 +567,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
-  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
   const [visitedLessons, setVisitedLessons] = useState<Set<string>>(new Set());
 
   const flatLessons = useMemo(() => flattenLessons(structure), [structure]);
@@ -685,6 +686,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           <div className="min-w-0 flex-1">
             <p className="text-cv-sm font-medium truncate">{title}</p>
           </div>
+          <CourseLanguageSwitcher />
           <Badge variant="secondary" className="shrink-0 text-cv-micro">{pct}%</Badge>
         </div>
         <div className="h-0.5 bg-muted">
@@ -782,12 +784,15 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 )}
               </>
             )}
-            {/* Brand logo */}
-            <img
-              src={DEFAULT_BRAND_SETTINGS[brand].logo}
-              alt=""
-              className="ml-auto h-6 w-auto"
-            />
+            {/* Brand logo + Language switcher */}
+            <div className="ml-auto flex items-center gap-3">
+              <CourseLanguageSwitcher />
+              <img
+                src={DEFAULT_BRAND_SETTINGS[brand].logo}
+                alt=""
+                className="h-6 w-auto"
+              />
+            </div>
           </div>
 
           {/* Content + Chat row */}
@@ -802,8 +807,9 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 .content-scroll::-webkit-scrollbar-button { display: none; }
                 .content-scroll::-webkit-scrollbar-corner { display: none; }
                 .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
-                .course-content { font-family: ${brandFonts.bodyFont}; }
+                .course-content { font-family: ${brandFonts.bodyFont}; font-size: 1.125rem; }
                 .course-content p { font-size: 1.125rem; }
+                .course-content .email-skeleton-fields { font-size: 1.125rem; }
                 .course-content h1 {
                   font-family: ${brandFonts.headlineFont};
                   font-weight: ${brandFonts.headlineWeight};
@@ -812,6 +818,10 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 .course-content h4, .course-content h5, .course-content h6 {
                   font-family: ${brandFonts.subHeadlineFont};
                   font-weight: ${brandFonts.subHeadlineWeight};
+                }
+                .course-content h2 {
+                  font-size: 1.25rem;
+                  font-weight: 700;
                 }
               `}</style>
               <div className="h-full w-full overflow-y-auto content-scroll course-content">

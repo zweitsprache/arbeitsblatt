@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
+import { BlockScreenshotButton } from "./block-screenshot-button";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
@@ -270,9 +271,10 @@ export function WorksheetViewer({
                       {visibleBlocks.map((block) => (
                         <div
                           key={block.id}
+                          data-block-id={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} />
                         </div>
                       ))}
                     </div>
@@ -309,7 +311,8 @@ export function WorksheetViewer({
               {visibleBlocks.map((block) => (
                 <div
                   key={block.id}
-                  className={`worksheet-block worksheet-block-${block.type}`}
+                  data-block-id={block.id}
+                  className={`worksheet-block worksheet-block-${block.type} ${worksheetId ? 'group/block relative' : ''}`}
                 >
                   <ViewerBlockRenderer
                     block={block}
@@ -319,7 +322,11 @@ export function WorksheetViewer({
                     showResults={showResults}
                     primaryColor={brandFonts.primaryColor}
                     allBlocks={visibleBlocks}
+                    brand={settings.brand || "edoomio"}
                   />
+                  {worksheetId && mode === "online" && (
+                    <BlockScreenshotButton worksheetId={worksheetId} blockId={block.id} />
+                  )}
                 </div>
               ))}
             </div>

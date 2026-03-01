@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   WorksheetBlock,
   WorksheetSettings,
+  Brand,
 } from "@/types/worksheet";
 import {
   CourseModule,
@@ -48,6 +49,7 @@ interface CourseViewerProps {
   worksheets: Map<string, WorksheetData>;
   languageLevel?: string;
   description?: string;
+  brand?: Brand;
 }
 
 interface FlatLesson {
@@ -512,6 +514,7 @@ export function CourseViewer({
   worksheets,
   languageLevel,
   description,
+  brand = "edoomio",
 }: CourseViewerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -750,6 +753,7 @@ export function CourseViewer({
                   prevLesson={prevLesson}
                   nextLesson={nextLesson}
                   onSelectLesson={handleSelectLesson}
+                  brand={brand}
                 />
               ) : (
                 <EmptyLesson
@@ -897,6 +901,7 @@ function LessonContent({
   prevLesson,
   nextLesson,
   onSelectLesson,
+  brand = "edoomio",
 }: {
   currentFlat: FlatLesson;
   totalLessons: number;
@@ -904,6 +909,7 @@ function LessonContent({
   prevLesson: FlatLesson | null;
   nextLesson: FlatLesson | null;
   onSelectLesson: (id: string) => void;
+  brand?: Brand;
 }) {
   return (
     <div className="py-6 lg:py-8 px-4 sm:px-6">
@@ -918,7 +924,7 @@ function LessonContent({
         </div>
         <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-4 text-cv-base">
           {blocks.map((block) => (
-            <ViewerBlockRenderer key={block.id} block={block} mode="online" />
+            <ViewerBlockRenderer key={block.id} block={block} mode="online" brand={brand} />
           ))}
           {blocks.length === 0 && (
             <p className="text-muted-foreground text-center py-8">

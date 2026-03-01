@@ -4,6 +4,7 @@ import React, { useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Heading from "@tiptap/extension-heading";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
@@ -13,6 +14,7 @@ import Color from "@tiptap/extension-color";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import Link from "@tiptap/extension-link";
+import { Mark, mergeAttributes } from "@tiptap/core";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -39,6 +41,7 @@ import {
   Heading3,
   RemoveFormatting,
   Quote,
+  WrapText,
 } from "lucide-react";
 import {
   Tooltip,
@@ -47,12 +50,64 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 
+/* ── Custom Heading extension with noMargin attribute ────── */
+const CustomHeading = Heading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      noMargin: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.classList.contains("no-margin"),
+        renderHTML: (attributes: Record<string, unknown>) => {
+          if (!attributes.noMargin) return {};
+          return { class: "no-margin" };
+        },
+      },
+    };
+  },
+});
+
+/* ── NoBreak mark: wraps text in <span data-nobreak class="nobreak"> ─ */
+const NoBreak = Mark.create({
+  name: "nobreak",
+  inclusive: true,
+  excludes: "",
+  parseHTML() {
+    return [{ tag: "span[data-nobreak]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes(HTMLAttributes, { "data-nobreak": "", class: "nobreak" }), 0];
+  },
+});
+
+/* ── Compact heading icons (H1⁰ / H2⁰ / H3⁰ style) ─────── */
+function HeadingNoMarginIcon({ level, className }: { level: number; className?: string }) {
+  return (
+    <span className={`inline-flex items-baseline font-bold leading-none ${className ?? ""}`} style={{ fontSize: 11 }}>
+      H{level}
+      <span className="text-[7px] leading-none" style={{ marginLeft: 1, marginBottom: -1 }}>⁰</span>
+    </span>
+  );
+}
+
+/* Wrapper components for the ToolbarButton (which expects icon: Component<{className}>) */
+function H1NoMarginIcon({ className }: { className?: string }) {
+  return <HeadingNoMarginIcon level={1} className={className} />;
+}
+function H2NoMarginIcon({ className }: { className?: string }) {
+  return <HeadingNoMarginIcon level={2} className={className} />;
+}
+function H3NoMarginIcon({ className }: { className?: string }) {
+  return <HeadingNoMarginIcon level={3} className={className} />;
+}
+
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
   editable?: boolean;
   floatingElement?: React.ReactNode;
+  editorClassName?: string;
 }
 
 function ToolbarButton({
@@ -94,6 +149,7 @@ export function RichTextEditor({
   placeholder,
   editable = true,
   floatingElement,
+  editorClassName,
 }: RichTextEditorProps) {
   const t = useTranslations("richtext");
   const resolvedPlaceholder = placeholder ?? t("startTyping");
@@ -101,9 +157,10 @@ export function RichTextEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
+        heading: false,
+      }),
+      CustomHeading.configure({
+        levels: [1, 2, 3],
       }),
       Underline,
       TextAlign.configure({
@@ -125,6 +182,7 @@ export function RichTextEditor({
           class: "text-primary underline cursor-pointer",
         },
       }),
+      NoBreak,
     ],
     content,
     editable,
@@ -134,7 +192,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2",
+          editorClassName ?? "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2",
       },
     },
   });
@@ -201,7 +259,7 @@ export function RichTextEditor({
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 1 }).run()
               }
-              isActive={editor.isActive("heading", { level: 1 })}
+              isActive={editor.isActive("heading", { level: 1 }) && !editor.getAttributes("heading").noMargin}
               icon={Heading1}
               label={t("heading1")}
             />
@@ -209,7 +267,7 @@ export function RichTextEditor({
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 2 }).run()
               }
-              isActive={editor.isActive("heading", { level: 2 })}
+              isActive={editor.isActive("heading", { level: 2 }) && !editor.getAttributes("heading").noMargin}
               icon={Heading2}
               label={t("heading2")}
             />
@@ -217,9 +275,45 @@ export function RichTextEditor({
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 3 }).run()
               }
-              isActive={editor.isActive("heading", { level: 3 })}
+              isActive={editor.isActive("heading", { level: 3 }) && !editor.getAttributes("heading").noMargin}
               icon={Heading3}
               label={t("heading3")}
+            />
+            <ToolbarButton
+              onClick={() => {
+                if (editor.isActive("heading", { level: 1 }) && editor.getAttributes("heading").noMargin) {
+                  editor.chain().focus().setParagraph().run();
+                } else {
+                  editor.chain().focus().setHeading({ level: 1, noMargin: true } as never).run();
+                }
+              }}
+              isActive={editor.isActive("heading", { level: 1 }) && !!editor.getAttributes("heading").noMargin}
+              icon={H1NoMarginIcon}
+              label={t("heading1NoMargin")}
+            />
+            <ToolbarButton
+              onClick={() => {
+                if (editor.isActive("heading", { level: 2 }) && editor.getAttributes("heading").noMargin) {
+                  editor.chain().focus().setParagraph().run();
+                } else {
+                  editor.chain().focus().setHeading({ level: 2, noMargin: true } as never).run();
+                }
+              }}
+              isActive={editor.isActive("heading", { level: 2 }) && !!editor.getAttributes("heading").noMargin}
+              icon={H2NoMarginIcon}
+              label={t("heading2NoMargin")}
+            />
+            <ToolbarButton
+              onClick={() => {
+                if (editor.isActive("heading", { level: 3 }) && editor.getAttributes("heading").noMargin) {
+                  editor.chain().focus().setParagraph().run();
+                } else {
+                  editor.chain().focus().setHeading({ level: 3, noMargin: true } as never).run();
+                }
+              }}
+              isActive={editor.isActive("heading", { level: 3 }) && !!editor.getAttributes("heading").noMargin}
+              icon={H3NoMarginIcon}
+              label={t("heading3NoMargin")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />
@@ -266,6 +360,12 @@ export function RichTextEditor({
               isActive={editor.isActive("superscript")}
               icon={SuperscriptIcon}
               label={t("superscript")}
+            />
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleMark("nobreak").run()}
+              isActive={editor.isActive("nobreak")}
+              icon={WrapText}
+              label={t("noBreak")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />

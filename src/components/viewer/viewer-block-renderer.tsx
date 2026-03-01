@@ -38,10 +38,100 @@ import {
   PageBreakBlock,
   WritingLinesBlock,
   WritingRowsBlock,
+  TextSnippetBlock,
+  EmailSkeletonBlock,
+  JobApplicationBlock,
+  DosAndDontsBlock,
+  NumberedItemsBlock,
+  LogoDividerBlock,
+  BRAND_ICON_LOGOS,
+  Brand,
   ViewMode,
 } from "@/types/worksheet";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import s from "./viewer-blocks.module.css";
+
+// ─── Tiptap HTML sanitiser ───────────────────────────────────
+/** Replace non-breaking spaces with regular spaces so the browser
+ *  can line-wrap normally, but preserve &nbsp; inside .nobreak spans. */
+function nbspToSpace(html: string): string {
+  // Temporarily protect content inside <span ... data-nobreak ...>…</span>
+  const placeholder = "\x00NB\x00";
+  const protected_: string[] = [];
+  const safe = html.replace(
+    /<span[^>]*data-nobreak[^>]*>.*?<\/span>/gi,
+    (match) => { protected_.push(match); return placeholder; }
+  );
+  // Replace nbsp in the rest
+  const cleaned = safe.replace(/&nbsp;/g, " ").replace(/\u00A0/g, " ");
+  // Restore protected spans
+  let idx = 0;
+  return cleaned.replace(new RegExp(placeholder.replace(/\x00/g, "\\x00"), "g"), () => protected_[idx++]);
+}
+
+// ─── Date shortcode helper ───────────────────────────────────
+const GERMAN_MONTHS = [
+  "Januar", "Februar", "März", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Dezember",
+];
+
+/** Add or subtract weekdays (Mon–Fri) from a date. */
+function addWeekdays(start: Date, days: number): Date {
+  const d = new Date(start);
+  const step = days >= 0 ? 1 : -1;
+  let remaining = Math.abs(days);
+  while (remaining > 0) {
+    d.setDate(d.getDate() + step);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) remaining--;
+  }
+  return d;
+}
+
+/** Replace {{df+N}}, {{df-N}}, {{ds+N}}, {{ds-N}} with formatted dates.
+ *  df = date full (28. Februar 2026), ds = date short (28.02.2026).
+ *  Also strips any TipTap color-span wrapping around the shortcode. */
+function resolveDateShortcodes(html: string): string {
+  // First strip color spans wrapping a shortcode so the date inherits the block color
+  html = html.replace(
+    /<span[^>]*style="[^"]*color:[^"]*"[^>]*>(\{\{d[fs][+-]\d+\}\})<\/span>/gi,
+    "$1",
+  );
+  return html.replace(/\{\{d([fs])([+-]\d+)\}\}/g, (_match, fmt: string, offset: string) => {
+    const target = addWeekdays(new Date(), parseInt(offset, 10));
+    if (fmt === "f") {
+      return `${target.getDate()}. ${GERMAN_MONTHS[target.getMonth()]} ${target.getFullYear()}`;
+    }
+    const dd = String(target.getDate()).padStart(2, "0");
+    const mm = String(target.getMonth() + 1).padStart(2, "0");
+    return `${dd}.${mm}.${target.getFullYear()}`;
+  });
+}
+
+/** Pipeline: sanitise nbsp + resolve date shortcodes. */
+function prepareTiptapHtml(html: string): string {
+  return resolveDateShortcodes(nbspToSpace(html));
+}
+
+// ─── German marker helper ────────────────────────────────────
+/** Parse {{de:…}} markers and render the German text in italic */
+function renderDeMarkers(text: string): React.ReactNode {
+  const parts = text.split(/(\{\{de:.*?\}\})/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    const m = part.match(/^\{\{de:(.*?)\}\}$/);
+    if (m) {
+      return (
+        <em key={i} className="not-italic font-semibold">
+          {m[1]}
+        </em>
+      );
+    }
+    return part;
+  });
+}
 
 // ─── Handwriting helper ──────────────────────────────────────
 /** Check whether a string contains ++…++ handwriting markers */
@@ -58,8 +148,7 @@ function renderHandwriting(text: string): React.ReactNode {
       return (
         <span
           key={i}
-          className="text-blue-500"
-          style={{ fontFamily: "var(--font-handwriting)", fontSize: "1.15em" }}
+          className={`text-blue-500 ${s.handwriting}`}
         >
           {inner}
         </span>
@@ -98,7 +187,7 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
   }
   return (
     <div className="rounded bg-slate-100 px-2 py-1">
-      <span className="font-semibold text-slate-800" style={{ paddingLeft: '2em', textIndent: '-2em', display: 'block' }}>
+      <span className={`font-semibold text-slate-800 ${s.numberedLabel}`}>
         {block.prefix}{displayNumber}{block.suffix ? `\u2003${block.suffix}` : ''}
       </span>
     </div>
@@ -112,6 +201,18 @@ function HeadingView({ block }: { block: HeadingBlock }) {
 }
 
 function TextView({ block }: { block: TextBlock }) {
+  const isExample = block.textStyle === "example";
+  const isExampleStandard = block.textStyle === "example-standard";
+  const isExampleImproved = block.textStyle === "example-improved";
+  const hasExampleBox = isExample || isExampleStandard || isExampleImproved;
+  const hasPill = isExampleStandard || isExampleImproved;
+
+  const isHinweis = block.textStyle === "hinweis";
+  const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
+  const isHinweisAlarm = block.textStyle === "hinweis-alarm";
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
+  const isRows = block.textStyle === "rows";
+
   const imageEl = block.imageSrc ? (
     <div
       style={{
@@ -130,13 +231,298 @@ function TextView({ block }: { block: TextBlock }) {
     </div>
   ) : null;
 
-  return (
-    <div style={{ overflow: "hidden" }}>
-      {imageEl}
+  if (!hasExampleBox && !hasHinweisBox) {
+    return (
+      <div className={`${s.textPlain} ${isRows ? "tiptap-rows" : ""}`}>
+        {imageEl}
+        <div
+          className="tiptap max-w-none"
+          dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
+        />
+      </div>
+    );
+  }
+
+  if (hasHinweisBox) {
+    const hinweisConfig = isHinweisAlarm
+      ? { color: "#990033", bg: "#99003308", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+      : isHinweisWichtig
+      ? { color: "#0369a1", bg: "#0369a108", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+      : { color: "#475569", bg: "#47556908", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
+
+    return (
       <div
-        className="tiptap max-w-none"
-        dangerouslySetInnerHTML={{ __html: block.content }}
+        className="flex gap-4 border-2 rounded-lg py-3 px-4"
+        style={{ borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
+      >
+        <div className="shrink-0 pt-0.5">
+          {hinweisConfig.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          {imageEl}
+          <div
+            className={`tiptap max-w-none ${s.tiptapFlush}`}
+            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const pillColor = isExampleStandard ? "#990033" : "#3A4F40";
+  const borderTextColor = isExampleStandard ? "#990033" : isExampleImproved ? "#3A4F40" : "#475569";
+
+  return (
+    <div>
+      {hasPill && (
+        <div className="flex">
+          <div
+            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            style={{ "--block-color": pillColor } as React.CSSProperties}
+          >
+            {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
+          </div>
+        </div>
+      )}
+      <div
+        className={`border border-dashed rounded-md py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
+          hasPill ? "rounded-tl-none" : ""
+        }`}
+        style={{ "--block-color": borderTextColor } as React.CSSProperties}
+      >
+        {imageEl}
+        <div
+          className="tiptap max-w-none"
+          dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
+        />
+      </div>
+      {block.comment && (
+        <div className={s.commentBox} style={{ "--block-color": borderTextColor } as React.CSSProperties}>
+          {renderDeMarkers(block.comment)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Email Skeleton View ─────────────────────────────────────
+function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
+  const t = useTranslations("blockRenderer");
+
+  const attachments = block.attachments ?? [];
+  const style = block.emailStyle ?? "none";
+  const isStyled = style === "standard" || style === "teal";
+  const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#475569" : undefined;
+  const pillColor = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
+
+  return (
+    <div>
+      {isStyled && (
+        <div className="flex">
+          <div
+            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            style={{ "--block-color": pillColor } as React.CSSProperties}
+          >
+            {style === "standard" ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
+          </div>
+        </div>
+      )}
+      <div
+        className={`border overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={{ borderColor: isStyled ? color : "#475569" }}
+      >
+        {/* Email toolbar */}
+        <div
+          className={`flex items-center gap-2 px-4 py-2 border-b ${isStyled ? "" : "bg-slate-50 border-slate-200"}`}
+          style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : undefined}
+        >
+          <svg className={`h-4 w-4 ${isStyled ? s.emailIcon : ""}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+        </div>
+
+      {/* Email header fields */}
+      <div className="email-skeleton-fields px-4 pt-3 pb-2 space-y-1.5 border-b border-slate-100">
+        <div className="flex items-baseline gap-2">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailFrom")}</span>
+          <span className="text-slate-700">{block.from}</span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailTo")}</span>
+          <span className="text-slate-700">{block.to}</span>
+        </div>
+        <div className="flex items-baseline gap-2 pt-1 border-t border-slate-100">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailSubject")}</span>
+          <span className={`font-semibold ${isStyled ? s.emailSubject : ""}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined}>{block.subject}</span>
+        </div>
+      </div>
+
+      {/* Email body */}
+      <div className="px-4 py-3">
+        <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
+      </div>
+
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-2">
+          {attachments.map((att) => (
+            <div key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs text-slate-600">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+              {att.name}
+            </div>
+          ))}
+        </div>
+      )}
+      </div>
+      {isStyled && block.comment && (
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
+      )}
+    </div>
+  );
+}
+
+// ─── Job Application View ────────────────────────────────────
+function JobApplicationView({ block }: { block: JobApplicationBlock }) {
+  const t = useTranslations("blockRenderer");
+
+  const style = block.applicationStyle ?? "none";
+  const isStyled = style === "standard" || style === "teal";
+  const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
+  const btnBg = color ?? "#334155";
+
+  return (
+    <div>
+      {isStyled && (
+        <div className="flex">
+          <div
+            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            style={{ "--block-color": color } as React.CSSProperties}
+          >
+            {style === "standard" ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
+          </div>
+        </div>
+      )}
+      <div
+        className={`border overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={isStyled ? { borderColor: color } : undefined}
+      >
+        {/* Form header */}
+        <div
+          className={`px-5 py-3 border-b ${s.formHeader}`}
+          style={isStyled ? { "--block-color-bg": `${color}0D`, "--block-color-border": `${color}4D` } as React.CSSProperties : undefined}
+        >
+          <span className={`text-sm font-bold uppercase tracking-wide ${s.formHeaderLabel}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined}>{t("jobApplicationTitle")}</span>
+        </div>
+
+        {/* Form fields */}
+        <div className="email-skeleton-fields px-5 py-4 space-y-3">
+          {/* Position dropdown (full width) */}
+          <div>
+            <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobPosition")} *</label>
+            <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 ${s.fakeDropdown}`}>
+              <span>{block.position}</span>
+              <svg className={`h-4 w-4 text-slate-400 ${s.dropdownChevron}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
+            </div>
+          </div>
+          {/* Vorname + Nachname row */}
+          <div className={s.twoColGrid}>
+            <div>
+              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobFirstName")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.firstName}</div>
+            </div>
+            <div>
+              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobLastName")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.applicantName}</div>
+            </div>
+          </div>
+          {/* Email + Phone row */}
+          <div className={s.twoColGrid}>
+            <div>
+              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobEmail")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.email}</div>
+            </div>
+            <div>
+              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobPhone")}</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.phone}</div>
+            </div>
+          </div>
+          {/* Message */}
+          <div>
+            <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobMessage")} *</label>
+            <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-2 ${s.messageArea}`}>
+              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message) }} />
+            </div>
+          </div>
+          {/* Submit button */}
+          <div>
+            <div
+              className={`inline-block rounded-md px-5 py-2 text-sm font-semibold text-white ${s.submitButton}`}
+              style={{ "--block-color": btnBg } as React.CSSProperties}
+            >
+              {t("jobSubmit")}
+            </div>
+          </div>
+        </div>
+      </div>
+      {isStyled && block.comment && (
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
+      )}
+    </div>
+  );
+}
+
+function TextSnippetView({ block }: { block: TextSnippetBlock }) {
+  const t = useTranslations("viewer");
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = async () => {
+    // Extract plain text from HTML content
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = block.content;
+    const plainText = tempDiv.textContent || tempDiv.innerText || "";
+    try {
+      await navigator.clipboard.writeText(plainText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = plainText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="relative group border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+      <div
+        className={`tiptap max-w-none ${s.tiptapFlush}`}
+        dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
       />
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white hover:bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm flex items-center gap-1.5"
+      >
+        {copied ? (
+          <>
+            <svg className="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            {t("copied")}
+          </>
+        ) : (
+          <>
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            {t("copyToClipboard")}
+          </>
+        )}
+      </button>
     </div>
   );
 }
@@ -296,6 +682,22 @@ function SpacerView({ block }: { block: SpacerBlock }) {
 
 function DividerView({ block }: { block: DividerBlock }) {
   return <hr style={{ borderStyle: block.style }} />;
+}
+
+function LogoDividerView({ block, brand = "edoomio" }: { block: LogoDividerBlock; brand?: Brand }) {
+  const logoSrc = BRAND_ICON_LOGOS[brand];
+  const size = block.size ?? 24;
+  return (
+    <div className="flex items-center justify-center py-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoSrc}
+        alt=""
+        style={{ width: size, height: size }}
+        className="opacity-30"
+      />
+    </div>
+  );
 }
 
 function PageBreakView({ block: _block }: { block: PageBreakBlock }) {
@@ -1136,17 +1538,17 @@ function GlossaryView({
   block: GlossaryBlock;
 }) {
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${s.glossary}`}>
       {block.instruction && (
         <p className="text-muted-foreground">{block.instruction}</p>
       )}
-      <div className="space-y-0">
+      <div className="space-y-0 border-t">
         {block.pairs.map((pair) => (
           <div
             key={pair.id}
-            className="flex items-start gap-4 py-2 border-b last:border-b-0"
+            className="flex items-start gap-4 py-2 border-b"
           >
-            <span className="font-semibold" style={{ width: "25%", minWidth: "25%", flexShrink: 0 }}>
+            <span className={`font-semibold ${s.glossaryTerm}`}>
               {pair.term}
             </span>
             <span className="flex-1">
@@ -1484,6 +1886,7 @@ function ColumnsView({
   showSolutions = false,
   primaryColor,
   allBlocks,
+  brand = "edoomio",
 }: {
   block: ColumnsBlock;
   mode: ViewMode;
@@ -1493,6 +1896,7 @@ function ColumnsView({
   showSolutions?: boolean;
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
+  brand?: Brand;
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
   return (
@@ -1515,6 +1919,7 @@ function ColumnsView({
               showSolutions={showSolutions}
               primaryColor={primaryColor}
               allBlocks={allBlocks}
+              brand={brand}
             />
           ))}
         </div>
@@ -2943,6 +3348,102 @@ function ChartView({ block }: { block: ChartBlock }) {
   );
 }
 
+// ─── Dos and Don'ts ─────────────────────────────────────────
+
+function DosAndDontsView({ block }: { block: DosAndDontsBlock }) {
+  const renderList = (
+    items: DosAndDontsBlock["dos"],
+    title: string,
+    color: string,
+    bgColor: string,
+    icon: React.ReactNode
+  ) => (
+    <div className={block.layout === "vertical" ? "w-full" : "flex-1 min-w-[200px]"}>
+      {block.showTitles !== false && (
+        <div className="flex items-center gap-2 mb-3">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${bgColor}`}>
+            {icon}
+          </div>
+          <p className="font-semibold m-0">{title}</p>
+        </div>
+      )}
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-start gap-2">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 shrink-0 ${bgColor}`}>
+              {icon}
+            </div>
+            <p className="m-0">{item.text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={block.layout === "vertical" ? "flex flex-col gap-6" : "flex gap-6 flex-wrap"}>
+      {renderList(
+        block.dos,
+        block.dosTitle,
+        "text-emerald-600",
+        "bg-emerald-100 text-emerald-600",
+        <Check className="h-3.5 w-3.5" />
+      )}
+      {renderList(
+        block.donts,
+        block.dontsTitle,
+        "text-red-500",
+        "bg-red-100 text-red-500",
+        <X className="h-3.5 w-3.5" />
+      )}
+    </div>
+  );
+}
+
+// ─── Numbered Items ─────────────────────────────────────────
+
+function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
+  const MAIN_HEX = new Set(["#4a3d55","#7a5550","#3a4f40","#5a4540","#3a6570","#990033"]);
+  const hasBg = !!block.bgColor;
+  const textWhite = hasBg && MAIN_HEX.has(block.bgColor!.toLowerCase());
+  const radius = block.borderRadius ?? 8;
+
+  return (
+    <div className="space-y-3">
+      {block.items.map((item, i) => (
+        <div
+          key={item.id}
+          className="relative font-semibold tiptap-compact"
+          style={hasBg ? {
+            backgroundColor: `${block.bgColor}18`,
+            borderRadius: `${radius}px`,
+            padding: '0.5rem 1.25rem 0.5rem 3.5rem',
+            color: block.bgColor,
+          } : {
+            padding: '0 0 0 3rem',
+          }}
+        >
+          <span
+            className="absolute left-0 top-0 w-10 flex items-center justify-center text-base font-bold"
+            style={{
+              backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
+              color: textWhite ? '#fff' : hasBg ? undefined : 'var(--color-primary, #1a1a1a)',
+              borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+              height: '100%',
+            }}
+          >
+            {String(block.startNumber + i).padStart(2, '0')}
+          </span>
+          <div
+            className="tiptap max-w-none"
+            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Renderer ──────────────────────────────────────────
 
 export function ViewerBlockRenderer({
@@ -2954,6 +3455,7 @@ export function ViewerBlockRenderer({
   showSolutions = false,
   primaryColor = "#1a1a1a",
   allBlocks,
+  brand = "edoomio",
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
@@ -2963,6 +3465,7 @@ export function ViewerBlockRenderer({
   showSolutions?: boolean;
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
+  brand?: Brand;
 }) {
   const interactive = mode === "online";
   const noop = () => {};
@@ -2982,6 +3485,8 @@ export function ViewerBlockRenderer({
       return <SpacerView block={block} />;
     case "divider":
       return <DividerView block={block} />;
+    case "logo-divider":
+      return <LogoDividerView block={block as LogoDividerBlock} brand={brand} />;
     case "page-break":
       return <PageBreakView block={block} />;
     case "writing-lines":
@@ -3201,8 +3706,19 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           primaryColor={primaryColor}
           allBlocks={allBlocks}
+          brand={brand}
         />
       );
+    case "text-snippet":
+      return <TextSnippetView block={block as TextSnippetBlock} />;
+    case "email-skeleton":
+      return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
+    case "job-application":
+      return <JobApplicationView block={block as JobApplicationBlock} />;
+    case "dos-and-donts":
+      return <DosAndDontsView block={block as DosAndDontsBlock} />;
+    case "numbered-items":
+      return <NumberedItemsView block={block as NumberedItemsBlock} />;
     default:
       return null;
   }

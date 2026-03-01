@@ -6,13 +6,14 @@ import { useParams, useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { WorksheetBlock } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
+import { BlockScreenshotButton } from "@/components/viewer/block-screenshot-button";
 import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
 
 export default function LessonPage() {
-  const { structure, slug, worksheets } = useCourse();
+  const { structure, slug, worksheets, id: courseId, brand } = useCourse();
   const { locale, moduleId, topicId, lessonId } = useParams<{
     locale: string;
     slug: string;
@@ -75,7 +76,20 @@ export default function LessonPage() {
         {/* Content blocks */}
         <div className="space-y-4 text-cv-base">
           {resolvedBlocks.map((block) => (
-            <ViewerBlockRenderer key={block.id} block={block} mode="online" />
+            <div
+              key={block.id}
+              data-block-id={block.id}
+              className="group/block relative"
+            >
+              <ViewerBlockRenderer block={block} mode="online" brand={brand} />
+              <BlockScreenshotButton
+                courseId={courseId}
+                moduleId={moduleId}
+                topicId={topicId}
+                lessonId={lessonId}
+                blockId={block.id}
+              />
+            </div>
           ))}
           {resolvedBlocks.length === 0 && (
             <p className="text-muted-foreground text-center py-12">

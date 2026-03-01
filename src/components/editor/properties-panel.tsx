@@ -51,6 +51,7 @@ import {
   VerbTableBlock,
   ChartBlock,
   ChartDataPoint,
+  NumberedItemsBlock,
   NumberedLabelBlock,
   DialogueBlock,
   DialogueItem,
@@ -58,9 +59,15 @@ import {
   WorksheetBlock,
   WritingLinesBlock,
   WritingRowsBlock,
+  EmailSkeletonBlock,
+  EmailSkeletonStyle,
+  EmailAttachment,
+  JobApplicationBlock,
+  JobApplicationStyle,
+  DosAndDontsBlock,
   BlockVisibility,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2 } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -2272,6 +2279,49 @@ function TextProps({ block }: { block: TextBlock }) {
       </Button>
       <Separator />
       <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textStyle")}</Label>
+        <select
+          value={block.textStyle || "standard"}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { textStyle: e.target.value } },
+            })
+          }
+          className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="standard">{t("textStyleStandard")}</option>
+          <option value="example">{t("textStyleExample")}</option>
+          <option value="example-standard">{t("textStyleExampleStandard")}</option>
+          <option value="example-improved">{t("textStyleExampleImproved")}</option>
+          <option value="hinweis">{t("textStyleHinweis")}</option>
+          <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
+          <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>
+          <option value="rows">{t("textStyleRows")}</option>
+        </select>
+      </div>
+      {(block.textStyle === "example" || block.textStyle === "example-standard" || block.textStyle === "example-improved") && (
+        <>
+          <Separator />
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <textarea
+              value={block.comment || ""}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { comment: e.target.value } },
+                })
+              }
+              placeholder={t("textCommentPlaceholder")}
+              className="w-full min-h-[60px] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
+              rows={3}
+            />
+          </div>
+        </>
+      )}
+      <Separator />
+      <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textImage")}</Label>
         {block.imageSrc ? (
           <div className="space-y-3">
@@ -4242,6 +4292,246 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
   );
 }
 
+// ─── Email Skeleton Props ────────────────────────────────────
+function EmailSkeletonProps({ block }: { block: EmailSkeletonBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const attachments = block.attachments ?? [];
+
+  const update = (updates: Partial<EmailSkeletonBlock>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates },
+    });
+  };
+
+  const addAttachment = () => {
+    const newAtt: EmailAttachment = {
+      id: `att${Date.now()}`,
+      name: "dokument.pdf",
+    };
+    update({ attachments: [...attachments, newAtt] });
+  };
+
+  const updateAttachment = (index: number, name: string) => {
+    const newAtts = [...attachments];
+    newAtts[index] = { ...newAtts[index], name };
+    update({ attachments: newAtts });
+  };
+
+  const removeAttachment = (index: number) => {
+    update({ attachments: attachments.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailStyle")}</Label>
+        <Select
+          value={block.emailStyle || "none"}
+          onValueChange={(v) => update({ emailStyle: v as EmailSkeletonStyle })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("emailStyleNone")}</SelectItem>
+            <SelectItem value="standard">{t("emailStyleStandard")}</SelectItem>
+            <SelectItem value="teal">{t("emailStyleTeal")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailHeader")}</Label>
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("emailFrom")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="from"
+              baseValue={block.from}
+              onBaseChange={(v) => update({ from: v })}
+              placeholder={t("emailFromPlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("emailTo")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="to"
+              baseValue={block.to}
+              onBaseChange={(v) => update({ to: v })}
+              placeholder={t("emailToPlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("emailSubject")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="subject"
+              baseValue={block.subject}
+              onBaseChange={(v) => update({ subject: v })}
+              placeholder={t("emailSubjectPlaceholder")}
+            />
+          </div>
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailAttachments")}</Label>
+        <div className="space-y-2">
+          {attachments.map((att, i) => (
+            <div key={att.id} className="flex items-center gap-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`attachments.${i}.name`}
+                baseValue={att.name}
+                onBaseChange={(v) => updateAttachment(i, v)}
+                placeholder={t("emailAttachmentPlaceholder")}
+                className="flex-1 h-8 text-xs"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => removeAttachment(i)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addAttachment} className="w-full">
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t("emailAddAttachment")}
+          </Button>
+        </div>
+      </div>
+      {(block.emailStyle === "standard" || block.emailStyle === "teal") && (
+        <>
+          <Separator />
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <textarea
+              value={block.comment || ""}
+              onChange={(e) => update({ comment: e.target.value })}
+              placeholder={t("textCommentPlaceholder")}
+              className="w-full min-h-[60px] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
+              rows={3}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Job Application Props ──────────────────────────────────
+function JobApplicationProps({ block }: { block: JobApplicationBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+
+  const update = (updates: Partial<JobApplicationBlock>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("jobStyle")}</Label>
+        <Select
+          value={block.applicationStyle || "none"}
+          onValueChange={(v) => update({ applicationStyle: v as JobApplicationStyle })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("emailStyleNone")}</SelectItem>
+            <SelectItem value="standard">{t("emailStyleStandard")}</SelectItem>
+            <SelectItem value="teal">{t("emailStyleTeal")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("jobPersonalData")}</Label>
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("jobFirstName")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="firstName"
+              baseValue={block.firstName}
+              onBaseChange={(v) => update({ firstName: v })}
+              placeholder={t("jobFirstNamePlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("jobLastName")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="applicantName"
+              baseValue={block.applicantName}
+              onBaseChange={(v) => update({ applicantName: v })}
+              placeholder={t("jobLastNamePlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("jobEmail")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="email"
+              baseValue={block.email}
+              onBaseChange={(v) => update({ email: v })}
+              placeholder={t("jobEmailPlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("jobPhone")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="phone"
+              baseValue={block.phone}
+              onBaseChange={(v) => update({ phone: v })}
+              placeholder={t("jobPhonePlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("jobPosition")}</Label>
+            <ChInput
+              blockId={block.id}
+              fieldPath="position"
+              baseValue={block.position}
+              onBaseChange={(v) => update({ position: v })}
+              placeholder={t("jobPositionPlaceholder")}
+            />
+          </div>
+        </div>
+      </div>
+      {(block.applicationStyle === "standard" || block.applicationStyle === "teal") && (
+        <>
+          <Separator />
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <textarea
+              value={block.comment || ""}
+              onChange={(e) => update({ comment: e.target.value })}
+              placeholder={t("textCommentPlaceholder")}
+              className="w-full min-h-[60px] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
+              rows={3}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Properties Panel ────────────────────────────────────────
 // ─── Chart Props ─────────────────────────────────────────────
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#818cf8", "#7c3aed", "#4f46e5", "#6d28d9"];
@@ -4510,6 +4800,110 @@ function ChartProps({ block }: { block: ChartBlock }) {
   );
 }
 
+const NUMBERED_ITEMS_MAIN_COLORS = [
+  { label: "Plum", hex: "#4A3D55" },
+  { label: "Mauve", hex: "#7A5550" },
+  { label: "Forest", hex: "#3A4F40" },
+  { label: "Bark", hex: "#5A4540" },
+  { label: "Teal", hex: "#3A6570" },
+  { label: "Red", hex: "#990033" },
+];
+
+const NUMBERED_ITEMS_PASTEL_COLORS = [
+  { label: "Rose", hex: "#F2DDE1" },
+  { label: "Peach", hex: "#F2E2D4" },
+  { label: "Buttercup", hex: "#F2EDDA" },
+  { label: "Mint", hex: "#DAF0DC" },
+  { label: "Sky", hex: "#D8E6F2" },
+  { label: "Lavender", hex: "#DED6EC" },
+  { label: "Lilac", hex: "#EADAEE" },
+  { label: "Cloud", hex: "#E4E4EC" },
+];
+
+function isMainColor(hex: string) {
+  return NUMBERED_ITEMS_MAIN_COLORS.some((c) => c.hex.toLowerCase() === hex.toLowerCase());
+}
+
+function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const update = (updates: Partial<NumberedItemsBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
+        <Input
+          type="number"
+          min={0}
+          value={block.startNumber}
+          onChange={(e) => update({ startNumber: Number(e.target.value) })}
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("backgroundColor")}</Label>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {/* None / transparent */}
+            <button
+              className={`w-7 h-7 rounded border-2 transition-all cursor-pointer flex items-center justify-center text-[10px] text-muted-foreground ${
+                !block.bgColor
+                  ? "border-primary scale-110"
+                  : "border-border hover:border-primary/50"
+              }`}
+              style={{ backgroundColor: "#fff" }}
+              onClick={() => update({ bgColor: "" })}
+            >
+              ✕
+            </button>
+            {NUMBERED_ITEMS_MAIN_COLORS.map((c) => (
+              <button
+                key={c.hex}
+                title={c.label}
+                className={`w-7 h-7 rounded border-2 transition-all cursor-pointer ${
+                  block.bgColor?.toLowerCase() === c.hex.toLowerCase()
+                    ? "border-primary scale-110"
+                    : "border-border hover:border-primary/50"
+                }`}
+                style={{ backgroundColor: c.hex }}
+                onClick={() => update({ bgColor: c.hex })}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {NUMBERED_ITEMS_PASTEL_COLORS.map((c) => (
+              <button
+                key={c.hex}
+                title={c.label}
+                className={`w-7 h-7 rounded border-2 transition-all cursor-pointer ${
+                  block.bgColor?.toLowerCase() === c.hex.toLowerCase()
+                    ? "border-primary scale-110"
+                    : "border-border hover:border-primary/50"
+                }`}
+                style={{ backgroundColor: c.hex }}
+                onClick={() => update({ bgColor: c.hex })}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("borderRadius")}</Label>
+        <Slider
+          min={0}
+          max={24}
+          step={1}
+          value={[block.borderRadius ?? 8]}
+          onValueChange={([v]) => update({ borderRadius: v })}
+        />
+        <span className="text-xs text-muted-foreground">{block.borderRadius ?? 8}px</span>
+      </div>
+    </div>
+  );
+}
+
 function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -4732,6 +5126,177 @@ function CoverImagesPanel() {
   );
 }
 
+// ─── Dos and Don'ts Props ─────────────────────────────────────
+function DosAndDontsProps({ block }: { block: DosAndDontsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+
+  const updateList = (
+    list: "dos" | "donts",
+    items: DosAndDontsBlock["dos"]
+  ) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { [list]: items } },
+    });
+  };
+
+  const addItem = (list: "dos" | "donts") => {
+    updateList(list, [
+      ...block[list],
+      { id: crypto.randomUUID(), text: "" },
+    ]);
+  };
+
+  const removeItem = (list: "dos" | "donts", index: number) => {
+    if (block[list].length <= 1) return;
+    updateList(
+      list,
+      block[list].filter((_, i) => i !== index)
+    );
+  };
+
+  const moveItem = (
+    list: "dos" | "donts",
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    const items = [...block[list]];
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= items.length) return;
+    [items[index], items[swapIndex]] = [items[swapIndex], items[index]];
+    updateList(list, items);
+  };
+
+  const renderSection = (
+    list: "dos" | "donts",
+    titleField: "dosTitle" | "dontsTitle",
+    label: string,
+    icon: React.ReactNode
+  ) => (
+    <div className="space-y-2">
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md flex items-center gap-2">
+        {icon} {label}
+      </Label>
+      <ChInput
+        blockId={block.id}
+        fieldPath={titleField}
+        baseValue={block[titleField]}
+        onBaseChange={(v) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { [titleField]: v } },
+          })
+        }
+        className="h-8 text-sm"
+        placeholder={label}
+      />
+      {block[list].map((item, i) => (
+        <div key={item.id} className="flex items-center gap-1 border rounded p-1.5 bg-white">
+          <ChInput
+            blockId={block.id}
+            fieldPath={`${list}.${i}.text`}
+            baseValue={item.text}
+            onBaseChange={(v) => {
+              const newItems = [...block[list]];
+              newItems[i] = { ...newItems[i], text: v };
+              updateList(list, newItems);
+            }}
+            className="h-7 text-xs flex-1"
+            placeholder="…"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => moveItem(list, i, "up")}
+            disabled={i === 0}
+          >
+            <ChevronUp className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => moveItem(list, i, "down")}
+            disabled={i === block[list].length - 1}
+          >
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => removeItem(list, i)}
+            disabled={block[list].length <= 1}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => addItem(list)}
+        className="w-full"
+      >
+        <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("dosLayout")}</Label>
+        <Select
+          value={block.layout ?? "horizontal"}
+          onValueChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { layout: v as "horizontal" | "vertical" } },
+            })
+          }
+        >
+          <SelectTrigger className="w-[130px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="horizontal">{t("dosHorizontal")}</SelectItem>
+            <SelectItem value="vertical">{t("dosVertical")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("dosShowTitles")}</Label>
+        <Switch
+          checked={block.showTitles !== false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showTitles: checked } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      {renderSection(
+        "dos",
+        "dosTitle",
+        "Do",
+        <Check className="h-3.5 w-3.5 text-emerald-600" />
+      )}
+      <Separator />
+      {renderSection(
+        "donts",
+        "dontsTitle",
+        "Don't",
+        <X className="h-3.5 w-3.5 text-red-500" />
+      )}
+    </div>
+  );
+}
+
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -4765,6 +5330,8 @@ export function PropertiesPanel() {
         return <SpacerProps block={selectedBlock} />;
       case "divider":
         return <DividerProps block={selectedBlock} />;
+      case "logo-divider":
+        return null;
       case "page-break":
         return null;
       case "writing-lines":
@@ -4813,6 +5380,14 @@ export function PropertiesPanel() {
         return <ChartProps block={selectedBlock} />;
       case "dialogue":
         return <DialogueProps block={selectedBlock} />;
+      case "email-skeleton":
+        return <EmailSkeletonProps block={selectedBlock} />;
+      case "job-application":
+        return <JobApplicationProps block={selectedBlock as JobApplicationBlock} />;
+      case "dos-and-donts":
+        return <DosAndDontsProps block={selectedBlock as DosAndDontsBlock} />;
+      case "numbered-items":
+        return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

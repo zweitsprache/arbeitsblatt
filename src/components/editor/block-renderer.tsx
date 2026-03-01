@@ -42,6 +42,14 @@ import {
   WritingLinesBlock,
   WritingRowsBlock,
   LinkedBlocksBlock,
+  TextSnippetBlock,
+  EmailSkeletonBlock,
+  JobApplicationBlock,
+  DosAndDontsBlock,
+  NumberedItemsBlock,
+  NumberedItem,
+  LogoDividerBlock,
+  BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
@@ -49,7 +57,7 @@ import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-ut
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -187,6 +195,18 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
 
+  const isHinweis = block.textStyle === "hinweis";
+  const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
+  const isHinweisAlarm = block.textStyle === "hinweis-alarm";
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
+  const isRows = block.textStyle === "rows";
+
+  const hinweisConfig = isHinweisAlarm
+    ? { color: "#990033", bg: "#99003308", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+    : isHinweisWichtig
+    ? { color: "#0369a1", bg: "#0369a108", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+    : { color: "#475569", bg: "#47556908", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
+
   const imageEl = block.imageSrc ? (
     <div
       style={{
@@ -207,8 +227,16 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
   return (
     <>
-      <div className="relative group/text">
-        <RichTextEditor
+      <div className={`relative group/text ${hasHinweisBox ? "flex gap-4 border-2 rounded-lg py-3 px-4" : ""} ${isRows ? "tiptap-rows" : ""}`}
+        style={hasHinweisBox ? { borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
+      >
+        {hasHinweisBox && (
+          <div className="shrink-0 pt-2">
+            {hinweisConfig.icon}
+          </div>
+        )}
+        <div className={hasHinweisBox ? "flex-1 min-w-0" : undefined}>
+          <RichTextEditor
           content={block.content}
           onChange={(html) =>
             localeUpdate(block.id, "content", html, () =>
@@ -226,6 +254,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
         >
           <Sparkles className="h-3.5 w-3.5" />
         </button>
+        </div>
       </div>
       <AiTextModal
         open={showAiModal}
@@ -233,6 +262,218 @@ function TextRenderer({ block }: { block: TextBlock }) {
         blockId={block.id}
       />
     </>
+  );
+}
+
+// ─── Text Snippet (Textbaustein) ─────────────────────────────
+function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  return (
+    <div className="relative group/text-snippet">
+      <div className="border border-dashed border-amber-300 rounded-lg p-3 bg-amber-50/30">
+        <div className="flex items-center gap-1.5 mb-2 text-xs text-amber-600 font-medium">
+          <Copy className="h-3.5 w-3.5" />
+          {t("textSnippetLabel")}
+        </div>
+        <RichTextEditor
+          content={block.content}
+          onChange={(html) =>
+            localeUpdate(block.id, "content", html, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+            )
+          }
+          placeholder={t("startTyping")}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Email Skeleton ──────────────────────────────────────────
+function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const attachments = block.attachments ?? [];
+  const style = block.emailStyle ?? "none";
+  const isStyled = style === "standard" || style === "teal";
+  const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
+  const pillLabel = style === "teal" ? "Besser" : style === "standard" ? "Standard" : "";
+
+  return (
+    <div>
+      {isStyled && (
+        <div className="flex">
+          <div
+            className="py-0.5 text-xs font-semibold text-white rounded-t-md text-center uppercase"
+            style={{ backgroundColor: color, width: 110, paddingLeft: 12, paddingRight: 12 }}
+          >
+            {pillLabel}
+          </div>
+        </div>
+      )}
+      <div
+        className={`border overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={isStyled ? { borderColor: color } : undefined}
+      >
+        {/* Email toolbar bar */}
+        <div
+          className={`flex items-center gap-2 px-4 py-2 border-b ${isStyled ? "" : "bg-slate-50 border-slate-200"}`}
+          style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : undefined}
+        >
+          <Mail className="h-4 w-4" style={isStyled ? { color } : undefined} />
+        </div>
+
+      {/* Email header fields */}
+      <div className="px-4 pt-3 pb-2 space-y-1.5 border-b border-slate-100">
+        <div className="flex items-baseline gap-2">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailFrom")}</span>
+          <span className="text-slate-700">{block.from}</span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailTo")}</span>
+          <span className="text-slate-700">{block.to}</span>
+        </div>
+        <div className="flex items-baseline gap-2 pt-1 border-t border-slate-100">
+          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailSubject")}</span>
+          <span className="font-semibold" style={isStyled ? { color } : undefined}>{block.subject}</span>
+        </div>
+      </div>
+
+      {/* Email body */}
+      <div className="px-4 py-3">
+        <RichTextEditor
+          content={block.body}
+          onChange={(html) =>
+            localeUpdate(block.id, "body", html, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { body: html } } })
+            )
+          }
+          placeholder={t("startTyping")}
+        />
+      </div>
+
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-2">
+          {attachments.map((att) => (
+            <div key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs text-slate-600">
+              <Paperclip className="h-3 w-3" />
+              {att.name}
+            </div>
+          ))}
+        </div>
+      )}
+      </div>
+      {isStyled && block.comment && (
+        <p style={{ color, marginTop: "0.75rem", backgroundColor: "#f8f8f8", padding: "0.5rem 1.25rem", borderRadius: "0.375rem" }}>{block.comment}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Job Application ─────────────────────────────────────────
+function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const style = block.applicationStyle ?? "none";
+  const isStyled = style === "standard" || style === "teal";
+  const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
+  const pillLabel = style === "teal" ? "Besser" : style === "standard" ? "Standard" : "";
+  const btnBg = color ?? "#334155";
+
+  return (
+    <div>
+      {isStyled && (
+        <div className="flex">
+          <div
+            className="py-0.5 text-xs font-semibold text-white rounded-t-md text-center uppercase"
+            style={{ backgroundColor: color, width: 110, paddingLeft: 12, paddingRight: 12 }}
+          >
+            {pillLabel}
+          </div>
+        </div>
+      )}
+      <div
+        className={`border overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={isStyled ? { borderColor: color } : { borderColor: "#e2e8f0" }}
+      >
+        {/* Form header */}
+        <div
+          className="px-5 py-3 border-b"
+          style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" }}
+        >
+          <span className="text-sm font-bold uppercase tracking-wide" style={isStyled ? { color } : { color: "#334155" }}>{t("jobApplicationTitle")}</span>
+        </div>
+
+        {/* Form fields */}
+        <div className="px-5 py-4 space-y-3">
+          {/* Position dropdown (full width) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobPosition")} *</label>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 flex items-center justify-between">
+              <span>{block.position}</span>
+              <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
+            </div>
+          </div>
+          {/* Vorname + Nachname row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobFirstName")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.firstName}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobLastName")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.applicantName}</div>
+            </div>
+          </div>
+          {/* Email + Phone row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobEmail")} *</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.email}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobPhone")}</label>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.phone}</div>
+            </div>
+          </div>
+          {/* Message */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobMessage")} *</label>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 min-h-[80px]">
+              <RichTextEditor
+                content={block.message}
+                onChange={(html) =>
+                  localeUpdate(block.id, "message", html, () =>
+                    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { message: html } } })
+                  )
+                }
+                placeholder={t("startTyping")}
+              />
+            </div>
+          </div>
+          {/* Submit button */}
+          <div>
+            <div
+              className="inline-block rounded-md px-5 py-2 text-sm font-semibold text-white cursor-default"
+              style={{ backgroundColor: btnBg }}
+            >
+              {t("jobSubmit")}
+            </div>
+          </div>
+        </div>
+      </div>
+      {isStyled && block.comment && (
+        <p style={{ color, marginTop: "0.75rem", backgroundColor: "#f8f8f8", padding: "0.5rem 1.25rem", borderRadius: "0.375rem" }}>{block.comment}</p>
+      )}
+    </div>
   );
 }
 
@@ -657,6 +898,25 @@ function DividerRenderer({ block }: { block: DividerBlock }) {
       className="my-2"
       style={{ borderStyle: block.style }}
     />
+  );
+}
+
+// ─── Logo Divider ────────────────────────────────────────────
+function LogoDividerRenderer({ block }: { block: LogoDividerBlock }) {
+  const { state } = useEditor();
+  const brand = state.settings.brand || "edoomio";
+  const logoSrc = BRAND_ICON_LOGOS[brand];
+  const size = block.size ?? 24;
+  return (
+    <div className="flex items-center justify-center py-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoSrc}
+        alt=""
+        style={{ width: size, height: size }}
+        className="opacity-30"
+      />
+    </div>
   );
 }
 
@@ -1183,11 +1443,11 @@ function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
       {block.instruction && (
         <p className="text-base text-muted-foreground">{block.instruction}</p>
       )}
-      <div className="space-y-0">
+      <div className="space-y-0 border-t">
         {block.pairs.map((pair) => (
           <div
             key={pair.id}
-            className="flex items-start gap-4 py-2 border-b last:border-b-0"
+            className="flex items-start gap-4 py-2 border-b"
           >
             <span className="text-base font-semibold" style={{ width: "25%", minWidth: "25%", flexShrink: 0 }}>
               {pair.term}
@@ -3411,6 +3671,218 @@ function LinkedBlocksRenderer({ block }: { block: LinkedBlocksBlock }) {
   );
 }
 
+// ─── Dos and Don'ts ─────────────────────────────────────────
+
+function DosAndDontsRenderer({ block }: { block: DosAndDontsBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+
+  const updateItem = (
+    list: "dos" | "donts",
+    index: number,
+    text: string
+  ) => {
+    localeUpdate(block.id, `${list}.${index}.text`, text, () => {
+      const newItems = [...block[list]];
+      newItems[index] = { ...newItems[index], text };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { [list]: newItems } },
+      });
+    });
+  };
+
+  const addItem = (list: "dos" | "donts") => {
+    const newItems = [
+      ...block[list],
+      { id: crypto.randomUUID(), text: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { [list]: newItems } },
+    });
+  };
+
+  const removeItem = (list: "dos" | "donts", index: number) => {
+    if (block[list].length <= 1) return;
+    const newItems = block[list].filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { [list]: newItems } },
+    });
+  };
+
+  const renderList = (
+    list: "dos" | "donts",
+    title: string,
+    titleField: "dosTitle" | "dontsTitle",
+    color: string,
+    icon: React.ReactNode
+  ) => (
+    <div className={block.layout === "vertical" ? "w-full" : "flex-1 min-w-[200px]"}>
+      {block.showTitles !== false && (
+        <div className="flex items-center gap-2 mb-3">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${color}`}>
+            {icon}
+          </div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              localeUpdate(block.id, titleField, e.target.value, () => {
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { [titleField]: e.target.value } },
+                });
+              });
+            }}
+            className="font-semibold text-base bg-transparent border-none outline-none flex-1"
+          />
+        </div>
+      )}
+      <div className="space-y-2">
+        {block[list].map((item, i) => (
+          <div key={item.id} className="flex items-start gap-2 group">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 shrink-0 ${color}`}>
+              {icon}
+            </div>
+            <input
+              type="text"
+              value={item.text}
+              onChange={(e) => updateItem(list, i, e.target.value)}
+              placeholder="…"
+              className="flex-1 bg-transparent border-none outline-none border-b border-transparent hover:border-muted-foreground/20 focus:border-primary transition-colors"
+            />
+            <button
+              onClick={() => removeItem(list, i)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={() => addItem(list)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+        >
+          <Plus className="h-3 w-3" /> Add
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={block.layout === "vertical" ? "flex flex-col gap-6" : "flex gap-6 flex-wrap"}>
+      {renderList(
+        "dos",
+        block.dosTitle,
+        "dosTitle",
+        "bg-emerald-100 text-emerald-600",
+        <Check className="h-3.5 w-3.5" />
+      )}
+      {renderList(
+        "donts",
+        block.dontsTitle,
+        "dontsTitle",
+        "bg-red-100 text-red-500",
+        <X className="h-3.5 w-3.5" />
+      )}
+    </div>
+  );
+}
+
+// ─── Numbered Items ─────────────────────────────────────────
+
+function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+
+  const updateItem = (index: number, content: string) => {
+    localeUpdate(block.id, `items.${index}.content`, content, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], content };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), content: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const MAIN_HEX = new Set(["#4a3d55","#7a5550","#3a4f40","#5a4540","#3a6570","#990033"]);
+  const hasBg = !!block.bgColor;
+  const textWhite = hasBg && MAIN_HEX.has(block.bgColor!.toLowerCase());
+  const radius = block.borderRadius ?? 8;
+
+  return (
+    <div className="space-y-2">
+      {block.items.map((item, i) => (
+        <div key={item.id} className="relative group">
+          <div
+            className="font-semibold tiptap-compact"
+            style={hasBg ? {
+              backgroundColor: `${block.bgColor}18`,
+              borderRadius: `${radius}px`,
+              padding: '0.5rem 0.75rem 0.5rem 3rem',
+              color: block.bgColor,
+            } : {
+              padding: '0 0 0 2.5rem',
+            }}
+          >
+            <span
+              className={`absolute left-0 top-0 w-10 flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+              style={{
+                ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : undefined } : {}),
+                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+                height: '100%',
+              }}
+            >
+              {String(block.startNumber + i).padStart(2, '0')}
+            </span>
+            <RichTextEditor
+              content={item.content}
+              onChange={(html) => updateItem(i, html)}
+              placeholder="…"
+              editorClassName="prose prose-sm max-w-none focus:outline-none px-0 py-0"
+            />
+          </div>
+          <button
+            onClick={() => removeItem(i)}
+            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-11"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -3454,6 +3926,8 @@ export function BlockRenderer({
       return <SpacerRenderer block={block} />;
     case "divider":
       return <DividerRenderer block={block} />;
+    case "logo-divider":
+      return <LogoDividerRenderer block={block as LogoDividerBlock} />;
     case "page-break":
       return <PageBreakRenderer block={block} />;
     case "writing-lines":
@@ -3508,6 +3982,16 @@ export function BlockRenderer({
       return <ColumnsRenderer block={block} mode={mode} />;
     case "linked-blocks":
       return <LinkedBlocksRenderer block={block as LinkedBlocksBlock} />;
+    case "text-snippet":
+      return <TextSnippetRenderer block={block as TextSnippetBlock} />;
+    case "email-skeleton":
+      return <EmailSkeletonRenderer block={block as EmailSkeletonBlock} />;
+    case "job-application":
+      return <JobApplicationRenderer block={block as JobApplicationBlock} />;
+    case "dos-and-donts":
+      return <DosAndDontsRenderer block={block as DosAndDontsBlock} />;
+    case "numbered-items":
+      return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

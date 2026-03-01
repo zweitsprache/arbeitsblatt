@@ -34,6 +34,8 @@ import {
   MessageCircle,
   FileOutput,
   Rows3,
+  Mail,
+  ClipboardList,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -64,6 +66,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   MessageCircle,
   FileOutput,
   Rows3,
+  Mail,
+  ClipboardList,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
