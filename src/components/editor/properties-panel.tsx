@@ -66,6 +66,7 @@ import {
   JobApplicationStyle,
   DosAndDontsBlock,
   BlockVisibility,
+  TextBlockStyle,
 } from "@/types/worksheet";
 import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
@@ -2285,7 +2286,7 @@ function TextProps({ block }: { block: TextBlock }) {
           onChange={(e) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { textStyle: e.target.value } },
+              payload: { id: block.id, updates: { textStyle: e.target.value as TextBlockStyle } },
             })
           }
           className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
