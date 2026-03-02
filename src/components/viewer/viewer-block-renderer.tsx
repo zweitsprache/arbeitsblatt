@@ -48,7 +48,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -210,6 +210,7 @@ function TextView({ block }: { block: TextBlock }) {
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
+  const isLernziel = block.textStyle === "lernziel";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
   const isRows = block.textStyle === "rows";
 
@@ -231,6 +232,23 @@ function TextView({ block }: { block: TextBlock }) {
     </div>
   ) : null;
 
+  if (isLernziel) {
+    return (
+      <div className="flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
+        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
+          <LogIn className="h-5 w-5" style={{ color: "#ffffff" }} />
+        </div>
+        <div className="flex-1 min-w-0 px-3 py-2">
+          {imageEl}
+          <div
+            className={`tiptap max-w-none ${s.tiptapFlush}`}
+            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!hasExampleBox && !hasHinweisBox) {
     return (
       <div className={`${s.textPlain} ${isRows ? "tiptap-rows" : ""}`}>
@@ -245,20 +263,20 @@ function TextView({ block }: { block: TextBlock }) {
 
   if (hasHinweisBox) {
     const hinweisConfig = isHinweisAlarm
-      ? { color: "#990033", bg: "#99003308", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+      ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
       : isHinweisWichtig
-      ? { color: "#0369a1", bg: "#0369a108", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
-      : { color: "#475569", bg: "#47556908", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
+      ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+      : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
     return (
       <div
-        className="flex gap-4 border-2 rounded-md px-5"
-        style={{ paddingTop: 6, paddingBottom: 6, borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
+        className="flex gap-0 border-2 rounded-md"
+        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
       >
-        <div className="shrink-0 pt-0.5">
+        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
           {hinweisConfig.icon}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 px-3 py-2">
           {imageEl}
           <div
             className={`tiptap max-w-none ${s.tiptapFlush}`}
@@ -3412,31 +3430,29 @@ function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
       {block.items.map((item, i) => (
         <div
           key={item.id}
-          className="relative font-semibold tiptap-compact"
+          className="flex gap-0 font-semibold tiptap-compact"
           style={hasBg ? {
             backgroundColor: `${block.bgColor}18`,
             borderRadius: `${radius}px`,
-            padding: '0.5rem 1.25rem 0.5rem 3.5rem',
             color: block.bgColor,
-          } : {
-            padding: '0 0 0 3rem',
-          }}
+          } : undefined}
         >
-          <span
-            className="absolute left-0 top-0 w-10 flex items-center justify-center text-base font-bold"
+          <div
+            className="shrink-0 w-10 flex items-center justify-center text-base font-bold"
             style={{
               backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
               color: textWhite ? '#fff' : hasBg ? undefined : 'var(--color-primary, #1a1a1a)',
               borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
-              height: '100%',
             }}
           >
             {String(block.startNumber + i).padStart(2, '0')}
-          </span>
-          <div
-            className="tiptap max-w-none"
-            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
-          />
+          </div>
+          <div className="flex-1 min-w-0 px-3 py-2">
+            <div
+              className="tiptap max-w-none"
+              dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+            />
+          </div>
         </div>
       ))}
     </div>

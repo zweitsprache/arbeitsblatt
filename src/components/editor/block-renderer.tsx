@@ -57,7 +57,7 @@ import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-ut
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, LogIn } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -198,14 +198,15 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
+  const isLernziel = block.textStyle === "lernziel";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
   const isRows = block.textStyle === "rows";
 
   const hinweisConfig = isHinweisAlarm
-    ? { color: "#990033", bg: "#99003308", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+    ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
     : isHinweisWichtig
-    ? { color: "#0369a1", bg: "#0369a108", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
-    : { color: "#475569", bg: "#47556908", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
+    ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+    : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
   const imageEl = block.imageSrc ? (
     <div
@@ -225,35 +226,63 @@ function TextRenderer({ block }: { block: TextBlock }) {
     </div>
   ) : null;
 
+  const richTextEl = (
+    <RichTextEditor
+      content={block.content}
+      onChange={(html) =>
+        localeUpdate(block.id, "content", html, () =>
+          dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+        )
+      }
+      placeholder={t("startTyping")}
+      floatingElement={imageEl}
+    />
+  );
+
+  if (isLernziel) {
+    return (
+      <>
+        <div className="relative group/text flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
+          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
+            <LogIn className="h-5 w-5" style={{ color: "#ffffff" }} />
+          </div>
+          <div className="flex-1 min-w-0 px-3 py-2">
+            {richTextEl}
+            <button
+              type="button"
+              onClick={() => setShowAiModal(true)}
+              className="absolute -top-2 -right-2 opacity-0 group-hover/text:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white rounded-full p-1.5 shadow-md z-10"
+              title={t("aiGenerateReadingText")}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+        <AiTextModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+      </>
+    );
+  }
+
   return (
     <>
-      <div className={`relative group/text ${hasHinweisBox ? "flex gap-4 border-2 rounded-md px-5" : ""} ${isRows ? "tiptap-rows" : ""}`}
-        style={hasHinweisBox ? { paddingTop: 6, paddingBottom: 6, borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
+      <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-md" : ""} ${isRows ? "tiptap-rows" : ""}`}
+        style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
       >
         {hasHinweisBox && (
-          <div className="shrink-0 pt-2">
+          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
             {hinweisConfig.icon}
           </div>
         )}
-        <div className={hasHinweisBox ? "flex-1 min-w-0" : undefined}>
-          <RichTextEditor
-          content={block.content}
-          onChange={(html) =>
-            localeUpdate(block.id, "content", html, () =>
-              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
-            )
-          }
-          placeholder={t("startTyping")}
-          floatingElement={imageEl}
-        />
-        <button
-          type="button"
-          onClick={() => setShowAiModal(true)}
-          className="absolute -top-2 -right-2 opacity-0 group-hover/text:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white rounded-full p-1.5 shadow-md z-10"
-          title={t("aiGenerateReadingText")}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-        </button>
+        <div className={hasHinweisBox ? "flex-1 min-w-0 px-3 py-2" : undefined}>
+          {richTextEl}
+          <button
+            type="button"
+            onClick={() => setShowAiModal(true)}
+            className="absolute -top-2 -right-2 opacity-0 group-hover/text:opacity-100 transition-opacity bg-purple-600 hover:bg-purple-700 text-white rounded-full p-1.5 shadow-md z-10"
+            title={t("aiGenerateReadingText")}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
       <AiTextModal
@@ -3837,32 +3866,30 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
       {block.items.map((item, i) => (
         <div key={item.id} className="relative group">
           <div
-            className="font-semibold tiptap-compact"
+            className="flex gap-0 font-semibold tiptap-compact"
             style={hasBg ? {
               backgroundColor: `${block.bgColor}18`,
               borderRadius: `${radius}px`,
-              padding: '0.5rem 0.75rem 0.5rem 3rem',
               color: block.bgColor,
-            } : {
-              padding: '0 0 0 2.5rem',
-            }}
+            } : undefined}
           >
-            <span
-              className={`absolute left-0 top-0 w-10 flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+            <div
+              className={`shrink-0 w-10 flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
               style={{
                 ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : undefined } : {}),
                 borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
-                height: '100%',
               }}
             >
               {String(block.startNumber + i).padStart(2, '0')}
-            </span>
-            <RichTextEditor
-              content={item.content}
-              onChange={(html) => updateItem(i, html)}
-              placeholder="…"
-              editorClassName="prose prose-sm max-w-none focus:outline-none px-0 py-0"
-            />
+            </div>
+            <div className="flex-1 min-w-0 px-3 py-2">
+              <RichTextEditor
+                content={item.content}
+                onChange={(html) => updateItem(i, html)}
+                placeholder="…"
+                editorClassName="prose prose-sm max-w-none focus:outline-none px-0 py-0"
+              />
+            </div>
           </div>
           <button
             onClick={() => removeItem(i)}

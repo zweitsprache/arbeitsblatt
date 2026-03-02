@@ -2298,6 +2298,7 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="hinweis">{t("textStyleHinweis")}</option>
           <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
           <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>
+          <option value="lernziel">{t("textStyleLernziel")}</option>
           <option value="rows">{t("textStyleRows")}</option>
         </select>
       </div>
