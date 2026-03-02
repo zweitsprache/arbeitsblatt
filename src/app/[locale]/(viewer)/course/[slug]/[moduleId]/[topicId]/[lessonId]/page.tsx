@@ -65,9 +65,6 @@ export default function LessonPage() {
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Lesson header */}
         <div className="mb-8">
-          <p className="text-xs text-muted-foreground mb-1">
-            Lesson {lessonIndex + 1} of {topic.lessons.length}
-          </p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {lesson.title || "Untitled Lesson"}
           </h1>

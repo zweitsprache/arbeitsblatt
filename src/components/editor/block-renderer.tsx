@@ -227,8 +227,8 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
   return (
     <>
-      <div className={`relative group/text ${hasHinweisBox ? "flex gap-4 border-2 rounded-lg py-3 px-4" : ""} ${isRows ? "tiptap-rows" : ""}`}
-        style={hasHinweisBox ? { borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
+      <div className={`relative group/text ${hasHinweisBox ? "flex gap-4 border-2 rounded-lg px-5" : ""} ${isRows ? "tiptap-rows" : ""}`}
+        style={hasHinweisBox ? { paddingTop: 6, paddingBottom: 6, borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
       >
         {hasHinweisBox && (
           <div className="shrink-0 pt-2">
@@ -906,14 +906,13 @@ function LogoDividerRenderer({ block }: { block: LogoDividerBlock }) {
   const { state } = useEditor();
   const brand = state.settings.brand || "edoomio";
   const logoSrc = BRAND_ICON_LOGOS[brand];
-  const size = block.size ?? 24;
   return (
     <div className="flex items-center justify-center py-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logoSrc}
         alt=""
-        style={{ width: size, height: size }}
+        style={{ width: 24, height: 24 }}
         className="opacity-30"
       />
     </div>

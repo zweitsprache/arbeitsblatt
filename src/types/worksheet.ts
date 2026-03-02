@@ -138,7 +138,6 @@ export interface DividerBlock extends BlockBase {
 // ─── Logo Divider block ──────────────────────────────────────
 export interface LogoDividerBlock extends BlockBase {
   type: "logo-divider";
-  size?: number; // px, default 32
 }
 
 export const BRAND_ICON_LOGOS: Record<Brand, string> = {
@@ -911,7 +910,6 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Logo-Trenner", description: "Zentriertes Markenlogo als Abschnittsteiler" } },
     defaultData: {
       type: "logo-divider",
-      size: 24,
       visibility: "both",
     },
   },

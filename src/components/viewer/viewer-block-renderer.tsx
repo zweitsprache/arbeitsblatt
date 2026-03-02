@@ -252,8 +252,8 @@ function TextView({ block }: { block: TextBlock }) {
 
     return (
       <div
-        className="flex gap-4 border-2 rounded-lg py-3 px-4"
-        style={{ borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
+        className="flex gap-4 border-2 rounded-lg px-5"
+        style={{ paddingTop: 6, paddingBottom: 6, borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
       >
         <div className="shrink-0 pt-0.5">
           {hinweisConfig.icon}
@@ -686,14 +686,13 @@ function DividerView({ block }: { block: DividerBlock }) {
 
 function LogoDividerView({ block, brand = "edoomio" }: { block: LogoDividerBlock; brand?: Brand }) {
   const logoSrc = BRAND_ICON_LOGOS[brand];
-  const size = block.size ?? 24;
   return (
     <div className="flex items-center justify-center py-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logoSrc}
         alt=""
-        style={{ width: size, height: size }}
+        style={{ width: 24, height: 24 }}
         className="opacity-30"
       />
     </div>

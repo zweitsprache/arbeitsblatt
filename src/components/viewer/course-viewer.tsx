@@ -748,7 +748,6 @@ export function CourseViewer({
               ) : currentFlat && hasContent ? (
                 <LessonContent
                   currentFlat={currentFlat}
-                  totalLessons={flatLessons.length}
                   blocks={resolvedBlocks}
                   prevLesson={prevLesson}
                   nextLesson={nextLesson}
@@ -896,7 +895,6 @@ function CourseOverview({
 
 function LessonContent({
   currentFlat,
-  totalLessons,
   blocks,
   prevLesson,
   nextLesson,
@@ -904,7 +902,6 @@ function LessonContent({
   brand = "edoomio",
 }: {
   currentFlat: FlatLesson;
-  totalLessons: number;
   blocks: WorksheetBlock[];
   prevLesson: FlatLesson | null;
   nextLesson: FlatLesson | null;
@@ -915,9 +912,6 @@ function LessonContent({
     <div className="py-6 lg:py-8 px-4 sm:px-6">
       <div className="overflow-hidden">
         <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4">
-          <p className="text-cv-xs text-muted-foreground mb-1">
-            Lesson {currentFlat.globalIndex + 1} of {totalLessons}
-          </p>
           <h2 className="text-cv-2xl font-bold">
             {currentFlat.lesson.title}
           </h2>
