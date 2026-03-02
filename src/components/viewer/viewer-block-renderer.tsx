@@ -252,7 +252,7 @@ function TextView({ block }: { block: TextBlock }) {
 
     return (
       <div
-        className="flex gap-4 border-2 rounded-lg px-5"
+        className="flex gap-4 border-2 rounded-md px-5"
         style={{ paddingTop: 6, paddingBottom: 6, borderColor: hinweisConfig.color, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
       >
         <div className="shrink-0 pt-0.5">
