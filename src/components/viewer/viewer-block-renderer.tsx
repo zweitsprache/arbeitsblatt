@@ -48,7 +48,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, LogIn } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -211,7 +211,7 @@ function TextView({ block }: { block: TextBlock }) {
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
   const isLernziel = block.textStyle === "lernziel";
-  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows";
 
   const imageEl = block.imageSrc ? (
@@ -264,14 +264,15 @@ function TextView({ block }: { block: TextBlock }) {
   if (hasHinweisBox) {
     const hinweisConfig = isHinweisAlarm
       ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
-      : isHinweisWichtig
       ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+      : isLernziel
+      ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
       : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
     return (
       <div
         className="flex gap-0 border-2 rounded-md"
-        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
+        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color, ...(isLernziel && { fontWeight: 600 }) }}
       >
         <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
           {hinweisConfig.icon}

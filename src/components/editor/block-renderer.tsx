@@ -57,7 +57,7 @@ import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-ut
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, LogIn } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -199,13 +199,15 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
   const isLernziel = block.textStyle === "lernziel";
-  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm;
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows";
 
   const hinweisConfig = isHinweisAlarm
     ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
     : isHinweisWichtig
     ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+    : isLernziel
+    ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
     : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
   const imageEl = block.imageSrc ? (
@@ -266,7 +268,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
   return (
     <>
       <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-md" : ""} ${isRows ? "tiptap-rows" : ""}`}
-        style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
+        style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color, ...(isLernziel && { fontWeight: 600 }) } : undefined}
       >
         {hasHinweisBox && (
           <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
