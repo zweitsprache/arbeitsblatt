@@ -49,15 +49,18 @@ import {
   NumberedItemsBlock,
   NumberedItem,
   LogoDividerBlock,
+  AiPromptBlock,
+  AiToolBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
+import { authFetch } from "@/lib/auth-fetch";
 import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -3914,6 +3917,137 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+// ─── AI Prompt block ─────────────────────────────────────────
+function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!block.userInput.trim() || !block.prompt.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const finalPrompt = block.prompt.replace(
+        new RegExp(`\\{\\{${block.variableName}\\}\\}`, "g"),
+        block.userInput
+      );
+      const res = await authFetch("/api/ai/prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: finalPrompt }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { aiResult: data.result } },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="border border-dashed border-violet-300 rounded-lg p-4 bg-violet-50/30 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
+        <Sparkles className="h-3.5 w-3.5" />
+        {block.description || t("aiPromptLabel")}
+      </div>
+
+      {/* Instructions */}
+      {block.instructions && (
+        <p className="text-sm text-slate-600">{block.instructions}</p>
+      )}
+
+      {/* Textarea input */}
+      <textarea
+        value={block.userInput}
+        onChange={(e) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { userInput: e.target.value } },
+          })
+        }
+        placeholder={t("aiPromptPlaceholder")}
+        className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+      />
+
+      {/* Submit button */}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={loading || !block.userInput.trim()}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="h-4 w-4" />
+        )}
+        {t("aiPromptSubmit")}
+      </button>
+
+      {/* Error */}
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+          {error}
+        </div>
+      )}
+
+      {/* AI Result */}
+      {block.aiResult && (
+        <div className="border border-violet-200 rounded-md p-3 bg-white">
+          <div className="text-xs text-violet-500 font-medium mb-1">{t("aiPromptResult")}</div>
+          <div className="text-sm text-slate-700 whitespace-pre-wrap">{block.aiResult}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AI Tool Renderer ───────────────────────────────────────
+function AiToolRenderer({ block }: { block: AiToolBlock }) {
+  const t = useTranslations("blockRenderer");
+
+  return (
+    <div className="border border-dashed border-violet-300 rounded-lg p-4 bg-violet-50/30 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
+        <Bot className="h-3.5 w-3.5" />
+        {t("aiToolLabel")}
+      </div>
+
+      {block.toolId ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">
+              {block.toolTitle || t("aiToolUntitled")}
+            </span>
+          </div>
+          {block.toolDescription && (
+            <p className="text-xs text-muted-foreground">{block.toolDescription}</p>
+          )}
+          <div className="text-[10px] text-muted-foreground bg-slate-100 rounded px-2 py-1 inline-block font-mono">
+            ID: {block.toolId}
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground italic">
+          {t("aiToolSelectHint")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -4023,6 +4157,10 @@ export function BlockRenderer({
       return <DosAndDontsRenderer block={block as DosAndDontsBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
+    case "ai-prompt":
+      return <AiPromptRenderer block={block as AiPromptBlock} />;
+    case "ai-tool":
+      return <AiToolRenderer block={block as AiToolBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

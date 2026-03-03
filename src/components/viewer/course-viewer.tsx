@@ -974,29 +974,29 @@ function LessonNav({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="flex items-stretch gap-3 mt-6">
+    <div className="flex items-stretch gap-2 mt-6">
       {prev ? (
         <button
-          className="flex-1 flex items-center gap-3 px-4 py-3 bg-background border rounded-xl hover:bg-muted/50 transition-colors text-left group"
+          className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-left group"
           onClick={() => onSelect(prev.lesson.id)}
         >
-          <ArrowLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
-          <div className="min-w-0">
-            <p className="text-cv-micro text-muted-foreground uppercase tracking-wider">Previous</p>
-            <p className="text-cv-sm font-medium truncate">{prev.lesson.title}</p>
+          <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+          <div className="min-w-0 space-y-0">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider leading-tight">Previous</p>
+            <p className="text-cv-sm font-medium truncate leading-tight">{prev.lesson.title}</p>
           </div>
         </button>
       ) : <div className="flex-1" />}
       {next ? (
         <button
-          className="flex-1 flex items-center justify-end gap-3 px-4 py-3 bg-background border rounded-xl hover:bg-muted/50 transition-colors text-right group"
+          className="flex-1 flex items-center justify-end gap-2 px-3 py-2 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-right group"
           onClick={() => onSelect(next.lesson.id)}
         >
-          <div className="min-w-0">
-            <p className="text-cv-micro text-muted-foreground uppercase tracking-wider">Next</p>
-            <p className="text-cv-sm font-medium truncate">{next.lesson.title}</p>
+          <div className="min-w-0 space-y-0">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider leading-tight">Next</p>
+            <p className="text-cv-sm font-medium truncate leading-tight">{next.lesson.title}</p>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
         </button>
       ) : <div className="flex-1" />}
     </div>

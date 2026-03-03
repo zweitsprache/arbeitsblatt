@@ -4,6 +4,7 @@ import { WorksheetBlock, Brand } from "./worksheet";
 export interface CourseLesson {
   id: string;
   title: string;
+  shortTitle: string;
   blocks: WorksheetBlock[];
 }
 
@@ -11,6 +12,7 @@ export interface CourseLesson {
 export interface CourseTopic {
   id: string;
   title: string;
+  shortTitle: string;
   image: string | null;
   lessons: CourseLesson[];
 }
@@ -19,6 +21,7 @@ export interface CourseTopic {
 export interface CourseModule {
   id: string;
   title: string;
+  shortTitle: string;
   image: string | null;
   topics: CourseTopic[];
 }
@@ -99,12 +102,14 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
   return modules.map((mod) => ({
     ...mod,
     image: mod.image ?? null,
+    shortTitle: mod.shortTitle ?? "",
     topics: mod.topics.map((topic) => ({
       ...topic,
       image: topic.image ?? null,
+      shortTitle: topic.shortTitle ?? "",
       lessons: topic.lessons.map((lesson) => {
         // Already migrated
-        if (Array.isArray(lesson.blocks)) return lesson;
+        if (Array.isArray(lesson.blocks)) return { ...lesson, shortTitle: lesson.shortTitle ?? "" };
         // Old format: convert worksheetId → linked-blocks block
         const raw = lesson as unknown as { id: string; title: string; worksheetId?: string | null };
         const blocks: WorksheetBlock[] = [];
@@ -118,7 +123,7 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
             worksheetSlug: "",
           });
         }
-        return { id: raw.id, title: raw.title, blocks };
+        return { id: raw.id, title: raw.title, shortTitle: "", blocks };
       }),
     })),
   }));

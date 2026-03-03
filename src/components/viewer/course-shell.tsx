@@ -141,11 +141,14 @@ function useSidebarTheme() { return React.useContext(SidebarThemeContext); }
 interface FlatLesson {
   moduleId: string;
   moduleTitle: string;
+  moduleShortTitle: string;
   moduleIndex: number;
   topicId: string;
   topicTitle: string;
+  topicShortTitle: string;
   lessonId: string;
   lessonTitle: string;
+  lessonShortTitle: string;
   globalIndex: number;
 }
 
@@ -159,11 +162,14 @@ function flattenLessons(structure: CourseModule[]): FlatLesson[] {
         flat.push({
           moduleId: mod.id,
           moduleTitle: mod.title,
+          moduleShortTitle: mod.shortTitle,
           moduleIndex: mi,
           topicId: topic.id,
           topicTitle: topic.title,
+          topicShortTitle: topic.shortTitle,
           lessonId: lesson.id,
           lessonTitle: lesson.title,
+          lessonShortTitle: lesson.shortTitle,
           globalIndex: flat.length,
         });
       }
@@ -297,7 +303,7 @@ function SidebarTopicSection({
           className="flex-1 min-w-0 text-left"
         >
           <span className="text-cv-xs font-semibold leading-snug truncate block" style={{ color: tk.topicText }}>
-            {topic.title || "Untitled Topic"}
+            {topic.shortTitle || topic.title || "Untitled Topic"}
           </span>
         </button>
       </div>
@@ -313,7 +319,7 @@ function SidebarTopicSection({
               return (
                 <SidebarLessonItem
                   key={lesson.id}
-                  title={lesson.title}
+                  title={lesson.shortTitle || lesson.title}
                   isActive={lesson.id === currentLessonId}
                   isVisited={visitedLessons.has(lesson.id)}
                   hasContent={hasContent}
@@ -384,7 +390,7 @@ function SidebarModuleSection({
           className="flex-1 min-w-0 text-left"
         >
           <p className="text-cv-xs font-semibold leading-snug" style={{ color: tk.text }}>
-            {mod.title || "Untitled Module"}
+            {mod.shortTitle || mod.title || "Untitled Module"}
           </p>
         </button>
         <button onClick={() => setOpen(!open)} className="shrink-0">

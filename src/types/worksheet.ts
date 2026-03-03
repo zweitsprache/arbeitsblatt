@@ -45,7 +45,9 @@ export type BlockType =
   | "job-application"
   | "dos-and-donts"
   | "numbered-items"
-  | "logo-divider";
+  | "logo-divider"
+  | "ai-prompt"
+  | "ai-tool";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -572,6 +574,26 @@ export interface NumberedItemsBlock extends BlockBase {
   borderRadius?: number;
 }
 
+// ─── AI Prompt block ─────────────────────────────────────────
+export interface AiPromptBlock extends BlockBase {
+  type: "ai-prompt";
+  instructions: string;       // instructions shown to the user
+  description: string;        // block description / label
+  variableName: string;       // name for the textarea value, used in prompt shortcode
+  prompt: string;             // prompt template with {{variableName}} shortcode
+  userInput: string;          // current textarea value (runtime)
+  aiResult: string;           // AI response (runtime)
+}
+
+// ─── AI Tool block ───────────────────────────────────────────
+export interface AiToolBlock extends BlockBase {
+  type: "ai-tool";
+  toolId: string;           // references AiTool.id
+  toolSlug: string;         // for viewer fetching
+  toolTitle: string;        // display name
+  toolDescription: string;  // display description
+}
+
 // ─── Linked Blocks block ─────────────────────────────────────
 export interface LinkedBlocksBlock extends BlockBase {
   type: "linked-blocks";
@@ -621,7 +643,9 @@ export type WorksheetBlock =
   | JobApplicationBlock
   | DosAndDontsBlock
   | NumberedItemsBlock
-  | LogoDividerBlock;
+  | LogoDividerBlock
+  | AiPromptBlock
+  | AiToolBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -763,7 +787,7 @@ export interface BlockDefinition {
   labelKey: string; // i18n key in "blocks" namespace
   descriptionKey: string; // i18n key in "blocks" namespace
   icon: string; // lucide icon name
-  category: "layout" | "content" | "interactive";
+  category: "layout" | "content" | "interactive" | "ai-tools";
   /** Per-locale fallback translations (label + description). English uses label/description fields. */
   translations?: Record<string, { label: string; description: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1503,6 +1527,45 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     bgColor: "",
     borderRadius: 8,
     visibility: "both",
+  },
+},
+// ── AI Tools ──────────────────────────────────────────────────
+{
+  type: "ai-prompt",
+  label: "AI Prompt",
+  description: "Text input with AI processing",
+  labelKey: "aiPrompt",
+  descriptionKey: "aiPromptDesc",
+  icon: "Sparkles",
+  category: "ai-tools",
+  translations: { de: { label: "KI-Prompt", description: "Texteingabe mit KI-Verarbeitung" } },
+  defaultData: {
+    type: "ai-prompt",
+    instructions: "",
+    description: "",
+    variableName: "eingabe",
+    prompt: "{{eingabe}}",
+    userInput: "",
+    aiResult: "",
+    visibility: "online",
+  },
+},
+{
+  type: "ai-tool",
+  label: "AI Tool",
+  description: "Form-based AI agent with custom fields",
+  labelKey: "aiTool",
+  descriptionKey: "aiToolDesc",
+  icon: "Bot",
+  category: "ai-tools",
+  translations: { de: { label: "KI-Tool", description: "Formularbasierter KI-Agent mit benutzerdefinierten Feldern" } },
+  defaultData: {
+    type: "ai-tool",
+    toolId: "",
+    toolSlug: "",
+    toolTitle: "",
+    toolDescription: "",
+    visibility: "online",
   },
 },
 ];

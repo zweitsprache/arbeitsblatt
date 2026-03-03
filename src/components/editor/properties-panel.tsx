@@ -65,10 +65,12 @@ import {
   JobApplicationBlock,
   JobApplicationStyle,
   DosAndDontsBlock,
+  AiPromptBlock,
+  AiToolBlock,
   BlockVisibility,
   TextBlockStyle,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -5349,6 +5351,155 @@ function DosAndDontsProps({ block }: { block: DosAndDontsBlock }) {
   );
 }
 
+// ─── AI Prompt Props ─────────────────────────────────────────
+function AiPromptProps({ block }: { block: AiPromptBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const update = (updates: Partial<AiPromptBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptDescription")}</Label>
+        <Input
+          value={block.description}
+          onChange={(e) => update({ description: e.target.value })}
+          placeholder={t("aiPromptDescriptionPlaceholder")}
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptInstructions")}</Label>
+        <textarea
+          value={block.instructions}
+          onChange={(e) => update({ instructions: e.target.value })}
+          placeholder={t("aiPromptInstructionsPlaceholder")}
+          className="w-full min-h-[60px] p-2 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptVariableName")}</Label>
+        <Input
+          value={block.variableName}
+          onChange={(e) => update({ variableName: e.target.value.replace(/\s/g, "_") })}
+          placeholder="stelleninserat"
+        />
+        <p className="text-xs text-muted-foreground mt-1">{t("aiPromptVariableHint")}</p>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptTemplate")}</Label>
+        <textarea
+          value={block.prompt}
+          onChange={(e) => update({ prompt: e.target.value })}
+          placeholder={`Analysiere das folgende Stelleninserat:\n\n{{${block.variableName}}}`}
+          className="w-full min-h-[120px] p-2 rounded-md border border-slate-200 bg-white text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          {t("aiPromptTemplateHint", { variable: `{{${block.variableName}}}` })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI Tool Props ──────────────────────────────────────────
+function AiToolProps({ block }: { block: AiToolBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const [tools, setTools] = React.useState<{ id: string; title: string; slug: string; description: string | null; fields: unknown[] }[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  const update = (updates: Partial<AiToolBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  // Fetch published tools
+  React.useEffect(() => {
+    setLoading(true);
+    fetch("/api/ai-tools?published=true", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => setTools(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSelectTool = (toolId: string) => {
+    const tool = tools.find((t) => t.id === toolId);
+    if (tool) {
+      update({
+        toolId: tool.id,
+        toolSlug: tool.slug,
+        toolTitle: tool.title,
+        toolDescription: tool.description || "",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("aiToolSelect")}
+        </Label>
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("aiToolLoading")}
+          </div>
+        ) : tools.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("aiToolNoTools")}</p>
+        ) : (
+          <Select value={block.toolId || ""} onValueChange={handleSelectTool}>
+            <SelectTrigger>
+              <SelectValue placeholder={t("aiToolSelectPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {tools.map((tool) => (
+                <SelectItem key={tool.id} value={tool.id}>
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-3.5 w-3.5 text-violet-500" />
+                    {tool.title}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {block.toolId && (
+        <>
+          <Separator />
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {t("aiToolTitleOverride")}
+            </Label>
+            <Input
+              value={block.toolTitle}
+              onChange={(e) => update({ toolTitle: e.target.value })}
+              placeholder={t("aiToolTitlePlaceholder")}
+            />
+          </div>
+          <Separator />
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {t("aiToolDescriptionOverride")}
+            </Label>
+            <textarea
+              value={block.toolDescription}
+              onChange={(e) => update({ toolDescription: e.target.value })}
+              placeholder={t("aiToolDescriptionPlaceholder")}
+              className="w-full min-h-[60px] p-2 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -5440,6 +5591,10 @@ export function PropertiesPanel() {
         return <DosAndDontsProps block={selectedBlock as DosAndDontsBlock} />;
       case "numbered-items":
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
+      case "ai-prompt":
+        return <AiPromptProps block={selectedBlock as AiPromptBlock} />;
+      case "ai-tool":
+        return <AiToolProps block={selectedBlock as AiToolBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

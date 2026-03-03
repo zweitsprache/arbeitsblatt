@@ -36,6 +36,8 @@ import {
   Rows3,
   Mail,
   ClipboardList,
+  Sparkles,
+  Bot,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -68,6 +70,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Rows3,
   Mail,
   ClipboardList,
+  Sparkles,
+  Bot,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
@@ -114,6 +118,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
       content: BLOCK_LIBRARY.filter((b) => b.category === "content" && filter(b)),
       layout: BLOCK_LIBRARY.filter((b) => b.category === "layout" && filter(b)),
       interactive: BLOCK_LIBRARY.filter((b) => b.category === "interactive" && filter(b)),
+      aiTools: BLOCK_LIBRARY.filter((b) => b.category === "ai-tools" && filter(b)),
     };
   }, [search, tb]);
 
@@ -190,8 +195,27 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
             </div>
           )}
 
+          {/* AI Tools blocks */}
+          {categories.aiTools.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-md mb-2">
+                {t("aiToolsCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.aiTools.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* No results */}
-          {categories.content.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && (
+          {categories.content.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">{t("noBlocksFound")}</p>
           )}
         </div>

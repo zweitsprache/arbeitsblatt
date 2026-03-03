@@ -50,10 +50,13 @@ export function extractTranslatableStrings(
   // ── Structure: modules → topics → lessons → blocks
   for (const mod of course.structure) {
     addStr(strings, `module.${mod.id}.title`, mod.title);
+    addStr(strings, `module.${mod.id}.shortTitle`, mod.shortTitle);
     for (const topic of mod.topics) {
       addStr(strings, `topic.${topic.id}.title`, topic.title);
+      addStr(strings, `topic.${topic.id}.shortTitle`, topic.shortTitle);
       for (const lesson of topic.lessons) {
         addStr(strings, `lesson.${lesson.id}.title`, lesson.title);
+        addStr(strings, `lesson.${lesson.id}.shortTitle`, lesson.shortTitle);
         extractBlockStrings(lesson.blocks ?? [], strings);
       }
     }
@@ -414,10 +417,13 @@ export function applyTranslations(
   // ── Structure
   for (const mod of structure) {
     apply(`module.${mod.id}.title`, (v) => (mod.title = v));
+    apply(`module.${mod.id}.shortTitle`, (v) => (mod.shortTitle = v));
     for (const topic of mod.topics) {
       apply(`topic.${topic.id}.title`, (v) => (topic.title = v));
+      apply(`topic.${topic.id}.shortTitle`, (v) => (topic.shortTitle = v));
       for (const lesson of topic.lessons) {
         apply(`lesson.${lesson.id}.title`, (v) => (lesson.title = v));
+        apply(`lesson.${lesson.id}.shortTitle`, (v) => (lesson.shortTitle = v));
         applyBlockTranslations(lesson.blocks ?? [], translations);
       }
     }

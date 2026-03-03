@@ -49,17 +49,22 @@ function LessonItem({
   const t = useTranslations("course");
   const tc = useTranslations("common");
   const { dispatch } = useCourse();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(lesson.title);
+  const [editingField, setEditingField] = useState<"title" | "shortTitle" | null>(null);
+  const [editValue, setEditValue] = useState("");
 
-  const handleSubmitRename = () => {
-    if (editTitle.trim()) {
+  const startEditing = (field: "title" | "shortTitle") => {
+    setEditValue(field === "title" ? lesson.title : lesson.shortTitle);
+    setEditingField(field);
+  };
+
+  const handleSubmitEdit = () => {
+    if (editingField && editValue.trim()) {
       dispatch({
         type: "UPDATE_LESSON",
-        payload: { moduleId, topicId, lessonId: lesson.id, title: editTitle.trim() },
+        payload: { moduleId, topicId, lessonId: lesson.id, [editingField]: editValue.trim() },
       });
     }
-    setIsEditing(false);
+    setEditingField(null);
   };
 
   return (
@@ -79,25 +84,25 @@ function LessonItem({
     >
       <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
-      {isEditing ? (
+      {editingField ? (
         <Input
-          value={editTitle}
-          onChange={(e) => setEditTitle(e.target.value)}
-          onBlur={handleSubmitRename}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSubmitEdit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmitRename();
+            if (e.key === "Enter") handleSubmitEdit();
             if (e.key === "Escape") {
-              setEditTitle(lesson.title);
-              setIsEditing(false);
+              setEditingField(null);
             }
           }}
           onClick={(e) => e.stopPropagation()}
           autoFocus
+          placeholder={editingField === "shortTitle" ? t("shortTitlePlaceholder") : ""}
           className="h-5 text-xs py-0"
         />
       ) : (
         <span className="flex-1 text-xs truncate">
-          {lesson.title || t("untitledLesson")}
+          {lesson.shortTitle || lesson.title || t("untitledLesson")}
         </span>
       )}
 
@@ -120,11 +125,18 @@ function LessonItem({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              setEditTitle(lesson.title);
-              setIsEditing(true);
+              startEditing("title");
             }}
           >
             {tc("rename")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              startEditing("shortTitle");
+            }}
+          >
+            {t("shortTitle")}
           </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive"
@@ -161,19 +173,24 @@ function TopicItem({
   const tc = useTranslations("common");
   const { dispatch, addLesson } = useCourse();
   const [expanded, setExpanded] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(topic.title);
+  const [editingField, setEditingField] = useState<"title" | "shortTitle" | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
   const { upload } = useUpload();
 
-  const handleSubmitRename = () => {
-    if (editTitle.trim()) {
+  const startEditing = (field: "title" | "shortTitle") => {
+    setEditValue(field === "title" ? topic.title : topic.shortTitle);
+    setEditingField(field);
+  };
+
+  const handleSubmitEdit = () => {
+    if (editingField && editValue.trim()) {
       dispatch({
         type: "UPDATE_TOPIC",
-        payload: { moduleId, topicId: topic.id, title: editTitle.trim() },
+        payload: { moduleId, topicId: topic.id, [editingField]: editValue.trim() },
       });
     }
-    setIsEditing(false);
+    setEditingField(null);
   };
 
   return (
@@ -208,25 +225,25 @@ function TopicItem({
 
         <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
-        {isEditing ? (
+        {editingField ? (
           <Input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={handleSubmitRename}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSubmitEdit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmitRename();
+              if (e.key === "Enter") handleSubmitEdit();
               if (e.key === "Escape") {
-                setEditTitle(topic.title);
-                setIsEditing(false);
+                setEditingField(null);
               }
             }}
             onClick={(e) => e.stopPropagation()}
             autoFocus
+            placeholder={editingField === "shortTitle" ? t("shortTitlePlaceholder") : ""}
             className="h-5 text-xs py-0"
           />
         ) : (
           <span className="flex-1 text-xs font-medium truncate">
-            {topic.title || t("untitledTopic")}
+            {topic.shortTitle || topic.title || t("untitledTopic")}
           </span>
         )}
 
@@ -258,11 +275,18 @@ function TopicItem({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditTitle(topic.title);
-                setIsEditing(true);
+                startEditing("title");
               }}
             >
               {tc("rename")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditing("shortTitle");
+              }}
+            >
+              {t("shortTitle")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
@@ -373,19 +397,24 @@ function ModuleItem({
   const tc = useTranslations("common");
   const { dispatch, addTopic } = useCourse();
   const [expanded, setExpanded] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(mod.title);
+  const [editingField, setEditingField] = useState<"title" | "shortTitle" | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
   const { upload } = useUpload();
 
-  const handleSubmitRename = () => {
-    if (editTitle.trim()) {
+  const startEditing = (field: "title" | "shortTitle") => {
+    setEditValue(field === "title" ? mod.title : mod.shortTitle);
+    setEditingField(field);
+  };
+
+  const handleSubmitEdit = () => {
+    if (editingField && editValue.trim()) {
       dispatch({
         type: "UPDATE_MODULE",
-        payload: { id: mod.id, title: editTitle.trim() },
+        payload: { id: mod.id, [editingField]: editValue.trim() },
       });
     }
-    setIsEditing(false);
+    setEditingField(null);
   };
 
   return (
@@ -417,26 +446,26 @@ function ModuleItem({
 
         <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
 
-        {isEditing ? (
+        {editingField ? (
           <Input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={handleSubmitRename}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSubmitEdit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmitRename();
+              if (e.key === "Enter") handleSubmitEdit();
               if (e.key === "Escape") {
-                setEditTitle(mod.title);
-                setIsEditing(false);
+                setEditingField(null);
               }
             }}
             onClick={(e) => e.stopPropagation()}
             autoFocus
+            placeholder={editingField === "shortTitle" ? t("shortTitlePlaceholder") : ""}
             className="h-6 text-sm py-0"
           />
         ) : (
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              {mod.title || t("untitledModule")}
+              {mod.shortTitle || mod.title || t("untitledModule")}
             </p>
             <p className="text-xs text-muted-foreground">
               {t("topicCount", { count: mod.topics.length })}
@@ -468,11 +497,18 @@ function ModuleItem({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditTitle(mod.title);
-                setIsEditing(true);
+                startEditing("title");
               }}
             >
               {tc("rename")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditing("shortTitle");
+              }}
+            >
+              {t("shortTitle")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {

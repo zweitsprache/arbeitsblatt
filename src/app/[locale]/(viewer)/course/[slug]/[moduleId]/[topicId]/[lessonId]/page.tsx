@@ -96,22 +96,18 @@ export default function LessonPage() {
         </div>
 
         {/* Prev / Next lesson navigation */}
-        <div className="flex items-stretch gap-3 mt-10">
+        <div className="flex items-center gap-2 mt-10">
           {prevLesson ? (
             <button
-              className="flex-1 flex items-center gap-3 px-4 py-3 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-left group"
+              className="flex-1 flex items-center gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-left group"
               onClick={() =>
                 router.push(`${basePath}/${prevLesson.id}`)
               }
             >
-              <ArrowLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
               <div className="min-w-0">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Previous Lesson
-                </p>
-                <p className="text-sm font-medium truncate">
-                  {prevLesson.title}
-                </p>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">Previous</span>
+                <span className="block !text-[16px] font-medium truncate leading-snug">{prevLesson.title}</span>
               </div>
             </button>
           ) : (
@@ -119,20 +115,16 @@ export default function LessonPage() {
           )}
           {nextLesson ? (
             <button
-              className="flex-1 flex items-center justify-end gap-3 px-4 py-3 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-right group"
+              className="flex-1 flex items-center justify-end gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-right group"
               onClick={() =>
                 router.push(`${basePath}/${nextLesson.id}`)
               }
             >
               <div className="min-w-0">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Next Lesson
-                </p>
-                <p className="text-sm font-medium truncate">
-                  {nextLesson.title}
-                </p>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">Next</span>
+                <span className="block !text-[16px] font-medium truncate leading-snug">{nextLesson.title}</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
             </button>
           ) : (
             <div className="flex-1" />

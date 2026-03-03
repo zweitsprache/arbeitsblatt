@@ -18,6 +18,7 @@ import {
   Store,
   Image,
   GraduationCap,
+  Bot,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -101,6 +102,13 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor/covers", labelKey: "newCover", icon: Plus },
       { href: "/covers", labelKey: "coverLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "aiTools",
+    icon: Bot,
+    items: [
+      { href: "/ai-tools", labelKey: "aiToolLibrary", icon: Library },
     ],
   },
   {

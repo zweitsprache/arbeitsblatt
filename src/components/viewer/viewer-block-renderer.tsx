@@ -44,11 +44,13 @@ import {
   DosAndDontsBlock,
   NumberedItemsBlock,
   LogoDividerBlock,
+  AiPromptBlock,
+  AiToolBlock,
   BRAND_ICON_LOGOS,
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -3464,6 +3466,358 @@ function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+// ─── AI Prompt View ──────────────────────────────────────────
+function AiPromptView({ block }: { block: AiPromptBlock }) {
+  const t = useTranslations("viewer");
+  const [userInput, setUserInput] = useState(block.userInput || "");
+  const [aiResult, setAiResult] = useState(block.aiResult || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!userInput.trim() || !block.prompt.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const finalPrompt = block.prompt.replace(
+        new RegExp(`\\{\\{${block.variableName}\\}\\}`, "g"),
+        userInput
+      );
+      const res = await fetch("/api/ai/prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: finalPrompt }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setAiResult(data.result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Instructions */}
+      {block.instructions && (
+        <p className="text-sm text-slate-600">{block.instructions}</p>
+      )}
+
+      {/* Textarea */}
+      <textarea
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+        placeholder={t("aiPromptPlaceholder")}
+        className="w-full min-h-[120px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+      />
+
+      {/* Submit */}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={loading || !userInput.trim()}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="h-4 w-4" />
+        )}
+        {t("aiPromptSubmit")}
+      </button>
+
+      {/* Error */}
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+          {error}
+        </div>
+      )}
+
+      {/* Result */}
+      {aiResult && (
+        <div className="border border-violet-200 rounded-md p-4 bg-violet-50/30">
+          <div className="text-xs text-violet-500 font-medium mb-2">{t("aiPromptResult")}</div>
+          <div className="text-sm text-slate-700 whitespace-pre-wrap">{aiResult}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AI Tool View ───────────────────────────────────────────
+function AiToolView({ block }: { block: AiToolBlock }) {
+  const t = useTranslations("viewer");
+  const [toolData, setToolData] = useState<{
+    id: string;
+    title: string;
+    description: string | null;
+    fields: { id: string; type: string; label: string; variableName: string; placeholder?: string; required?: boolean; options?: { id: string; label: string; value: string }[]; min?: number; max?: number; defaultValue?: string }[];
+  } | null>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch tool metadata
+  React.useEffect(() => {
+    if (!block.toolId) {
+      setFetchLoading(false);
+      return;
+    }
+    fetch(`/api/ai-tools/${block.toolId}/public`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Tool not found");
+        return res.json();
+      })
+      .then((data) => {
+        setToolData(data);
+        // Initialize default values
+        const defaults: Record<string, string> = {};
+        for (const field of data.fields || []) {
+          if (field.defaultValue) defaults[field.variableName] = field.defaultValue;
+        }
+        setValues(defaults);
+      })
+      .catch(() => setError(t("aiToolNotFound")))
+      .finally(() => setFetchLoading(false));
+  }, [block.toolId, t]);
+
+  const handleSubmit = async () => {
+    if (!block.toolId || !toolData) return;
+    setLoading(true);
+    setError(null);
+    setResult("");
+    try {
+      const res = await fetch(`/api/ai-tools/${block.toolId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ values }),
+      });
+      if (res.status === 401) {
+        setError(t("aiToolLoginRequired"));
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setResult(data.result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setResult("");
+    setError(null);
+    const defaults: Record<string, string> = {};
+    for (const field of toolData?.fields || []) {
+      if (field.defaultValue) defaults[field.variableName] = field.defaultValue;
+    }
+    setValues(defaults);
+  };
+
+  if (fetchLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+      </div>
+    );
+  }
+
+  if (!block.toolId || !toolData) {
+    return (
+      <div className="text-sm text-muted-foreground text-center py-4">
+        {t("aiToolNotConfigured")}
+      </div>
+    );
+  }
+
+  const ReactMarkdownLazy = React.lazy(() => import("react-markdown"));
+
+  return (
+    <div className="space-y-4">
+      {/* Title & description */}
+      {(block.toolTitle || toolData.title) && (
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-violet-500" />
+          <h3 className="text-base font-semibold">
+            {block.toolTitle || toolData.title}
+          </h3>
+        </div>
+      )}
+      {(block.toolDescription || toolData.description) && (
+        <p className="text-sm text-muted-foreground">
+          {block.toolDescription || toolData.description}
+        </p>
+      )}
+
+      {/* Dynamic form */}
+      <div className="space-y-4">
+        {toolData.fields.map((field) => (
+          <div key={field.id}>
+            <label className="text-sm font-medium block mb-1">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+
+            {field.type === "text" && (
+              <input
+                type="text"
+                value={values[field.variableName] || ""}
+                onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
+                placeholder={field.placeholder}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              />
+            )}
+
+            {field.type === "textarea" && (
+              <textarea
+                value={values[field.variableName] || ""}
+                onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
+                placeholder={field.placeholder}
+                className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+              />
+            )}
+
+            {field.type === "select" && (
+              <select
+                value={values[field.variableName] || ""}
+                onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              >
+                <option value="">{field.placeholder || t("aiToolSelectOption")}</option>
+                {(field.options || []).map((opt) => (
+                  <option key={opt.id} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+
+            {field.type === "number" && (
+              <input
+                type="number"
+                value={values[field.variableName] || ""}
+                onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
+                placeholder={field.placeholder}
+                min={field.min}
+                max={field.max}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              />
+            )}
+
+            {field.type === "checkbox" && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={values[field.variableName] === "true"}
+                  onChange={(e) =>
+                    setValues((prev) => ({
+                      ...prev,
+                      [field.variableName]: e.target.checked ? "true" : "false",
+                    }))
+                  }
+                  className="accent-violet-600 h-4 w-4"
+                />
+                <span className="text-sm">{field.placeholder || ""}</span>
+              </label>
+            )}
+
+            {field.type === "radio" && (
+              <div className="space-y-1.5">
+                {(field.options || []).map((opt) => (
+                  <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`viewer-${field.variableName}`}
+                      value={opt.value}
+                      checked={values[field.variableName] === opt.value}
+                      onChange={(e) =>
+                        setValues((prev) => ({
+                          ...prev,
+                          [field.variableName]: e.target.value,
+                        }))
+                      }
+                      className="accent-violet-600"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Submit button */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {t("aiToolSubmit")}
+        </button>
+
+        {result && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition-colors"
+          >
+            {t("aiToolClear")}
+          </button>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+          {error}
+        </div>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div className="border border-violet-200 rounded-lg p-4 bg-violet-50/30">
+          <div className="text-xs text-violet-500 font-medium mb-2">{t("aiToolResult")}</div>
+          <div className="prose prose-sm max-w-none text-slate-700">
+            <React.Suspense fallback={<div className="text-sm text-slate-500">{result}</div>}>
+              <ReactMarkdownLazy
+                components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2 last:mb-0 space-y-0.5">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 last:mb-0 space-y-0.5">{children}</ol>,
+                  li: ({ children }) => <li>{children}</li>,
+                  code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-[0.9em]">{children}</code>,
+                }}
+              >
+                {result}
+              </ReactMarkdownLazy>
+            </React.Suspense>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Renderer ──────────────────────────────────────────
 
 export function ViewerBlockRenderer({
@@ -3739,6 +4093,10 @@ export function ViewerBlockRenderer({
       return <DosAndDontsView block={block as DosAndDontsBlock} />;
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} />;
+    case "ai-prompt":
+      return <AiPromptView block={block as AiPromptBlock} />;
+    case "ai-tool":
+      return <AiToolView block={block as AiToolBlock} />;
     default:
       return null;
   }
