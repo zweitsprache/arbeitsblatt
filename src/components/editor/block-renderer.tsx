@@ -268,7 +268,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
   return (
     <>
       <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-md" : ""} ${isRows ? "tiptap-rows" : ""}`}
-        style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color, ...(isLernziel && { fontWeight: 600 }) } : undefined}
+        style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
       >
         {hasHinweisBox && (
           <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">

@@ -273,7 +273,7 @@ function TextView({ block }: { block: TextBlock }) {
     return (
       <div
         className="flex gap-0 border-2 rounded-md"
-        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color, ...(isLernziel && { fontWeight: 600 }) }}
+        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
       >
         <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
           {hinweisConfig.icon}
