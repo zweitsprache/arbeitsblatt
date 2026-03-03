@@ -80,6 +80,7 @@ export interface ImageBlock extends BlockBase {
   src: string;
   alt: string;
   width?: number;
+  height?: number;
   caption?: string;
 }
 

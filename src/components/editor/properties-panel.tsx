@@ -409,6 +409,56 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("heightPx")}</Label>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const current = block.height ?? 200;
+              const next = Math.max(20, current - 20);
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { height: next } },
+              });
+            }}
+          >
+            −
+          </Button>
+          <Input
+            type="number"
+            value={block.height || ""}
+            placeholder={t("auto")}
+            className="text-center flex-1"
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: { height: e.target.value ? Number(e.target.value) : undefined },
+                },
+              })
+            }
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const current = block.height ?? 200;
+              const next = current + 20;
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { height: next } },
+              });
+            }}
+          >
+            +
+          </Button>
+        </div>
+      </div>
+      <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("caption")}</Label>
         <Input
           value={block.caption || ""}

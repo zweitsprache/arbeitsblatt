@@ -553,8 +553,11 @@ function ImageView({ block }: { block: ImageBlock }) {
       <img
         src={block.src}
         alt={block.alt}
-        className="max-w-full rounded"
-        style={block.width ? { width: block.width } : undefined}
+        className="max-w-full rounded mx-auto block"
+        style={{
+          ...(block.width ? { width: block.width } : {}),
+          ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
+        }}
       />
       {block.caption && (
         <figcaption className="text-muted-foreground mt-1 text-center">
