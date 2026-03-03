@@ -246,7 +246,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
       <>
         <div className="relative group/text flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
           <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
-            <LogIn className="h-5 w-5" style={{ color: "#ffffff" }} />
+            <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
           </div>
           <div className="flex-1 min-w-0 px-3 py-2">
             {richTextEl}

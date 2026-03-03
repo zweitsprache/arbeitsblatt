@@ -236,7 +236,7 @@ function TextView({ block }: { block: TextBlock }) {
     return (
       <div className="flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
         <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
-          <LogIn className="h-5 w-5" style={{ color: "#ffffff" }} />
+          <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
         </div>
         <div className="flex-1 min-w-0 px-3 py-2">
           {imageEl}
@@ -264,6 +264,7 @@ function TextView({ block }: { block: TextBlock }) {
   if (hasHinweisBox) {
     const hinweisConfig = isHinweisAlarm
       ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+      : isHinweisWichtig
       ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
       : isLernziel
       ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
