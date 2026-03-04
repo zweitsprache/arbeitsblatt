@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { CourseModule, SidebarTheme } from "@/types/course";
-import { BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,44 @@ const LIGHT_TOKENS: SidebarTokens = {
   scrollThumbHover: "rgba(0,0,0,0.18)",
 };
 
-function getSidebarTokens(theme: SidebarTheme): SidebarTokens {
+const LINGOSTAR_LIGHT_TOKENS: SidebarTokens = {
+  bg: "#ffffff",
+  text: "rgba(0,0,0,0.85)",
+  textMuted: "rgba(0,0,0,0.70)",
+  textFaint: "rgba(0,0,0,0.25)",
+  accentText: "#3a4f40",
+  accentPercent: "rgba(58,79,64,0.5)",
+  progressBar: "linear-gradient(90deg, #3a4f40, #4d6953)",
+  progressTrack: "rgba(0,0,0,0.06)",
+  ringTrack: "rgba(0,0,0,0.08)",
+  ringFill: "rgba(58,79,64,0.6)",
+  ringFillComplete: "#3a4f40",
+  ringNumber: "rgba(0,0,0,0.55)",
+  ringNumberActive: "#3a4f40",
+  ringNumberFaint: "rgba(0,0,0,0.20)",
+  divider: "rgba(0,0,0,0.07)",
+  hoverBg: "rgba(0,0,0,0.03)",
+  activeBg: "rgba(58,79,64,0.08)",
+  activeIndicator: "#3a4f40",
+  openBg: "rgba(0,0,0,0.02)",
+  topicText: "rgba(0,0,0,0.65)",
+  chevron: "rgba(0,0,0,0.25)",
+  borderLine: "rgba(0,0,0,0.07)",
+  continueGradient: "linear-gradient(135deg, #3a4f40, #4d6953)",
+  continueText: "#ffffff",
+  continueShadow: "0 2px 12px rgba(58,79,64,0.12)",
+  continueShadowHover: "0 4px 20px rgba(58,79,64,0.20)",
+  overviewText: "rgba(0,0,0,0.35)",
+  overviewHover: "rgba(0,0,0,0.55)",
+  glowGradient: "radial-gradient(circle, rgba(58,79,64,0.03) 0%, transparent 70%)",
+  scrollThumb: "rgba(0,0,0,0.08)",
+  scrollThumbHover: "rgba(0,0,0,0.15)",
+};
+
+function getSidebarTokens(theme: SidebarTheme, brand?: Brand): SidebarTokens {
+  if (brand === "lingostar") {
+    return theme === "dark" ? DARK_TOKENS : LINGOSTAR_LIGHT_TOKENS;
+  }
   return theme === "light" ? LIGHT_TOKENS : DARK_TOKENS;
 }
 
@@ -453,7 +490,7 @@ function SidebarNav({
   onContinue?: () => void;
 }) {
   const { brand, sidebarTheme, image: courseImage } = useCourse();
-  const tk = getSidebarTokens(sidebarTheme);
+  const tk = getSidebarTokens(sidebarTheme, brand as Brand);
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
   const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
@@ -726,6 +763,12 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen lg:h-screen flex flex-col p-4 gap-4">
         {/* Breadcrumb header (full width) */}
         <div className="flex items-center gap-2 pr-4 py-1.5 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+          {/* Brand logo */}
+          <img
+            src={DEFAULT_BRAND_SETTINGS[brand].logo}
+            alt=""
+            className="h-6 w-auto mr-2"
+          />
           {breadcrumb && (
             <>
               <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
@@ -750,11 +793,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           {/* Brand logo + Language switcher */}
           <div className="ml-auto flex items-center gap-3">
             <CourseLanguageSwitcher />
-            <img
-              src={DEFAULT_BRAND_SETTINGS[brand].logo}
-              alt=""
-              className="h-6 w-auto"
-            />
           </div>
         </div>
 

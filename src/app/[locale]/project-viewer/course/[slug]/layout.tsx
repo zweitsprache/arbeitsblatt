@@ -1,0 +1,132 @@
+import { headers } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import { setRequestLocale } from "next-intl/server";
+import {
+  CourseModule,
+  CourseCoverSettings,
+  CourseSettings,
+  DEFAULT_COURSE_COVER_SETTINGS,
+  DEFAULT_COURSE_SETTINGS,
+  collectLinkedWorksheetIds,
+  normalizeCourseStructure,
+} from "@/types/course";
+import {
+  WorksheetBlock,
+  WorksheetSettings,
+  DEFAULT_SETTINGS,
+} from "@/types/worksheet";
+import { CourseProvider } from "@/components/viewer/course-context";
+import { CourseShell } from "@/components/viewer/course-shell";
+
+export default async function ProjectCourseLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+
+  const headersList = await headers();
+  const projectSlug = headersList.get("x-project-slug");
+  if (!projectSlug) notFound();
+
+  const project = await prisma.project.findUnique({
+    where: { slug: projectSlug },
+  });
+  if (!project) notFound();
+
+  const course = await prisma.course.findUnique({ where: { slug } });
+  if (!course) notFound();
+
+  // Verify course is assigned to this project
+  const assignment = await prisma.projectContent.findUnique({
+    where: {
+      projectId_contentType_contentId: {
+        projectId: project.id,
+        contentType: "COURSE",
+        contentId: course.id,
+      },
+    },
+  });
+  if (!assignment) notFound();
+
+  const structure = normalizeCourseStructure(
+    course.structure as unknown as CourseModule[]
+  );
+
+  const linkedWorksheetIds = collectLinkedWorksheetIds(structure);
+  const worksheetsData =
+    linkedWorksheetIds.length > 0
+      ? await prisma.worksheet.findMany({
+          where: { id: { in: linkedWorksheetIds } },
+        })
+      : [];
+
+  const worksheets: Record<
+    string,
+    {
+      id: string;
+      title: string;
+      slug: string;
+      blocks: WorksheetBlock[];
+      settings: WorksheetSettings;
+    }
+  > = {};
+
+  for (const ws of worksheetsData) {
+    worksheets[ws.id] = {
+      id: ws.id,
+      title: ws.title,
+      slug: ws.slug,
+      blocks: ws.blocks as unknown as WorksheetBlock[],
+      settings: {
+        ...DEFAULT_SETTINGS,
+        ...(ws.settings as unknown as Partial<WorksheetSettings>),
+      },
+    };
+  }
+
+  const settings: CourseSettings = {
+    ...DEFAULT_COURSE_SETTINGS,
+    ...(course.settings as unknown as Partial<CourseSettings>),
+  };
+
+  const coverSettings: CourseCoverSettings = {
+    ...DEFAULT_COURSE_COVER_SETTINGS,
+    ...(course.coverSettings as unknown as Partial<CourseCoverSettings>),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTranslations = (course as any).translations as unknown;
+  const translations: Record<string, Record<string, string>> | undefined =
+    rawTranslations &&
+    typeof rawTranslations === "object" &&
+    Object.keys(rawTranslations as Record<string, unknown>).length > 0
+      ? (rawTranslations as Record<string, Record<string, string>>)
+      : undefined;
+
+  return (
+    <CourseProvider
+      value={{
+        id: course.id,
+        slug,
+        title: course.title,
+        description: settings.description,
+        languageLevel: settings.languageLevel,
+        image: settings.image,
+        brand: settings.brand || "edoomio",
+        sidebarTheme: settings.sidebarTheme || "dark",
+        structure,
+        coverSettings,
+        settings,
+        worksheets,
+        translations,
+      }}
+    >
+      <CourseShell>{children}</CourseShell>
+    </CourseProvider>
+  );
+}

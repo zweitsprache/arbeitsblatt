@@ -29,6 +29,8 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import React, { useState } from "react";
+import { useIsAdmin } from "@/lib/auth/use-is-admin";
+import { Building2, FolderKanban } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -121,6 +123,15 @@ const sections: NavSection[] = [
   },
 ];
 
+const adminSection: NavSection = {
+  titleKey: "admin",
+  icon: Shield,
+  items: [
+    { href: "/admin/clients", labelKey: "adminClients", icon: Building2 },
+    { href: "/admin/projects", labelKey: "adminProjects", icon: FolderKanban },
+  ],
+};
+
 function SectionTitle({ icon: Icon, children, collapsed }: { icon: React.ComponentType<{ className?: string }>, children: React.ReactNode, collapsed: boolean }) {
   if (collapsed) return null;
   return (
@@ -135,6 +146,11 @@ export function AppSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const t = useTranslations("sidebar");
+  const isAdminUser = useIsAdmin();
+
+  const allSections = isAdminUser
+    ? [...sections.slice(0, -1), adminSection, sections[sections.length - 1]]
+    : sections;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -186,7 +202,7 @@ export function AppSidebar() {
           </nav>
 
           {/* Sections */}
-          {sections.map((section) => (
+          {allSections.map((section) => (
             <div key={section.titleKey}>
               <SectionTitle icon={section.icon} collapsed={collapsed}>
                 {t(section.titleKey)}

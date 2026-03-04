@@ -113,3 +113,53 @@ model VerbCache {
 
   @@index([infinitive])
 }
+
+// ── Multi-tenant project system ──────────────────────────────────────
+
+model Client {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  brandSettings Json      @default("{}")  // BrandSettings: logo, favicon, colors, font, pageTitle
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[]
+
+  @@index([slug])
+}
+
+model Project {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique  // used as subdomain: slug.domain.com
+  clientId  String
+  domain    String?          @unique  // optional custom domain
+  settings  Json             @default("{}")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contents  ProjectContent[]
+
+  @@index([slug])
+  @@index([clientId])
+}
+
+enum ContentType {
+  WORKSHEET
+  EBOOK
+  COURSE
+  AI_TOOL
+}
+
+model ProjectContent {
+  id          String      @id @default(cuid())
+  projectId   String
+  contentType ContentType
+  contentId   String      // references Worksheet.id, EBook.id, Course.id, or AiTool.id
+  createdAt   DateTime    @default(now())
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, contentType, contentId])
+  @@index([contentId])
+  @@index([projectId])
+}
