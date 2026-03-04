@@ -22,9 +22,9 @@ export default function middleware(req: NextRequest) {
     subdomain = hostWithoutPort.replace(`.${baseWithoutPort}`, "");
   }
 
-  // If subdomain detected (and not www/app), inject project slug header
+  // If subdomain detected (and not www), inject project slug header
   // and rewrite to the project viewer routes
-  const RESERVED_SUBDOMAINS = ["www", "app"];
+  const RESERVED_SUBDOMAINS = ["www"];
   if (subdomain && !RESERVED_SUBDOMAINS.includes(subdomain)) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-project-slug", subdomain);
