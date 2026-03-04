@@ -2,8 +2,6 @@
 
 import React from "react";
 import { useCourse } from "./course-context";
-import { Globe } from "lucide-react";
-import "flag-icons/css/flag-icons.min.css";
 
 /** Human-readable labels for content languages */
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -20,7 +18,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   ru: "Русский",
 };
 
-/** Map language codes to flag-icons country codes (ISO 3166-1 alpha-2) */
+/** Map language codes to flag SVG filenames in /public/flags/ */
 const LANGUAGE_FLAG_CODES: Record<string, string> = {
   de: "ch",
   en: "gb",
@@ -65,7 +63,10 @@ export function CourseLanguageSwitcher() {
               `}
               title={LANGUAGE_LABELS[locale] ?? locale}
             >
-              {flagCode && <span className={`fi fi-${flagCode}`} style={{ fontSize: "0.875rem" }} />}
+              {flagCode && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/flags/${flagCode}.svg`} alt="" className="inline-block w-[1.2em] h-[0.9em] object-cover rounded-[1px]" />
+              )}
               {locale.toUpperCase()}
             </button>
           );

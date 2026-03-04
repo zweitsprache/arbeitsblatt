@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { applyTranslations } from "@/lib/course-translation";
 import { getTranslations, getLanguages } from "@/lib/i18nexus";
-import {
-  CourseModule,
-  CourseCoverSettings,
-  CourseSettings,
-  CourseTranslation,
-} from "@/types/course";
 
 export async function POST(
   _req: NextRequest,
@@ -40,22 +33,8 @@ export async function POST(
   const languages = await getLanguages();
   const targetLangs = languages.filter((l) => !l.base_language);
 
-  const doc = {
-    id: course.id,
-    title: course.title,
-    slug: course.slug,
-    structure: course.structure as unknown as CourseModule[],
-    coverSettings: course.coverSettings as unknown as CourseCoverSettings,
-    settings: course.settings as unknown as CourseSettings,
-    published: course.published,
-    createdAt: course.createdAt.toISOString(),
-    updatedAt: course.updatedAt.toISOString(),
-    folderId: course.folderId,
-    userId: course.userId,
-  };
-
-  // Fetch translations for each target language and apply them
-  const translations: Record<string, CourseTranslation> = {};
+  // Fetch translation strings for each target language
+  const translations: Record<string, Record<string, string>> = {};
   const fetchedLanguages: string[] = [];
 
   for (const lang of targetLangs) {
@@ -66,7 +45,7 @@ export async function POST(
       );
 
       if (Object.keys(langTranslations).length > 0) {
-        translations[lang.full_code] = applyTranslations(doc, langTranslations);
+        translations[lang.full_code] = langTranslations;
         fetchedLanguages.push(lang.full_code);
       }
     } catch {

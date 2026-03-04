@@ -335,6 +335,12 @@ function extractSingleBlockStrings(
       }
       break;
 
+    // ── Table
+    case "table":
+      addStr(strings, `${p}.content`, block.content);
+      addStr(strings, `${p}.caption`, block.caption);
+      break;
+
     // ── Columns: recurse into children
     case "columns": {
       const cb = block as ColumnsBlock;
@@ -386,7 +392,7 @@ export function getAiInstructions(
  * with their translations. Falls back to original German if missing.
  */
 export function applyTranslations(
-  course: CourseDocument,
+  course: { structure: CourseModule[]; coverSettings: CourseCoverSettings; settings: CourseSettings },
   translations: Record<string, string>
 ): CourseTranslation {
   // Deep clone
@@ -603,6 +609,10 @@ function applySingleBlockTranslations(
     case "numbered-items":
       for (const item of block.items)
         apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
+      break;
+    case "table":
+      apply(`${p}.content`, (v) => (block.content = v));
+      apply(`${p}.caption`, (v) => { if (block.caption !== undefined) block.caption = v; });
       break;
     case "columns": {
       for (const col of (block as ColumnsBlock).children)

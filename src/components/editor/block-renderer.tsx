@@ -51,6 +51,7 @@ import {
   LogoDividerBlock,
   AiPromptBlock,
   AiToolBlock,
+  TableBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
@@ -59,8 +60,9 @@ import { authFetch } from "@/lib/auth-fetch";
 import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
+import { TableEditor } from "./table-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, ClipboardList, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
+import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -177,6 +179,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
   return (
     <Tag
       className={`${sizes[block.level]} font-bold outline-none`}
+      style={block.level === 3 ? { fontWeight: 800 } : undefined}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -351,7 +354,7 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
         </div>
       )}
       <div
-        className={`border overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
         style={isStyled ? { borderColor: color } : undefined}
       >
         {/* Email toolbar bar */}
@@ -420,7 +423,6 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
   const isStyled = style === "standard" || style === "teal";
   const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
   const pillLabel = style === "teal" ? "Besser" : style === "standard" ? "Standard" : "";
-  const btnBg = color ?? "#334155";
 
   return (
     <div>
@@ -435,53 +437,45 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
         </div>
       )}
       <div
-        className={`border overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
-        style={isStyled ? { borderColor: color } : { borderColor: "#e2e8f0" }}
+        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={{ borderColor: isStyled ? color : "#475569" }}
       >
-        {/* Form header */}
+        {/* Form header — icon only, same style as email toolbar */}
         <div
-          className="px-5 py-3 border-b"
+          className="flex items-center gap-2 px-4 py-2 border-b"
           style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" }}
         >
-          <span className="text-sm font-bold uppercase tracking-wide" style={isStyled ? { color } : { color: "#334155" }}>{t("jobApplicationTitle")}</span>
+          <FormInput className="h-4 w-4" style={{ color: isStyled ? color : "#475569" }} />
         </div>
 
         {/* Form fields */}
-        <div className="px-5 py-4 space-y-3">
-          {/* Position dropdown (full width) */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobPosition")} *</label>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 flex items-center justify-between">
+        <div className="px-4 pt-3 pb-4 space-y-1.5">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobPosition")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 flex items-center justify-between">
               <span>{block.position}</span>
               <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
-          {/* Vorname + Nachname row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobFirstName")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.firstName}</div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobLastName")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.applicantName}</div>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobFirstName")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.firstName}</div>
           </div>
-          {/* Email + Phone row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobEmail")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.email}</div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobPhone")}</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.phone}</div>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobLastName")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.applicantName}</div>
           </div>
-          {/* Message */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">{t("jobMessage")} *</label>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 min-h-[80px]">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobEmail")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.email}</div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobPhone")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.phone}</div>
+          </div>
+          <div className="flex items-start gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm pt-1.5">{t("jobMessage")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
               <RichTextEditor
                 content={block.message}
                 onChange={(html) =>
@@ -491,15 +485,6 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
                 }
                 placeholder={t("startTyping")}
               />
-            </div>
-          </div>
-          {/* Submit button */}
-          <div>
-            <div
-              className="inline-block rounded-md px-5 py-2 text-sm font-semibold text-white cursor-default"
-              style={{ backgroundColor: btnBg }}
-            >
-              {t("jobSubmit")}
             </div>
           </div>
         </div>
@@ -4048,6 +4033,31 @@ function AiToolRenderer({ block }: { block: AiToolBlock }) {
   );
 }
 
+// ─── Table Block Renderer ───────────────────────────────────
+function TableBlockRenderer({ block }: { block: TableBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+
+  return (
+    <div
+      className={`table-block table-style-${block.tableStyle ?? "default"}`}
+    >
+      <TableEditor
+        content={block.content}
+        columnWidths={block.columnWidths}
+        onChange={(html) =>
+          localeUpdate(block.id, "content", html, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+          )
+        }
+      />
+      {block.caption && (
+        <p className="text-xs text-muted-foreground text-center mt-1 italic">{block.caption}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -4161,6 +4171,8 @@ export function BlockRenderer({
       return <AiPromptRenderer block={block as AiPromptBlock} />;
     case "ai-tool":
       return <AiToolRenderer block={block as AiToolBlock} />;
+    case "table":
+      return <TableBlockRenderer block={block as TableBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

@@ -47,7 +47,8 @@ export type BlockType =
   | "numbered-items"
   | "logo-divider"
   | "ai-prompt"
-  | "ai-tool";
+  | "ai-tool"
+  | "table";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -141,6 +142,17 @@ export interface DividerBlock extends BlockBase {
 // ─── Logo Divider block ──────────────────────────────────────
 export interface LogoDividerBlock extends BlockBase {
   type: "logo-divider";
+}
+
+// ─── Table block ─────────────────────────────────────────────
+export type TableStyle = "default" | "striped" | "bordered" | "minimal";
+
+export interface TableBlock extends BlockBase {
+  type: "table";
+  content: string;
+  tableStyle?: TableStyle;
+  caption?: string;
+  columnWidths?: number[];
 }
 
 export const BRAND_ICON_LOGOS: Record<Brand, string> = {
@@ -645,7 +657,8 @@ export type WorksheetBlock =
   | NumberedItemsBlock
   | LogoDividerBlock
   | AiPromptBlock
-  | AiToolBlock;
+  | AiToolBlock
+  | TableBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 export type Brand = "edoomio" | "lingostar";
@@ -1566,6 +1579,23 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     toolTitle: "",
     toolDescription: "",
     visibility: "online",
+  },
+},
+// ── Table ─────────────────────────────────────────────────────
+{
+  type: "table",
+  label: "Table",
+  description: "Flexible table with rich text cells",
+  labelKey: "table",
+  descriptionKey: "tableDesc",
+  icon: "Table",
+  category: "content",
+  translations: { de: { label: "Tabelle", description: "Flexible Tabelle mit formatierbaren Zellen" } },
+  defaultData: {
+    type: "table",
+    content: '<table><tbody><tr><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr></tbody></table>',
+    tableStyle: "default",
+    visibility: "both",
   },
 },
 ];

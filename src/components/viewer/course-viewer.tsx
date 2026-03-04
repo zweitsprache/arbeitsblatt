@@ -726,10 +726,10 @@ export function CourseViewer({
           {/* Content container */}
           <div className="flex-1 min-h-0 rounded-lg border bg-background overflow-hidden flex justify-center">
             <style>{`
-              .content-scroll::-webkit-scrollbar { width: 6px; background: transparent; }
-              .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 12px; }
-              .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
-              .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+              .content-scroll::-webkit-scrollbar { width: 14px; background: transparent; }
+              .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 24px; }
+              .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; border: 4px solid transparent; background-clip: padding-box; }
+              .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; border: 4px solid transparent; background-clip: padding-box; }
               .content-scroll::-webkit-scrollbar-button { display: none; }
               .content-scroll::-webkit-scrollbar-corner { display: none; }
               .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }

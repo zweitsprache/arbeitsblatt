@@ -68,7 +68,7 @@ export interface CourseDocument {
   updatedAt: string;
   folderId: string | null;
   userId: string | null;
-  translations?: Record<string, CourseTranslation>;
+  translations?: Record<string, Record<string, string>>;
   i18nexusNamespace?: string | null;
   translatedAt?: string | null;
 }

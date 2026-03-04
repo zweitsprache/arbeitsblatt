@@ -46,11 +46,12 @@ import {
   LogoDividerBlock,
   AiPromptBlock,
   AiToolBlock,
+  TableBlock,
   BRAND_ICON_LOGOS,
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -199,7 +200,11 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-xl", 2: "text-cv-xl", 3: "text-cv-lg" };
-  return <Tag className={`${sizes[block.level]}`} style={block.level === 1 ? { marginBottom: -4 } : undefined}>{block.content}</Tag>;
+  const style: React.CSSProperties = {
+    ...(block.level === 1 ? { marginBottom: -4 } : {}),
+    ...(block.level === 3 ? { fontWeight: 800 } : {}),
+  };
+  return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
 function TextView({ block }: { block: TextBlock }) {
@@ -350,7 +355,7 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
         </div>
       )}
       <div
-        className={`border overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
         style={{ borderColor: isStyled ? color : "#475569" }}
       >
         {/* Email toolbar */}
@@ -413,7 +418,6 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
   const style = block.applicationStyle ?? "none";
   const isStyled = style === "standard" || style === "teal";
   const color = style === "teal" ? "#3A4F40" : style === "standard" ? "#990033" : undefined;
-  const btnBg = color ?? "#334155";
 
   return (
     <div>
@@ -428,63 +432,46 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
         </div>
       )}
       <div
-        className={`border overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
-        style={isStyled ? { borderColor: color } : undefined}
+        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        style={{ borderColor: isStyled ? color : "#475569" }}
       >
-        {/* Form header */}
+        {/* Form header — icon only, same style as email toolbar */}
         <div
-          className={`px-5 py-3 border-b ${s.formHeader}`}
-          style={isStyled ? { "--block-color-bg": `${color}0D`, "--block-color-border": `${color}4D` } as React.CSSProperties : undefined}
+          className={`flex items-center gap-2 px-4 py-2 border-b ${isStyled ? "" : "bg-slate-50 border-slate-200"}`}
+          style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : undefined}
         >
-          <span className={`text-sm font-bold uppercase tracking-wide ${s.formHeaderLabel}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined}>{t("jobApplicationTitle")}</span>
+          <FormInput className={`h-4 w-4 ${isStyled ? s.emailIcon : ""}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined} />
         </div>
 
         {/* Form fields */}
-        <div className="email-skeleton-fields px-5 py-4 space-y-3">
-          {/* Position dropdown (full width) */}
-          <div>
-            <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobPosition")} *</label>
-            <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 ${s.fakeDropdown}`}>
+        <div className="email-skeleton-fields px-4 pt-3 pb-4 space-y-1.5">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobPosition")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 flex items-center justify-between">
               <span>{block.position}</span>
-              <svg className={`h-4 w-4 text-slate-400 ${s.dropdownChevron}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
+              <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
-          {/* Vorname + Nachname row */}
-          <div className={s.twoColGrid}>
-            <div>
-              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobFirstName")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.firstName}</div>
-            </div>
-            <div>
-              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobLastName")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.applicantName}</div>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobFirstName")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.firstName}</div>
           </div>
-          {/* Email + Phone row */}
-          <div className={s.twoColGrid}>
-            <div>
-              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobEmail")} *</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.email}</div>
-            </div>
-            <div>
-              <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobPhone")}</label>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{block.phone}</div>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobLastName")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.applicantName}</div>
           </div>
-          {/* Message */}
-          <div>
-            <label className={`block text-xs font-semibold text-slate-500 ${s.fieldLabel}`}>{t("jobMessage")} *</label>
-            <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-2 ${s.messageArea}`}>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobEmail")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.email}</div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobPhone")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.phone}</div>
+          </div>
+          <div className="flex items-start gap-4">
+            <span className="font-semibold text-slate-400 w-24 shrink-0 pt-1.5">{t("jobMessage")}</span>
+            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
               <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message) }} />
-            </div>
-          </div>
-          {/* Submit button */}
-          <div>
-            <div
-              className={`inline-block rounded-md px-5 py-2 text-sm font-semibold text-white ${s.submitButton}`}
-              style={{ "--block-color": btnBg } as React.CSSProperties}
-            >
-              {t("jobSubmit")}
             </div>
           </div>
         </div>
@@ -3549,6 +3536,36 @@ function AiPromptView({ block }: { block: AiPromptBlock }) {
   );
 }
 
+// ─── Table View ─────────────────────────────────────────────
+function TableView({ block }: { block: TableBlock }) {
+  // Strip TipTap's pixel-based widths from saved HTML
+  let html = prepareTiptapHtml(block.content)
+    .replace(/<table([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<table$1")
+    .replace(/<col([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<col$1");
+
+  // Inject <colgroup> for column widths if defined on the block
+  if (block.columnWidths && block.columnWidths.length > 0) {
+    const colgroup = `<colgroup>${block.columnWidths.map((w) => `<col style="width:${w}%">`).join("")}</colgroup>`;
+    if (/<colgroup>/i.test(html)) {
+      html = html.replace(/<colgroup>[\s\S]*?<\/colgroup>/i, colgroup);
+    } else {
+      html = html.replace(/<table([^>]*)>/i, `<table$1>${colgroup}`);
+    }
+  }
+
+  return (
+    <div className={`table-block table-style-${block.tableStyle ?? "default"}`}>
+      <div
+        className="tiptap-table-view"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {block.caption && (
+        <p className="text-xs text-muted-foreground text-center mt-1 italic">{block.caption}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── AI Tool View ───────────────────────────────────────────
 function AiToolView({ block }: { block: AiToolBlock }) {
   const t = useTranslations("viewer");
@@ -4097,6 +4114,8 @@ export function ViewerBlockRenderer({
       return <AiPromptView block={block as AiPromptBlock} />;
     case "ai-tool":
       return <AiToolView block={block as AiToolBlock} />;
+    case "table":
+      return <TableView block={block as TableBlock} />;
     default:
       return null;
   }

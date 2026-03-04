@@ -67,6 +67,8 @@ import {
   DosAndDontsBlock,
   AiPromptBlock,
   AiToolBlock,
+  TableBlock,
+  TableStyle,
   BlockVisibility,
   TextBlockStyle,
 } from "@/types/worksheet";
@@ -5500,6 +5502,230 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
   );
 }
 
+// ─── Table Properties ────────────────────────────────────────
+
+/** Count columns from the first row of a table HTML string */
+function countTableColumns(html: string): number {
+  const parser = typeof DOMParser !== "undefined" ? new DOMParser() : null;
+  if (!parser) return 0;
+  const doc = parser.parseFromString(html, "text/html");
+  const firstRow = doc.querySelector("tr");
+  if (!firstRow) return 0;
+  return firstRow.querySelectorAll("td, th").length;
+}
+
+/** Controlled input that uses local state while editing, commits on blur/Enter */
+function ColWidthInput({
+  index,
+  percentage,
+  onCommit,
+}: {
+  index: number;
+  percentage: number;
+  onCommit: (value: number) => void;
+}) {
+  const [localVal, setLocalVal] = React.useState(String(percentage));
+  const [editing, setEditing] = React.useState(false);
+
+  // Sync from parent when not editing
+  React.useEffect(() => {
+    if (!editing) setLocalVal(String(percentage));
+  }, [percentage, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = parseFloat(localVal);
+    if (!isNaN(parsed) && parsed !== percentage) {
+      onCommit(parsed);
+    } else {
+      setLocalVal(String(percentage));
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[10px] text-muted-foreground whitespace-nowrap">{index + 1}:</span>
+      <Input
+        type="text"
+        inputMode="decimal"
+        value={localVal}
+        onFocus={(e) => {
+          setEditing(true);
+          e.target.select();
+        }}
+        onChange={(e) => {
+          setEditing(true);
+          // Allow digits and one decimal point
+          setLocalVal(e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"));
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+            (e.target as HTMLInputElement).blur();
+          }
+          if (e.key === "Escape") {
+            setEditing(false);
+            setLocalVal(String(percentage));
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        className="h-7 text-xs text-center px-1"
+      />
+      <span className="text-[10px] text-muted-foreground">%</span>
+    </div>
+  );
+}
+
+function TableProps({ block }: { block: TableBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+
+  const tableStyles: { value: TableStyle; label: string }[] = [
+    { value: "default", label: t("tableStyleDefault") },
+    { value: "striped", label: t("tableStyleStriped") },
+    { value: "bordered", label: t("tableStyleBordered") },
+    { value: "minimal", label: t("tableStyleMinimal") },
+  ];
+
+  const colCount = React.useMemo(() => countTableColumns(block.content), [block.content]);
+
+  // Get current column percentages from block data
+  const colPercentages = React.useMemo(() => {
+    if (colCount === 0) return [];
+    if (block.columnWidths && block.columnWidths.length === colCount) {
+      return block.columnWidths;
+    }
+    // Default: equal distribution
+    const equal = Math.round((100 / colCount) * 10) / 10;
+    return Array(colCount).fill(equal);
+  }, [block.columnWidths, colCount]);
+
+  const total = React.useMemo(() => {
+    return Math.round(colPercentages.reduce((s, p) => s + p, 0) * 10) / 10;
+  }, [colPercentages]);
+
+  const handlePercentageChange = (colIdx: number, newPercent: number) => {
+    const clamped = Math.max(1, Math.min(100, newPercent));
+    const newWidths = [...colPercentages];
+    newWidths[colIdx] = clamped;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { columnWidths: newWidths } },
+    });
+  };
+
+  const handleResetWidths = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { columnWidths: undefined } },
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+          {t("tableSettings")}
+        </div>
+
+        {/* Table Style */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t("tableStyle")}</Label>
+          <Select
+            value={block.tableStyle ?? "default"}
+            onValueChange={(val) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { tableStyle: val as TableStyle } },
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tableStyles.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Column Widths */}
+        {colCount > 0 && (
+          <div className="space-y-1.5 mt-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">{t("tableColumnWidths")}</Label>
+              {total !== 100 && (
+                <span className="text-[10px] font-medium text-amber-600">
+                  {t("tableWidthsTotal")}: {total}%
+                </span>
+              )}
+            </div>
+            {/* Visual bar */}
+            <div className="flex h-6 rounded-md overflow-hidden border border-slate-200">
+              {colPercentages.map((pct, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-center text-[10px] font-medium border-r last:border-r-0 border-slate-200 transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: `hsl(${210 + i * 30}, 60%, ${92 - i * 3}%)`,
+                    color: "#475569",
+                  }}
+                >
+                  {pct}%
+                </div>
+              ))}
+            </div>
+            {/* Precise inputs */}
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(colCount, 4)}, 1fr)` }}>
+              {colPercentages.map((pct, i) => (
+                <ColWidthInput
+                  key={i}
+                  index={i}
+                  percentage={pct}
+                  onCommit={(val) => handlePercentageChange(i, val)}
+                />
+              ))}
+            </div>
+            {block.columnWidths && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs w-full mt-1"
+                onClick={handleResetWidths}
+              >
+                {t("tableResetWidths")}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Caption */}
+        <div className="space-y-1.5 mt-3">
+          <Label className="text-xs">{t("tableCaption")}</Label>
+          <Input
+            value={block.caption ?? ""}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { caption: e.target.value } },
+              })
+            }
+            placeholder={t("tableCaptionPlaceholder")}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -5595,6 +5821,8 @@ export function PropertiesPanel() {
         return <AiPromptProps block={selectedBlock as AiPromptBlock} />;
       case "ai-tool":
         return <AiToolProps block={selectedBlock as AiToolBlock} />;
+      case "table":
+        return <TableProps block={selectedBlock as TableBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

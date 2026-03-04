@@ -723,131 +723,130 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       {/* Desktop layout */}
-      <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row gap-4 p-4">
-        {/* Desktop sidebar */}
-        <div className={cn(
-          "hidden lg:flex shrink-0 relative transition-all duration-300",
-          desktopSidebarOpen ? "w-[400px]" : "w-0"
-        )}>
-          <aside className={cn(
-            "flex flex-col w-[400px] h-full rounded-lg overflow-hidden transition-all duration-300",
-            desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}>
-            <SidebarNav
-              title={title}
-              structure={structure}
-              flatLessons={flatLessons}
-              currentLessonId={currentLessonId}
-              visitedLessons={visitedLessons}
-              onSelectLesson={handleSelectLesson}
-              onSelectModule={handleSelectModule}
-              onSelectTopic={handleSelectTopic}
-              onShowOverview={handleShowOverview}
-              onContinue={firstUnvisited ? handleContinue : undefined}
+      <div className="min-h-screen lg:h-screen flex flex-col p-4 gap-4">
+        {/* Breadcrumb header (full width) */}
+        <div className="flex items-center gap-2 pr-4 py-1.5 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+          {breadcrumb && (
+            <>
+              <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                {breadcrumb.mod.title}
+              </button>
+              {breadcrumb.topic && (
+                <>
+                  <ChevronRight className="h-3 w-3 shrink-0" />
+                  <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                    {breadcrumb.topic.title}
+                  </button>
+                </>
+              )}
+              {breadcrumb.lesson && (
+                <>
+                  <ChevronRight className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">{breadcrumb.lesson.title}</span>
+                </>
+              )}
+            </>
+          )}
+          {/* Brand logo + Language switcher */}
+          <div className="ml-auto flex items-center gap-3">
+            <CourseLanguageSwitcher />
+            <img
+              src={DEFAULT_BRAND_SETTINGS[brand].logo}
+              alt=""
+              className="h-6 w-auto"
             />
-          </aside>
-          <button
-            className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors"
-            onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
-            aria-label={desktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            {desktopSidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          </button>
+          </div>
         </div>
 
-        {!desktopSidebarOpen && (
-          <button
-            className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-4"
-            onClick={() => setDesktopSidebarOpen(true)}
-            aria-label="Expand sidebar"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        )}
-
-        {/* Right column: breadcrumb header + content + chat */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          {/* Breadcrumb header (full width) */}
-          <div className="flex items-center gap-2 pr-4 py-1.5 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
-            {breadcrumb && (
-              <>
-                <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                  {breadcrumb.mod.title}
-                </button>
-                {breadcrumb.topic && (
-                  <>
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                    <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                      {breadcrumb.topic.title}
-                    </button>
-                  </>
-                )}
-                {breadcrumb.lesson && (
-                  <>
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                    <span className="font-medium">{breadcrumb.lesson.title}</span>
-                  </>
-                )}
-              </>
-            )}
-            {/* Brand logo + Language switcher */}
-            <div className="ml-auto flex items-center gap-3">
-              <CourseLanguageSwitcher />
-              <img
-                src={DEFAULT_BRAND_SETTINGS[brand].logo}
-                alt=""
-                className="h-6 w-auto"
+        {/* Middle row: sidebar + content + chat */}
+        <div className="flex-1 min-h-0 flex flex-row gap-4">
+          {/* Desktop sidebar */}
+          <div className={cn(
+            "hidden lg:flex shrink-0 relative transition-all duration-300",
+            desktopSidebarOpen ? "w-[400px]" : "w-0"
+          )}>
+            <aside className={cn(
+              "flex flex-col w-[400px] h-full rounded-lg overflow-hidden transition-all duration-300",
+              desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}>
+              <SidebarNav
+                title={title}
+                structure={structure}
+                flatLessons={flatLessons}
+                currentLessonId={currentLessonId}
+                visitedLessons={visitedLessons}
+                onSelectLesson={handleSelectLesson}
+                onSelectModule={handleSelectModule}
+                onSelectTopic={handleSelectTopic}
+                onShowOverview={handleShowOverview}
+                onContinue={firstUnvisited ? handleContinue : undefined}
               />
-            </div>
+            </aside>
+            <button
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors"
+              onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
+              aria-label={desktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {desktopSidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
           </div>
 
-          {/* Content + Chat row */}
-          <div className="flex-1 min-h-0 flex flex-row gap-4">
-            {/* Content container */}
-            <div className="flex-1 min-w-0 rounded-lg border bg-background overflow-hidden">
-              <style>{`
-                .content-scroll::-webkit-scrollbar { width: 6px; background: transparent; }
-                .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 12px; }
-                .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
-                .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-                .content-scroll::-webkit-scrollbar-button { display: none; }
-                .content-scroll::-webkit-scrollbar-corner { display: none; }
-                .content-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
-                .course-content { font-family: ${brandFonts.bodyFont}; font-size: 1.125rem; }
-                .course-content p { font-size: 1.125rem; }
-                .course-content .email-skeleton-fields { font-size: 1.125rem; }
-                .course-content h1 {
-                  font-family: ${brandFonts.headlineFont};
-                  font-weight: ${brandFonts.headlineWeight};
-                }
-                .course-content h2, .course-content h3,
-                .course-content h4, .course-content h5, .course-content h6 {
-                  font-family: ${brandFonts.subHeadlineFont};
-                  font-weight: ${brandFonts.subHeadlineWeight};
-                }
-                .course-content h2 {
-                  font-size: 1.25rem;
-                  font-weight: 700;
-                }
-              `}</style>
-              <div className="h-full w-full overflow-y-auto content-scroll course-content">
+          {!desktopSidebarOpen && (
+            <button
+              className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-4"
+              onClick={() => setDesktopSidebarOpen(true)}
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          {/* Content container */}
+          <div className="flex-1 min-w-0 rounded-lg border bg-background overflow-hidden">
+            <style>{`
+              .content-scroll::-webkit-scrollbar { width: 6px; }
+              .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 32px; }
+              .content-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
+              .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+              .content-scroll::-webkit-scrollbar-button { display: none; height: 0; }
+              .content-scroll::-webkit-scrollbar-corner { display: none; }
+              .course-content { font-family: ${brandFonts.bodyFont}; font-size: 1.125rem; }
+              .course-content p { font-size: 1.125rem; }
+              .course-content .email-skeleton-fields { font-size: 1.125rem; }
+              .course-content h1 {
+                font-family: ${brandFonts.headlineFont};
+                font-weight: ${brandFonts.headlineWeight};
+              }
+              .course-content h2, .course-content h3,
+              .course-content h4, .course-content h5, .course-content h6 {
+                font-family: ${brandFonts.subHeadlineFont};
+                font-weight: ${brandFonts.subHeadlineWeight};
+              }
+              .course-content h2 {
+                font-size: 1.25rem;
+                font-weight: 700;
+              }
+            `}</style>
+            <div className="h-full flex">
+              <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
                 {children}
               </div>
+              <div className="w-6 shrink-0" />
             </div>
-
-            {/* Chat sidebar (desktop) */}
-            <CourseChatSidebar
-              open={chatSidebarOpen}
-              onClose={() => setChatSidebarOpen(false)}
-              lessonContext={currentLessonData?.context ?? ""}
-              lessonTitle={currentLessonData?.title ?? ""}
-            />
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center gap-2 pr-4 py-3 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
-            <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
-          </div>
+          {/* Chat sidebar (desktop) */}
+          <CourseChatSidebar
+            open={chatSidebarOpen}
+            onClose={() => setChatSidebarOpen(false)}
+            lessonContext={currentLessonData?.context ?? ""}
+            lessonTitle={currentLessonData?.title ?? ""}
+          />
+        </div>
+
+        {/* Footer (full width) */}
+        <div className="flex items-center gap-2 pr-4 py-3 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+          <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
         </div>
 
         {/* Chat toggle button (desktop, when sidebar is closed) */}

@@ -27,12 +27,6 @@
   font-size: 1.125rem;
 }
 
-.twoColGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
 /* ─── Handwriting ────────────────────────────────────────── */
 
 .handwriting {
@@ -80,36 +74,7 @@
 
 /* ─── Job application form ───────────────────────────────── */
 
-.formHeader {
-  background-color: var(--block-color-bg, #f8fafc);
-  border-color: var(--block-color-border, #e2e8f0);
-}
 
-.formHeaderLabel {
-  color: var(--block-color, #334155);
-}
-
-.fieldLabel {
-  margin-bottom: 0.25rem;
-}
-
-.fakeDropdown {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.dropdownChevron {
-  flex-shrink: 0;
-}
-
-.messageArea {
-  min-height: 80px;
-}
-
-.submitButton {
-  background-color: var(--block-color, #334155);
-}
 
 /* ─── Glossary ───────────────────────────────────────────── */
 

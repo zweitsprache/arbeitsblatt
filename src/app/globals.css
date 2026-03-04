@@ -175,7 +175,7 @@
 
 .tiptap h3 {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 800 !important;
   line-height: 1.75rem;
   margin-top: 0.5rem;
   margin-bottom: 0.25rem;
@@ -242,19 +242,24 @@
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
 }
 
 .tiptap ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
 }
 
 .tiptap li {
-  margin-top: 0.125rem;
-  margin-bottom: 0.125rem;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.tiptap li p {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .tiptap blockquote {
@@ -386,4 +391,104 @@
 }
 .scrollbar-hide [data-slot="scroll-area-scrollbar"] {
   display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Table Block — TipTap Table Editor & Viewer Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Base table styles (editor & viewer) ───────────────────── */
+.table-block table {
+  border-collapse: collapse;
+  width: 100% !important;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.table-block td,
+.table-block th {
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+  min-width: 60px;
+}
+
+.table-block th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  text-align: left;
+}
+
+.table-block td p,
+.table-block th p {
+  margin: 0;
+}
+
+/* ── Table style variants ─────────────────────────────────── */
+
+/* Striped rows */
+.table-style-striped table tbody tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+
+/* Bordered — thicker borders */
+.table-style-bordered table {
+  border: 2px solid #94a3b8;
+}
+.table-style-bordered td,
+.table-style-bordered th {
+  border: 1.5px solid #94a3b8;
+}
+
+/* Minimal — thin horizontal lines only */
+.table-style-minimal td,
+.table-style-minimal th {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom: 1px solid #e2e8f0;
+}
+.table-style-minimal th {
+  border-bottom: 2px solid #cbd5e1;
+  background-color: transparent;
+  font-weight: 700;
+}
+
+/* ── Editor-specific: Selected cells ─────────────────────── */
+.table-editor-content .selectedCell {
+  background-color: #dbeafe !important;
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* ── Editor-specific: Table wrapper ──────────────────────── */
+.table-editor-content .tableWrapper {
+  overflow-x: auto;
+}
+.table-editor-content table {
+  margin: 0;
+  width: 100% !important;
+}
+
+/* ── Viewer: make sure tables look good without editor ───── */
+.tiptap-table-view table {
+  border-collapse: collapse;
+  width: 100% !important;
+  table-layout: fixed;
+}
+.tiptap-table-view td,
+.tiptap-table-view th {
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+.tiptap-table-view th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  text-align: left;
+}
+.tiptap-table-view td p,
+.tiptap-table-view th p {
+  margin: 0;
 }

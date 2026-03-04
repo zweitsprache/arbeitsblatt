@@ -83,23 +83,29 @@ export async function POST(
     });
   }
 
-  // Import all strings as base language (German) in bulk — updates existing values
-  await importStrings(namespaceName, { de: strings }, true);
+// Bulk-update existing base language values (does NOT create new keys)
+  try {
+    await importStrings(namespaceName, { de: strings }, true, true);
+  } catch {
+    // importStrings may fail on large payloads; continue with createString
+  }
 
-  // Create strings one-by-one to trigger machine translation for new keys.
-  // createString fails on duplicate keys — we catch and skip those.
+  // Create strings one-by-one to trigger machine translation.
+  // createString creates new keys; duplicates return 422 and are skipped.
   let created = 0;
+  let total = 0;
   for (const [key, value] of entries) {
+    total++;
     try {
       const aiInstructions = getAiInstructions(key, value);
       await createString(key, value, namespaceName, aiInstructions);
       created++;
     } catch {
-      // String already exists — that's fine, import already updated its value.
+      // 422 = duplicate key (already exists) — expected for existing strings
     }
 
     // Rate limit: ~8 requests per second
-    if (created % 8 === 0 && created > 0) {
+    if (total % 8 === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }

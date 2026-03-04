@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useMemo } from "react";
-import { CourseModule, CourseTranslation, SidebarTheme } from "@/types/course";
+import { CourseModule, CourseCoverSettings, CourseSettings, SidebarTheme } from "@/types/course";
 import { WorksheetBlock, WorksheetSettings, Brand } from "@/types/worksheet";
+import { applyTranslations } from "@/lib/course-translation";
 
 export interface WorksheetData {
   id: string;
@@ -22,9 +23,11 @@ export interface CourseContextInitial {
   brand: Brand;
   sidebarTheme: SidebarTheme;
   structure: CourseModule[];
+  coverSettings: CourseCoverSettings;
+  settings: CourseSettings;
   worksheets: Record<string, WorksheetData>;
-  /** Pulled translations keyed by language code (e.g. "en", "uk") */
-  translations?: Record<string, CourseTranslation>;
+  /** Pulled translation strings keyed by language code (e.g. "en", "uk") */
+  translations?: Record<string, Record<string, string>>;
 }
 
 export interface CourseContextValue extends CourseContextInitial {
@@ -57,17 +60,25 @@ export function CourseProvider({
     return locales;
   }, [value.translations]);
 
-  // When a translation is active, swap in the translated structure/settings
+  // When a translation is active, apply it dynamically to the current structure
   const resolved = useMemo<CourseContextValue>(() => {
     if (contentLocale === "de" || !value.translations?.[contentLocale]) {
       return { ...value, contentLocale, availableLocales, setContentLocale };
     }
-    const t = value.translations[contentLocale];
+    const translationStrings = value.translations[contentLocale];
+    const translated = applyTranslations(
+      {
+        structure: value.structure,
+        coverSettings: value.coverSettings,
+        settings: value.settings,
+      },
+      translationStrings
+    );
     return {
       ...value,
-      structure: t.structure,
-      title: t.coverSettings.title || value.title,
-      description: t.settings.description || value.description,
+      structure: translated.structure,
+      title: translated.coverSettings.title || value.title,
+      description: translated.settings.description || value.description,
       contentLocale,
       availableLocales,
       setContentLocale,

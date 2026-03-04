@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import {
   CourseModule,
+  CourseCoverSettings,
   CourseSettings,
-  CourseTranslation,
+  DEFAULT_COURSE_COVER_SETTINGS,
   DEFAULT_COURSE_SETTINGS,
   collectLinkedWorksheetIds,
   normalizeCourseStructure,
@@ -68,14 +69,19 @@ export default async function CourseLayout({
     ...(course.settings as unknown as Partial<CourseSettings>),
   };
 
-  // Load translations (if any were pulled from i18nexus)
+  const coverSettings: CourseCoverSettings = {
+    ...DEFAULT_COURSE_COVER_SETTINGS,
+    ...(course.coverSettings as unknown as Partial<CourseCoverSettings>),
+  };
+
+  // Load translation strings (if any were pulled from i18nexus)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawTranslations = (course as any).translations as unknown;
-  const translations: Record<string, CourseTranslation> | undefined =
+  const translations: Record<string, Record<string, string>> | undefined =
     rawTranslations &&
     typeof rawTranslations === "object" &&
     Object.keys(rawTranslations as Record<string, unknown>).length > 0
-      ? (rawTranslations as Record<string, CourseTranslation>)
+      ? (rawTranslations as Record<string, Record<string, string>>)
       : undefined;
 
   return (
@@ -90,6 +96,8 @@ export default async function CourseLayout({
         brand: settings.brand || "edoomio",
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
+        coverSettings,
+        settings,
         worksheets,
         translations,
       }}
