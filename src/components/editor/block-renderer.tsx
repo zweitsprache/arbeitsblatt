@@ -46,6 +46,7 @@ import {
   EmailSkeletonBlock,
   JobApplicationBlock,
   DosAndDontsBlock,
+  TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
   LogoDividerBlock,
@@ -250,9 +251,9 @@ function TextRenderer({ block }: { block: TextBlock }) {
   if (isLernziel) {
     return (
       <>
-        <div className="relative group/text flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
-          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
-            <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
+        <div className="relative group/text flex gap-0 border-2 rounded-md" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D550A" }}>
+          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D5515" }}>
+            <Goal className="h-5 w-5" style={{ color: "#4A3D55" }} />
           </div>
           <div className="flex-1 min-w-0 px-3 py-2">
             {richTextEl}
@@ -3812,6 +3813,57 @@ function DosAndDontsRenderer({ block }: { block: DosAndDontsBlock }) {
   );
 }
 
+// ─── Text Comparison (Textvergleich) ─────────────────────────
+
+function TextComparisonRenderer({ block }: { block: TextComparisonBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+
+  const chColor = "#3A4F40";
+  const deColor = "#990033";
+
+  const renderSide = (
+    side: "left" | "right",
+    content: string,
+    field: "leftContent" | "rightContent",
+    color: string,
+    flagSrc: string,
+  ) => (
+    <div className="flex-1 min-w-0">
+      <div className="flex">
+        <div
+          className="py-1 text-xs font-semibold rounded-t-md text-center uppercase flex items-center justify-center border border-b-0"
+          style={{ width: 44, paddingLeft: 12, paddingRight: 12, borderColor: color }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={flagSrc} alt="" className="h-4 w-6 object-cover" />
+        </div>
+      </div>
+      <div
+        className="border border-dashed rounded-md rounded-tl-none py-3 pr-3 pl-6"
+        style={{ borderColor: color, color }}
+      >
+        <RichTextEditor
+          content={content}
+          onChange={(html) =>
+            localeUpdate(block.id, field, html, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { [field]: html } } })
+            )
+          }
+          placeholder="…"
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex gap-4">
+      {renderSide("left", block.leftContent, "leftContent", chColor, "/flags/ch.svg")}
+      {renderSide("right", block.rightContent, "rightContent", deColor, "/flags/de.svg")}
+    </div>
+  );
+}
+
 // ─── Numbered Items ─────────────────────────────────────────
 
 function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
@@ -4165,6 +4217,8 @@ export function BlockRenderer({
       return <JobApplicationRenderer block={block as JobApplicationBlock} />;
     case "dos-and-donts":
       return <DosAndDontsRenderer block={block as DosAndDontsBlock} />;
+    case "text-comparison":
+      return <TextComparisonRenderer block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
     case "ai-prompt":

@@ -8,11 +8,18 @@ import {
   ArrowRight,
   FileText,
   Layers,
+  BookOpen,
+  ToyBrick,
+  Folder,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
+import { moduleNumber, topicNumber } from "@/types/course";
+import { usePastelColors } from "@/lib/pastel-colors";
 
 export default function ModulePage() {
   const { structure, slug } = useCourse();
+  const pastelColors = usePastelColors();
   const { locale, moduleId } = useParams<{
     locale: string;
     slug: string;
@@ -38,17 +45,23 @@ export default function ModulePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
-        {/* Header */}
+        {/* Hero */}
         <div className="mb-10">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span>
-              Module {moduleIndex + 1} of {structure.length}
-            </span>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              {mod.icon ? (
+                <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary" />
+              ) : (
+                <ToyBrick className="h-8 w-8 text-primary" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                {moduleNumber(moduleIndex)} {mod.title || "Untitled Module"}
+              </h1>
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            {mod.title || "Untitled Module"}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <Badge variant="outline" className="text-xs">
               {mod.topics.length}{" "}
               {mod.topics.length === 1 ? "Topic" : "Topics"}
@@ -61,7 +74,7 @@ export default function ModulePage() {
 
         {/* Topic card grid */}
         <h2 className="text-lg font-semibold mb-4">Topics</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {mod.topics.map((topic, i) => {
             const lessonCount = topic.lessons.length;
 
@@ -73,7 +86,8 @@ export default function ModulePage() {
                     `/${locale}/course/${slug}/${moduleId}/${topic.id}`
                   )
                 }
-                className="group text-left rounded-lg border bg-background overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
+                className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
+                style={{ backgroundColor: pastelColors[i % pastelColors.length] }}
               >
                 {topic.image && (
                   <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
@@ -86,12 +100,14 @@ export default function ModulePage() {
                 )}
                 <div className="p-5">
                 <div className="flex items-start gap-3">
-                  <span className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted text-muted-foreground text-sm font-bold shrink-0">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
+                  {topic.icon ? (
+                    <DynamicLucideIcon name={topic.icon} className="h-8 w-8 text-primary shrink-0" />
+                  ) : (
+                    <Folder className="h-8 w-8 text-primary shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
-                      {topic.title || "Untitled Topic"}
+                    <h3 className="text-base group-hover:text-primary transition-colors truncate">
+                      <span className="font-extrabold">{topicNumber(moduleIndex, i)}</span>{" "}<span className="font-semibold">{topic.title || "Untitled Topic"}</span>
                     </h3>
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">

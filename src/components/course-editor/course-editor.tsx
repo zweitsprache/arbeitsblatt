@@ -7,6 +7,7 @@ import { CourseTreeSidebar } from "./course-tree-sidebar";
 import { CourseContent } from "./course-content";
 import { CourseSettingsPanel } from "./course-settings-panel";
 import { CourseToolbar } from "./course-toolbar";
+import { CourseStructureManager } from "./course-structure-manager";
 import { CourseDocument } from "@/types/course";
 
 function EditorInner({
@@ -14,7 +15,7 @@ function EditorInner({
 }: {
   initialData?: CourseDocument | null;
 }) {
-  const { dispatch, save } = useCourse();
+  const { state, dispatch, save } = useCourse();
 
   // Load initial data
   useEffect(() => {
@@ -50,9 +51,15 @@ function EditorInner({
     <div className="h-full flex flex-col">
       <CourseToolbar />
       <div className="flex flex-1 min-h-0 overflow-hidden bg-muted/30">
-        <CourseTreeSidebar />
-        <CourseContent />
-        <CourseSettingsPanel />
+        {state.view === "structure" ? (
+          <CourseStructureManager />
+        ) : (
+          <>
+            <CourseTreeSidebar />
+            <CourseContent />
+            <CourseSettingsPanel />
+          </>
+        )}
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Save, Loader2, ArrowLeft, Eye } from "lucide-react";
+import { Save, Loader2, ArrowLeft, Eye, LayoutList, PenLine } from "lucide-react";
 import { useCourse } from "@/store/course-store";
 import { Link } from "@/i18n/navigation";
 import { CourseTranslationDialog } from "./course-translation-dialog";
@@ -55,6 +55,40 @@ export function CourseToolbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+        {/* View toggle */}
+        <div className="flex items-center rounded-md border bg-muted p-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={state.view === "content" ? "default" : "ghost"}
+                size="sm"
+                className="gap-1.5 h-7 px-2.5"
+                onClick={() => dispatch({ type: "SET_VIEW", payload: "content" })}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                {t("viewContent")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("viewContentTooltip")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={state.view === "structure" ? "default" : "ghost"}
+                size="sm"
+                className="gap-1.5 h-7 px-2.5"
+                onClick={() => dispatch({ type: "SET_VIEW", payload: "structure" })}
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+                {t("viewStructure")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("viewStructureTooltip")}</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Separator orientation="vertical" className="h-6" />
+
         {/* Translations */}
         {state.courseId && <CourseTranslationDialog />}
 

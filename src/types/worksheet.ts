@@ -48,7 +48,8 @@ export type BlockType =
   | "logo-divider"
   | "ai-prompt"
   | "ai-tool"
-  | "table";
+  | "table"
+  | "text-comparison";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -556,6 +557,14 @@ export interface JobApplicationBlock extends BlockBase {
   comment?: string;
 }
 
+// ─── Text Comparison block ───────────────────────────────────
+export interface TextComparisonBlock extends BlockBase {
+  type: "text-comparison";
+  leftContent: string;  // HTML rich text
+  rightContent: string; // HTML rich text
+  comment?: string;
+}
+
 // ─── Dos and Don'ts block ────────────────────────────────────
 export interface DosAndDontsItem {
   id: string;
@@ -653,6 +662,7 @@ export type WorksheetBlock =
   | TextSnippetBlock
   | EmailSkeletonBlock
   | JobApplicationBlock
+  | TextComparisonBlock
   | DosAndDontsBlock
   | NumberedItemsBlock
   | LogoDividerBlock
@@ -1495,6 +1505,22 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     position: "Verkäufer/in",
     message: "<p>Sehr geehrte Damen und Herren,</p><p>…</p><p>Mit freundlichen Grüßen<br/>Anna Müller</p>",
     applicationStyle: "none",
+    visibility: "both",
+  },
+},
+{
+  type: "text-comparison",
+  label: "Text Comparison",
+  description: "Compare two text variants side by side",
+  labelKey: "textComparison",
+  descriptionKey: "textComparisonDesc",
+  icon: "Columns2",
+  category: "content",
+  translations: { de: { label: "Textvergleich", description: "Zwei Textvarianten nebeneinander vergleichen" } },
+  defaultData: {
+    type: "text-comparison",
+    leftContent: "<p></p>",
+    rightContent: "<p></p>",
     visibility: "both",
   },
 },

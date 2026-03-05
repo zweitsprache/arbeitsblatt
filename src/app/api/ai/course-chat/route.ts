@@ -11,6 +11,7 @@ interface ChatRequestBody {
   lessonContext: string;
   courseTitle: string;
   lessonTitle: string;
+  contentLocale?: string;
 }
 
 const MAX_CONTEXT_LENGTH = 12000;
@@ -22,7 +23,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = (await req.json()) as ChatRequestBody;
-    const { messages, lessonContext, courseTitle, lessonTitle } = body;
+    const { messages, lessonContext, courseTitle, lessonTitle, contentLocale } = body;
+
+    const LOCALE_NAMES: Record<string, string> = {
+      de: "German", en: "English", uk: "Ukrainian", fr: "French",
+      es: "Spanish", it: "Italian", pt: "Portuguese", tr: "Turkish",
+      ar: "Arabic", pl: "Polish", ru: "Russian",
+    };
+    const responseLang = LOCALE_NAMES[contentLocale ?? ""] ?? "German";
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -55,7 +63,7 @@ ${trimmedContext}
 RULES:
 1. ONLY answer questions that are directly related to the lesson content provided above. This includes explaining concepts, vocabulary, grammar rules, exercises, or anything mentioned in the lesson.
 2. If the user asks something UNRELATED to the lesson content (e.g., holiday ideas, cooking recipes, personal advice, general knowledge not covered in the lesson), politely decline and redirect them to ask about the lesson. Say something like: "I can only help with questions about this lesson's content. Feel free to ask me about [brief topic of the lesson]!"
-3. Detect the language of the user's message and ALWAYS respond in the SAME language. If they write in German, respond in German. If in English, respond in English. Etc.
+3. ALWAYS respond in ${responseLang}, regardless of what language the user writes in. This is the language the student has selected in the course viewer.
 4. Keep responses concise and educational. Use simple, clear explanations appropriate for language learners.
 5. When explaining grammar or vocabulary from the lesson, provide examples where helpful.
 6. You may reference specific exercises or content from the lesson to help the student.

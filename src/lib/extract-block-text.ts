@@ -54,6 +54,11 @@ export function extractBlocksText(
         if (block.content) parts.push(stripHtml(block.content));
         break;
 
+      case "text-comparison":
+        if (block.leftContent) parts.push(stripHtml(block.leftContent));
+        if (block.rightContent) parts.push(stripHtml(block.rightContent));
+        break;
+
       case "multiple-choice":
         if (block.question) parts.push(block.question);
         for (const opt of block.options ?? []) {

@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
+import { lessonNumber } from "@/types/course";
 
 export default function LessonPage() {
   const { structure, slug, worksheets, id: courseId, brand } = useCourse();
@@ -65,8 +66,8 @@ export default function LessonPage() {
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Lesson header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {lesson.title || "Untitled Lesson"}
+          <h1 className="text-xl sm:text-2xl font-bold">
+            {lessonNumber(moduleIndex, topicIndex, lessonIndex)} {lesson.title || "Untitled Lesson"}
           </h1>
         </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useCourse } from "./course-context";
 import { BRAND_FONTS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
@@ -178,8 +178,7 @@ export function CourseChatSidebar({
   lessonTitle,
 }: CourseChatSidebarProps) {
   const t = useTranslations("courseChat");
-  const locale = useLocale();
-  const { brand, title: courseTitle } = useCourse();
+  const { brand, title: courseTitle, contentLocale } = useCourse();
   const brandFonts = BRAND_FONTS[brand || "edoomio"];
 
   const [inputValue, setInputValue] = useState("");
@@ -261,6 +260,7 @@ export function CourseChatSidebar({
           lessonContext,
           courseTitle,
           lessonTitle,
+          contentLocale,
         }),
         signal: controller.signal,
       });
@@ -319,7 +319,7 @@ export function CourseChatSidebar({
       setIsStreaming(false);
       abortRef.current = null;
     }
-  }, [inputValue, isStreaming, lessonContext, messages, courseTitle, lessonTitle, t]);
+  }, [inputValue, isStreaming, lessonContext, messages, courseTitle, lessonTitle, contentLocale, t]);
 
   const noLesson = !lessonContext;
 
@@ -369,7 +369,7 @@ export function CourseChatSidebar({
       const res = await authFetch("/api/ai/course-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonContext, courseTitle, lessonTitle, locale }),
+        body: JSON.stringify({ lessonContext, courseTitle, lessonTitle, locale: contentLocale }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -391,46 +391,77 @@ export function CourseChatSidebar({
     } finally {
       setIsStreaming(false);
     }
-  }, [isStreaming, noLesson, lessonContext, courseTitle, lessonTitle, locale, t]);
+  }, [isStreaming, noLesson, lessonContext, courseTitle, lessonTitle, contentLocale, t]);
 
   return (
     <div
       className={cn(
         "hidden lg:flex shrink-0 relative transition-all duration-300",
-        open ? "w-[380px]" : "w-0"
+        open ? "w-[420px]" : "w-0"
       )}
     >
       <aside
         className={cn(
-          "flex flex-col w-[380px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
+          "flex flex-col w-[420px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         style={{ fontFamily: brandFonts.bodyFont }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10">
-            <Bot className="h-4 w-4 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">{t("title")}</p>
-            <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
+        <div className="flex items-center gap-2 px-6 py-4 border-b bg-muted/30">
+          <p className="text-sm font-semibold flex-1 min-w-0">{t("title")}</p>
+          <button
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
 
+        {/* Preset prompt buttons — pinned above messages */}
+        {!noLesson && (
+          <div className="flex flex-wrap gap-2 px-4 py-3 border-b shrink-0">
+            <button
+              onClick={handleSummary}
+              disabled={isStreaming}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <BookOpen className="h-3 w-3" />
+              {t("presetSummary")}
+            </button>
+            <button
+              onClick={handleTranslate}
+              disabled={isStreaming}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Languages className="h-3 w-3" />
+              {t("presetTranslate")}
+            </button>
+            <button
+              onClick={handleReflect}
+              disabled={isStreaming}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Lightbulb className="h-3 w-3" />
+              {t("presetReflect")}
+            </button>
+            <button
+              onClick={handleQuiz}
+              disabled={isStreaming}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CircleHelp className="h-3 w-3" />
+              {t("presetQuiz")}
+            </button>
+          </div>
+        )}
+
         {/* Messages area */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll"
-        >
+        <div className="flex-1 min-h-0 py-3 pr-3">
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto pl-4 pr-3 space-y-4 chat-scroll"
+          >
           {noLesson ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-sm text-muted-foreground text-center px-4">
@@ -439,41 +470,6 @@ export function CourseChatSidebar({
             </div>
           ) : (
             <>
-              {/* Preset prompt buttons */}
-              <div className="flex flex-wrap gap-2 mb-2">
-                <button
-                  onClick={handleSummary}
-                  disabled={isStreaming}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <BookOpen className="h-3 w-3" />
-                  {t("presetSummary")}
-                </button>
-                <button
-                  onClick={handleTranslate}
-                  disabled={isStreaming}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Languages className="h-3 w-3" />
-                  {t("presetTranslate")}
-                </button>
-                <button
-                  onClick={handleReflect}
-                  disabled={isStreaming}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Lightbulb className="h-3 w-3" />
-                  {t("presetReflect")}
-                </button>
-                <button
-                  onClick={handleQuiz}
-                  disabled={isStreaming}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CircleHelp className="h-3 w-3" />
-                  {t("presetQuiz")}
-                </button>
-              </div>
               {displayMessages.map((msg) => (
               <div
                 key={msg.id}
@@ -491,12 +487,12 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "rounded-xl px-3.5 py-2.5 text-base leading-snug",
+                    "rounded-md px-3.5 py-2.5 text-base leading-snug",
                     msg.role === "user"
-                      ? "max-w-[85%] bg-primary text-primary-foreground rounded-br-sm"
+                      ? "max-w-[85%] bg-primary text-primary-foreground"
                       : msg.quiz
-                        ? "w-full bg-muted rounded-bl-sm"
-                        : "max-w-[85%] bg-muted rounded-bl-sm"
+                        ? "w-full bg-muted"
+                        : "max-w-[85%] bg-muted"
                   )}
                 >
                   {msg.quiz ? (
@@ -526,6 +522,7 @@ export function CourseChatSidebar({
             ))}
             </>
           )}
+          </div>
         </div>
 
         {/* Input area */}
@@ -574,10 +571,11 @@ export function CourseChatSidebar({
         </div>
 
         <style>{`
-          .chat-scroll::-webkit-scrollbar { width: 4px; }
+          .chat-scroll::-webkit-scrollbar { width: 6px; }
           .chat-scroll::-webkit-scrollbar-track { background: transparent; }
-          .chat-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+          .chat-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; min-height: 40px; }
           .chat-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+          .chat-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
         `}</style>
       </aside>
     </div>

@@ -8,13 +8,19 @@ import {
   FileText,
   ArrowRight,
   GraduationCap,
+  ToyBrick,
+  Folder,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
+import { moduleNumber } from "@/types/course";
+import { usePastelColors } from "@/lib/pastel-colors";
 
 export default function CourseOverviewPage() {
   const { title, description, languageLevel, structure } = useCourse();
   const { locale, slug } = useParams<{ locale: string; slug: string }>();
   const router = useRouter();
+  const pastelColors = usePastelColors();
 
   const totalTopics = structure.reduce((s, m) => s + m.topics.length, 0);
   const totalLessons = structure.reduce(
@@ -26,12 +32,12 @@ export default function CourseOverviewPage() {
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Hero */}
         <div className="mb-10">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-              <GraduationCap className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-4 mb-4">
+            <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <BookOpen className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-bold">
                 {title}
               </h1>
               {description && (
@@ -61,7 +67,7 @@ export default function CourseOverviewPage() {
 
         {/* Module card grid */}
         <h2 className="text-lg font-semibold mb-4">Modules</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {structure.map((mod, i) => {
             const topicCount = mod.topics.length;
             const lessonCount = mod.topics.reduce(
@@ -75,7 +81,8 @@ export default function CourseOverviewPage() {
                 onClick={() =>
                   router.push(`/${locale}/course/${slug}/${mod.id}`)
                 }
-                className="group text-left rounded-lg border bg-background overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
+                className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
+                style={{ backgroundColor: pastelColors[i % pastelColors.length] }}
               >
                 {mod.image && (
                   <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
@@ -88,16 +95,18 @@ export default function CourseOverviewPage() {
                 )}
                 <div className="p-5">
                 <div className="flex items-start gap-3">
-                  <span className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 text-primary text-sm font-bold shrink-0">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
+                  {mod.icon ? (
+                    <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary shrink-0" />
+                  ) : (
+                    <ToyBrick className="h-8 w-8 text-primary shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
-                      {mod.title || "Untitled Module"}
+                    <h3 className="text-base group-hover:text-primary transition-colors truncate">
+                      <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
                     </h3>
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Layers className="h-3.5 w-3.5" />
+                        <Folder className="h-3.5 w-3.5" />
                         {topicCount} {topicCount === 1 ? "Topic" : "Topics"}
                       </span>
                       <span className="flex items-center gap-1">

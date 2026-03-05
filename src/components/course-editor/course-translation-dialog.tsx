@@ -45,7 +45,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 
 export function CourseTranslationDialog() {
   const t = useTranslations("course");
-  const { state } = useCourse();
+  const { state, save } = useCourse();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<TranslationStatus | null>(null);
   const [isPushing, setIsPushing] = useState(false);
@@ -83,18 +83,31 @@ export function CourseTranslationDialog() {
     setError(null);
     setPushResult(null);
     try {
+      // Always save current editor state before pushing so the API
+      // sees the latest blocks (the push route reads from the DB).
+      if (state.isDirty) {
+        await save();
+      }
+
       const res = await authFetch(
         `/api/courses/${state.courseId}/translations/push`,
         { method: "POST" }
       );
       const data = await res.json();
       if (res.ok) {
-        setPushResult(
-          t("pushSuccess", {
-            count: data.stringCount,
-            newCount: data.newStrings,
-          })
-        );
+        let msg = t("pushSuccess", {
+          count: data.stringCount,
+          newCount: data.newStrings,
+        });
+        if (data.errors > 0) {
+          msg += ` (${data.errors} errors)`;
+        }
+        setPushResult(msg);
+
+        if (data.errors > 0 && data.errorMessages?.length) {
+          setError(data.errorMessages.join("\n"));
+        }
+
         await fetchStatus();
       } else {
         setError(data.error || "Push failed");

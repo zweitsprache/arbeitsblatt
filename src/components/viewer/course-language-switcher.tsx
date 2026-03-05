@@ -57,7 +57,7 @@ export function CourseLanguageSwitcher() {
                 px-2 py-1 text-xs font-medium transition-colors flex items-center gap-1.5
                 ${
                   isActive
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-slate-200 text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }
               `}

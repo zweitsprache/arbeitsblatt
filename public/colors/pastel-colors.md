@@ -2,11 +2,11 @@
 
 | Color     | Hex       |
 |-----------|-----------|
-| Rose      | `#F2DDE1` |
-| Peach     | `#F2E2D4` |
-| Buttercup | `#F2EDDA` |
-| Mint      | `#DAF0DC` |
-| Sky       | `#D8E6F2` |
-| Lavender  | `#DED6EC` |
-| Lilac     | `#EADAEE` |
-| Cloud     | `#E4E4EC` |
+| Peach     | `#F9F1EA` |
+| Buttercup | `#F9F6ED` |
+| Mint      | `#EDF8EE` |
+| Sky       | `#ECF3F9` |
+| Lavender  | `#EFEBF6` |
+| Lilac     | `#F5EDF7` |
+| Cloud     | `#F2F2F6` |
+| Rose      | `#F9EEF0` |

@@ -14,6 +14,7 @@ export interface CourseTopic {
   title: string;
   shortTitle: string;
   image: string | null;
+  icon: string | null;
   lessons: CourseLesson[];
 }
 
@@ -23,6 +24,7 @@ export interface CourseModule {
   title: string;
   shortTitle: string;
   image: string | null;
+  icon: string | null;
   topics: CourseTopic[];
 }
 
@@ -102,10 +104,12 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
   return modules.map((mod) => ({
     ...mod,
     image: mod.image ?? null,
+    icon: mod.icon ?? null,
     shortTitle: mod.shortTitle ?? "",
     topics: mod.topics.map((topic) => ({
       ...topic,
       image: topic.image ?? null,
+      icon: topic.icon ?? null,
       shortTitle: topic.shortTitle ?? "",
       lessons: topic.lessons.map((lesson) => {
         // Already migrated
@@ -164,4 +168,24 @@ export function countTopics(modules: CourseModule[]): number {
     count += mod.topics.length;
   }
   return count;
+}
+
+// ─── Dynamic Numbering ──────────────────────────────────────
+/** Module number: 100, 200, 300, … */
+export function moduleNumber(moduleIndex: number): number {
+  return (moduleIndex + 1) * 100;
+}
+
+/** Topic number: 101, 102, … (within module 100); 201, 202, … (within module 200) */
+export function topicNumber(moduleIndex: number, topicIndex: number): number {
+  return moduleNumber(moduleIndex) + topicIndex + 1;
+}
+
+/** Lesson number: "101.01", "101.02", … */
+export function lessonNumber(
+  moduleIndex: number,
+  topicIndex: number,
+  lessonIndex: number,
+): string {
+  return `${topicNumber(moduleIndex, topicIndex)}.${String(lessonIndex + 1).padStart(2, "0")}`;
 }

@@ -252,14 +252,16 @@
   margin-bottom: 1rem;
 }
 
-.tiptap li {
+.tiptap li, .tiptap li p {
   margin-top: 0;
   margin-bottom: 0;
+  line-height: 1.75rem;
 }
 
-.tiptap li p {
+.course-content li p {
   margin-top: 0;
   margin-bottom: 0;
+  line-height: 1.75rem;
 }
 
 .tiptap blockquote {

@@ -42,6 +42,7 @@ import {
   EmailSkeletonBlock,
   JobApplicationBlock,
   DosAndDontsBlock,
+  TextComparisonBlock,
   NumberedItemsBlock,
   LogoDividerBlock,
   AiPromptBlock,
@@ -234,7 +235,7 @@ function TextView({ block }: { block: TextBlock }) {
       <img
         src={block.imageSrc}
         alt=""
-        className="w-full rounded"
+        className="w-full rounded-md"
       />
     </div>
   ) : null;
@@ -544,7 +545,7 @@ function ImageView({ block }: { block: ImageBlock }) {
       <img
         src={block.src}
         alt={block.alt}
-        className="max-w-full rounded mx-auto block"
+        className="max-w-full rounded-md mx-auto block"
         style={{
           ...(block.width ? { width: block.width } : {}),
           ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
@@ -3411,6 +3412,54 @@ function DosAndDontsView({ block }: { block: DosAndDontsBlock }) {
   );
 }
 
+// ─── Text Comparison (Textvergleich) ─────────────────────────
+
+function TextComparisonView({ block }: { block: TextComparisonBlock }) {
+  const chColor = "#3A4F40";
+  const deColor = "#990033";
+
+  const renderSide = (
+    content: string,
+    color: string,
+    flagSrc: string,
+  ) => (
+    <div className="flex-1 min-w-0">
+      <div className="flex">
+        <div
+          className="py-1 text-xs font-semibold rounded-t-md text-center uppercase flex items-center justify-center border border-b-0 border-dashed"
+          style={{ width: 44, paddingLeft: 12, paddingRight: 12, borderColor: color }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={flagSrc} alt="" className="h-4 w-6 object-cover" />
+        </div>
+      </div>
+      <div
+        className={`border border-dashed rounded-md py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
+        style={{ "--block-color": color } as React.CSSProperties}
+      >
+        <div
+          className="tiptap max-w-none"
+          dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(content) }}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="flex gap-4">
+        {renderSide(block.leftContent, chColor, "/flags/ch.svg")}
+        {renderSide(block.rightContent, deColor, "/flags/de.svg")}
+      </div>
+      {block.comment && (
+        <div className={s.commentBox} style={{ "--block-color": "#475569" } as React.CSSProperties}>
+          {block.comment}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Numbered Items ─────────────────────────────────────────
 
 function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
@@ -4108,6 +4157,8 @@ export function ViewerBlockRenderer({
       return <JobApplicationView block={block as JobApplicationBlock} />;
     case "dos-and-donts":
       return <DosAndDontsView block={block as DosAndDontsBlock} />;
+    case "text-comparison":
+      return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} />;
     case "ai-prompt":

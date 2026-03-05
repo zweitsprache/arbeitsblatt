@@ -328,6 +328,13 @@ function extractSingleBlockStrings(
       }
       break;
 
+    // ── Text Comparison
+    case "text-comparison":
+      addStr(strings, `${p}.leftContent`, block.leftContent);
+      addStr(strings, `${p}.rightContent`, block.rightContent);
+      addStr(strings, `${p}.comment`, block.comment);
+      break;
+
     // ── Numbered Items
     case "numbered-items":
       for (const item of block.items) {
@@ -605,6 +612,11 @@ function applySingleBlockTranslations(
         apply(`${p}.dos.${item.id}.text`, (v) => (item.text = v));
       for (const item of block.donts)
         apply(`${p}.donts.${item.id}.text`, (v) => (item.text = v));
+      break;
+    case "text-comparison":
+      apply(`${p}.leftContent`, (v) => (block.leftContent = v));
+      apply(`${p}.rightContent`, (v) => (block.rightContent = v));
+      apply(`${p}.comment`, (v) => (block.comment = v));
       break;
     case "numbered-items":
       for (const item of block.items)

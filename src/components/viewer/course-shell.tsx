@@ -215,37 +215,18 @@ function flattenLessons(structure: CourseModule[]): FlatLesson[] {
   return flat;
 }
 
-// ─── Progress Ring ───────────────────────────────────────────
+// ─── Module Number ──────────────────────────────────────────
 
-function ProgressRing({ progress, number }: { progress: number; number: string }) {
+function ModuleNumber({ number }: { number: string }) {
   const t = useSidebarTheme();
-  const circumference = 2 * Math.PI * 14;
-  const hasProgress = progress > 0;
-  const isComplete = progress === 100;
 
   return (
-    <svg width="34" height="34" viewBox="0 0 34 34" className="shrink-0">
-      <circle cx="17" cy="17" r="14" fill="none" stroke={t.ringTrack} strokeWidth="2" />
-      {hasProgress && (
-        <circle
-          cx="17" cy="17" r="14" fill="none"
-          stroke={isComplete ? t.ringFillComplete : t.ringFill}
-          strokeWidth="2" strokeLinecap="round"
-          strokeDasharray={`${(progress / 100) * circumference} ${circumference}`}
-          transform="rotate(-90 17 17)"
-          style={{ transition: "stroke-dasharray 0.5s ease" }}
-        />
-      )}
-      <text x="17" y="17" textAnchor="middle" dominantBaseline="central"
-        className="text-cv-micro"
-        style={{
-          fontWeight: 500,
-          fill: isComplete ? t.ringNumberActive : hasProgress ? t.ringNumber : t.ringNumberFaint,
-        }}
-      >
-        {number}
-      </text>
-    </svg>
+    <span
+      className="flex items-center justify-center h-7 w-7 rounded-full text-cv-micro font-medium shrink-0"
+      style={{ color: t.ringNumber, border: `1.5px solid ${t.ringTrack}` }}
+    >
+      {number}
+    </span>
   );
 }
 
@@ -277,20 +258,16 @@ function SidebarLessonItem({
       style={{
         backgroundColor: isActive ? t.activeBg : undefined,
       }}
-      onMouseEnter={(e) => { if (!isActive && !isLocked) e.currentTarget.style.backgroundColor = t.hoverBg; }}
-      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = ""; }}
     >
       <span
-        className="flex-1 min-w-0 leading-snug truncate font-normal"
+        className="flex-1 min-w-0 leading-snug truncate"
         style={{
           color: isActive ? t.text : isLocked ? t.textFaint : t.textMuted,
+          fontWeight: isActive ? 600 : 400,
         }}
       >
         {title || "Untitled Lesson"}
       </span>
-      {isActive && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-l" style={{ backgroundColor: t.activeIndicator }} />
-      )}
     </button>
   );
 }
@@ -321,14 +298,10 @@ function SidebarTopicSection({
 
   return (
     <div className="mb-0.5">
-      <div
-        className="flex items-center gap-3 py-2 pl-5 pr-3 rounded-md transition-colors"
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = tk.hoverBg; }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
-      >
+      <div className="flex items-center gap-3 py-2 pl-5 pr-3 rounded-md">
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
-            "h-3.5 w-3.5 transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "h-3.5 w-3.5 transition-transform duration-200",
             open && "rotate-90"
           )} style={{ color: tk.chevron }} />
         </button>
@@ -339,18 +312,18 @@ function SidebarTopicSection({
           }}
           className="flex-1 min-w-0 text-left"
         >
-          <span className="text-cv-xs font-semibold leading-snug truncate block" style={{ color: tk.topicText }}>
+          <span className="text-cv-xs font-medium leading-snug truncate block" style={{ color: tk.topicText }}>
             {topic.shortTitle || topic.title || "Untitled Topic"}
           </span>
         </button>
       </div>
 
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        className="grid transition-[grid-template-rows] duration-200"
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-1 pt-1 pb-1">
+          <div className="flex flex-col gap-0.5 pt-1 pb-1">
             {topic.lessons.map((lesson) => {
               const hasContent = (lesson.blocks ?? []).length > 0;
               return (
@@ -410,15 +383,9 @@ function SidebarModuleSection({
   };
 
   return (
-    <div className="mb-1 rounded-lg transition-colors" style={{ backgroundColor: open ? tk.openBg : "transparent" }}>
-      <div
-        className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.backgroundColor = tk.hoverBg; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.backgroundColor = ""; }}
-      >
-        <div className="shrink-0">
-          <ProgressRing progress={progress} number={moduleNumber} />
-        </div>
+    <div className="mb-1 rounded-lg">
+      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+        <ModuleNumber number={moduleNumber} />
         <button
           onClick={() => {
             onSelectModule(mod.id);
@@ -432,14 +399,14 @@ function SidebarModuleSection({
         </button>
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
-            "h-3.5 w-3.5 transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "h-3.5 w-3.5 transition-transform duration-200",
             open && "rotate-90"
           )} style={{ color: tk.chevron }} />
         </button>
       </div>
 
       <div
-        className="grid transition-[grid-template-rows] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+        className="grid transition-[grid-template-rows] duration-200"
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
@@ -504,48 +471,24 @@ function SidebarNav({
   return (
     <SidebarThemeContext.Provider value={tk}>
     <div className="flex flex-col h-full relative overflow-hidden"
-      style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont, backgroundColor: tk.bg }}
+      style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
-      <div
-        className="absolute -top-[100px] -left-[50px] w-[300px] h-[300px] pointer-events-none"
-        style={{ background: tk.glowGradient }}
-      />
-
-      <div className="p-5 pb-4 shrink-0 relative">
+      {/* Header — matches breadcrumb / chat sidebar header */}
+      <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0">
         <button
           onClick={onShowOverview}
-          className="text-cv-xs font-medium uppercase mb-3 transition-colors"
-          style={{ color: tk.overviewText }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = tk.overviewHover; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = tk.overviewText; }}
+          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Overview
+          ←&ensp;Start
         </button>
+      </div>
+
+      <div className="p-5 pb-4 shrink-0 relative">
         <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>{title}</h1>
 
         {courseImage && (
           <div className="mt-3 w-full overflow-hidden rounded-md">
             <img src={courseImage} alt="" className="w-full h-auto object-contain" />
-          </div>
-        )}
-
-        {totalLessons > 0 && (
-          <div className="mt-3">
-            <div className="flex justify-between items-baseline mb-1.5">
-              <span className="text-cv-xs font-medium uppercase" style={{ color: tk.textFaint }}>Progress</span>
-              <span className="text-cv-lg font-medium" style={{ color: tk.accentText }}>
-                {overallProgress}<span className="text-cv-xs" style={{ color: tk.accentPercent }}>%</span>
-              </span>
-            </div>
-            <div className="h-1 rounded overflow-hidden" style={{ backgroundColor: tk.progressTrack }}>
-              <div
-                className="h-full rounded transition-[width] duration-600 ease-out"
-                style={{ width: `${overallProgress}%`, background: tk.progressBar }}
-              />
-            </div>
-            <p className="text-cv-xs mt-1.5" style={{ color: tk.textFaint }}>
-              {completedLessons} of {totalLessons} lessons completed
-            </p>
           </div>
         )}
       </div>
@@ -573,10 +516,8 @@ function SidebarNav({
         <div className="p-4 px-5 shrink-0" style={{ borderTop: `1px solid ${tk.divider}` }}>
           <button
             onClick={onContinue}
-            className="w-full py-2.5 rounded-lg text-cv-sm font-bold cursor-pointer transition-all hover:-translate-y-px"
-            style={{ background: tk.continueGradient, color: tk.continueText, boxShadow: tk.continueShadow }}
-            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = tk.continueShadowHover; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = tk.continueShadow; }}
+            className="w-full py-2.5 rounded-lg text-cv-sm font-semibold cursor-pointer transition-colors"
+            style={{ background: tk.continueGradient, color: tk.continueText }}
           >
             Continue Learning →
           </button>
@@ -584,10 +525,6 @@ function SidebarNav({
       )}
 
       <style>{`
-        @keyframes pulse-ring {
-          0%, 100% { opacity: 0.3; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.08); }
-        }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: ${tk.scrollThumb}; border-radius: 4px; }
@@ -704,15 +641,16 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   // Determine breadcrumb from URL
   const breadcrumb = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
-    if (segments.length < 4) return null;
-    const moduleId = segments[3];
+    // segments: [locale, "course", slug, moduleId?, topicId?, lessonId?]
+    if (segments.length < 3) return null;
+    const isOverview = segments.length === 3;
+    const moduleId = segments[3] ?? null;
     const topicId = segments.length >= 5 ? segments[4] : null;
     const lessonId = segments.length >= 6 ? segments[5] : null;
-    const mod = structure.find((m) => m.id === moduleId);
-    if (!mod) return null;
-    const topic = topicId ? mod.topics.find((t) => t.id === topicId) : null;
+    const mod = moduleId ? structure.find((m) => m.id === moduleId) : null;
+    const topic = mod && topicId ? mod.topics.find((t) => t.id === topicId) : null;
     const lesson = topic && lessonId ? topic.lessons.find((l) => l.id === lessonId) : null;
-    return { mod, topic, lesson };
+    return { isOverview, mod: mod ?? null, topic: topic ?? null, lesson: lesson ?? null };
   }, [pathname, structure]);
 
   return (
@@ -760,51 +698,30 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       {/* Desktop layout */}
-      <div className="min-h-screen lg:h-screen flex flex-col p-4 gap-4">
-        {/* Breadcrumb header (full width) */}
-        <div className="flex items-center gap-2 pr-4 py-1.5 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
-          {/* Brand logo */}
-          <img
-            src={DEFAULT_BRAND_SETTINGS[brand].logo}
-            alt=""
-            className="h-6 w-auto mr-2"
-          />
-          {breadcrumb && (
-            <>
-              <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                {breadcrumb.mod.title}
-              </button>
-              {breadcrumb.topic && (
-                <>
-                  <ChevronRight className="h-3 w-3 shrink-0" />
-                  <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                    {breadcrumb.topic.title}
-                  </button>
-                </>
-              )}
-              {breadcrumb.lesson && (
-                <>
-                  <ChevronRight className="h-3 w-3 shrink-0" />
-                  <span className="font-medium">{breadcrumb.lesson.title}</span>
-                </>
-              )}
-            </>
-          )}
-          {/* Brand logo + Language switcher */}
-          <div className="ml-auto flex items-center gap-3">
-            <CourseLanguageSwitcher />
-          </div>
+      {/* Top bar (full width, outside padding) */}
+      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-b" style={{ fontFamily: brandFonts.bodyFont }}>
+        {/* Brand logo */}
+        <img
+          src={DEFAULT_BRAND_SETTINGS[brand].logo}
+          alt=""
+          className="h-8 w-auto mr-2"
+        />
+        {/* Language switcher */}
+        <div className="ml-auto flex items-center gap-3">
+          <CourseLanguageSwitcher />
         </div>
+      </div>
 
+      <div className="min-h-screen lg:h-screen flex flex-col p-8 pt-0 lg:pt-6 gap-6">
         {/* Middle row: sidebar + content + chat */}
-        <div className="flex-1 min-h-0 flex flex-row gap-4">
+        <div className="flex-1 min-h-0 flex flex-row gap-8">
           {/* Desktop sidebar */}
           <div className={cn(
             "hidden lg:flex shrink-0 relative transition-all duration-300",
             desktopSidebarOpen ? "w-[400px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[400px] h-full rounded-lg overflow-hidden transition-all duration-300",
+              "flex flex-col w-[400px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
@@ -831,7 +748,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
           {!desktopSidebarOpen && (
             <button
-              className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-4"
+              className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-8"
               onClick={() => setDesktopSidebarOpen(true)}
               aria-label="Expand sidebar"
             >
@@ -865,11 +782,55 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 font-weight: 700;
               }
             `}</style>
-            <div className="h-full flex">
-              <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
-                {children}
+            <div className="h-full flex flex-col">
+              {/* Breadcrumb path */}
+              {breadcrumb && (
+                <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground border-b shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+                  {breadcrumb.isOverview ? (
+                    <span className="font-medium text-foreground">Start</span>
+                  ) : (
+                    <button onClick={() => router.push(`/${locale}/course/${slug}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                      Start
+                    </button>
+                  )}
+                  {breadcrumb.mod && (
+                    <>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                      {!breadcrumb.topic ? (
+                        <span className="font-medium text-foreground">{breadcrumb.mod.title}</span>
+                      ) : (
+                        <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                          {breadcrumb.mod.title}
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {breadcrumb.topic && (
+                    <>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                      {!breadcrumb.lesson ? (
+                        <span className="font-medium text-foreground">{breadcrumb.topic.title}</span>
+                      ) : (
+                        <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                          {breadcrumb.topic.title}
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {breadcrumb.lesson && (
+                    <>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                      <span className="font-medium text-foreground">{breadcrumb.lesson.title}</span>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="flex-1 min-h-0 flex">
+                <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
+                  {children}
+                </div>
+                <div className="w-6 shrink-0" />
               </div>
-              <div className="w-6 shrink-0" />
             </div>
           </div>
 
@@ -881,11 +842,12 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             lessonTitle={currentLessonData?.title ?? ""}
           />
         </div>
+      </div>
 
-        {/* Footer (full width) */}
-        <div className="flex items-center gap-2 pr-4 py-3 text-cv-xs text-muted-foreground shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
-          <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
-        </div>
+      {/* Footer (full width) */}
+      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t sticky bottom-0 z-20" style={{ fontFamily: brandFonts.bodyFont }}>
+        <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
+      </div>
 
         {/* Chat toggle button (desktop, when sidebar is closed) */}
         {!chatSidebarOpen && (
@@ -897,7 +859,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <MessageCircle className="h-5 w-5" />
           </button>
         )}
-      </div>
     </div>
   );
 }

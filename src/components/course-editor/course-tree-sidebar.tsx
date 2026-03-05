@@ -30,9 +30,13 @@ import {
   CourseModule,
   CourseTopic,
   CourseLesson,
+  moduleNumber,
+  topicNumber,
+  lessonNumber,
 } from "@/types/course";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { useUpload } from "@/lib/use-upload";
+import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 
 // ─── Lesson Item ─────────────────────────────────────────────
 function LessonItem({
@@ -40,11 +44,13 @@ function LessonItem({
   moduleId,
   topicId,
   isSelected,
+  number,
 }: {
   lesson: CourseLesson;
   moduleId: string;
   topicId: string;
   isSelected: boolean;
+  number: string;
 }) {
   const t = useTranslations("course");
   const tc = useTranslations("common");
@@ -84,6 +90,8 @@ function LessonItem({
     >
       <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
+      <span className="text-[10px] font-mono text-muted-foreground shrink-0">{number}</span>
+
       {editingField ? (
         <Input
           value={editValue}
@@ -115,10 +123,10 @@ function LessonItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            className="size-5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
           >
-            <MoreVertical className="h-3 w-3" />
+            <MoreVertical className="size-3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -161,11 +169,15 @@ function LessonItem({
 function TopicItem({
   topic,
   moduleId,
+  moduleIndex,
+  topicIndex,
   isSelected,
   selectedLessonId,
 }: {
   topic: CourseTopic;
   moduleId: string;
+  moduleIndex: number;
+  topicIndex: number;
   isSelected: boolean;
   selectedLessonId: string | null;
 }) {
@@ -223,7 +235,13 @@ function TopicItem({
           )}
         </button>
 
-        <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        {topic.icon ? (
+          <DynamicLucideIcon name={topic.icon} className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        ) : (
+          <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        )}
+
+        <span className="text-[10px] font-mono text-muted-foreground shrink-0">{topicNumber(moduleIndex, topicIndex)}</span>
 
         {editingField ? (
           <Input
@@ -256,10 +274,10 @@ function TopicItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 shrink-0 text-muted-foreground"
+              className="size-5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
-              <MoreVertical className="h-3 w-3" />
+              <MoreVertical className="size-3" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -355,13 +373,14 @@ function TopicItem({
 
       {expanded && (
         <div>
-          {topic.lessons.map((lesson) => (
+          {topic.lessons.map((lesson, li) => (
             <LessonItem
               key={lesson.id}
               lesson={lesson}
               moduleId={moduleId}
               topicId={topic.id}
               isSelected={selectedLessonId === lesson.id && isSelected}
+              number={lessonNumber(moduleIndex, topicIndex, li)}
             />
           ))}
           {topic.lessons.length === 0 && (
@@ -384,11 +403,13 @@ function TopicItem({
 // ─── Module Item ─────────────────────────────────────────────
 function ModuleItem({
   module: mod,
+  moduleIndex,
   isSelected,
   selectedTopicId,
   selectedLessonId,
 }: {
   module: CourseModule;
+  moduleIndex: number;
   isSelected: boolean;
   selectedTopicId: string | null;
   selectedLessonId: string | null;
@@ -444,7 +465,13 @@ function ModuleItem({
           )}
         </button>
 
-        <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+        {mod.icon ? (
+          <DynamicLucideIcon name={mod.icon} className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
+
+        <span className="text-[10px] font-mono text-muted-foreground shrink-0">{moduleNumber(moduleIndex)}</span>
 
         {editingField ? (
           <Input
@@ -478,10 +505,10 @@ function ModuleItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0 text-muted-foreground"
+              className="size-6 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
-              <MoreVertical className="h-3.5 w-3.5" />
+              <MoreVertical className="size-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -576,11 +603,13 @@ function ModuleItem({
 
       {expanded && (
         <div className="mt-0.5">
-          {mod.topics.map((topic) => (
+          {mod.topics.map((topic, ti) => (
             <TopicItem
               key={topic.id}
               topic={topic}
               moduleId={mod.id}
+              moduleIndex={moduleIndex}
+              topicIndex={ti}
               isSelected={isSelected && selectedTopicId === topic.id}
               selectedLessonId={
                 selectedTopicId === topic.id ? selectedLessonId : null
@@ -645,7 +674,7 @@ export function CourseTreeSidebar() {
       </div>
 
       {/* Modules tree */}
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 px-3 py-2 [&>[data-slot=scroll-area-viewport]>div]:!block">
         {state.structure.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">{t("noModules")}</p>
@@ -661,10 +690,11 @@ export function CourseTreeSidebar() {
           </div>
         ) : (
           <div className="space-y-0.5">
-            {state.structure.map((mod) => (
+            {state.structure.map((mod, mi) => (
               <ModuleItem
                 key={mod.id}
                 module={mod}
+                moduleIndex={mi}
                 isSelected={state.selectedModuleId === mod.id}
                 selectedTopicId={
                   state.selectedModuleId === mod.id

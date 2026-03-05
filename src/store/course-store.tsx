@@ -15,6 +15,8 @@ import {
 } from "@/types/course";
 
 // ─── State ───────────────────────────────────────────────────
+export type CourseView = "content" | "structure";
+
 interface CourseState {
   courseId: string | null;
   title: string;
@@ -28,6 +30,7 @@ interface CourseState {
   isDirty: boolean;
   isSaving: boolean;
   published: boolean;
+  view: CourseView;
 }
 
 const initialState: CourseState = {
@@ -43,6 +46,7 @@ const initialState: CourseState = {
   isDirty: false,
   isSaving: false,
   published: false,
+  view: "content",
 };
 
 // ─── Actions ─────────────────────────────────────────────────
@@ -51,13 +55,13 @@ type CourseAction =
   | { type: "SET_TITLE"; payload: string }
   // Module actions
   | { type: "ADD_MODULE"; payload: { title: string } }
-  | { type: "UPDATE_MODULE"; payload: { id: string; title?: string; shortTitle?: string; image?: string | null } }
+  | { type: "UPDATE_MODULE"; payload: { id: string; title?: string; shortTitle?: string; image?: string | null; icon?: string | null } }
   | { type: "REMOVE_MODULE"; payload: string }
   | { type: "REORDER_MODULES"; payload: CourseModule[] }
   | { type: "SELECT_MODULE"; payload: string | null }
   // Topic actions
   | { type: "ADD_TOPIC"; payload: { moduleId: string; title: string } }
-  | { type: "UPDATE_TOPIC"; payload: { moduleId: string; topicId: string; title?: string; shortTitle?: string; image?: string | null } }
+  | { type: "UPDATE_TOPIC"; payload: { moduleId: string; topicId: string; title?: string; shortTitle?: string; image?: string | null; icon?: string | null } }
   | { type: "REMOVE_TOPIC"; payload: { moduleId: string; topicId: string } }
   | { type: "REORDER_TOPICS"; payload: { moduleId: string; topics: CourseTopic[] } }
   | { type: "SELECT_TOPIC"; payload: { moduleId: string; topicId: string } | null }
@@ -76,7 +80,8 @@ type CourseAction =
   | { type: "UPDATE_SETTINGS"; payload: Partial<CourseSettings> }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "MARK_SAVED" }
-  | { type: "SET_PUBLISHED"; payload: boolean };
+  | { type: "SET_PUBLISHED"; payload: boolean }
+  | { type: "SET_VIEW"; payload: CourseView };
 
 // ─── Helpers ─────────────────────────────────────────────────
 function mapModule(
@@ -132,6 +137,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         title: action.payload.title || `Module ${state.structure.length + 1}`,
         shortTitle: "",
         image: null,
+        icon: null,
         topics: [],
       };
       return {
@@ -152,6 +158,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
           ...(action.payload.title !== undefined && { title: action.payload.title }),
           ...(action.payload.shortTitle !== undefined && { shortTitle: action.payload.shortTitle }),
           ...(action.payload.image !== undefined && { image: action.payload.image }),
+          ...(action.payload.icon !== undefined && { icon: action.payload.icon }),
         })),
         isDirty: true,
       };
@@ -191,6 +198,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         title: action.payload.title || "New Topic",
         shortTitle: "",
         image: null,
+        icon: null,
         lessons: [],
       };
       return {
@@ -215,6 +223,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
             ...(action.payload.title !== undefined && { title: action.payload.title }),
             ...(action.payload.shortTitle !== undefined && { shortTitle: action.payload.shortTitle }),
             ...(action.payload.image !== undefined && { image: action.payload.image }),
+            ...(action.payload.icon !== undefined && { icon: action.payload.icon }),
           }))
         ),
         isDirty: true,
@@ -400,6 +409,9 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
 
     case "SET_PUBLISHED":
       return { ...state, published: action.payload, isDirty: true };
+
+    case "SET_VIEW":
+      return { ...state, view: action.payload };
 
     default:
       return state;

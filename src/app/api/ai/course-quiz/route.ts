@@ -36,7 +36,12 @@ export async function POST(req: NextRequest) {
 
     const trimmedContext = lessonContext.slice(0, MAX_CONTEXT_LENGTH);
 
-    const lang = locale === "de" ? "German" : "English";
+    const LOCALE_NAMES: Record<string, string> = {
+      de: "German", en: "English", uk: "Ukrainian", fr: "French",
+      es: "Spanish", it: "Italian", pt: "Portuguese", tr: "Turkish",
+      ar: "Arabic", pl: "Polish", ru: "Russian",
+    };
+    const lang = LOCALE_NAMES[locale ?? ""] ?? "German";
 
     const systemPrompt = `You generate quiz questions for an educational platform. Respond ONLY with valid JSON — no commentary, no markdown fences, no explanation.
 

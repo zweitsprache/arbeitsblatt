@@ -117,6 +117,21 @@ export async function deleteString(
   }
 }
 
+/**
+ * Get all base strings for a specific namespace.
+ * Returns an array of { key, value, namespace } objects.
+ */
+export async function getBaseStrings(
+  namespace: string
+): Promise<{ key: string; value: string; namespace: string }[]> {
+  const res = await fetch(readUrl(`base_strings.json?namespace=${namespace}`));
+  if (!res.ok) {
+    throw new Error(`i18nexus getBaseStrings failed: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.collection ?? data;
+}
+
 // ─── Helpers ────────────────────────────────────────────────
 
 /**
