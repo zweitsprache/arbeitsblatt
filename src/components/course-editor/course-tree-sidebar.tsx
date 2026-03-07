@@ -35,6 +35,7 @@ import {
   lessonNumber,
 } from "@/types/course";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
+import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useUpload } from "@/lib/use-upload";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 
@@ -188,7 +189,34 @@ function TopicItem({
   const [editingField, setEditingField] = useState<"title" | "shortTitle" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const { upload } = useUpload();
+
+  const handleFileForCrop = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    try {
+      const file = new File([result.blob], "topic-image.png", { type: "image/png" });
+      const uploadResult = await upload(file);
+      if (uploadResult?.url) {
+        dispatch({
+          type: "UPDATE_TOPIC",
+          payload: { moduleId, topicId: topic.id, image: uploadResult.url },
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
 
   const startEditing = (field: "title" | "shortTitle") => {
     setEditValue(field === "title" ? topic.title : topic.shortTitle);
@@ -268,6 +296,10 @@ function TopicItem({
         <span className="text-[10px] text-muted-foreground shrink-0">
           {topic.lessons.length}
         </span>
+
+        {(topic.blocks ?? []).length > 0 && (
+          <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -360,15 +392,20 @@ function TopicItem({
             payload: { moduleId, topicId: topic.id, image: url },
           });
         }}
-        onSelectFile={async (file) => {
-          const result = await upload(file);
-          if (result?.url) {
-            dispatch({
-              type: "UPDATE_TOPIC",
-              payload: { moduleId, topicId: topic.id, image: result.url },
-            });
+        onSelectFile={(file) => handleFileForCrop(file)}
+      />
+
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open && cropSrc) {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
           }
         }}
+        onCropComplete={handleCropComplete}
       />
 
       {expanded && (
@@ -421,7 +458,34 @@ function ModuleItem({
   const [editingField, setEditingField] = useState<"title" | "shortTitle" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const { upload } = useUpload();
+
+  const handleFileForCrop = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    try {
+      const file = new File([result.blob], "module-image.png", { type: "image/png" });
+      const uploadResult = await upload(file);
+      if (uploadResult?.url) {
+        dispatch({
+          type: "UPDATE_MODULE",
+          payload: { id: mod.id, image: uploadResult.url },
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
 
   const startEditing = (field: "title" | "shortTitle") => {
     setEditValue(field === "title" ? mod.title : mod.shortTitle);
@@ -498,6 +562,10 @@ function ModuleItem({
               {t("topicCount", { count: mod.topics.length })}
             </p>
           </div>
+        )}
+
+        {(mod.blocks ?? []).length > 0 && (
+          <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
         )}
 
         <DropdownMenu>
@@ -590,15 +658,20 @@ function ModuleItem({
             payload: { id: mod.id, image: url },
           });
         }}
-        onSelectFile={async (file) => {
-          const result = await upload(file);
-          if (result?.url) {
-            dispatch({
-              type: "UPDATE_MODULE",
-              payload: { id: mod.id, image: result.url },
-            });
+        onSelectFile={(file) => handleFileForCrop(file)}
+      />
+
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open && cropSrc) {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
           }
         }}
+        onCropComplete={handleCropComplete}
       />
 
       {expanded && (

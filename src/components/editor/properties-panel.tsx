@@ -66,8 +66,10 @@ import {
   JobApplicationStyle,
   DosAndDontsBlock,
   TextComparisonBlock,
+  AccordionBlock,
   AiPromptBlock,
   AiToolBlock,
+  AudioBlock,
   TableBlock,
   TableStyle,
   BlockVisibility,
@@ -4977,6 +4979,25 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+function AccordionProps({ block }: { block: AccordionBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const update = (updates: Partial<AccordionBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">{t("showNumbers")}</Label>
+        <Switch
+          checked={block.showNumbers ?? false}
+          onCheckedChange={(checked) => update({ showNumbers: checked })}
+        />
+      </div>
+    </div>
+  );
+}
+
 function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -5545,6 +5566,79 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
   );
 }
 
+// ─── Audio Properties ────────────────────────────────────────
+function AudioProps({ block }: { block: AudioBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [isUploading, setIsUploading] = React.useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("audio/")) return;
+    setIsUploading(true);
+    try {
+      const result = await upload(file);
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { src: result.url } },
+      });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("audioFile")}</Label>
+        {block.src ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 text-xs text-slate-600 truncate">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span className="truncate flex-1">{block.src.split("/").pop()}</span>
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { src: "" } } })}
+                className="text-red-400 hover:text-red-600 shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-slate-200 p-4 cursor-pointer hover:border-slate-300 transition-colors">
+            {isUploading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <Upload className="w-5 h-5 text-slate-400" />
+            )}
+            <span className="text-xs text-slate-500">{isUploading ? t("uploading") : t("audioUploadHint")}</span>
+            <input
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("audioTitle")}</Label>
+        <Input
+          value={block.title || ""}
+          onChange={(e) => dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { title: e.target.value } } })}
+          placeholder={t("audioTitlePlaceholder")}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Table Properties ────────────────────────────────────────
 
 /** Count columns from the first row of a table HTML string */
@@ -5862,12 +5956,16 @@ export function PropertiesPanel() {
         return <TextComparisonProps block={selectedBlock as TextComparisonBlock} />;
       case "numbered-items":
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
+      case "accordion":
+        return <AccordionProps block={selectedBlock as AccordionBlock} />;
       case "ai-prompt":
         return <AiPromptProps block={selectedBlock as AiPromptBlock} />;
       case "ai-tool":
         return <AiToolProps block={selectedBlock as AiToolBlock} />;
       case "table":
         return <TableProps block={selectedBlock as TableBlock} />;
+      case "audio":
+        return <AudioProps block={selectedBlock as AudioBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

@@ -213,6 +213,13 @@ export function extractBlocksText(
         }
         break;
 
+      case "accordion":
+        for (const item of block.items ?? []) {
+          if (item.title) parts.push(item.title);
+          if (item.content) parts.push(stripHtml(item.content));
+        }
+        break;
+
       // Skip visual-only blocks: image, spacer, divider, page-break,
       // writing-lines, writing-rows, number-line, numbered-label, word-search
       default:

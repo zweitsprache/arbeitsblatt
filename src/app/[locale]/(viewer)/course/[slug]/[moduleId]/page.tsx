@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useCourse } from "@/components/viewer/course-context";
 import { useParams, useRouter } from "next/navigation";
@@ -16,9 +17,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 import { moduleNumber, topicNumber } from "@/types/course";
+import { WorksheetBlock } from "@/types/worksheet";
+import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
+import { BlockScreenshotButton } from "@/components/viewer/block-screenshot-button";
 
 export default function ModulePage() {
-  const { structure, slug } = useCourse();
+  const { structure, slug, worksheets, id: courseId, brand } = useCourse();
   const { locale, moduleId } = useParams<{
     locale: string;
     slug: string;
@@ -26,6 +30,7 @@ export default function ModulePage() {
   }>();
   const router = useRouter();
   const t = useTranslations("common");
+  const tc = useTranslations("course");
 
   const moduleIndex = structure.findIndex((m) => m.id === moduleId);
   const mod = structure[moduleIndex];
@@ -40,40 +45,111 @@ export default function ModulePage() {
   );
 
   const prevModule = moduleIndex > 0 ? structure[moduleIndex - 1] : null;
+  const firstTopic = mod.topics.length > 0 ? mod.topics[0] : null;
   const nextModule =
     moduleIndex < structure.length - 1 ? structure[moduleIndex + 1] : null;
 
+  // Resolve module-level blocks: expand linked-blocks
+  const resolvedBlocks = useMemo(() => {
+    const blocks: WorksheetBlock[] = [];
+    for (const block of mod.blocks ?? []) {
+      if (block.type === "linked-blocks") {
+        const ws = worksheets[block.worksheetId];
+        if (ws) {
+          blocks.push(...ws.blocks);
+        }
+      } else {
+        blocks.push(block);
+      }
+    }
+    return blocks;
+  }, [mod, worksheets]);
+
   return (
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
-        {/* Hero */}
+        {/* Hero with optional image overlay */}
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              {mod.icon ? (
-                <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary" />
-              ) : (
-                <ToyBrick className="h-8 w-8 text-primary" />
-              )}
+          {mod.image ? (
+            <div className="relative rounded-sm overflow-hidden">
+              <img src={mod.image} alt="" className="w-full h-auto" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="h-14 w-14 rounded-sm backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shrink-0">
+                    {mod.icon ? (
+                      <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-white" />
+                    ) : (
+                      <ToyBrick className="h-8 w-8 text-white" />
+                    )}
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-md">
+                    {moduleNumber(moduleIndex)} {mod.title || "Untitled Module"}
+                  </h1>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-xs text-white border-white/40 rounded-sm">
+                    {mod.topics.length}{" "}
+                    {mod.topics.length === 1 ? tc("topicSingular") : tc("topicPlural")}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs text-white border-white/40 rounded-sm">
+                    {totalLessons} {totalLessons === 1 ? tc("lessonSingular") : tc("lessonPlural")}
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold">
-                {moduleNumber(moduleIndex)} {mod.title || "Untitled Module"}
-              </h1>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Badge variant="outline" className="text-xs">
-              {mod.topics.length}{" "}
-              {mod.topics.length === 1 ? "Topic" : "Topics"}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {totalLessons} {totalLessons === 1 ? "Lesson" : "Lessons"}
-            </Badge>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-14 w-14 rounded-sm bg-primary/10 flex items-center justify-center shrink-0">
+                  {mod.icon ? (
+                    <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary" />
+                  ) : (
+                    <ToyBrick className="h-8 w-8 text-primary" />
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-bold">
+                    {moduleNumber(moduleIndex)} {mod.title || "Untitled Module"}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-4">
+                <Badge variant="outline" className="text-xs rounded-sm">
+                  {mod.topics.length}{" "}
+                  {mod.topics.length === 1 ? tc("topicSingular") : tc("topicPlural")}
+                </Badge>
+                <Badge variant="outline" className="text-xs rounded-sm">
+                  {totalLessons} {totalLessons === 1 ? tc("lessonSingular") : tc("lessonPlural")}
+                </Badge>
+              </div>
+            </>
+          )}
         </div>
 
+        {/* Module content blocks */}
+        {resolvedBlocks.length > 0 && (
+          <>
+            <div className="space-y-4 text-cv-base mb-10">
+              {resolvedBlocks.map((block) => (
+                <div
+                  key={block.id}
+                  data-block-id={block.id}
+                  className="group/block relative"
+                >
+                  <ViewerBlockRenderer block={block} mode="online" brand={brand} />
+                  <BlockScreenshotButton
+                    courseId={courseId}
+                    moduleId={moduleId}
+                    blockId={block.id}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Topic card grid */}
-        <h2 className="text-lg font-semibold mb-4">Topics</h2>
+        <h2 className="text-lg font-semibold mb-4">Themen in diesem Modul</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {mod.topics.map((topic, i) => {
             const lessonCount = topic.lessons.length;
@@ -86,7 +162,7 @@ export default function ModulePage() {
                     `/${locale}/course/${slug}/${moduleId}/${topic.id}`
                   )
                 }
-                className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
+                className="group text-left rounded-sm overflow-hidden hover:shadow-md transition-all"
                 style={{ backgroundColor: "#ECF3F9" }}
               >
                 {topic.image && (
@@ -150,7 +226,20 @@ export default function ModulePage() {
           ) : (
             <div className="flex-1" />
           )}
-          {nextModule ? (
+          {firstTopic ? (
+            <button
+              className="flex-1 flex items-center justify-end gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-right group"
+              onClick={() =>
+                router.push(`/${locale}/course/${slug}/${moduleId}/${firstTopic.id}`)
+              }
+            >
+              <div className="min-w-0">
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">{t("next")}</span>
+                <span className="block !text-[16px] font-medium truncate leading-snug">{firstTopic.title}</span>
+              </div>
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+            </button>
+          ) : nextModule ? (
             <button
               className="flex-1 flex items-center justify-end gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-right group"
               onClick={() =>

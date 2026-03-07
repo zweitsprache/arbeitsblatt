@@ -132,7 +132,7 @@ function WorksheetPickerDialog({
               {worksheets.map((ws) => (
                 <div
                   key={ws.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer hover:bg-muted"
+                  className="flex items-center gap-3 p-3 rounded-sm border transition-all cursor-pointer hover:bg-muted"
                   onClick={() => onSelect(ws)}
                 >
                   <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -152,6 +152,511 @@ function WorksheetPickerDialog({
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Module Block Editor (reuses the full worksheet editor) ──
+
+function ModuleEditorInner() {
+  const t = useTranslations("course");
+  const { state: editorState, dispatch: editorDispatch, addBlock } = useEditor();
+  const {
+    state: courseState,
+    dispatch: courseDispatch,
+    getSelectedModule,
+    save: saveCourse,
+  } = useCourse();
+
+  const selectedModule = getSelectedModule();
+
+  const dndId = useId();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [overPosition, setOverPosition] = useState<"above" | "below">("below");
+  const [selectorOpen, setSelectorOpen] = useState(false);
+
+  // Sync tracking
+  const syncingRef = useRef(false);
+  const prevModuleIdRef = useRef<string | null>(null);
+  const prevBlocksJsonRef = useRef("");
+
+  // Load module blocks into editor store when module selection changes
+  useEffect(() => {
+    if (!selectedModule) return;
+    if (selectedModule.id === prevModuleIdRef.current) return;
+    prevModuleIdRef.current = selectedModule.id;
+    syncingRef.current = true;
+    const blocks = selectedModule.blocks ?? [];
+    prevBlocksJsonRef.current = JSON.stringify(blocks);
+    editorDispatch({
+      type: "LOAD_WORKSHEET",
+      payload: {
+        id: selectedModule.id,
+        title: selectedModule.title,
+        slug: "",
+        blocks,
+        settings: { ...DEFAULT_SETTINGS, brand: courseState.settings.brand || "edoomio" },
+        published: false,
+      },
+    });
+    requestAnimationFrame(() => {
+      syncingRef.current = false;
+    });
+  }, [selectedModule, editorDispatch, courseState.settings.brand]);
+
+  // Sync editor blocks back to course store on change
+  useEffect(() => {
+    if (syncingRef.current) return;
+    if (!courseState.selectedModuleId) return;
+    const json = JSON.stringify(editorState.blocks);
+    if (json === prevBlocksJsonRef.current) return;
+    prevBlocksJsonRef.current = json;
+    courseDispatch({
+      type: "SET_MODULE_BLOCKS",
+      payload: {
+        moduleId: courseState.selectedModuleId,
+        blocks: editorState.blocks,
+      },
+    });
+  }, [editorState.blocks, courseState.selectedModuleId, courseDispatch]);
+
+  // Keyboard: Cmd+S saves course, Delete removes selected block
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveCourse();
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const el = document.activeElement;
+        const isEditing =
+          el?.tagName === "INPUT" ||
+          el?.tagName === "TEXTAREA" ||
+          (el as HTMLElement)?.contentEditable === "true";
+        if (!isEditing && editorState.selectedBlockId) {
+          editorDispatch({ type: "REMOVE_BLOCK", payload: editorState.selectedBlockId });
+        }
+      }
+      if (e.key === "Escape") {
+        editorDispatch({ type: "SELECT_BLOCK", payload: null });
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveCourse, editorState.selectedBlockId, editorDispatch]);
+
+  // DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    setActiveId(e.active.id as string);
+  }, []);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    setOverId(e.over?.id as string | null);
+    if (e.over && e.activatorEvent && "clientY" in e.activatorEvent) {
+      const overRect = e.over.rect;
+      const pointerY = (e.activatorEvent as PointerEvent).clientY + (e.delta?.y ?? 0);
+      setOverPosition(pointerY < overRect.top + overRect.height / 2 ? "above" : "below");
+    }
+  }, []);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    setOverId(null);
+    const { active, over } = event;
+    const activeData = active.data.current;
+    const overData = over?.data.current;
+
+    // From sidebar library
+    if (activeData?.type === "library-block") {
+      const blockType = activeData.blockType as BlockType;
+      if (overData?.type === "column-drop") {
+        const { blockId, colIndex } = overData as { blockId: string; colIndex: number };
+        const columnsBlock = editorState.blocks.find((b) => b.id === blockId);
+        if (columnsBlock && columnsBlock.type === "columns") {
+          const def = BLOCK_LIBRARY.find((b) => b.type === blockType);
+          if (!def) return;
+          const newChild = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
+          const newChildren = columnsBlock.children.map((col: WorksheetBlock[], i: number) =>
+            i === colIndex ? [...col, newChild] : col
+          );
+          editorDispatch({ type: "UPDATE_BLOCK", payload: { id: blockId, updates: { children: newChildren } } });
+        }
+        return;
+      }
+      if (over) {
+        const idx = editorState.blocks.findIndex((b) => b.id === over.id);
+        if (idx >= 0) addBlock(blockType, overPosition === "above" ? idx : idx + 1);
+        else addBlock(blockType);
+      } else {
+        addBlock(blockType);
+      }
+      return;
+    }
+
+    // Column child
+    if (activeData?.type === "column-child") {
+      const blockId = activeData.blockId as string;
+      if (overData?.type === "column-drop") {
+        const { blockId: targetParentId, colIndex: targetColIndex } = overData as { blockId: string; colIndex: number };
+        editorDispatch({ type: "MOVE_BLOCK_BETWEEN_COLUMNS", payload: { blockId, targetParentId, targetColIndex } });
+        return;
+      }
+      if (over && editorState.blocks.some((b) => b.id === (over.id as string))) {
+        editorDispatch({ type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP", payload: { blockId, insertAfterBlockId: over.id as string } });
+        return;
+      }
+      editorDispatch({ type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP", payload: { blockId } });
+      return;
+    }
+
+    // Top-level reorder
+    if (over && active.id !== over.id) {
+      if (overData?.type === "column-drop") {
+        const { blockId: targetParentId, colIndex: targetColIndex } = overData as { blockId: string; colIndex: number };
+        editorDispatch({ type: "MOVE_BLOCK_TO_COLUMN", payload: { blockId: active.id as string, targetParentId, targetColIndex } });
+        return;
+      }
+      editorDispatch({ type: "MOVE_BLOCK", payload: { activeId: active.id as string, overId: over.id as string, position: overPosition } });
+    }
+  };
+
+  // Link Worksheet → add linked-blocks block
+  const addLinkedBlocks = useCallback(
+    (ws: WorksheetItem) => {
+      const block: LinkedBlocksBlock = {
+        id: uuidv4(),
+        type: "linked-blocks",
+        visibility: "both",
+        worksheetId: ws.id,
+        worksheetTitle: ws.title,
+        worksheetSlug: ws.slug,
+      };
+      editorDispatch({ type: "ADD_BLOCK", payload: { block } });
+      setSelectorOpen(false);
+    },
+    [editorDispatch]
+  );
+
+  // Drag overlay
+  const activeBlock = activeId ? editorState.blocks.find((b) => b.id === activeId) : null;
+  const activeLibType = activeId?.startsWith("library-") ? activeId.replace("library-", "") : null;
+  const activeLibDef = activeLibType ? BLOCK_LIBRARY.find((b) => b.type === activeLibType) : null;
+
+  return (
+    <DndContext
+      id={dndId}
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="h-full flex flex-col">
+        {/* Module breadcrumb header */}
+        <div className="px-4 py-2 border-b bg-background flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+            <span className="truncate font-medium text-foreground">
+              {selectedModule?.title || t("untitledModule")}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 shrink-0"
+            onClick={() => setSelectorOpen(true)}
+          >
+            <Link2 className="h-4 w-4" />
+            {t("linkWorksheet")}
+          </Button>
+        </div>
+
+        {/* Same three-panel layout as the worksheet editor */}
+        <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
+          <BlockSidebar onAddBlock={(type) => addBlock(type)} />
+          <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
+          <PropertiesPanel />
+        </div>
+      </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeBlock ? (
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl p-3 opacity-90 max-w-[600px] max-h-[120px] overflow-hidden pointer-events-none">
+            <BlockRenderer block={activeBlock} mode={editorState.viewMode} />
+          </div>
+        ) : activeLibDef ? (
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl px-4 py-3 opacity-90 pointer-events-none">
+            <p className="text-sm font-medium">{activeLibDef.label}</p>
+            <p className="text-xs text-muted-foreground">{activeLibDef.description}</p>
+          </div>
+        ) : null}
+      </DragOverlay>
+
+      <WorksheetPickerDialog
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        onSelect={addLinkedBlocks}
+      />
+    </DndContext>
+  );
+}
+
+// ─── Topic Block Editor (reuses the full worksheet editor) ──
+
+function TopicEditorInner() {
+  const t = useTranslations("course");
+  const { state: editorState, dispatch: editorDispatch, addBlock } = useEditor();
+  const {
+    state: courseState,
+    dispatch: courseDispatch,
+    getSelectedModule,
+    getSelectedTopic,
+    save: saveCourse,
+  } = useCourse();
+
+  const selectedModule = getSelectedModule();
+  const selectedTopic = getSelectedTopic();
+
+  const dndId = useId();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [overPosition, setOverPosition] = useState<"above" | "below">("below");
+  const [selectorOpen, setSelectorOpen] = useState(false);
+
+  // Sync tracking
+  const syncingRef = useRef(false);
+  const prevTopicIdRef = useRef<string | null>(null);
+  const prevBlocksJsonRef = useRef("");
+
+  // Load topic blocks into editor store when topic selection changes
+  useEffect(() => {
+    if (!selectedTopic) return;
+    if (selectedTopic.id === prevTopicIdRef.current) return;
+    prevTopicIdRef.current = selectedTopic.id;
+    syncingRef.current = true;
+    const blocks = selectedTopic.blocks ?? [];
+    prevBlocksJsonRef.current = JSON.stringify(blocks);
+    editorDispatch({
+      type: "LOAD_WORKSHEET",
+      payload: {
+        id: selectedTopic.id,
+        title: selectedTopic.title,
+        slug: "",
+        blocks,
+        settings: { ...DEFAULT_SETTINGS, brand: courseState.settings.brand || "edoomio" },
+        published: false,
+      },
+    });
+    requestAnimationFrame(() => {
+      syncingRef.current = false;
+    });
+  }, [selectedTopic, editorDispatch, courseState.settings.brand]);
+
+  // Sync editor blocks back to course store on change
+  useEffect(() => {
+    if (syncingRef.current) return;
+    if (!courseState.selectedModuleId || !courseState.selectedTopicId) return;
+    const json = JSON.stringify(editorState.blocks);
+    if (json === prevBlocksJsonRef.current) return;
+    prevBlocksJsonRef.current = json;
+    courseDispatch({
+      type: "SET_TOPIC_BLOCKS",
+      payload: {
+        moduleId: courseState.selectedModuleId,
+        topicId: courseState.selectedTopicId,
+        blocks: editorState.blocks,
+      },
+    });
+  }, [editorState.blocks, courseState.selectedModuleId, courseState.selectedTopicId, courseDispatch]);
+
+  // Keyboard: Cmd+S saves course, Delete removes selected block
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveCourse();
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const el = document.activeElement;
+        const isEditing =
+          el?.tagName === "INPUT" ||
+          el?.tagName === "TEXTAREA" ||
+          (el as HTMLElement)?.contentEditable === "true";
+        if (!isEditing && editorState.selectedBlockId) {
+          editorDispatch({ type: "REMOVE_BLOCK", payload: editorState.selectedBlockId });
+        }
+      }
+      if (e.key === "Escape") {
+        editorDispatch({ type: "SELECT_BLOCK", payload: null });
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveCourse, editorState.selectedBlockId, editorDispatch]);
+
+  // DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    setActiveId(e.active.id as string);
+  }, []);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    setOverId(e.over?.id as string | null);
+    if (e.over && e.activatorEvent && "clientY" in e.activatorEvent) {
+      const overRect = e.over.rect;
+      const pointerY = (e.activatorEvent as PointerEvent).clientY + (e.delta?.y ?? 0);
+      setOverPosition(pointerY < overRect.top + overRect.height / 2 ? "above" : "below");
+    }
+  }, []);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    setOverId(null);
+    const { active, over } = event;
+    const activeData = active.data.current;
+    const overData = over?.data.current;
+
+    // From sidebar library
+    if (activeData?.type === "library-block") {
+      const blockType = activeData.blockType as BlockType;
+      if (overData?.type === "column-drop") {
+        const { blockId, colIndex } = overData as { blockId: string; colIndex: number };
+        const columnsBlock = editorState.blocks.find((b) => b.id === blockId);
+        if (columnsBlock && columnsBlock.type === "columns") {
+          const def = BLOCK_LIBRARY.find((b) => b.type === blockType);
+          if (!def) return;
+          const newChild = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
+          const newChildren = columnsBlock.children.map((col: WorksheetBlock[], i: number) =>
+            i === colIndex ? [...col, newChild] : col
+          );
+          editorDispatch({ type: "UPDATE_BLOCK", payload: { id: blockId, updates: { children: newChildren } } });
+        }
+        return;
+      }
+      if (over) {
+        const idx = editorState.blocks.findIndex((b) => b.id === over.id);
+        if (idx >= 0) addBlock(blockType, overPosition === "above" ? idx : idx + 1);
+        else addBlock(blockType);
+      } else {
+        addBlock(blockType);
+      }
+      return;
+    }
+
+    // Column child
+    if (activeData?.type === "column-child") {
+      const blockId = activeData.blockId as string;
+      if (overData?.type === "column-drop") {
+        const { blockId: targetParentId, colIndex: targetColIndex } = overData as { blockId: string; colIndex: number };
+        editorDispatch({ type: "MOVE_BLOCK_BETWEEN_COLUMNS", payload: { blockId, targetParentId, targetColIndex } });
+        return;
+      }
+      if (over && editorState.blocks.some((b) => b.id === (over.id as string))) {
+        editorDispatch({ type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP", payload: { blockId, insertAfterBlockId: over.id as string } });
+        return;
+      }
+      editorDispatch({ type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP", payload: { blockId } });
+      return;
+    }
+
+    // Top-level reorder
+    if (over && active.id !== over.id) {
+      if (overData?.type === "column-drop") {
+        const { blockId: targetParentId, colIndex: targetColIndex } = overData as { blockId: string; colIndex: number };
+        editorDispatch({ type: "MOVE_BLOCK_TO_COLUMN", payload: { blockId: active.id as string, targetParentId, targetColIndex } });
+        return;
+      }
+      editorDispatch({ type: "MOVE_BLOCK", payload: { activeId: active.id as string, overId: over.id as string, position: overPosition } });
+    }
+  };
+
+  // Link Worksheet → add linked-blocks block
+  const addLinkedBlocks = useCallback(
+    (ws: WorksheetItem) => {
+      const block: LinkedBlocksBlock = {
+        id: uuidv4(),
+        type: "linked-blocks",
+        visibility: "both",
+        worksheetId: ws.id,
+        worksheetTitle: ws.title,
+        worksheetSlug: ws.slug,
+      };
+      editorDispatch({ type: "ADD_BLOCK", payload: { block } });
+      setSelectorOpen(false);
+    },
+    [editorDispatch]
+  );
+
+  // Drag overlay
+  const activeBlock = activeId ? editorState.blocks.find((b) => b.id === activeId) : null;
+  const activeLibType = activeId?.startsWith("library-") ? activeId.replace("library-", "") : null;
+  const activeLibDef = activeLibType ? BLOCK_LIBRARY.find((b) => b.type === activeLibType) : null;
+
+  return (
+    <DndContext
+      id={dndId}
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="h-full flex flex-col">
+        {/* Topic breadcrumb header */}
+        <div className="px-4 py-2 border-b bg-background flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+            <span className="truncate">{selectedModule?.title}</span>
+            <span>/</span>
+            <span className="truncate font-medium text-foreground">
+              {selectedTopic?.title || t("untitledTopic")}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 shrink-0"
+            onClick={() => setSelectorOpen(true)}
+          >
+            <Link2 className="h-4 w-4" />
+            {t("linkWorksheet")}
+          </Button>
+        </div>
+
+        {/* Same three-panel layout as the worksheet editor */}
+        <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
+          <BlockSidebar onAddBlock={(type) => addBlock(type)} />
+          <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
+          <PropertiesPanel />
+        </div>
+      </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeBlock ? (
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl p-3 opacity-90 max-w-[600px] max-h-[120px] overflow-hidden pointer-events-none">
+            <BlockRenderer block={activeBlock} mode={editorState.viewMode} />
+          </div>
+        ) : activeLibDef ? (
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl px-4 py-3 opacity-90 pointer-events-none">
+            <p className="text-sm font-medium">{activeLibDef.label}</p>
+            <p className="text-xs text-muted-foreground">{activeLibDef.description}</p>
+          </div>
+        ) : null}
+      </DragOverlay>
+
+      <WorksheetPickerDialog
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        onSelect={addLinkedBlocks}
+      />
+    </DndContext>
   );
 }
 
@@ -395,11 +900,11 @@ function LessonEditorInner() {
 
       <DragOverlay dropAnimation={null}>
         {activeBlock ? (
-          <div className="bg-white rounded-lg border border-primary/30 shadow-xl p-3 opacity-90 max-w-[600px] max-h-[120px] overflow-hidden pointer-events-none">
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl p-3 opacity-90 max-w-[600px] max-h-[120px] overflow-hidden pointer-events-none">
             <BlockRenderer block={activeBlock} mode={editorState.viewMode} />
           </div>
         ) : activeLibDef ? (
-          <div className="bg-white rounded-lg border border-primary/30 shadow-xl px-4 py-3 opacity-90 pointer-events-none">
+          <div className="bg-white rounded-sm border border-primary/30 shadow-xl px-4 py-3 opacity-90 pointer-events-none">
             <p className="text-sm font-medium">{activeLibDef.label}</p>
             <p className="text-xs text-muted-foreground">{activeLibDef.description}</p>
           </div>
@@ -430,33 +935,25 @@ export function CourseContent() {
     return <CourseSettingsPanel isFullPanel />;
   }
 
-  // Module selected but no topic
+  // Module selected but no topic → module editor
   if (!state.selectedTopicId) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground mb-1">
-            {selectedModule?.title || t("untitledModule")}
-          </h3>
-          <p className="text-sm text-muted-foreground">{t("selectTopicPrompt")}</p>
-        </div>
-      </div>
+      <TooltipProvider>
+        <EditorProvider>
+          <ModuleEditorInner />
+        </EditorProvider>
+      </TooltipProvider>
     );
   }
 
-  // Topic selected but no lesson
+  // Topic selected but no lesson → topic editor
   if (!state.selectedLessonId || !selectedLesson) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground mb-1">
-            {selectedTopic?.title || t("untitledTopic")}
-          </h3>
-          <p className="text-sm text-muted-foreground">{t("selectLessonPrompt")}</p>
-        </div>
-      </div>
+      <TooltipProvider>
+        <EditorProvider>
+          <TopicEditorInner />
+        </EditorProvider>
+      </TooltipProvider>
     );
   }
 

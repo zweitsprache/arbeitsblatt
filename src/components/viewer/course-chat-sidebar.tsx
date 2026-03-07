@@ -25,6 +25,21 @@ import ReactMarkdown from "react-markdown";
 
 // ─── Types ──────────────────────────────────────────────────
 
+/** Welcome greetings per content language */
+const WELCOME_MESSAGES: Record<string, string> = {
+  de: "Hallo! Ich bin dein Kurs-Assistent. Stelle mir eine Frage zum aktuellen Lektionsinhalt.",
+  en: "Hi! I'm your course assistant. Ask me anything about this lesson's content.",
+  uk: "Привіт! Я твій помічник з курсу. Запитуй мене будь-що про зміст цього уроку.",
+  fr: "Salut ! Je suis ton assistant de cours. Pose-moi une question sur le contenu de cette leçon.",
+  es: "¡Hola! Soy tu asistente del curso. Pregúntame lo que quieras sobre el contenido de esta lección.",
+  it: "Ciao! Sono il tuo assistente del corso. Chiedimi qualsiasi cosa sul contenuto di questa lezione.",
+  pt: "Olá! Sou o teu assistente do curso. Pergunta-me o que quiseres sobre o conteúdo desta lição.",
+  tr: "Merhaba! Ben kurs asistanınım. Bu dersin içeriğiyle ilgili bana her şeyi sorabilirsin.",
+  ar: "مرحباً! أنا مساعدك في الدورة. اسألني أي شيء عن محتوى هذا الدرس.",
+  pl: "Cześć! Jestem twoim asystentem kursu. Zapytaj mnie o cokolwiek dotyczącego treści tej lekcji.",
+  ru: "Привет! Я твой помощник по курсу. Задай мне любой вопрос о содержании этого урока.",
+};
+
 interface QuizQuestion {
   question: string;
   options: string[];
@@ -94,7 +109,7 @@ function QuizBlock({ questions }: { questions: QuizQuestion[] }) {
             const isCorrect = q.correct === optIdx;
 
             let btnClass =
-              "w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors ";
+              "w-full text-left px-3 py-2 text-sm rounded-sm border transition-colors ";
             if (isCurrentRevealed) {
               if (isCorrect) {
                 btnClass +=
@@ -138,7 +153,7 @@ function QuizBlock({ questions }: { questions: QuizQuestion[] }) {
       {isCurrentRevealed && !isLast && (
         <button
           onClick={handleNext}
-          className="w-full px-3 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="w-full px-3 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           {t("quizNext")}
         </button>
@@ -202,7 +217,7 @@ export function CourseChatSidebar({
   // Show welcome message when chat has no messages and lesson is available
   const welcomeMessage: ChatMessage | null =
     messages.length === 0 && lessonTitle
-      ? { id: "welcome", role: "assistant", content: t("welcomeMessage") }
+      ? { id: "welcome", role: "assistant", content: WELCOME_MESSAGES[contentLocale ?? "de"] ?? WELCOME_MESSAGES.de }
       : null;
 
   const displayMessages = welcomeMessage
@@ -343,10 +358,8 @@ export function CourseChatSidebar({
 
   const handleReflect = useCallback(() => {
     if (isStreaming || noLesson) return;
-    const selected = getSelectedText();
-    if (!selected) return;
-    sendMessage(t("presetReflectPrompt", { text: selected }), t("presetReflect"));
-  }, [isStreaming, noLesson, getSelectedText, sendMessage, t]);
+    sendMessage(t("presetReflectPrompt"), t("presetReflect"));
+  }, [isStreaming, noLesson, sendMessage, t]);
 
   const handleQuiz = useCallback(async () => {
     if (isStreaming || noLesson) return;
@@ -397,12 +410,12 @@ export function CourseChatSidebar({
     <div
       className={cn(
         "hidden lg:flex shrink-0 relative transition-all duration-300",
-        open ? "w-[420px]" : "w-0"
+        open ? "w-[320px] 2xl:w-[420px]" : "w-0"
       )}
     >
       <aside
         className={cn(
-          "flex flex-col w-[420px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
+          "flex flex-col w-[320px] 2xl:w-[420px] h-full rounded-sm border bg-background overflow-hidden transition-all duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         style={{ fontFamily: brandFonts.bodyFont }}
@@ -420,38 +433,22 @@ export function CourseChatSidebar({
 
         {/* Preset prompt buttons — pinned above messages */}
         {!noLesson && (
-          <div className="flex flex-wrap gap-2 px-4 py-3 border-b shrink-0">
+          <div className="flex gap-2 px-4 py-3 border-b shrink-0">
             <button
               onClick={handleSummary}
               disabled={isStreaming}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <BookOpen className="h-3 w-3" />
               {t("presetSummary")}
             </button>
             <button
-              onClick={handleTranslate}
-              disabled={isStreaming}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Languages className="h-3 w-3" />
-              {t("presetTranslate")}
-            </button>
-            <button
               onClick={handleReflect}
               disabled={isStreaming}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lightbulb className="h-3 w-3" />
               {t("presetReflect")}
-            </button>
-            <button
-              onClick={handleQuiz}
-              disabled={isStreaming}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CircleHelp className="h-3 w-3" />
-              {t("presetQuiz")}
             </button>
           </div>
         )}
@@ -487,7 +484,7 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "rounded-md px-3.5 py-2.5 text-base leading-snug",
+                    "rounded-sm px-3.5 py-2.5 text-base leading-snug",
                     msg.role === "user"
                       ? "max-w-[85%] bg-primary text-primary-foreground"
                       : msg.quiz
@@ -537,7 +534,7 @@ export function CourseChatSidebar({
                   noLesson ? t("noLessonShort") : t("inputPlaceholder")
                 }
                 disabled={noLesson || isStreaming}
-                className="w-full resize-none rounded-lg border bg-muted/30 px-3 py-2.5 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full resize-none rounded-sm border bg-muted/30 px-3 py-2.5 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={1}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
@@ -554,7 +551,7 @@ export function CourseChatSidebar({
             </div>
             <Button
               size="icon"
-              className="h-[40px] w-[40px] shrink-0 rounded-lg"
+              className="h-[40px] w-[40px] shrink-0 rounded-sm"
               disabled={!inputValue.trim() || isStreaming || noLesson}
               onClick={() => sendMessage()}
             >

@@ -30,7 +30,7 @@ export default function CourseOverviewPage() {
         {/* Hero */}
         <div className="mb-10">
           <div className="flex items-center gap-4 mb-4">
-            <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 rounded-sm bg-primary/10 flex items-center justify-center shrink-0">
               <BookOpen className="h-8 w-8 text-primary" />
             </div>
             <div>
@@ -77,40 +77,66 @@ export default function CourseOverviewPage() {
                 onClick={() =>
                   router.push(`/${locale}/course/${slug}/${mod.id}`)
                 }
-                className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
+                className="group text-left rounded-sm overflow-hidden hover:shadow-md transition-all"
                 style={{ backgroundColor: "#ECF3F9" }}
               >
-                {mod.image && (
-                  <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
+                {mod.image ? (
+                  <div className="relative w-full overflow-hidden">
                     <img
                       src={mod.image}
                       alt=""
-                      className="h-full w-auto max-w-none object-contain group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                  </div>
-                )}
-                <div className="p-5">
-                <div className="flex items-start gap-3">
-                  {mod.icon ? (
-                    <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary shrink-0" />
-                  ) : (
-                    <ToyBrick className="h-8 w-8 text-primary shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base group-hover:text-primary transition-colors truncate">
-                      <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
-                    </h3>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <FileText className="h-3.5 w-3.5" />
-                        {lessonCount}{" "}
-                        {lessonCount === 1 ? "Lesson" : "Lessons"}
-                      </span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-sm backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shrink-0">
+                          {mod.icon ? (
+                            <DynamicLucideIcon name={mod.icon} className="h-5 w-5 text-white" />
+                          ) : (
+                            <ToyBrick className="h-5 w-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base text-white drop-shadow-md truncate">
+                            <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
+                          </h3>
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-white/80">
+                            <span className="flex items-center gap-1">
+                              <FileText className="h-3.5 w-3.5" />
+                              {lessonCount}{" "}
+                              {lessonCount === 1 ? "Lesson" : "Lessons"}
+                            </span>
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                      </div>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
-                </div>
-                </div>
+                ) : (
+                  <div className="p-5">
+                    <div className="flex items-start gap-3">
+                      {mod.icon ? (
+                        <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary shrink-0" />
+                      ) : (
+                        <ToyBrick className="h-8 w-8 text-primary shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base group-hover:text-primary transition-colors truncate">
+                          <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
+                        </h3>
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-3.5 w-3.5" />
+                            {lessonCount}{" "}
+                            {lessonCount === 1 ? "Lesson" : "Lessons"}
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                    </div>
+                  </div>
+                )}
               </button>
             );
           })}

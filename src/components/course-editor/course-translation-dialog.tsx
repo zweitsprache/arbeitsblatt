@@ -169,7 +169,7 @@ export function CourseTranslationDialog() {
         <div className="space-y-4 py-2">
           {/* Status info */}
           {status && (
-            <div className="space-y-2 rounded-lg border p-3 text-sm">
+            <div className="space-y-2 rounded-sm border p-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">
                   {t("stringCount")}
@@ -214,7 +214,7 @@ export function CourseTranslationDialog() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-center gap-2 rounded-sm border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0" />
               {error}
             </div>
@@ -222,13 +222,13 @@ export function CourseTranslationDialog() {
 
           {/* Success messages */}
           {pushResult && (
-            <div className="flex items-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+            <div className="flex items-center gap-2 rounded-sm border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4 shrink-0" />
               {pushResult}
             </div>
           )}
           {pullResult && (
-            <div className="flex items-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+            <div className="flex items-center gap-2 rounded-sm border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4 shrink-0" />
               {pullResult}
             </div>

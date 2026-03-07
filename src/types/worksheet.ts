@@ -49,7 +49,9 @@ export type BlockType =
   | "ai-prompt"
   | "ai-tool"
   | "table"
-  | "text-comparison";
+  | "text-comparison"
+  | "accordion"
+  | "audio";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -598,6 +600,26 @@ export interface NumberedItemsBlock extends BlockBase {
   borderRadius?: number;
 }
 
+// ─── Accordion block ─────────────────────────────────────────
+export interface AccordionItem {
+  id: string;
+  title: string;
+  content: string; // HTML string for WYSIWYG
+}
+
+export interface AccordionBlock extends BlockBase {
+  type: "accordion";
+  items: AccordionItem[];
+  showNumbers?: boolean;
+}
+
+// ─── Audio block ─────────────────────────────────────────────
+export interface AudioBlock extends BlockBase {
+  type: "audio";
+  src: string;       // audio file URL
+  title?: string;    // optional display title
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 export interface AiPromptBlock extends BlockBase {
   type: "ai-prompt";
@@ -669,6 +691,8 @@ export type WorksheetBlock =
   | DosAndDontsBlock
   | NumberedItemsBlock
   | LogoDividerBlock
+  | AccordionBlock
+  | AudioBlock
   | AiPromptBlock
   | AiToolBlock
   | TableBlock;
@@ -1571,6 +1595,24 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     visibility: "both",
   },
 },
+{
+  type: "accordion",
+  label: "Accordion",
+  description: "Collapsible sections with rich text content",
+  labelKey: "accordion",
+  descriptionKey: "accordionDesc",
+  icon: "ChevronDown",
+  category: "content",
+  translations: { de: { label: "Akkordeon", description: "Aufklappbare Abschnitte mit formatiertem Text" } },
+  defaultData: {
+    type: "accordion",
+    items: [
+      { id: crypto.randomUUID(), title: "", content: "" },
+    ],
+    showNumbers: false,
+    visibility: "both",
+  },
+},
 // ── AI Tools ──────────────────────────────────────────────────
 {
   type: "ai-prompt",
@@ -1625,6 +1667,23 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     content: '<table><tbody><tr><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr></tbody></table>',
     tableStyle: "default",
     visibility: "both",
+  },
+},
+// ── Audio ─────────────────────────────────────────────────────
+{
+  type: "audio",
+  label: "Audio",
+  description: "Audio player with playback controls",
+  labelKey: "audio",
+  descriptionKey: "audioDesc",
+  icon: "Volume2",
+  category: "content",
+  translations: { de: { label: "Audio", description: "Audioplayer mit Wiedergabesteuerung" } },
+  defaultData: {
+    type: "audio",
+    src: "",
+    title: "",
+    visibility: "online",
   },
 },
 ];

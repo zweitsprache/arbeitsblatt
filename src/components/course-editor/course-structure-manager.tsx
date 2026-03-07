@@ -126,7 +126,7 @@ function SortableLessonItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-center gap-2 px-3 py-2 rounded-md border bg-background transition-colors",
+        "group flex items-center gap-2 px-3 py-2 rounded-sm border bg-background transition-colors",
         isDragging && "opacity-50 shadow-lg",
         "hover:border-primary/30"
       )}
@@ -319,7 +319,7 @@ function SortableTopicSection({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "rounded-lg border bg-muted/30 transition-all",
+        "rounded-sm border bg-muted/30 transition-all",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
@@ -444,7 +444,7 @@ function SortableTopicSection({
       {expanded && (
         <div className="px-3 pb-3">
           {topic.lessons.length === 0 ? (
-            <div className="text-center py-4 border border-dashed rounded-md">
+            <div className="text-center py-4 border border-dashed rounded-sm">
               <p className="text-xs text-muted-foreground mb-2">
                 {t("noLessonContent")}
               </p>
@@ -580,7 +580,7 @@ function SortableModuleSection({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "rounded-xl border-2 bg-background transition-all",
+        "rounded-sm border-2 bg-background transition-all",
         isDragging && "opacity-50 shadow-xl"
       )}
     >
@@ -685,7 +685,7 @@ function SortableModuleSection({
       {expanded && (
         <div className="p-4">
           {mod.topics.length === 0 ? (
-            <div className="text-center py-6 border border-dashed rounded-lg">
+            <div className="text-center py-6 border border-dashed rounded-sm">
               <Layers className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
                 {t("noTopicsYet")}
@@ -818,7 +818,7 @@ export function CourseStructureManager() {
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-6 max-w-4xl mx-auto">
           {state.structure.length === 0 ? (
-            <div className="text-center py-16 border-2 border-dashed rounded-xl">
+            <div className="text-center py-16 border-2 border-dashed rounded-sm">
               <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 {t("noModules")}

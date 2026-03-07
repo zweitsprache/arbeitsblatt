@@ -213,7 +213,7 @@ function ViewerTopicSection({
   return (
     <div className="mb-0.5 border-b border-white/[0.06]">
       {/* Topic header */}
-      <div className="flex items-center gap-4 py-3 pl-3 pr-3.5 rounded-lg transition-colors bg-white/[0.04] hover:bg-white/[0.06]">
+      <div className="flex items-center gap-4 py-3 pl-3 pr-3.5 rounded-sm transition-colors bg-white/[0.04] hover:bg-white/[0.06]">
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight
             className={cn(
@@ -304,14 +304,14 @@ function ViewerModuleSection({
   return (
     <div
       className={cn(
-        "mb-1.5 rounded-xl transition-colors",
+        "mb-1.5 rounded-sm transition-colors",
         open ? "bg-[rgba(255,255,255,0.02)]" : "bg-transparent"
       )}
     >
       {/* Module header */}
       <div
         className={cn(
-          "flex items-center gap-7 px-[18px] py-2.5 rounded-xl transition-colors",
+          "flex items-center gap-7 px-[18px] py-2.5 rounded-sm transition-colors",
           !open && "hover:bg-white/[0.06]"
         )}
         style={{ backgroundColor: pastelBg }}
@@ -484,7 +484,7 @@ function SidebarNav({
         <div className="p-5 px-7 border-t border-white/[0.06] shrink-0">
           <button
             onClick={onContinue}
-            className="w-full py-3.5 rounded-xl text-cv-base font-bold cursor-pointer transition-all shadow-[0_2px_12px_rgba(242,237,218,0.15)] hover:shadow-[0_4px_20px_rgba(242,237,218,0.25)] hover:-translate-y-px"
+            className="w-full py-3.5 rounded-sm text-cv-base font-bold cursor-pointer transition-all shadow-[0_2px_12px_rgba(242,237,218,0.15)] hover:shadow-[0_4px_20px_rgba(242,237,218,0.25)] hover:-translate-y-px"
             style={{
               background: "linear-gradient(135deg, #F2EDDA, #D9D4C0)",
               color: "#302f2c",
@@ -673,7 +673,7 @@ export function CourseViewer({
         >
           <aside
             className={cn(
-              "flex flex-col w-[500px] h-full rounded-lg overflow-hidden transition-all duration-300",
+              "flex flex-col w-[500px] h-full rounded-sm overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
@@ -718,7 +718,7 @@ export function CourseViewer({
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* Breadcrumb header — separate container */}
           {currentFlat && (
-            <div className="flex items-center gap-2 px-6 py-4 text-cv-sm text-muted-foreground rounded-lg border bg-background shrink-0">
+            <div className="flex items-center gap-2 px-6 py-4 text-cv-sm text-muted-foreground rounded-sm border bg-background shrink-0">
               <span className="font-medium">{currentFlat.moduleTitle}</span>
               <ChevronRight className="h-3.5 w-3.5 shrink-0" />
               <span className="font-medium">{currentFlat.topicTitle}</span>
@@ -728,7 +728,7 @@ export function CourseViewer({
           )}
 
           {/* Content container */}
-          <div className="flex-1 min-h-0 rounded-lg border bg-background overflow-hidden flex justify-center">
+          <div className="flex-1 min-h-0 rounded-sm border bg-background overflow-hidden flex justify-center">
             <style>{`
               .content-scroll::-webkit-scrollbar { width: 14px; background: transparent; }
               .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 24px; }
@@ -801,7 +801,7 @@ function CourseOverview({
         {/* Hero */}
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 sm:px-8 py-8 sm:py-10">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-sm bg-primary/15 flex items-center justify-center shrink-0">
               <GraduationCap className="h-7 w-7 text-primary" />
             </div>
             <div>
@@ -843,13 +843,13 @@ function CourseOverview({
               <div
                 key={mod.id}
                 className={cn(
-                  "border rounded-xl p-4 sm:p-5 transition-colors",
+                  "border rounded-sm p-4 sm:p-5 transition-colors",
                   isComplete && "border-primary/30 bg-primary/[0.02]"
                 )}
               >
                 <div className="flex items-start gap-3">
                   <span className={cn(
-                    "flex items-center justify-center h-7 w-7 rounded-lg text-cv-xs font-bold shrink-0 mt-0.5",
+                    "flex items-center justify-center h-7 w-7 rounded-sm text-cv-xs font-bold shrink-0 mt-0.5",
                     isComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     {isComplete ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
@@ -953,7 +953,7 @@ function EmptyLesson({
   return (
     <div className="py-8 lg:py-12 px-4 sm:px-6">
       <div className="p-8 sm:p-12 text-center">
-        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+        <div className="h-16 w-16 rounded-sm bg-muted flex items-center justify-center mx-auto mb-4">
           <FileText className="h-8 w-8 text-muted-foreground/40" />
         </div>
         <h2 className="text-cv-xl font-semibold mb-2">{title}</h2>
@@ -981,7 +981,7 @@ function LessonNav({
     <div className="flex items-stretch gap-2 mt-6">
       {prev ? (
         <button
-          className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-left group"
+          className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border rounded-sm hover:bg-muted/50 transition-colors text-left group"
           onClick={() => onSelect(prev.lesson.id)}
         >
           <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
@@ -993,7 +993,7 @@ function LessonNav({
       ) : <div className="flex-1" />}
       {next ? (
         <button
-          className="flex-1 flex items-center justify-end gap-2 px-3 py-2 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-right group"
+          className="flex-1 flex items-center justify-end gap-2 px-3 py-2 bg-background border rounded-sm hover:bg-muted/50 transition-colors text-right group"
           onClick={() => onSelect(next.lesson.id)}
         >
           <div className="min-w-0 space-y-0">

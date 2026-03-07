@@ -168,6 +168,17 @@ export async function POST(
         break;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        // Handle duplicate key: delete and retry once
+        if (msg.includes("422") && msg.includes("existiert bereits") && attempt === 0) {
+          try {
+            await deleteString(key, namespaceName);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            attempt++;
+            continue;
+          } catch {
+            // Fall through to error handling
+          }
+        }
         if (msg.includes("429") && attempt < MAX_RETRIES) {
           const delay = 1000 * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));

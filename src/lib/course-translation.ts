@@ -14,19 +14,19 @@ import {
 // ─── AI instructions for special content ─────────────────────
 
 const HTML_AI_INSTRUCTIONS =
-  "This is HTML content. Translate the text but preserve ALL HTML tags exactly as they are (<p>, <br/>, <strong>, <em>, etc.). Do not add or remove tags.";
+  "HTML content. Translate text only, preserve all HTML tags exactly.";
 
 const BLANK_AI_INSTRUCTIONS =
-  "This text contains {{blank:answer}} markers. Translate the surrounding text but keep the {{blank:...}} syntax exactly. Translate the word inside blank: as well.";
+  "Translate text, keep {{blank:...}} syntax. Translate word inside blank: too.";
 
 const INLINE_CHOICE_AI_INSTRUCTIONS =
-  "This text contains {{option1|option2|option3}} markers. Translate the surrounding text and translate each option inside {{...}}, keeping the | separators and {{}} syntax intact. The first option is always the correct answer.";
+  "Translate text and options in {{...|...}}. Keep {{}} and | syntax. First option = correct.";
 
 const FIX_SENTENCE_AI_INSTRUCTIONS =
-  "This sentence has parts separated by ' | '. Translate each part but keep the ' | ' separators exactly as they are.";
+  "Translate each part, keep ' | ' separators exactly.";
 
 const DE_MARKER_AI_INSTRUCTIONS =
-  "This text contains {{de:German text}} markers. The German text inside {{de:...}} must be kept EXACTLY as-is (it is vocabulary being taught). Translate the surrounding text naturally so the sentence reads well in the target language despite the embedded German words. Keep the {{de:...}} syntax intact.";
+  "Keep {{de:...}} German text as-is. Translate surrounding text naturally.";
 
 // ─── Extract translatable strings ────────────────────────────
 
@@ -51,9 +51,11 @@ export function extractTranslatableStrings(
   for (const mod of course.structure) {
     addStr(strings, `module.${mod.id}.title`, mod.title);
     addStr(strings, `module.${mod.id}.shortTitle`, mod.shortTitle);
+    extractBlockStrings(mod.blocks ?? [], strings);
     for (const topic of mod.topics) {
       addStr(strings, `topic.${topic.id}.title`, topic.title);
       addStr(strings, `topic.${topic.id}.shortTitle`, topic.shortTitle);
+      extractBlockStrings(topic.blocks ?? [], strings);
       for (const lesson of topic.lessons) {
         addStr(strings, `lesson.${lesson.id}.title`, lesson.title);
         addStr(strings, `lesson.${lesson.id}.shortTitle`, lesson.shortTitle);
@@ -431,9 +433,11 @@ export function applyTranslations(
   for (const mod of structure) {
     apply(`module.${mod.id}.title`, (v) => (mod.title = v));
     apply(`module.${mod.id}.shortTitle`, (v) => (mod.shortTitle = v));
+    applyBlockTranslations(mod.blocks ?? [], translations);
     for (const topic of mod.topics) {
       apply(`topic.${topic.id}.title`, (v) => (topic.title = v));
       apply(`topic.${topic.id}.shortTitle`, (v) => (topic.shortTitle = v));
+      applyBlockTranslations(topic.blocks ?? [], translations);
       for (const lesson of topic.lessons) {
         apply(`lesson.${lesson.id}.title`, (v) => (lesson.title = v));
         apply(`lesson.${lesson.id}.shortTitle`, (v) => (lesson.shortTitle = v));

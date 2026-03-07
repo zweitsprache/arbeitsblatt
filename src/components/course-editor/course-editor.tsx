@@ -57,7 +57,7 @@ function EditorInner({
           <>
             <CourseTreeSidebar />
             <CourseContent />
-            <CourseSettingsPanel />
+            {state.selectedModuleId === null && <CourseSettingsPanel />}
           </>
         )}
       </div>

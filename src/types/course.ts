@@ -16,6 +16,7 @@ export interface CourseTopic {
   image: string | null;
   icon: string | null;
   lessons: CourseLesson[];
+  blocks: WorksheetBlock[];
 }
 
 // ─── Course Module ──────────────────────────────────────────
@@ -26,6 +27,7 @@ export interface CourseModule {
   image: string | null;
   icon: string | null;
   topics: CourseTopic[];
+  blocks: WorksheetBlock[];
 }
 
 // ─── Course Cover Settings ──────────────────────────────────
@@ -106,11 +108,13 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
     image: mod.image ?? null,
     icon: mod.icon ?? null,
     shortTitle: mod.shortTitle ?? "",
+    blocks: Array.isArray(mod.blocks) ? mod.blocks : [],
     topics: mod.topics.map((topic) => ({
       ...topic,
       image: topic.image ?? null,
       icon: topic.icon ?? null,
       shortTitle: topic.shortTitle ?? "",
+      blocks: Array.isArray(topic.blocks) ? topic.blocks : [],
       lessons: topic.lessons.map((lesson) => {
         // Already migrated
         if (Array.isArray(lesson.blocks)) return { ...lesson, shortTitle: lesson.shortTitle ?? "" };
@@ -137,7 +141,19 @@ export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[
 export function collectLinkedWorksheetIds(modules: CourseModule[]): string[] {
   const ids = new Set<string>();
   for (const mod of modules) {
+    // Module-level blocks
+    for (const block of mod.blocks ?? []) {
+      if (block.type === "linked-blocks") {
+        ids.add(block.worksheetId);
+      }
+    }
     for (const topic of mod.topics) {
+      // Topic-level blocks
+      for (const block of topic.blocks ?? []) {
+        if (block.type === "linked-blocks") {
+          ids.add(block.worksheetId);
+        }
+      }
       for (const lesson of topic.lessons) {
         for (const block of lesson.blocks ?? []) {
           if (block.type === "linked-blocks") {

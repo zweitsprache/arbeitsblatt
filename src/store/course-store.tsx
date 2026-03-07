@@ -75,6 +75,14 @@ type CourseAction =
   | { type: "SET_LESSON_BLOCKS"; payload: { moduleId: string; topicId: string; lessonId: string; blocks: WorksheetBlock[] } }
   | { type: "ADD_LESSON_BLOCK"; payload: { moduleId: string; topicId: string; lessonId: string; block: WorksheetBlock; index?: number } }
   | { type: "REMOVE_LESSON_BLOCK"; payload: { moduleId: string; topicId: string; lessonId: string; blockId: string } }
+  // Module blocks
+  | { type: "SET_MODULE_BLOCKS"; payload: { moduleId: string; blocks: WorksheetBlock[] } }
+  | { type: "ADD_MODULE_BLOCK"; payload: { moduleId: string; block: WorksheetBlock; index?: number } }
+  | { type: "REMOVE_MODULE_BLOCK"; payload: { moduleId: string; blockId: string } }
+  // Topic blocks
+  | { type: "SET_TOPIC_BLOCKS"; payload: { moduleId: string; topicId: string; blocks: WorksheetBlock[] } }
+  | { type: "ADD_TOPIC_BLOCK"; payload: { moduleId: string; topicId: string; block: WorksheetBlock; index?: number } }
+  | { type: "REMOVE_TOPIC_BLOCK"; payload: { moduleId: string; topicId: string; blockId: string } }
   // Settings
   | { type: "UPDATE_COVER"; payload: Partial<CourseCoverSettings> }
   | { type: "UPDATE_SETTINGS"; payload: Partial<CourseSettings> }
@@ -139,6 +147,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         image: null,
         icon: null,
         topics: [],
+        blocks: [],
       };
       return {
         ...state,
@@ -200,6 +209,7 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
         image: null,
         icon: null,
         lessons: [],
+        blocks: [],
       };
       return {
         ...state,
@@ -382,6 +392,80 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
               blocks: (lesson.blocks ?? []).filter((b) => b.id !== action.payload.blockId),
             }))
           )
+        ),
+        isDirty: true,
+      };
+
+    // ─── Module Blocks ─────────────────────────────────────
+    case "SET_MODULE_BLOCKS":
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) => ({
+          ...mod,
+          blocks: action.payload.blocks,
+        })),
+        isDirty: true,
+      };
+
+    case "ADD_MODULE_BLOCK": {
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) => {
+          const blocks = [...(mod.blocks ?? [])];
+          const index = action.payload.index ?? blocks.length;
+          blocks.splice(index, 0, action.payload.block);
+          return { ...mod, blocks };
+        }),
+        isDirty: true,
+      };
+    }
+
+    case "REMOVE_MODULE_BLOCK":
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) => ({
+          ...mod,
+          blocks: (mod.blocks ?? []).filter((b) => b.id !== action.payload.blockId),
+        })),
+        isDirty: true,
+      };
+
+    // ─── Topic Blocks ──────────────────────────────────────
+    case "SET_TOPIC_BLOCKS":
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
+          mapTopic(mod, action.payload.topicId, (topic) => ({
+            ...topic,
+            blocks: action.payload.blocks,
+          }))
+        ),
+        isDirty: true,
+      };
+
+    case "ADD_TOPIC_BLOCK": {
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
+          mapTopic(mod, action.payload.topicId, (topic) => {
+            const blocks = [...(topic.blocks ?? [])];
+            const index = action.payload.index ?? blocks.length;
+            blocks.splice(index, 0, action.payload.block);
+            return { ...topic, blocks };
+          })
+        ),
+        isDirty: true,
+      };
+    }
+
+    case "REMOVE_TOPIC_BLOCK":
+      return {
+        ...state,
+        structure: mapModule(state.structure, action.payload.moduleId, (mod) =>
+          mapTopic(mod, action.payload.topicId, (topic) => ({
+            ...topic,
+            blocks: (topic.blocks ?? []).filter((b) => b.id !== action.payload.blockId),
+          }))
         ),
         isDirty: true,
       };

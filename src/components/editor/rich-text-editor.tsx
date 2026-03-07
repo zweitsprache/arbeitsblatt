@@ -42,6 +42,7 @@ import {
   RemoveFormatting,
   Quote,
   WrapText,
+  Languages,
 } from "lucide-react";
 import {
   Tooltip,
@@ -366,6 +367,24 @@ export function RichTextEditor({
               isActive={editor.isActive("nobreak")}
               icon={WrapText}
               label={t("noBreak")}
+            />
+            <ToolbarButton
+              onClick={() => {
+                const { from, to } = editor.state.selection;
+                const selectedText = editor.state.doc.textBetween(from, to);
+                if (selectedText) {
+                  // Wrap selected text in {{de:...}}
+                  editor.chain().focus().insertContentAt({ from, to }, `{{de:${selectedText}}}`).run();
+                } else {
+                  // No selection: prompt for term
+                  const term = window.prompt("Deutsches Wort eingeben:");
+                  if (term) {
+                    editor.chain().focus().insertContent(`{{de:${term}}}`).run();
+                  }
+                }
+              }}
+              icon={Languages}
+              label={t("deMarker")}
             />
 
             <Separator orientation="vertical" className="mx-1 h-5" />

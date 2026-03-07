@@ -45,7 +45,7 @@ export function CourseLanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-1">
-      <div className="flex items-center rounded-md border bg-background/50 overflow-hidden">
+      <div className="flex items-center rounded-sm border bg-background/50 overflow-hidden">
         {availableLocales.map((locale) => {
           const isActive = locale === contentLocale;
           const flagCode = LANGUAGE_FLAG_CODES[locale];

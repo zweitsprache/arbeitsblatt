@@ -487,7 +487,7 @@ function SidebarNav({
         <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>{title}</h1>
 
         {courseImage && (
-          <div className="mt-3 w-full overflow-hidden rounded-md">
+          <div className="mt-3 w-full overflow-hidden rounded-sm">
             <img src={courseImage} alt="" className="w-full h-auto object-contain" />
           </div>
         )}
@@ -516,7 +516,7 @@ function SidebarNav({
         <div className="p-4 px-5 shrink-0" style={{ borderTop: `1px solid ${tk.divider}` }}>
           <button
             onClick={onContinue}
-            className="w-full py-2.5 rounded-lg text-cv-sm font-semibold cursor-pointer transition-colors"
+            className="w-full py-2.5 rounded-sm text-cv-sm font-semibold cursor-pointer transition-colors"
             style={{ background: tk.continueGradient, color: tk.continueText }}
           >
             Continue Learning →
@@ -658,7 +658,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       {/* Load brand fonts */}
       <link rel="stylesheet" href={brandFonts.googleFontsUrl} />
 
-      {/* Top bar (mobile only) */}
+      {/* Top bar (mobile only — below lg) */}
       <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b" style={{ fontFamily: brandFonts.bodyFont }}>
         <div className="flex items-center gap-3 px-4 py-3">
           <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => setMobileNavOpen(true)}>
@@ -675,7 +675,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile sidebar */}
+      {/* Sidebar as overlay sheet (below 2xl) */}
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-[400px] p-0 border-none" showCloseButton={false}>
           <SheetHeader className="sr-only">
@@ -699,29 +699,35 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop layout */}
       {/* Top bar (full width, outside padding) */}
-      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-b" style={{ fontFamily: brandFonts.bodyFont }}>
+      <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-b" style={{ fontFamily: brandFonts.bodyFont }}>
         {/* Brand logo */}
         <img
           src={DEFAULT_BRAND_SETTINGS[brand].logo}
           alt=""
           className="h-8 w-auto mr-2"
         />
+        {/* Menu button for sidebar (lg to 2xl) */}
+        <div className="2xl:hidden">
+          <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => setMobileNavOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
         {/* Language switcher */}
         <div className="ml-auto flex items-center gap-3">
           <CourseLanguageSwitcher />
         </div>
       </div>
 
-      <div className="min-h-screen lg:flex-1 lg:min-h-0 flex flex-col p-8 pt-0 lg:pt-6 gap-6">
+      <div className="min-h-screen lg:flex-1 lg:min-h-0 flex flex-col p-4 lg:p-6 2xl:p-8 pt-0 lg:pt-4 2xl:pt-6 gap-4 lg:gap-4 2xl:gap-6">
         {/* Middle row: sidebar + content + chat */}
-        <div className="flex-1 min-h-0 flex flex-row gap-8">
-          {/* Desktop sidebar */}
+        <div className="flex-1 min-h-0 flex flex-row gap-4 lg:gap-4 2xl:gap-6">
+          {/* Desktop sidebar (2xl+ only — push layout) */}
           <div className={cn(
-            "hidden lg:flex shrink-0 relative transition-all duration-300",
-            desktopSidebarOpen ? "w-[440px]" : "w-0"
+            "hidden 2xl:flex shrink-0 relative transition-all duration-300",
+            desktopSidebarOpen ? "w-[400px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[440px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
+              "flex flex-col w-[400px] h-full rounded-sm border bg-background overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
@@ -748,7 +754,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
           {!desktopSidebarOpen && (
             <button
-              className="hidden lg:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-8"
+              className="hidden 2xl:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-6"
               onClick={() => setDesktopSidebarOpen(true)}
               aria-label="Expand sidebar"
             >
@@ -757,7 +763,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Content container */}
-          <div className="flex-1 min-w-0 rounded-lg border bg-background overflow-hidden">
+          <div className="flex-1 min-w-0 rounded-sm border bg-background overflow-hidden">
             <style>{`
               .content-scroll::-webkit-scrollbar { width: 6px; }
               .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 32px; }
@@ -845,20 +851,18 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Footer (full width) */}
-      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t" style={{ fontFamily: brandFonts.bodyFont }}>
+      <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t" style={{ fontFamily: brandFonts.bodyFont }}>
         <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
-      </div>
-
-        {/* Chat toggle button (desktop, when sidebar is closed) */}
         {!chatSidebarOpen && (
           <button
             onClick={() => setChatSidebarOpen(true)}
-            className="hidden lg:flex fixed bottom-8 right-8 z-30 items-center justify-center h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+            className="ml-auto flex items-center justify-center h-8 w-8 rounded-full bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200"
             aria-label="Open chat"
           >
-            <MessageCircle className="h-5 w-5" />
+            <MessageCircle className="h-4 w-4" />
           </button>
         )}
+      </div>
     </div>
   );
 }

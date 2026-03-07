@@ -56,7 +56,7 @@ export function CourseToolbar() {
       {/* Actions */}
       <div className="flex items-center gap-2">
         {/* View toggle */}
-        <div className="flex items-center rounded-md border bg-muted p-0.5">
+        <div className="flex items-center rounded-sm border bg-muted p-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

@@ -18,8 +18,8 @@ interface WorksheetScreenshotProps {
 interface CourseScreenshotProps {
   courseId: string;
   moduleId: string;
-  topicId: string;
-  lessonId: string;
+  topicId?: string;
+  lessonId?: string;
   blockId: string;
   worksheetId?: never;
 }
@@ -48,8 +48,8 @@ export function BlockScreenshotButton(props: BlockScreenshotButtonProps) {
         body = {
           blockId,
           moduleId: props.moduleId,
-          topicId: props.topicId,
-          lessonId: props.lessonId,
+          ...(props.topicId && { topicId: props.topicId }),
+          ...(props.lessonId && { lessonId: props.lessonId }),
         };
       } else {
         return;
@@ -88,7 +88,7 @@ export function BlockScreenshotButton(props: BlockScreenshotButtonProps) {
       onClick={handleScreenshot}
       disabled={loading}
       title={t("screenshotBlock")}
-      className="absolute top-1 right-1 z-10 opacity-0 group-hover/block:opacity-100 transition-opacity rounded-md bg-background/80 border border-border shadow-sm p-1.5 hover:bg-accent cursor-pointer disabled:cursor-wait"
+      className="absolute top-1 right-1 z-10 opacity-0 group-hover/block:opacity-100 transition-opacity rounded-sm bg-background/80 border border-border shadow-sm p-1.5 hover:bg-accent cursor-pointer disabled:cursor-wait"
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

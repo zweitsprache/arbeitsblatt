@@ -49,9 +49,12 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
+  AccordionBlock,
+  AccordionItem,
   LogoDividerBlock,
   AiPromptBlock,
   AiToolBlock,
+  AudioBlock,
   TableBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
@@ -63,7 +66,7 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
+import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -251,9 +254,9 @@ function TextRenderer({ block }: { block: TextBlock }) {
   if (isLernziel) {
     return (
       <>
-        <div className="relative group/text flex gap-0 border-2 rounded-md" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D550A" }}>
-          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D5515" }}>
-            <Goal className="h-5 w-5" style={{ color: "#4A3D55" }} />
+        <div className="relative group/text flex gap-0 border-2 rounded-sm overflow-hidden" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D5510", color: "#4A3D55" }}>
+          <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: "#4A3D55" }}>
+            <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
           </div>
           <div className="flex-1 min-w-0 px-3 py-2">
             {richTextEl}
@@ -274,11 +277,11 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
   return (
     <>
-      <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-md" : ""} ${isRows ? "tiptap-rows" : ""}`}
+      <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-sm" : ""} ${isRows ? "tiptap-rows" : ""}`}
         style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
       >
         {hasHinweisBox && (
-          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
+          <div className="shrink-0 w-10 flex items-center justify-center rounded-l-sm">
             {hinweisConfig.icon}
           </div>
         )}
@@ -311,7 +314,7 @@ function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
 
   return (
     <div className="relative group/text-snippet">
-      <div className="border border-dashed border-amber-300 rounded-lg p-3 bg-amber-50/30">
+      <div className="border border-dashed border-amber-300 rounded-sm p-3 bg-amber-50/30">
         <div className="flex items-center gap-1.5 mb-2 text-xs text-amber-600 font-medium">
           <Copy className="h-3.5 w-3.5" />
           {t("textSnippetLabel")}
@@ -347,7 +350,7 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
       {isStyled && (
         <div className="flex">
           <div
-            className="py-0.5 text-xs font-semibold text-white rounded-t-md text-center uppercase"
+            className="py-0.5 text-xs font-semibold text-white rounded-t-sm text-center uppercase"
             style={{ backgroundColor: color, width: 110, paddingLeft: 12, paddingRight: 12 }}
           >
             {pillLabel}
@@ -355,7 +358,7 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
         style={isStyled ? { borderColor: color } : undefined}
       >
         {/* Email toolbar bar */}
@@ -430,7 +433,7 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
       {isStyled && (
         <div className="flex">
           <div
-            className="py-0.5 text-xs font-semibold text-white rounded-t-md text-center uppercase"
+            className="py-0.5 text-xs font-semibold text-white rounded-t-sm text-center uppercase"
             style={{ backgroundColor: color, width: 110, paddingLeft: 12, paddingRight: 12 }}
           >
             {pillLabel}
@@ -438,7 +441,7 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white shadow-sm ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
         style={{ borderColor: isStyled ? color : "#475569" }}
       >
         {/* Form header — icon only, same style as email toolbar */}
@@ -453,30 +456,30 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
         <div className="px-4 pt-3 pb-4 space-y-1.5">
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobPosition")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 flex items-center justify-between">
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 flex items-center justify-between">
               <span>{block.position}</span>
               <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobFirstName")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.firstName}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.firstName}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobLastName")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.applicantName}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.applicantName}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobEmail")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.email}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.email}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm">{t("jobPhone")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.phone}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{block.phone}</div>
           </div>
           <div className="flex items-start gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 text-sm pt-1.5">{t("jobMessage")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5">
               <RichTextEditor
                 content={block.message}
                 onChange={(html) =>
@@ -502,7 +505,7 @@ function ImageRenderer({ block }: { block: ImageBlock }) {
   const t = useTranslations("blockRenderer");
   if (!block.src) {
     return (
-      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center text-muted-foreground text-sm">
+      <div className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-8 text-center text-muted-foreground text-sm">
         <p>{t("clickToAddImage")}</p>
       </div>
     );
@@ -745,7 +748,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
       <button
         type="button"
         onClick={addCard}
-        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-lg text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-sm text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="h-4 w-4" />
         {t("addCard")}
@@ -891,7 +894,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
       <button
         type="button"
         onClick={addCard}
-        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-lg text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-sm text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="h-4 w-4" />
         {t("addCard")}
@@ -1046,7 +1049,7 @@ function MultipleChoiceRenderer({
       </p>
       <div className="space-y-2">
         {block.options.map((opt, i) => (
-          <div key={opt.id} className="flex items-center gap-3 p-3 rounded-lg border border-border group">
+          <div key={opt.id} className="flex items-center gap-3 p-3 rounded-sm border border-border group">
             <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
               {String(i + 1).padStart(2, "0")}
             </span>
@@ -1254,7 +1257,7 @@ function FillInBlankItemsRenderer({
   return (
     <div>
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3 p-2 bg-muted/40 rounded-md">
+        <div className="flex flex-wrap gap-2 mb-3 p-2 bg-muted/40 rounded-sm">
           {wordBankAnswers.map((word, i) => (
             <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
               {word}
@@ -1498,7 +1501,7 @@ function OpenResponseRenderer({
       <p className="font-medium">{block.question}</p>
       {interactive ? (
         <textarea
-          className="w-full border rounded-md p-2 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full border rounded-sm p-2 text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary"
           rows={block.lines}
           placeholder={t("writeAnswerHere")}
         />
@@ -1517,7 +1520,7 @@ function OpenResponseRenderer({
 function WordBankRenderer({ block }: { block: WordBankBlock }) {
   const t = useTranslations("blockRenderer");
   return (
-    <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4">
+    <div className="border-2 border-dashed border-muted-foreground/30 rounded-sm p-4">
       <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
         {t("wordBank")}
       </p>
@@ -1687,7 +1690,7 @@ function TrueFalseMatrixRenderer({
                 </span>
                 </div>
               </td>
-              <td className="p-2 text-center">
+              <td className="p-2 text-center align-middle">
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${stmt.correctAnswer ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/30 hover:border-green-400"}`}
@@ -1699,7 +1702,7 @@ function TrueFalseMatrixRenderer({
                   {stmt.correctAnswer && <Check className="h-3 w-3" />}
                 </button>
               </td>
-              <td className="p-2 text-center">
+              <td className="p-2 text-center align-middle">
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${!stmt.correctAnswer ? "bg-red-500 border-red-500 text-white" : "border-muted-foreground/30 hover:border-red-400"}`}
@@ -1711,7 +1714,7 @@ function TrueFalseMatrixRenderer({
                   {!stmt.correctAnswer && <X className="h-3 w-3" />}
                 </button>
               </td>
-              <td className="p-2 text-center">
+              <td className="p-2 text-center align-middle">
                 <button
                   className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
                   onClick={(e) => {
@@ -1984,7 +1987,7 @@ function OrderItemsRenderer({
         {sortedItems.map((item, i) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 group/item p-3 rounded-lg border border-border"
+            className="flex items-center gap-3 group/item p-3 rounded-sm border border-border"
           >
             <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
               {String(i + 1).padStart(2, "0")}
@@ -2433,7 +2436,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
                 <tr key={ri}>
                   {row.map((cell, ci) => {
                     let cornerClass = "";
-                    if (ri === 0 && ci === 0) cornerClass = "rounded-tl-lg";
+                    if (ri === 0 && ci === 0) cornerClass = "rounded-tl-sm";
                     if (ri === 0 && ci === row.length - 1) cornerClass = "rounded-tr-lg";
                     if (ri === block.grid.length - 1 && ci === 0) cornerClass = "rounded-bl-lg";
                     if (ri === block.grid.length - 1 && ci === row.length - 1) cornerClass = "rounded-br-lg";
@@ -2557,7 +2560,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
             cat.correctItems.includes(item.id)
           );
           return (
-            <div key={cat.id} className="rounded-md border border-border overflow-hidden">
+            <div key={cat.id} className="rounded-sm border border-border overflow-hidden">
               <div className="bg-muted px-3 py-2">
                 <span
                   className="font-semibold outline-none block"
@@ -2727,7 +2730,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
           return (
             <div
               key={item.id}
-              className="flex items-center gap-3 group/item p-3 rounded-lg border border-border"
+              className="flex items-center gap-3 group/item p-3 rounded-sm border border-border"
             >
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
@@ -2848,7 +2851,7 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
           return (
             <div
               key={item.id}
-              className="group/item rounded-lg border border-border overflow-hidden"
+              className="group/item rounded-sm border border-border overflow-hidden"
             >
               <div className="flex items-center gap-3 p-3 bg-muted/30">
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
@@ -3201,7 +3204,7 @@ function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
       </div>
 
       <div className="flex">
-        <table className="flex-1 border-separate border-spacing-0 border-2 border-border rounded-lg overflow-hidden" style={{ fontSize: 16 }}>
+        <table className="flex-1 border-separate border-spacing-0 border-2 border-border rounded-sm overflow-hidden" style={{ fontSize: 16 }}>
           <colgroup>
             <col style={{ width: "15%" }} />
             <col style={{ width: "15%" }} />
@@ -3217,7 +3220,7 @@ function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
           </colgroup>
           <tbody>
             <tr className="bg-muted/50">
-              <td colSpan={colCount} className="border-b border-border px-3 py-2 font-bold uppercase tracking-wider text-muted-foreground rounded-tl-lg rounded-tr-lg" style={{ fontSize: 16 }}>
+              <td colSpan={colCount} className="border-b border-border px-3 py-2 font-bold uppercase tracking-wider text-muted-foreground rounded-tl-sm rounded-tr-lg" style={{ fontSize: 16 }}>
                 Singular
               </td>
             </tr>
@@ -3332,7 +3335,7 @@ function ColumnChildBlock({
   return (
     <div
       ref={setNodeRef}
-      className={`group/child relative rounded-md border transition-all
+      className={`group/child relative rounded-sm border transition-all
         ${isDragging ? "opacity-50 shadow-lg z-50" : ""}
         ${isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-border"}
         ${!isVisibleInMode ? "opacity-40" : ""}
@@ -3344,7 +3347,7 @@ function ColumnChildBlock({
     >
       {/* Child block toolbar */}
       <div
-        className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-md shadow-sm px-1 py-0.5 z-20
+        className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-sm shadow-sm px-1 py-0.5 z-20
           ${isSelected ? "opacity-100" : "opacity-0 group-hover/child:opacity-100"}
           transition-opacity`}
       >
@@ -3437,7 +3440,7 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`border border-dashed rounded-md p-3 min-h-[80px] space-y-2 transition-colors
+      className={`border border-dashed rounded-sm p-3 min-h-[80px] space-y-2 transition-colors
         ${isOver ? "border-primary bg-primary/5" : "border-border"}
         ${isEmpty ? "" : ""}`}
     >
@@ -3667,8 +3670,8 @@ function NumberedLabelRenderer({ block }: { block: NumberedLabelBlock }) {
 // ─── Linked Blocks Renderer ─────────────────────────────────
 function LinkedBlocksRenderer({ block }: { block: LinkedBlocksBlock }) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
-      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+    <div className="flex items-center gap-3 p-4 rounded-sm border-2 border-dashed border-primary/30 bg-primary/5">
+      <div className="h-10 w-10 rounded-sm bg-primary/10 flex items-center justify-center shrink-0">
         <Link2 className="h-5 w-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
@@ -3683,7 +3686,7 @@ function LinkedBlocksRenderer({ block }: { block: LinkedBlocksBlock }) {
         href={`/editor/${block.worksheetId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border hover:bg-muted transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm border hover:bg-muted transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         <ExternalLink className="h-3.5 w-3.5" />
@@ -3832,7 +3835,7 @@ function TextComparisonRenderer({ block }: { block: TextComparisonBlock }) {
     <div className="flex-1 min-w-0">
       <div className="flex">
         <div
-          className="py-1 text-xs font-semibold rounded-t-md text-center uppercase flex items-center justify-center border border-b-0"
+          className="py-1 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center border border-b-0"
           style={{ width: 44, paddingLeft: 12, paddingRight: 12, borderColor: color }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3840,7 +3843,7 @@ function TextComparisonRenderer({ block }: { block: TextComparisonBlock }) {
         </div>
       </div>
       <div
-        className="border border-dashed rounded-md rounded-tl-none py-3 pr-3 pl-6"
+        className="border border-dashed rounded-sm rounded-tl-none py-3 pr-3 pl-6"
         style={{ borderColor: color, color }}
       >
         <RichTextEditor
@@ -3954,6 +3957,211 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+// ─── Accordion block ─────────────────────────────────────────
+function AccordionRenderer({ block }: { block: AccordionBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const [openIndex, setOpenIndex] = React.useState<number | null>(0);
+
+  const updateTitle = (index: number, title: string) => {
+    localeUpdate(block.id, `items.${index}.title`, title, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], title };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const updateContent = (index: number, content: string) => {
+    localeUpdate(block.id, `items.${index}.content`, content, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], content };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), title: "", content: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+    setOpenIndex(newItems.length - 1);
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+    if (openIndex === index) setOpenIndex(null);
+    else if (openIndex !== null && openIndex > index) setOpenIndex(openIndex - 1);
+  };
+
+  return (
+    <div className="space-y-1">
+      {block.items.map((item, i) => (
+        <div key={item.id} className="relative group border border-border rounded-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOpenIndex(openIndex === i ? null : i)}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+          >
+            {block.showNumbers && (
+              <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
+            )}
+            <input
+              type="text"
+              value={item.title}
+              onChange={(e) => updateTitle(i, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Title…"
+              className="flex-1 bg-transparent border-none outline-none font-medium placeholder:text-muted-foreground/50"
+            />
+            <button
+              onClick={(e) => { e.stopPropagation(); removeItem(i); }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            {openIndex === i ? (
+              <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+          </button>
+          {openIndex === i && (
+            <div className="px-5 py-4 tiptap-compact">
+              <RichTextEditor
+                content={item.content}
+                onChange={(html) => updateContent(i, html)}
+                placeholder="Content…"
+                editorClassName="max-w-none focus:outline-none px-0 py-0"
+              />
+            </div>
+          )}
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+    </div>
+  );
+}
+
+// ─── Audio block ─────────────────────────────────────────────
+function AudioRenderer({ block }: { block: AudioBlock }) {
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const rafRef = React.useRef<number>(0);
+  const [playing, setPlaying] = React.useState(false);
+  const [time, setTime] = React.useState(0);
+  const [dur, setDur] = React.useState(0);
+  const [muted, setMuted] = React.useState(false);
+  const [slow, setSlow] = React.useState(false);
+
+  // Poll currentTime via rAF for guaranteed updates
+  React.useEffect(() => {
+    const tick = () => {
+      const a = audioRef.current;
+      if (a) {
+        setTime(a.currentTime);
+        if (a.duration && isFinite(a.duration)) setDur(a.duration);
+        if (a.ended && playing) setPlaying(false);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [playing]);
+
+  const pct = dur > 0 ? (time / dur) * 100 : 0;
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else { a.playbackRate = slow ? 0.85 : 1; a.play().catch(() => {}); setPlaying(true); }
+  };
+
+  const toggleSpeed = () => {
+    const a = audioRef.current;
+    const next = !slow;
+    setSlow(next);
+    if (a) a.playbackRate = next ? 0.85 : 1;
+  };
+
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = trackRef.current;
+    const a = audioRef.current;
+    if (!el || !a || dur <= 0) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    a.currentTime = ratio * dur;
+    setTime(a.currentTime);
+  };
+
+  const fmt = (s: number) => {
+    if (!isFinite(s) || isNaN(s)) return "0:00";
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
+  };
+
+  if (!block.src) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-400">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        {block.title || "No audio file — upload in properties panel"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[47px] flex items-center pl-2 pr-4 border border-slate-200 rounded-lg">
+      <audio ref={audioRef} src={block.src} preload="auto" muted={muted} />
+      <div className="flex items-center gap-4 w-full">
+        <button type="button" onClick={toggle} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+          {playing ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          )}
+        </button>
+        {block.title && <span className="text-sm font-medium text-slate-700 shrink-0 max-w-[120px] truncate">{block.title}</span>}
+        <div
+          ref={trackRef}
+          onClick={handleTrackClick}
+          className="flex-1 h-[6px] rounded-full cursor-pointer"
+          style={{ background: `linear-gradient(to right, #334155 ${pct}%, #e2e8f0 ${pct}%)` }}
+        />
+        <span className="text-xs tabular-nums text-slate-500 shrink-0">{fmt(time)} / {fmt(dur)}</span>
+        <button type="button" onClick={toggleSpeed} className={`shrink-0 p-1 rounded transition-colors ${slow ? 'text-slate-700' : 'text-slate-400 hover:text-slate-600'}`}>
+          {slow ? <ChevronsDown size={16} /> : <ChevronsUp size={16} />}
+        </button>
+        <button type="button" onClick={() => setMuted(!muted)} className="text-slate-500 hover:text-slate-700 transition-colors">
+          {muted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
   const { dispatch } = useEditor();
@@ -3992,7 +4200,7 @@ function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
   };
 
   return (
-    <div className="border border-dashed border-violet-300 rounded-lg p-4 bg-violet-50/30 space-y-3">
+    <div className="border border-dashed border-violet-300 rounded-sm p-4 bg-violet-50/30 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
         <Sparkles className="h-3.5 w-3.5" />
@@ -4014,7 +4222,7 @@ function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
           })
         }
         placeholder={t("aiPromptPlaceholder")}
-        className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+        className="w-full min-h-[100px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
       />
 
       {/* Submit button */}
@@ -4022,7 +4230,7 @@ function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
         type="button"
         onClick={handleSubmit}
         disabled={loading || !block.userInput.trim()}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -4034,14 +4242,14 @@ function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
 
       {/* Error */}
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-sm p-2">
           {error}
         </div>
       )}
 
       {/* AI Result */}
       {block.aiResult && (
-        <div className="border border-violet-200 rounded-md p-3 bg-white">
+        <div className="border border-violet-200 rounded-sm p-3 bg-white">
           <div className="text-xs text-violet-500 font-medium mb-1">{t("aiPromptResult")}</div>
           <div className="text-sm text-slate-700 whitespace-pre-wrap">{block.aiResult}</div>
         </div>
@@ -4055,7 +4263,7 @@ function AiToolRenderer({ block }: { block: AiToolBlock }) {
   const t = useTranslations("blockRenderer");
 
   return (
-    <div className="border border-dashed border-violet-300 rounded-lg p-4 bg-violet-50/30 space-y-3">
+    <div className="border border-dashed border-violet-300 rounded-sm p-4 bg-violet-50/30 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium">
         <Bot className="h-3.5 w-3.5" />
@@ -4221,12 +4429,16 @@ export function BlockRenderer({
       return <TextComparisonRenderer block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
+    case "accordion":
+      return <AccordionRenderer block={block as AccordionBlock} />;
     case "ai-prompt":
       return <AiPromptRenderer block={block as AiPromptBlock} />;
     case "ai-tool":
       return <AiToolRenderer block={block as AiToolBlock} />;
     case "table":
       return <TableBlockRenderer block={block as TableBlock} />;
+    case "audio":
+      return <AudioRenderer block={block as AudioBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

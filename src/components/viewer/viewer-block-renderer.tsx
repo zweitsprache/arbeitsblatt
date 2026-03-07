@@ -44,15 +44,17 @@ import {
   DosAndDontsBlock,
   TextComparisonBlock,
   NumberedItemsBlock,
+  AccordionBlock,
   LogoDividerBlock,
   AiPromptBlock,
   AiToolBlock,
+  AudioBlock,
   TableBlock,
   BRAND_ICON_LOGOS,
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -114,9 +116,17 @@ function resolveDateShortcodes(html: string): string {
   });
 }
 
-/** Pipeline: sanitise nbsp + resolve date shortcodes. */
+/** Replace {{de:…}} markers in HTML with styled <span> elements */
+function resolveDeMarkers(html: string): string {
+  return html.replace(
+    /\{\{de:(.*?)\}\}/g,
+    '«<span style="font-weight:600">$1</span>»',
+  );
+}
+
+/** Pipeline: sanitise nbsp + resolve date shortcodes + resolve {{de:…}} markers. */
 function prepareTiptapHtml(html: string): string {
-  return resolveDateShortcodes(nbspToSpace(html));
+  return resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)));
 }
 
 // ─── German marker helper ────────────────────────────────────
@@ -129,7 +139,7 @@ function renderDeMarkers(text: string): React.ReactNode {
     if (m) {
       return (
         <em key={i} className="not-italic font-semibold">
-          {m[1]}
+          «{m[1]}»
         </em>
       );
     }
@@ -235,15 +245,15 @@ function TextView({ block }: { block: TextBlock }) {
       <img
         src={block.imageSrc}
         alt=""
-        className="w-full rounded-md"
+        className="w-full rounded-sm"
       />
     </div>
   ) : null;
 
   if (isLernziel) {
     return (
-      <div className="flex gap-0 font-semibold rounded-md" style={{ backgroundColor: "#4A3D55", color: "#ffffff" }}>
-        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md" style={{ backgroundColor: "#4A3D55" }}>
+      <div className="flex gap-0 font-semibold border-2 rounded-sm overflow-hidden" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D5510", color: "#4A3D55" }}>
+        <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: "#4A3D55" }}>
           <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
         </div>
         <div className="flex-1 min-w-0 px-3 py-2">
@@ -280,10 +290,10 @@ function TextView({ block }: { block: TextBlock }) {
 
     return (
       <div
-        className="flex gap-0 border-2 rounded-md"
+        className="flex gap-0 border-2 rounded-sm"
         style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
       >
-        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-md">
+        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-sm">
           {hinweisConfig.icon}
         </div>
         <div className="flex-1 min-w-0 px-3 py-2">
@@ -305,7 +315,7 @@ function TextView({ block }: { block: TextBlock }) {
       {hasPill && (
         <div className="flex">
           <div
-            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            className={`py-1 text-xs font-semibold text-white rounded-t-sm text-center uppercase flex items-center justify-center ${s.pill}`}
             style={{ "--block-color": pillColor } as React.CSSProperties}
           >
             {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
@@ -313,7 +323,7 @@ function TextView({ block }: { block: TextBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed rounded-md py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
+        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
           hasPill ? "rounded-tl-none" : ""
         }`}
         style={{ "--block-color": borderTextColor } as React.CSSProperties}
@@ -348,7 +358,7 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
       {isStyled && (
         <div className="flex">
           <div
-            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            className={`py-1 text-xs font-semibold text-white rounded-t-sm text-center uppercase flex items-center justify-center ${s.pill}`}
             style={{ "--block-color": pillColor } as React.CSSProperties}
           >
             {style === "standard" ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
@@ -356,7 +366,7 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
         style={{ borderColor: isStyled ? color : "#475569" }}
       >
         {/* Email toolbar */}
@@ -425,7 +435,7 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
       {isStyled && (
         <div className="flex">
           <div
-            className={`py-1 text-xs font-semibold text-white rounded-t-md text-center uppercase flex items-center justify-center ${s.pill}`}
+            className={`py-1 text-xs font-semibold text-white rounded-t-sm text-center uppercase flex items-center justify-center ${s.pill}`}
             style={{ "--block-color": color } as React.CSSProperties}
           >
             {style === "standard" ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
@@ -433,7 +443,7 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-lg rounded-tl-none" : "rounded-lg"}`}
+        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
         style={{ borderColor: isStyled ? color : "#475569" }}
       >
         {/* Form header — icon only, same style as email toolbar */}
@@ -448,30 +458,30 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
         <div className="email-skeleton-fields px-4 pt-3 pb-4 space-y-1.5">
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobPosition")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 flex items-center justify-between">
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 flex items-center justify-between">
               <span>{block.position}</span>
               <svg className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobFirstName")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.firstName}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.firstName}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobLastName")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.applicantName}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.applicantName}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobEmail")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.email}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.email}</div>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0">{t("jobPhone")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.phone}</div>
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700">{block.phone}</div>
           </div>
           <div className="flex items-start gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 pt-1.5">{t("jobMessage")}</span>
-            <div className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+            <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5">
               <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message) }} />
             </div>
           </div>
@@ -511,7 +521,7 @@ function TextSnippetView({ block }: { block: TextSnippetBlock }) {
   };
 
   return (
-    <div className="relative group border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+    <div className="relative group border border-slate-200 rounded-sm p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
       <div
         className={`tiptap max-w-none ${s.tiptapFlush}`}
         dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
@@ -519,7 +529,7 @@ function TextSnippetView({ block }: { block: TextSnippetBlock }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white hover:bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm flex items-center gap-1.5"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white hover:bg-slate-100 border border-slate-200 rounded-sm px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm flex items-center gap-1.5"
       >
         {copied ? (
           <>
@@ -541,14 +551,14 @@ function ImageView({ block }: { block: ImageBlock }) {
   if (!block.src) return null;
   const isExample = block.imageStyle === "example";
   return (
-    <figure className={isExample ? `border border-dashed rounded-md p-3 ${s.styledBorder}` : undefined}
+    <figure className={isExample ? `border border-dashed rounded-sm p-3 ${s.styledBorder}` : undefined}
       style={isExample ? { "--block-color": "#475569" } as React.CSSProperties : undefined}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.src}
         alt={block.alt}
-        className="max-w-full rounded-md mx-auto block"
+        className="max-w-full rounded-sm mx-auto block"
         style={{
           ...(block.width ? { width: block.width } : {}),
           ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
@@ -1012,7 +1022,7 @@ function FillInBlankItemsView({
   return (
     <div>
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-md" style={{ gap: 8 }}>
+        <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
             <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-cv-sm">
               {word}
@@ -1679,9 +1689,6 @@ function renderTfBlanks(text: string): React.ReactNode {
 function TrueFalseMatrixView({
   block,
   interactive,
-  answer,
-  onAnswer,
-  showResults,
   showSolutions = false,
 }: {
   block: TrueFalseMatrixBlock;
@@ -1692,16 +1699,15 @@ function TrueFalseMatrixView({
   showSolutions?: boolean;
 }) {
   const tc = useTranslations("common");
-  const t = useTranslations("viewer");
-  const answers = (answer as Record<string, boolean | null> | undefined) || {};
+  const [answers, setAnswers] = useState<Record<string, boolean>>({});
 
   const handleSelect = (stmtId: string, value: boolean) => {
-    if (!interactive) return;
-    onAnswer({ ...answers, [stmtId]: value });
+    if (stmtId in answers) return; // already answered
+    setAnswers((prev) => ({ ...prev, [stmtId]: value }));
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 text-cv-sm">
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -1719,12 +1725,41 @@ function TrueFalseMatrixView({
                   .concat(block.statements.filter((s) => !block.statementOrder!.includes(s.id)))
               : block.statements;
             return orderedStatements.map((stmt, stmtIndex) => {
-            const selected = answers[stmt.id];
-            const isCorrect = selected === stmt.correctAnswer;
+            const hasAnswered = stmt.id in answers;
+            const selected = hasAnswered ? answers[stmt.id] : undefined;
+            const isCorrect = hasAnswered && selected === stmt.correctAnswer;
+
+            // Determine radio style for the "true" column
+            const trueRadioClass = (() => {
+              if (!hasAnswered) return "border-muted-foreground/30 hover:border-primary/50";
+              if (selected === true) {
+                // User picked true
+                return isCorrect
+                  ? "bg-green-500 border-green-500 text-white"   // correct
+                  : "bg-red-500 border-red-500 text-white";      // wrong
+              }
+              // User picked false — highlight correct answer if it's true
+              if (stmt.correctAnswer === true) return "bg-blue-500 border-blue-500 text-white";
+              return "border-muted-foreground/30";
+            })();
+
+            // Determine radio style for the "false" column
+            const falseRadioClass = (() => {
+              if (!hasAnswered) return "border-muted-foreground/30 hover:border-primary/50";
+              if (selected === false) {
+                // User picked false
+                return isCorrect
+                  ? "bg-green-500 border-green-500 text-white"   // correct
+                  : "bg-red-500 border-red-500 text-white";      // wrong
+              }
+              // User picked true — highlight correct answer if it's false
+              if (stmt.correctAnswer === false) return "bg-blue-500 border-blue-500 text-white";
+              return "border-muted-foreground/30";
+            })();
 
             return (
               <tr key={stmt.id} className="border-b last:border-b-0">
-                <td className="py-2 pr-2">
+                <td className="py-2 pr-2 align-middle">
                   <div className="flex items-center gap-3">
                     <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
                       {String(stmtIndex + 1).padStart(2, "0")}
@@ -1732,49 +1767,39 @@ function TrueFalseMatrixView({
                     <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                   </div>
                 </td>
-                <td className="p-2 text-center">
-                  {interactive ? (
+                <td className="p-2 align-middle">
+                  <div className="flex items-center justify-center">
+                  {showSolutions && !interactive ? (
+                    stmt.correctAnswer ? (
+                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
+                    ) : (
+                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30" />
+                    )
+                  ) : (
                     <button
-                      className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors
-                        ${selected === true
-                          ? showResults
-                            ? stmt.correctAnswer
-                              ? "bg-green-500 border-green-500 text-white"
-                              : "bg-red-500 border-red-500 text-white"
-                            : "bg-primary border-primary text-white"
-                          : "border-muted-foreground/30 hover:border-primary/50"
-                        }`}
+                      className={`w-6 h-6 min-w-6 min-h-6 rounded-full border-2 transition-colors ${trueRadioClass}`}
                       onClick={() => handleSelect(stmt.id, true)}
-                    >
-                      {selected === true && "✓"}
-                    </button>
-                  ) : showSolutions && stmt.correctAnswer ? (
-                    <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
-                  ) : (
-                    <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
+                      disabled={hasAnswered}
+                    />
                   )}
+                  </div>
                 </td>
-                <td className="p-2 text-center">
-                  {interactive ? (
-                    <button
-                      className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors
-                        ${selected === false
-                          ? showResults
-                            ? !stmt.correctAnswer
-                              ? "bg-green-500 border-green-500 text-white"
-                              : "bg-red-500 border-red-500 text-white"
-                            : "bg-primary border-primary text-white"
-                          : "border-muted-foreground/30 hover:border-primary/50"
-                        }`}
-                      onClick={() => handleSelect(stmt.id, false)}
-                    >
-                      {selected === false && "✓"}
-                    </button>
-                  ) : showSolutions && !stmt.correctAnswer ? (
-                    <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
+                <td className="p-2 align-middle">
+                  <div className="flex items-center justify-center">
+                  {showSolutions && !interactive ? (
+                    !stmt.correctAnswer ? (
+                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
+                    ) : (
+                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30" />
+                    )
                   ) : (
-                    <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
+                    <button
+                      className={`w-6 h-6 min-w-6 min-h-6 rounded-full border-2 transition-colors ${falseRadioClass}`}
+                      onClick={() => handleSelect(stmt.id, false)}
+                      disabled={hasAnswered}
+                    />
                   )}
+                  </div>
                 </td>
               </tr>
             );
@@ -1782,11 +1807,6 @@ function TrueFalseMatrixView({
           })()}
         </tbody>
       </table>
-      {showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {t("resultCount", { correct: block.statements.filter((s) => answers[s.id] === s.correctAnswer).length, total: block.statements.length })}
-        </p>
-      )}
     </div>
   );
 }
@@ -3429,7 +3449,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="flex">
         <div
-          className="py-1 text-xs font-semibold rounded-t-md text-center uppercase flex items-center justify-center border border-b-0 border-dashed"
+          className="py-1 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center border border-b-0 border-dashed"
           style={{ width: 44, paddingLeft: 12, paddingRight: 12, borderColor: color }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3437,7 +3457,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
         </div>
       </div>
       <div
-        className={`flex-1 border border-dashed rounded-md py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
+        className={`flex-1 border border-dashed rounded-sm py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
         style={{ "--block-color": color } as React.CSSProperties}
       >
         <div
@@ -3505,6 +3525,136 @@ function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+// ─── Accordion View ────────────────────────────────────────────
+function AccordionView({ block }: { block: AccordionBlock }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <div className="space-y-1">
+      {block.items.map((item, i) => (
+        <div key={item.id} className="border border-border rounded-sm overflow-hidden course-content">
+          <button
+            type="button"
+            onClick={() => setOpenIndex(openIndex === i ? null : i)}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+          >
+            {block.showNumbers && (
+              <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
+            )}
+            <span className="flex-1 font-medium">{item.title || "\u2026"}</span>
+            {openIndex === i ? (
+              <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+          </button>
+          {openIndex === i && (
+            <div className="px-5 py-4 tiptap-compact">
+              <div
+                className="tiptap max-w-none"
+                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Audio View ──────────────────────────────────────────────
+function AudioView({ block }: { block: AudioBlock }) {
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const rafRef = React.useRef<number>(0);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [dur, setDur] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  // Poll currentTime via rAF for guaranteed updates
+  React.useEffect(() => {
+    const tick = () => {
+      const a = audioRef.current;
+      if (a) {
+        setTime(a.currentTime);
+        if (a.duration && isFinite(a.duration)) setDur(a.duration);
+        if (a.ended && playing) setPlaying(false);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [playing]);
+
+  const pct = dur > 0 ? (time / dur) * 100 : 0;
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else { a.playbackRate = slow ? 0.85 : 1; a.play().catch(() => {}); setPlaying(true); }
+  };
+
+  const toggleSpeed = () => {
+    const a = audioRef.current;
+    const next = !slow;
+    setSlow(next);
+    if (a) a.playbackRate = next ? 0.85 : 1;
+  };
+
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = trackRef.current;
+    const a = audioRef.current;
+    if (!el || !a || dur <= 0) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    a.currentTime = ratio * dur;
+    setTime(a.currentTime);
+  };
+
+  const fmt = (s: number) => {
+    if (!isFinite(s) || isNaN(s)) return "0:00";
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
+  };
+
+  if (!block.src) return null;
+
+  return (
+    <div className="h-[47px] flex items-center pl-2 pr-4 border border-slate-200 rounded-lg">
+      <audio ref={audioRef} src={block.src} preload="auto" muted={muted} />
+      <div className="flex items-center gap-4 w-full">
+        <button type="button" onClick={toggle} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+          {playing ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          )}
+        </button>
+        {block.title && <span className="text-sm font-medium text-slate-700 shrink-0 max-w-[120px] truncate">{block.title}</span>}
+        <div
+          ref={trackRef}
+          onClick={handleTrackClick}
+          className="flex-1 h-[6px] rounded-full cursor-pointer"
+          style={{ background: `linear-gradient(to right, #334155 ${pct}%, #e2e8f0 ${pct}%)` }}
+        />
+        <span className="text-xs tabular-nums text-slate-500 shrink-0">{fmt(time)} / {fmt(dur)}</span>
+        <button type="button" onClick={toggleSpeed} className={`shrink-0 p-1 rounded transition-colors ${slow ? 'text-slate-700' : 'text-slate-400 hover:text-slate-600'}`}>
+          {slow ? <ChevronsDown size={16} /> : <ChevronsUp size={16} />}
+        </button>
+        <button type="button" onClick={() => setMuted(!muted)} className="text-slate-500 hover:text-slate-700 transition-colors">
+          {muted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── AI Prompt View ──────────────────────────────────────────
 function AiPromptView({ block }: { block: AiPromptBlock }) {
   const t = useTranslations("viewer");
@@ -3552,7 +3702,7 @@ function AiPromptView({ block }: { block: AiPromptBlock }) {
         value={userInput}
         onChange={(e) => setUserInput(e.target.value)}
         placeholder={t("aiPromptPlaceholder")}
-        className="w-full min-h-[120px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+        className="w-full min-h-[120px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
       />
 
       {/* Submit */}
@@ -3560,7 +3710,7 @@ function AiPromptView({ block }: { block: AiPromptBlock }) {
         type="button"
         onClick={handleSubmit}
         disabled={loading || !userInput.trim()}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -3572,14 +3722,14 @@ function AiPromptView({ block }: { block: AiPromptBlock }) {
 
       {/* Error */}
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-sm p-2">
           {error}
         </div>
       )}
 
       {/* Result */}
       {aiResult && (
-        <div className="border border-violet-200 rounded-md p-4 bg-violet-50/30">
+        <div className="border border-violet-200 rounded-sm p-4 bg-violet-50/30">
           <div className="text-xs text-violet-500 font-medium mb-2">{t("aiPromptResult")}</div>
           <div className="text-sm text-slate-700 whitespace-pre-wrap">{aiResult}</div>
         </div>
@@ -3746,7 +3896,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
                 value={values[field.variableName] || ""}
                 onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
                 placeholder={field.placeholder}
-                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                className="w-full px-3 py-2 rounded-sm border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
               />
             )}
 
@@ -3755,7 +3905,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
                 value={values[field.variableName] || ""}
                 onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
                 placeholder={field.placeholder}
-                className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+                className="w-full min-h-[100px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
               />
             )}
 
@@ -3763,7 +3913,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
               <select
                 value={values[field.variableName] || ""}
                 onChange={(e) => setValues((prev) => ({ ...prev, [field.variableName]: e.target.value }))}
-                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                className="w-full px-3 py-2 rounded-sm border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
               >
                 <option value="">{field.placeholder || t("aiToolSelectOption")}</option>
                 {(field.options || []).map((opt) => (
@@ -3780,7 +3930,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
                 placeholder={field.placeholder}
                 min={field.min}
                 max={field.max}
-                className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                className="w-full px-3 py-2 rounded-sm border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
               />
             )}
 
@@ -3833,7 +3983,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
           type="button"
           onClick={handleSubmit}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -3847,7 +3997,7 @@ function AiToolView({ block }: { block: AiToolBlock }) {
           <button
             type="button"
             onClick={handleClear}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-sm border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition-colors"
           >
             {t("aiToolClear")}
           </button>
@@ -3856,14 +4006,14 @@ function AiToolView({ block }: { block: AiToolBlock }) {
 
       {/* Error */}
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-sm p-3">
           {error}
         </div>
       )}
 
       {/* Result */}
       {result && (
-        <div className="border border-violet-200 rounded-lg p-4 bg-violet-50/30">
+        <div className="border border-violet-200 rounded-sm p-4 bg-violet-50/30">
           <div className="text-xs text-violet-500 font-medium mb-2">{t("aiToolResult")}</div>
           <div className="prose prose-sm max-w-none text-slate-700">
             <React.Suspense fallback={<div className="text-sm text-slate-500">{result}</div>}>
@@ -4164,12 +4314,16 @@ export function ViewerBlockRenderer({
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} />;
+    case "accordion":
+      return <AccordionView block={block as AccordionBlock} />;
     case "ai-prompt":
       return <AiPromptView block={block as AiPromptBlock} />;
     case "ai-tool":
       return <AiToolView block={block as AiToolBlock} />;
     case "table":
       return <TableView block={block as TableBlock} />;
+    case "audio":
+      return <AudioView block={block as AudioBlock} />;
     default:
       return null;
   }
