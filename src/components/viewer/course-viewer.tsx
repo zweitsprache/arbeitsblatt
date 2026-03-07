@@ -10,6 +10,7 @@ import {
 import {
   CourseModule,
   CourseLesson,
+  moduleNumber as getModuleNumber,
 } from "@/types/course";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { cn } from "@/lib/utils";
@@ -97,15 +98,15 @@ function ProgressRing({
   progress: number;
   number: string;
 }) {
-  const circumference = 2 * Math.PI * 20; // r = 20
+  const circumference = 2 * Math.PI * 22; // r = 22
   const hasProgress = progress > 0;
   const isComplete = progress === 100;
 
   return (
-    <svg width="46" height="46" viewBox="0 0 46 46" className="shrink-0">
+    <svg width="52" height="52" viewBox="0 0 52 52" className="shrink-0">
       {/* Background track */}
       <circle
-        cx="23" cy="23" r="20"
+        cx="26" cy="26" r="22"
         fill="none"
         stroke="rgba(255,255,255,0.06)"
         strokeWidth="2.5"
@@ -113,19 +114,19 @@ function ProgressRing({
       {/* Progress arc */}
       {hasProgress && (
         <circle
-          cx="23" cy="23" r="20"
+          cx="26" cy="26" r="22"
           fill="none"
           stroke={isComplete ? "#F2EDDA" : "rgba(242,237,218,0.7)"}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeDasharray={`${(progress / 100) * circumference} ${circumference}`}
-          transform="rotate(-90 23 23)"
+          transform="rotate(-90 26 26)"
           style={{ transition: "stroke-dasharray 0.5s ease" }}
         />
       )}
       {/* Number */}
       <text
-        x="23" y="24"
+        x="26" y="27"
         textAnchor="middle"
         dominantBaseline="central"
         className="text-cv-sm"
@@ -165,9 +166,9 @@ function ViewerLessonItem({
     <button
       onClick={onSelect}
       className={cn(
-        "relative flex items-center w-full py-2.5 pl-[62px] pr-3.5 rounded-lg text-left text-cv-xl transition-colors",
+        "relative flex items-center w-full py-2.5 pl-[38px] pr-3.5 text-left text-cv-base transition-colors",
         isLocked ? "cursor-default opacity-40" : "cursor-pointer",
-        isActive ? "bg-[rgba(242,237,218,0.08)]" : "hover:bg-[rgba(255,255,255,0.03)]"
+        isActive ? "font-semibold" : "hover:bg-[rgba(255,255,255,0.03)]"
       )}
     >
       {/* Title */}
@@ -210,9 +211,9 @@ function ViewerTopicSection({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="mb-0.5">
+    <div className="mb-0.5 border-b border-white/[0.06]">
       {/* Topic header */}
-      <div className="flex items-center gap-4 py-3 pl-7 pr-3.5 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.04)]">
+      <div className="flex items-center gap-4 py-3 pl-3 pr-3.5 rounded-lg transition-colors bg-white/[0.04] hover:bg-white/[0.06]">
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight
             className={cn(
@@ -243,8 +244,8 @@ function ViewerTopicSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-1 pt-1 pb-1">
-            {topic.lessons.map((lesson) => {
+          <div className="flex flex-col gap-0 pt-1 pb-1">
+            {topic.lessons.map((lesson, lessonIdx) => {
               const hasContent = (lesson.blocks ?? []).length > 0;
               return (
                 <ViewerLessonItem
@@ -290,7 +291,9 @@ function ViewerModuleSection({
   const moduleLessonCount = moduleLessons.length;
   const progress = moduleLessonCount > 0 ? Math.round((moduleCompleted / moduleLessonCount) * 100) : 0;
   const isFullyComplete = progress === 100 && moduleLessonCount > 0;
-  const moduleNumber = String(moduleIndex + 1).padStart(2, "0");
+  const moduleNumber = String(getModuleNumber(moduleIndex));
+  // Static pastel background for dark theme
+  const pastelBg = "#ECF3F914"; // ~8% opacity via hex alpha
 
   // Compute per-topic progress for defaultOpen
   const topicHasProgress = (topic: CourseModule["topics"][0]) => {
@@ -308,9 +311,10 @@ function ViewerModuleSection({
       {/* Module header */}
       <div
         className={cn(
-          "flex items-center gap-4 px-[18px] py-2.5 rounded-xl transition-colors",
-          !open && "hover:bg-[rgba(255,255,255,0.03)]"
+          "flex items-center gap-7 px-[18px] py-2.5 rounded-xl transition-colors",
+          !open && "hover:bg-white/[0.06]"
         )}
+        style={{ backgroundColor: pastelBg }}
       >
         {/* Progress ring */}
         <div className="shrink-0">
@@ -350,7 +354,7 @@ function ViewerModuleSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="px-2 pb-3 pl-8">
+          <div className="pr-0 pt-1.5 pb-3 pl-8">
             {/* Thin connecting line */}
             <div className="border-l-[1.5px] border-white/[0.06] ml-1.5 pl-3">
               {mod.topics.map((topic) => (

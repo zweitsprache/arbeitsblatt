@@ -79,6 +79,8 @@ export interface TextBlock extends BlockBase {
 }
 
 // ─── Image block ─────────────────────────────────────────────
+export type ImageBlockStyle = "standard" | "example";
+
 export interface ImageBlock extends BlockBase {
   type: "image";
   src: string;
@@ -86,6 +88,7 @@ export interface ImageBlock extends BlockBase {
   width?: number;
   height?: number;
   caption?: string;
+  imageStyle?: ImageBlockStyle;
 }
 
 // ─── Image Cards block ───────────────────────────────────────

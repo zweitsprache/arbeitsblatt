@@ -815,7 +815,7 @@ export function CourseStructureManager() {
       </div>
 
       {/* Modules list */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-6 max-w-4xl mx-auto">
           {state.structure.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed rounded-xl">

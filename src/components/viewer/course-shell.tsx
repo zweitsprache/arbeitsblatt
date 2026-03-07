@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
-import { CourseModule, SidebarTheme } from "@/types/course";
+import { CourseModule, SidebarTheme, moduleNumber as getModuleNumber } from "@/types/course";
 import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
@@ -59,6 +59,7 @@ interface SidebarTokens {
   glowGradient: string;
   scrollThumb: string;
   scrollThumbHover: string;
+  slateBg: string;
 }
 
 const DARK_TOKENS: SidebarTokens = {
@@ -93,6 +94,7 @@ const DARK_TOKENS: SidebarTokens = {
   glowGradient: "radial-gradient(circle, rgba(242,237,218,0.04) 0%, transparent 70%)",
   scrollThumb: "rgba(255,255,255,0.08)",
   scrollThumbHover: "rgba(255,255,255,0.15)",
+  slateBg: "rgba(255,255,255,0.04)",
 };
 
 const LIGHT_TOKENS: SidebarTokens = {
@@ -127,6 +129,7 @@ const LIGHT_TOKENS: SidebarTokens = {
   glowGradient: "radial-gradient(circle, rgba(74,70,57,0.03) 0%, transparent 70%)",
   scrollThumb: "rgba(0,0,0,0.10)",
   scrollThumbHover: "rgba(0,0,0,0.18)",
+  slateBg: "rgba(0,0,0,0.03)",
 };
 
 const LINGOSTAR_LIGHT_TOKENS: SidebarTokens = {
@@ -161,6 +164,7 @@ const LINGOSTAR_LIGHT_TOKENS: SidebarTokens = {
   glowGradient: "radial-gradient(circle, rgba(58,79,64,0.03) 0%, transparent 70%)",
   scrollThumb: "rgba(0,0,0,0.08)",
   scrollThumbHover: "rgba(0,0,0,0.15)",
+  slateBg: "rgba(0,0,0,0.03)",
 };
 
 function getSidebarTokens(theme: SidebarTheme, brand?: Brand): SidebarTokens {
@@ -218,12 +222,10 @@ function flattenLessons(structure: CourseModule[]): FlatLesson[] {
 // ─── Module Number ──────────────────────────────────────────
 
 function ModuleNumber({ number }: { number: string }) {
-  const t = useSidebarTheme();
-
   return (
     <span
-      className="flex items-center justify-center h-7 w-7 rounded-full text-cv-micro font-medium shrink-0"
-      style={{ color: t.ringNumber, border: `1.5px solid ${t.ringTrack}` }}
+      className="flex items-center justify-center h-7 min-w-9 px-1.5 rounded-sm text-cv-micro font-bold shrink-0"
+      style={{ color: "#1a1a1a", border: "2px solid #1a1a1a" }}
     >
       {number}
     </span>
@@ -252,12 +254,9 @@ function SidebarLessonItem({
     <button
       onClick={onSelect}
       className={cn(
-        "relative flex items-center w-full py-1.5 pl-[48px] pr-3 rounded-md text-left text-cv-xs transition-colors",
+        "relative flex items-center w-full py-1.5 pl-[38px] pr-3 text-left text-cv-xs transition-colors",
         isLocked ? "cursor-default opacity-40" : "cursor-pointer",
       )}
-      style={{
-        backgroundColor: isActive ? t.activeBg : undefined,
-      }}
     >
       <span
         className="flex-1 min-w-0 leading-snug truncate"
@@ -289,7 +288,7 @@ function SidebarTopicSection({
   onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
   onSelectTopic: (moduleId: string, topicId: string) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(true);
   const { structure } = useCourse();
   const tk = useSidebarTheme();
   // Find which module this topic belongs to
@@ -298,7 +297,7 @@ function SidebarTopicSection({
 
   return (
     <div className="mb-0.5">
-      <div className="flex items-center gap-3 py-2 pl-5 pr-3 rounded-md">
+      <div className="flex items-center gap-3 py-2 pl-3 pr-3 rounded-[2px]" style={{ backgroundColor: tk.slateBg }}>
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
             "h-3.5 w-3.5 transition-transform duration-200",
@@ -323,8 +322,8 @@ function SidebarTopicSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-0.5 pt-1 pb-1">
-            {topic.lessons.map((lesson) => {
+          <div className="flex flex-col gap-0 pt-1 pb-1">
+            {topic.lessons.map((lesson, lessonIdx) => {
               const hasContent = (lesson.blocks ?? []).length > 0;
               return (
                 <SidebarLessonItem
@@ -367,7 +366,7 @@ function SidebarModuleSection({
   onSelectModule: (moduleId: string) => void;
   onSelectTopic: (moduleId: string, topicId: string) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(true);
   const tk = useSidebarTheme();
 
   const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
@@ -375,7 +374,8 @@ function SidebarModuleSection({
   const moduleLessonCount = moduleLessons.length;
   const progress = moduleLessonCount > 0 ? Math.round((moduleCompleted / moduleLessonCount) * 100) : 0;
   const isFullyComplete = progress === 100 && moduleLessonCount > 0;
-  const moduleNumber = String(moduleIndex + 1).padStart(2, "0");
+  const moduleNumber = String(getModuleNumber(moduleIndex));
+  const pastelBg = "#ECF3F9";
 
   const topicHasProgress = (topic: CourseModule["topics"][0]) => {
     const visited = topic.lessons.filter((l) => visitedLessons.has(l.id)).length;
@@ -383,8 +383,8 @@ function SidebarModuleSection({
   };
 
   return (
-    <div className="mb-1 rounded-lg">
-      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+    <div className="mb-1 rounded-[2px]">
+      <div className="flex items-center gap-7 px-3 py-2 rounded-[2px]" style={{ backgroundColor: pastelBg }}>
         <ModuleNumber number={moduleNumber} />
         <button
           onClick={() => {
@@ -410,7 +410,7 @@ function SidebarModuleSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="px-1.5 pb-2 pl-6">
+          <div className="pr-0 pt-1.5 pb-2 pl-6">
             <div className="ml-1 pl-2.5" style={{ borderLeft: `1.5px solid ${tk.borderLine}` }}>
               {mod.topics.map((topic) => (
                 <SidebarTopicSection
@@ -654,7 +654,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   }, [pathname, structure]);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-muted/30">
       {/* Load brand fonts */}
       <link rel="stylesheet" href={brandFonts.googleFontsUrl} />
 
@@ -712,16 +712,16 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="min-h-screen lg:h-screen flex flex-col p-8 pt-0 lg:pt-6 gap-6">
+      <div className="min-h-screen lg:flex-1 lg:min-h-0 flex flex-col p-8 pt-0 lg:pt-6 gap-6">
         {/* Middle row: sidebar + content + chat */}
         <div className="flex-1 min-h-0 flex flex-row gap-8">
           {/* Desktop sidebar */}
           <div className={cn(
             "hidden lg:flex shrink-0 relative transition-all duration-300",
-            desktopSidebarOpen ? "w-[400px]" : "w-0"
+            desktopSidebarOpen ? "w-[440px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[400px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
+              "flex flex-col w-[440px] h-full rounded-lg border bg-background overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
@@ -845,7 +845,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Footer (full width) */}
-      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t sticky bottom-0 z-20" style={{ fontFamily: brandFonts.bodyFont }}>
+      <div className="hidden lg:flex items-center gap-2 px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t" style={{ fontFamily: brandFonts.bodyFont }}>
         <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
       </div>
 

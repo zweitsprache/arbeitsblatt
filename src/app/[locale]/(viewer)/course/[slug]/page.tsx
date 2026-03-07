@@ -9,18 +9,15 @@ import {
   ArrowRight,
   GraduationCap,
   ToyBrick,
-  Folder,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 import { moduleNumber } from "@/types/course";
-import { usePastelColors } from "@/lib/pastel-colors";
 
 export default function CourseOverviewPage() {
   const { title, description, languageLevel, structure } = useCourse();
   const { locale, slug } = useParams<{ locale: string; slug: string }>();
   const router = useRouter();
-  const pastelColors = usePastelColors();
 
   const totalTopics = structure.reduce((s, m) => s + m.topics.length, 0);
   const totalLessons = structure.reduce(
@@ -69,7 +66,6 @@ export default function CourseOverviewPage() {
         <h2 className="text-lg font-semibold mb-4">Modules</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {structure.map((mod, i) => {
-            const topicCount = mod.topics.length;
             const lessonCount = mod.topics.reduce(
               (s, t) => s + t.lessons.length,
               0
@@ -82,7 +78,7 @@ export default function CourseOverviewPage() {
                   router.push(`/${locale}/course/${slug}/${mod.id}`)
                 }
                 className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
-                style={{ backgroundColor: pastelColors[i % pastelColors.length] }}
+                style={{ backgroundColor: "#ECF3F9" }}
               >
                 {mod.image && (
                   <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
@@ -105,10 +101,6 @@ export default function CourseOverviewPage() {
                       <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
                     </h3>
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Folder className="h-3.5 w-3.5" />
-                        {topicCount} {topicCount === 1 ? "Topic" : "Topics"}
-                      </span>
                       <span className="flex items-center gap-1">
                         <FileText className="h-3.5 w-3.5" />
                         {lessonCount}{" "}

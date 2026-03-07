@@ -539,8 +539,11 @@ function TextSnippetView({ block }: { block: TextSnippetBlock }) {
 
 function ImageView({ block }: { block: ImageBlock }) {
   if (!block.src) return null;
+  const isExample = block.imageStyle === "example";
   return (
-    <figure>
+    <figure className={isExample ? `border border-dashed rounded-md p-3 ${s.styledBorder}` : undefined}
+      style={isExample ? { "--block-color": "#475569" } as React.CSSProperties : undefined}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.src}
@@ -3423,7 +3426,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
     color: string,
     flagSrc: string,
   ) => (
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0 flex flex-col">
       <div className="flex">
         <div
           className="py-1 text-xs font-semibold rounded-t-md text-center uppercase flex items-center justify-center border border-b-0 border-dashed"
@@ -3434,7 +3437,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
         </div>
       </div>
       <div
-        className={`border border-dashed rounded-md py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
+        className={`flex-1 border border-dashed rounded-md py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
         style={{ "--block-color": color } as React.CSSProperties}
       >
         <div

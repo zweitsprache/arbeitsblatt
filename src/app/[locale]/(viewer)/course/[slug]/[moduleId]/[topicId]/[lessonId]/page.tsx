@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useCourse } from "@/components/viewer/course-context";
 import { useParams, useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
@@ -23,6 +24,7 @@ export default function LessonPage() {
     lessonId: string;
   }>();
   const router = useRouter();
+  const t = useTranslations("common");
 
   const mod = structure.find((m) => m.id === moduleId);
   if (!mod) notFound();
@@ -107,7 +109,7 @@ export default function LessonPage() {
             >
               <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
               <div className="min-w-0">
-                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">Previous</span>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">{t("previous")}</span>
                 <span className="block !text-[16px] font-medium truncate leading-snug">{prevLesson.title}</span>
               </div>
             </button>
@@ -122,7 +124,7 @@ export default function LessonPage() {
               }
             >
               <div className="min-w-0">
-                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">Next</span>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">{t("next")}</span>
                 <span className="block !text-[16px] font-medium truncate leading-snug">{nextLesson.title}</span>
               </div>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />

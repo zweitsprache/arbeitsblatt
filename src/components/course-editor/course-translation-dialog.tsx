@@ -98,6 +98,7 @@ export function CourseTranslationDialog() {
         let msg = t("pushSuccess", {
           count: data.stringCount,
           newCount: data.newStrings,
+          retranslatedCount: data.retranslatedStrings ?? 0,
         });
         if (data.errors > 0) {
           msg += ` (${data.errors} errors)`;

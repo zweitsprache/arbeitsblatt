@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCourse } from "@/components/viewer/course-context";
 import { useParams, useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
@@ -12,11 +13,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 import { moduleNumber, topicNumber, lessonNumber } from "@/types/course";
-import { usePastelColors } from "@/lib/pastel-colors";
 
 export default function TopicPage() {
   const { structure, slug } = useCourse();
-  const pastelColors = usePastelColors();
   const { locale, moduleId, topicId } = useParams<{
     locale: string;
     slug: string;
@@ -24,6 +23,7 @@ export default function TopicPage() {
     topicId: string;
   }>();
   const router = useRouter();
+  const t = useTranslations("common");
 
   const mod = structure.find((m) => m.id === moduleId);
   if (!mod) notFound();
@@ -79,7 +79,7 @@ export default function TopicPage() {
                   )
                 }
                 className="group text-left rounded-lg overflow-hidden hover:shadow-md transition-all"
-                style={{ backgroundColor: pastelColors[i % pastelColors.length] }}
+                style={{ backgroundColor: "#ECF3F9" }}
               >
                 {topic.image && (
                   <div className="w-full h-36 overflow-x-clip overflow-y-hidden flex items-center justify-center">
@@ -120,24 +120,20 @@ export default function TopicPage() {
         )}
 
         {/* Prev / Next topic navigation */}
-        <div className="flex items-stretch gap-3 mt-10">
+        <div className="flex items-center gap-2 mt-10">
           {prevTopic ? (
             <button
-              className="flex-1 flex items-center gap-3 px-4 py-3 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-left group"
+              className="flex-1 flex items-center gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-left group"
               onClick={() =>
                 router.push(
                   `/${locale}/course/${slug}/${moduleId}/${prevTopic.id}`
                 )
               }
             >
-              <ArrowLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
               <div className="min-w-0">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Previous Topic
-                </p>
-                <p className="text-sm font-medium truncate">
-                  {prevTopic.title}
-                </p>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">{t("previous")}</span>
+                <span className="block !text-[16px] font-medium truncate leading-snug">{prevTopic.title}</span>
               </div>
             </button>
           ) : (
@@ -145,7 +141,7 @@ export default function TopicPage() {
           )}
           {nextTopic ? (
             <button
-              className="flex-1 flex items-center justify-end gap-3 px-4 py-3 bg-background border rounded-lg hover:bg-muted/50 transition-colors text-right group"
+              className="flex-1 flex items-center justify-end gap-1.5 px-4 py-3 bg-background border rounded hover:bg-muted/50 transition-colors text-right group"
               onClick={() =>
                 router.push(
                   `/${locale}/course/${slug}/${moduleId}/${nextTopic.id}`
@@ -153,14 +149,10 @@ export default function TopicPage() {
               }
             >
               <div className="min-w-0">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Next Topic
-                </p>
-                <p className="text-sm font-medium truncate">
-                  {nextTopic.title}
-                </p>
+                <span className="block !text-[16px] text-muted-foreground uppercase tracking-wider leading-snug">{t("next")}</span>
+                <span className="block !text-[16px] font-medium truncate leading-snug">{nextTopic.title}</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
             </button>
           ) : (
             <div className="flex-1" />

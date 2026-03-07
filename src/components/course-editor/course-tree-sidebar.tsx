@@ -442,7 +442,7 @@ function ModuleItem({
     <div className="mb-1">
       <div
         className={cn(
-          "group flex items-center gap-1.5 px-2 py-2 cursor-pointer transition-colors rounded-md",
+          "group flex items-center gap-1.5 px-2 py-2 cursor-pointer transition-colors rounded-sm",
           isSelected && !selectedTopicId
             ? "bg-primary/10 border border-primary/30"
             : "hover:bg-muted border border-transparent"
@@ -658,7 +658,7 @@ export function CourseTreeSidebar() {
       {/* Cover section */}
       <div
         className={cn(
-          "mx-3 mt-3 p-2 rounded-md cursor-pointer transition-colors flex items-center gap-2",
+          "mx-3 mt-3 p-2 rounded-sm cursor-pointer transition-colors flex items-center gap-2",
           state.selectedModuleId === null &&
             state.selectedTopicId === null &&
             state.selectedLessonId === null

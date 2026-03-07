@@ -475,6 +475,22 @@ function ImageProps({ block }: { block: ImageBlock }) {
           }
         />
       </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageBlockStyle")}</Label>
+        <select
+          value={block.imageStyle || "standard"}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { imageStyle: e.target.value } },
+            })
+          }
+          className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="standard">{t("imageBlockStyleStandard")}</option>
+          <option value="example">{t("imageBlockStyleExample")}</option>
+        </select>
+      </div>
 
       <MediaBrowserDialog
         open={browserOpen}

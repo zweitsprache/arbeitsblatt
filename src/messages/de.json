@@ -500,6 +500,7 @@
     "onlineOnly": "Nur Online",
     "options": "Optionen",
     "pairs": "Paare",
+    "previous": "Zurück",
     "preview": "Vorschau",
     "print": "Druck",
     "printOnly": "Nur Druck",
@@ -574,7 +575,7 @@
     "pullTranslations": "Übersetzungen laden",
     "publishing": "Veröffentlichung",
     "pushInProgress": "Inhalte werden übertragen…",
-    "pushSuccess": "{count} Strings übertragen ({newCount} neu erstellt)",
+    "pushSuccess": "{count} Strings übertragen ({newCount} neu, {retranslatedCount} neu übersetzt)",
     "pushToI18nexus": "An i18nexus senden",
     "selectLevel": "Niveau wählen",
     "selectLessonPrompt": "Wähle eine Lektion aus der Seitenleiste",
@@ -634,7 +635,7 @@
     "quizTitle": "Quiz",
     "subtitle": "Fragen zum Kursinhalt",
     "title": "Kurs-Assistent",
-    "welcomeMessage": "👋 Hallo! Ich bin dein Kurs-Assistent. Stelle mir eine Frage zum aktuellen Lektionsinhalt."
+    "welcomeMessage": "Hallo! Ich bin dein Kurs-Assistent. Stelle mir eine Frage zum aktuellen Lektionsinhalt."
   },
   "coverDashboard": {
     "createCover": "Cover erstellen",
@@ -1114,6 +1115,9 @@
     "heightPx": "Höhe (px)",
     "imageAspectRatio": "Seitenverhältnis",
     "imageScale": "Bildgrösse",
+    "imageBlockStyle": "Bildstil",
+    "imageBlockStyleExample": "Textbeispiel",
+    "imageBlockStyleStandard": "Standard",
     "imageUrl": "Bild-URL",
     "imageUrlPlaceholder": "https://beispiel.com/bild.jpg",
     "inlineChoicesHelp": "Schreibe Auswahloptionen mit | getrennt in '{'geschweifte Klammern'}'",

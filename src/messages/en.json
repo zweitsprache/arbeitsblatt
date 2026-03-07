@@ -500,6 +500,7 @@
     "onlineOnly": "Online only",
     "options": "Options",
     "pairs": "Pairs",
+    "previous": "Previous",
     "preview": "Preview",
     "print": "Print",
     "printOnly": "Print only",
@@ -574,7 +575,7 @@
     "pullTranslations": "Pull translations",
     "publishing": "Publishing",
     "pushInProgress": "Pushing content…",
-    "pushSuccess": "{count} strings pushed ({newCount} newly created)",
+    "pushSuccess": "{count} strings pushed ({newCount} new, {retranslatedCount} retranslated)",
     "pushToI18nexus": "Push to i18nexus",
     "selectLevel": "Select level",
     "selectLessonPrompt": "Select a lesson from the sidebar",
@@ -634,7 +635,7 @@
     "quizTitle": "Quiz",
     "subtitle": "Questions about course content",
     "title": "Course Assistant",
-    "welcomeMessage": "👋 Hi! I'm your course assistant. Ask me anything about this lesson's content."
+    "welcomeMessage": "Hi! I'm your course assistant. Ask me anything about this lesson's content."
   },
   "coverDashboard": {
     "createCover": "Create cover",
@@ -1114,6 +1115,9 @@
     "heightPx": "Height (px)",
     "imageAspectRatio": "Aspect ratio",
     "imageScale": "Image size",
+    "imageBlockStyle": "Image style",
+    "imageBlockStyleExample": "Text Example",
+    "imageBlockStyleStandard": "Standard",
     "imageUrl": "Image URL",
     "imageUrlPlaceholder": "https://example.com/image.jpg",
     "inlineChoicesHelp": "Write selection options separated by | in '{'curly braces'}'",

@@ -8,8 +8,9 @@ import {
 import {
   getNamespaces,
   createNamespace,
-  importStrings,
   createString,
+  deleteString,
+  getBaseStrings,
 } from "@/lib/i18nexus";
 import {
   CourseModule,
@@ -83,85 +84,117 @@ export async function POST(
     });
   }
 
-  // 1. Create strings one-by-one FIRST to trigger machine translation.
-  //    New keys get created + auto-translated; existing keys return 422.
-  //    IMPORTANT: This MUST run before importStrings, because importStrings
-  //    creates new keys WITHOUT triggering auto-translation.
+  // ── Fetch existing base strings from i18nexus to detect changes ──
+  let remoteStrings: Record<string, string> = {};
+  try {
+    const baseStrings = await getBaseStrings(namespaceName);
+    for (const s of baseStrings) {
+      remoteStrings[s.key] = s.value;
+    }
+  } catch {
+    // If fetch fails (e.g. new namespace), treat everything as new
+    remoteStrings = {};
+  }
+
+  // Categorize each entry:
+  //  - new:       key does not exist remotely → createString (triggers auto-translate)
+  //  - changed:   key exists but German value differs → deleteString + createString (re-triggers auto-translate)
+  //  - unchanged: key exists with same value → skip entirely
+
   let created = 0;
-  let skipped = 0;
+  let retranslated = 0;
+  let unchanged = 0;
   let errors = 0;
   const errorMessages: string[] = [];
-  // Track keys that already exist (422) — only these should be bulk-updated
-  const existingKeys: string[] = [];
-  // Track keys that failed — must NOT be imported (would create without auto-translate)
   const failedKeys = new Set<string>();
 
   for (let i = 0; i < entries.length; i++) {
     const [key, value] = entries[i];
+    const remoteValue = remoteStrings[key];
+    const isNew = remoteValue === undefined;
+    const isChanged = !isNew && remoteValue !== value;
 
-    // Retry loop with exponential backoff for 429 rate limits
+    // Unchanged keys: nothing to do
+    if (!isNew && !isChanged) {
+      unchanged++;
+      continue;
+    }
+
+    // Changed keys: delete first so createString treats them as new
+    if (isChanged) {
+      let attempt = 0;
+      const MAX_RETRIES = 4;
+      let deleted = false;
+      while (attempt <= MAX_RETRIES) {
+        try {
+          await deleteString(key, namespaceName);
+          deleted = true;
+          break;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("429") && attempt < MAX_RETRIES) {
+            const delay = 1000 * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            attempt++;
+          } else {
+            errors++;
+            failedKeys.add(key);
+            if (errorMessages.length < 3) {
+              errorMessages.push(`Delete failed for "${key}": ${msg}`);
+            }
+            break;
+          }
+        }
+      }
+      if (!deleted) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    // Create the string (new or just-deleted) → triggers auto-translation
     let attempt = 0;
     const MAX_RETRIES = 4;
     while (attempt <= MAX_RETRIES) {
       try {
         const aiInstructions = getAiInstructions(key, value);
         await createString(key, value, namespaceName, aiInstructions);
-        created++;
-        break; // success → exit retry loop
+        if (isChanged) {
+          retranslated++;
+        } else {
+          created++;
+        }
+        break;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("422")) {
-          // 422 = duplicate key (already exists) — expected
-          skipped++;
-          existingKeys.push(key);
-          break;
-        } else if (msg.includes("429") && attempt < MAX_RETRIES) {
-          // 429 = rate limited — wait and retry with exponential backoff
-          const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s, 8s
+        if (msg.includes("429") && attempt < MAX_RETRIES) {
+          const delay = 1000 * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
           attempt++;
         } else {
-          // Non-retryable error or max retries exhausted
           errors++;
           failedKeys.add(key);
           if (errorMessages.length < 3) {
-            errorMessages.push(msg);
+            errorMessages.push(`Create failed for "${key}": ${msg}`);
           }
           break;
         }
       }
     }
 
-    // Throttle: 1 request per second to stay well within i18nexus limits
+    // Throttle: 1 request per second to stay within i18nexus limits
     await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-
-  // 2. Bulk-update base language values for EXISTING strings only.
-  //    This ensures changed German text is synced to i18nexus.
-  //    CRITICAL: We MUST NOT include failed keys here — importStrings would
-  //    create them without triggering auto-translation, permanently preventing
-  //    them from ever being auto-translated via createString.
-  let importError: string | null = null;
-  if (existingKeys.length > 0) {
-    const existingStrings: Record<string, string> = {};
-    for (const key of existingKeys) {
-      existingStrings[key] = strings[key];
-    }
-    try {
-      await importStrings(namespaceName, { de: existingStrings }, true, true);
-    } catch (err) {
-      importError = err instanceof Error ? err.message : String(err);
-    }
   }
 
   return NextResponse.json({
     success: errors === 0,
     stringCount: entries.length,
     newStrings: created,
-    skippedStrings: skipped,
+    retranslatedStrings: retranslated,
+    unchangedStrings: unchanged,
     errors,
     errorMessages: errorMessages.length > 0 ? errorMessages : undefined,
-    importError: importError ?? undefined,
     namespace: namespaceName,
   });
 }
