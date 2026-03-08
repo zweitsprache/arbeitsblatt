@@ -55,8 +55,18 @@ export function ProjectsDashboard() {
         authFetch("/api/admin/projects"),
         authFetch("/api/admin/clients"),
       ]);
-      if (projRes.ok) setProjects(await projRes.json());
-      if (clientRes.ok) setClients(await clientRes.json());
+      if (projRes.ok) {
+        setProjects(await projRes.json());
+      } else {
+        console.error("Failed to fetch projects:", projRes.status, await projRes.text());
+      }
+      if (clientRes.ok) {
+        setClients(await clientRes.json());
+      } else {
+        console.error("Failed to fetch clients:", clientRes.status, await clientRes.text());
+      }
+    } catch (err) {
+      console.error("fetchData error:", err);
     } finally {
       setLoading(false);
     }

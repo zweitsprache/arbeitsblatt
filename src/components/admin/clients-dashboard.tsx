@@ -43,7 +43,11 @@ export function ClientsDashboard() {
       if (res.ok) {
         const data = await res.json();
         setClients(data);
+      } else {
+        console.error("Failed to fetch clients:", res.status, await res.text());
       }
+    } catch (err) {
+      console.error("fetchClients error:", err);
     } finally {
       setLoading(false);
     }

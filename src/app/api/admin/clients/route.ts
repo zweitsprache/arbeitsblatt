@@ -9,14 +9,19 @@ export async function GET() {
   const result = await requireAdmin();
   if (result instanceof NextResponse) return result;
 
-  const clients = await prisma.client.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: {
-      _count: { select: { projects: true } },
-    },
-  });
+  try {
+    const clients = await prisma.client.findMany({
+      orderBy: { updatedAt: "desc" },
+      include: {
+        _count: { select: { projects: true } },
+      },
+    });
 
-  return NextResponse.json(clients);
+    return NextResponse.json(clients);
+  } catch (err) {
+    console.error("GET /api/admin/clients error:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
 
 // POST /api/admin/clients — create a new client

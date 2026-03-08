@@ -6,7 +6,6 @@ import {
   CourseModule,
   CourseCoverSettings,
   CourseSettings,
-  CourseTranslation,
 } from "@/types/course";
 
 export async function GET(
@@ -45,17 +44,18 @@ export async function GET(
   const strings = extractTranslatableStrings(doc);
   const translations = (courseAny.translations ?? {}) as Record<
     string,
-    CourseTranslation
+    Record<string, string>
   >;
   const translatedAt = courseAny.translatedAt
     ? (courseAny.translatedAt as Date).toISOString()
     : null;
 
+  const langKeys = Object.keys(translations).filter((k) => !k.startsWith("_"));
+
   return NextResponse.json({
-    hasTranslations: Object.keys(translations).length > 0,
-    languages: Object.keys(translations),
+    hasTranslations: langKeys.length > 0,
+    languages: langKeys,
     translatedAt,
     stringCount: Object.keys(strings).length,
-    namespace: courseAny.i18nexusNamespace ?? null,
   });
 }

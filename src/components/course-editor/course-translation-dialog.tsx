@@ -19,10 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Languages,
-  Upload,
-  Download,
   Loader2,
-  ExternalLink,
   Check,
   AlertCircle,
 } from "lucide-react";
@@ -34,7 +31,6 @@ interface TranslationStatus {
   languages: string[];
   translatedAt: string | null;
   stringCount: number;
-  namespace: string | null;
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -48,10 +44,8 @@ export function CourseTranslationDialog() {
   const { state, save } = useCourse();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<TranslationStatus | null>(null);
-  const [isPushing, setIsPushing] = useState(false);
-  const [isPulling, setIsPulling] = useState(false);
-  const [pushResult, setPushResult] = useState<string | null>(null);
-  const [pullResult, setPullResult] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translateResult, setTranslateResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -71,78 +65,42 @@ export function CourseTranslationDialog() {
   useEffect(() => {
     if (open) {
       fetchStatus();
-      setPushResult(null);
-      setPullResult(null);
+      setTranslateResult(null);
       setError(null);
     }
   }, [open, fetchStatus]);
 
-  const handlePush = async () => {
+  const handleTranslate = async () => {
     if (!state.courseId) return;
-    setIsPushing(true);
+    setIsTranslating(true);
     setError(null);
-    setPushResult(null);
+    setTranslateResult(null);
     try {
-      // Always save current editor state before pushing so the API
-      // sees the latest blocks (the push route reads from the DB).
+      // Always save current editor state before translating
       if (state.isDirty) {
         await save();
       }
 
       const res = await authFetch(
-        `/api/courses/${state.courseId}/translations/push`,
+        `/api/courses/${state.courseId}/translations/translate`,
         { method: "POST" }
       );
       const data = await res.json();
       if (res.ok) {
-        let msg = t("pushSuccess", {
-          count: data.stringCount,
-          newCount: data.newStrings,
-          retranslatedCount: data.retranslatedStrings ?? 0,
-        });
-        if (data.errors > 0) {
-          msg += ` (${data.errors} errors)`;
-        }
-        setPushResult(msg);
-
-        if (data.errors > 0 && data.errorMessages?.length) {
-          setError(data.errorMessages.join("\n"));
-        }
-
-        await fetchStatus();
-      } else {
-        setError(data.error || "Push failed");
-      }
-    } catch {
-      setError("Push failed — network error");
-    } finally {
-      setIsPushing(false);
-    }
-  };
-
-  const handlePull = async () => {
-    if (!state.courseId) return;
-    setIsPulling(true);
-    setError(null);
-    setPullResult(null);
-    try {
-      const res = await authFetch(
-        `/api/courses/${state.courseId}/translations/pull`,
-        { method: "POST" }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setPullResult(
-          t("pullSuccess", { languages: data.languages.join(", ") })
+        setTranslateResult(
+          t("translateSuccess", {
+            count: data.stringCount,
+            languages: data.languages.join(", "),
+          })
         );
         await fetchStatus();
       } else {
-        setError(data.error || "Pull failed");
+        setError(data.error || t("translateFailed"));
       }
     } catch {
-      setError("Pull failed — network error");
+      setError(t("translateFailed"));
     } finally {
-      setIsPulling(false);
+      setIsTranslating(false);
     }
   };
 
@@ -220,62 +178,27 @@ export function CourseTranslationDialog() {
             </div>
           )}
 
-          {/* Success messages */}
-          {pushResult && (
+          {/* Success message */}
+          {translateResult && (
             <div className="flex items-center gap-2 rounded-sm border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4 shrink-0" />
-              {pushResult}
-            </div>
-          )}
-          {pullResult && (
-            <div className="flex items-center gap-2 rounded-sm border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-              <Check className="h-4 w-4 shrink-0" />
-              {pullResult}
+              {translateResult}
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={handlePush}
-              disabled={isPushing || isPulling}
-              className="gap-2"
-            >
-              {isPushing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              {isPushing ? t("pushInProgress") : t("pushToI18nexus")}
-            </Button>
-
-            <Button
-              onClick={handlePull}
-              disabled={isPulling || isPushing || !status?.namespace}
-              variant="outline"
-              className="gap-2"
-            >
-              {isPulling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {isPulling ? t("pullInProgress") : t("pullTranslations")}
-            </Button>
-          </div>
-
-          {/* Link to i18nexus dashboard */}
-          {status?.namespace && (
-            <a
-              href="https://app.i18nexus.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ExternalLink className="h-3 w-3" />
-              {t("openInI18nexus")}
-            </a>
-          )}
+          {/* Action */}
+          <Button
+            onClick={handleTranslate}
+            disabled={isTranslating}
+            className="w-full gap-2"
+          >
+            {isTranslating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Languages className="h-4 w-4" />
+            )}
+            {isTranslating ? t("translateInProgress") : t("translateCourse")}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

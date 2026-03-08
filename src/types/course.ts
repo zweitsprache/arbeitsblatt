@@ -73,7 +73,7 @@ export interface CourseDocument {
   folderId: string | null;
   userId: string | null;
   translations?: Record<string, Record<string, string>>;
-  i18nexusNamespace?: string | null;
+  i18nexusNamespace?: string | null; // legacy — kept for DB compat
   translatedAt?: string | null;
 }
 

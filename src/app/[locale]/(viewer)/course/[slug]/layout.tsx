@@ -74,7 +74,7 @@ export default async function CourseLayout({
     ...(course.coverSettings as unknown as Partial<CourseCoverSettings>),
   };
 
-  // Load translation strings (if any were pulled from i18nexus)
+  // Load translation strings (if any exist)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawTranslations = (course as any).translations as unknown;
   const translations: Record<string, Record<string, string>> | undefined =

@@ -107,7 +107,9 @@ function extractSingleBlockStrings(
     case "numbered-label":
     case "linked-blocks":
     case "word-search":
-    case "text-snippet":     // not translated per spec
+    case "text-snippet":
+      addStr(strings, `${p}.content`, (block as import("@/types/worksheet").TextSnippetBlock).content);
+      break;
     case "job-application":  // form blocks not translated
       break;
 
@@ -372,6 +374,72 @@ function extractSingleBlockStrings(
   }
 }
 
+// ─── Extract translatable strings for a specific scope ───────
+
+export type TranslationScope = "cover" | "module" | "topic" | "lesson";
+
+/**
+ * Extract translatable strings for a single structural unit.
+ * Unlike extractTranslatableStrings(), this only returns keys
+ * belonging to the specified scope — no children are included.
+ */
+export function extractTranslatableStringsForScope(
+  course: CourseDocument,
+  scope: TranslationScope,
+  scopeId?: string
+): Record<string, string> {
+  const strings: Record<string, string> = {};
+
+  switch (scope) {
+    case "cover":
+      addStr(strings, "cover.title", course.coverSettings.title);
+      addStr(strings, "cover.subtitle", course.coverSettings.subtitle);
+      addStr(strings, "cover.author", course.coverSettings.author);
+      addStr(strings, "settings.description", course.settings.description);
+      break;
+
+    case "module": {
+      const mod = course.structure.find((m) => m.id === scopeId);
+      if (mod) {
+        addStr(strings, `module.${mod.id}.title`, mod.title);
+        addStr(strings, `module.${mod.id}.shortTitle`, mod.shortTitle);
+        extractBlockStrings(mod.blocks ?? [], strings);
+      }
+      break;
+    }
+
+    case "topic": {
+      for (const mod of course.structure) {
+        const topic = mod.topics.find((t) => t.id === scopeId);
+        if (topic) {
+          addStr(strings, `topic.${topic.id}.title`, topic.title);
+          addStr(strings, `topic.${topic.id}.shortTitle`, topic.shortTitle);
+          extractBlockStrings(topic.blocks ?? [], strings);
+          break;
+        }
+      }
+      break;
+    }
+
+    case "lesson": {
+      outer: for (const mod of course.structure) {
+        for (const topic of mod.topics) {
+          const lesson = topic.lessons.find((l) => l.id === scopeId);
+          if (lesson) {
+            addStr(strings, `lesson.${lesson.id}.title`, lesson.title);
+            addStr(strings, `lesson.${lesson.id}.shortTitle`, lesson.shortTitle);
+            extractBlockStrings(lesson.blocks ?? [], strings);
+            break outer;
+          }
+        }
+      }
+      break;
+    }
+  }
+
+  return strings;
+}
+
 // ─── Determine AI instructions per key ───────────────────────
 
 /**
@@ -627,6 +695,11 @@ function applySingleBlockTranslations(
         apply(`${p}.dos.${item.id}.text`, (v) => (item.text = v));
       for (const item of block.donts)
         apply(`${p}.donts.${item.id}.text`, (v) => (item.text = v));
+      break;
+    case "text-snippet":
+      apply(`${p}.content`, (v) => {
+        (block as import("@/types/worksheet").TextSnippetBlock).translatedContent = v;
+      });
       break;
     case "text-comparison":
       apply(`${p}.leftContent`, (v) => (block.leftContent = v));

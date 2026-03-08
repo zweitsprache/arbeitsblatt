@@ -3,11 +3,11 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -21,10 +21,12 @@ import {
   FileText,
   Settings,
   ImagePlus,
+  Languages,
+  Loader2,
   X,
 } from "lucide-react";
 import { useCourse } from "@/store/course-store";
-import { useState } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   CourseModule,
@@ -38,6 +40,46 @@ import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useUpload } from "@/lib/use-upload";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
+import { authFetch } from "@/lib/auth-fetch";
+
+// ─── Translation Status Context ──────────────────────────────
+type UnitStatus = "translated" | "outdated" | "none";
+
+interface UnitStatusMap {
+  cover: UnitStatus;
+  modules: Record<string, UnitStatus>;
+  topics: Record<string, UnitStatus>;
+  lessons: Record<string, UnitStatus>;
+}
+
+interface TranslationStatusCtx {
+  status: UnitStatusMap | null;
+  translatingId: string | null;
+  translateUnit: (scope: string, scopeId?: string) => Promise<void>;
+}
+
+const TranslationStatusContext = createContext<TranslationStatusCtx>({
+  status: null,
+  translatingId: null,
+  translateUnit: async () => {},
+});
+
+function useTranslationStatus() {
+  return useContext(TranslationStatusContext);
+}
+
+function TranslationDot({ unitStatus }: { unitStatus?: UnitStatus }) {
+  if (!unitStatus || unitStatus === "none") return null;
+  return (
+    <span
+      className={cn(
+        "size-2 rounded-full shrink-0",
+        unitStatus === "translated" ? "bg-green-500" : "bg-orange-500"
+      )}
+      title={unitStatus === "translated" ? "Translated" : "Needs update"}
+    />
+  );
+}
 
 // ─── Lesson Item ─────────────────────────────────────────────
 function LessonItem({
@@ -119,6 +161,8 @@ function LessonItem({
         <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
       )}
 
+      <TranslationDotForUnit type="lessons" id={lesson.id} />
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -147,6 +191,9 @@ function LessonItem({
           >
             {t("shortTitle")}
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <TranslateMenuItem scope="lesson" scopeId={lesson.id} />
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive"
             onClick={(e) => {
@@ -301,6 +348,8 @@ function TopicItem({
           <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
         )}
 
+        <TranslationDotForUnit type="topics" id={topic.id} />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -347,6 +396,9 @@ function TopicItem({
               <ImagePlus className="h-3.5 w-3.5 mr-2" />
               {tc("image")}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <TranslateMenuItem scope="topic" scopeId={topic.id} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"
               onClick={(e) => {
@@ -568,6 +620,8 @@ function ModuleItem({
           <span className="text-[10px] text-muted-foreground/70 shrink-0">●</span>
         )}
 
+        <TranslationDotForUnit type="modules" id={mod.id} />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -614,6 +668,9 @@ function ModuleItem({
               <ImagePlus className="h-3.5 w-3.5 mr-2" />
               {tc("image")}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <TranslateMenuItem scope="module" scopeId={mod.id} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"
               onClick={(e) => {
@@ -706,13 +763,110 @@ function ModuleItem({
   );
 }
 
+// ─── Shared Translation Helpers ──────────────────────────────
+
+function TranslationDotForUnit({ type, id }: { type: "modules" | "topics" | "lessons"; id: string }) {
+  const { status, translatingId } = useTranslationStatus();
+  if (translatingId === id) {
+    return <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />;
+  }
+  const unitStatus = status?.[type]?.[id];
+  return <TranslationDot unitStatus={unitStatus} />;
+}
+
+function TranslateMenuItem({ scope, scopeId }: { scope: string; scopeId: string }) {
+  const t = useTranslations("course");
+  const { translatingId, translateUnit } = useTranslationStatus();
+  const isTranslating = translatingId === scopeId;
+
+  return (
+    <DropdownMenuItem
+      disabled={isTranslating}
+      onClick={(e) => {
+        e.stopPropagation();
+        translateUnit(scope, scopeId);
+      }}
+    >
+      {isTranslating ? (
+        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+      ) : (
+        <Languages className="h-3.5 w-3.5 mr-2" />
+      )}
+      {isTranslating ? t("translating") : t("translate")}
+    </DropdownMenuItem>
+  );
+}
+
 // ─── Tree Sidebar ────────────────────────────────────────────
 export function CourseTreeSidebar() {
   const t = useTranslations("course");
-  const { state, dispatch, addModule } = useCourse();
+  const { state, dispatch, addModule, save } = useCourse();
+
+  // ── Translation status management ──────────────────────────
+  const [unitStatus, setUnitStatus] = useState<UnitStatusMap | null>(null);
+  const [translatingId, setTranslatingId] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
+
+  const fetchUnitStatus = useCallback(async () => {
+    if (!state.courseId) return;
+    try {
+      const res = await authFetch(`/api/courses/${state.courseId}/translations/unit-status`);
+      if (res.ok) setUnitStatus(await res.json());
+    } catch {
+      // Silently ignore
+    }
+  }, [state.courseId]);
+
+  useEffect(() => {
+    if (!fetchedRef.current && state.courseId) {
+      fetchedRef.current = true;
+      fetchUnitStatus();
+    }
+  }, [state.courseId, fetchUnitStatus]);
+
+  // Refresh status after every save completes
+  const wasSavingRef = useRef(false);
+  useEffect(() => {
+    if (wasSavingRef.current && !state.isSaving) {
+      fetchUnitStatus();
+    }
+    wasSavingRef.current = state.isSaving;
+  }, [state.isSaving, fetchUnitStatus]);
+
+  const translateUnit = useCallback(async (scope: string, scopeId?: string) => {
+    if (!state.courseId) return;
+    setTranslatingId(scopeId ?? "cover");
+    try {
+      if (state.isDirty) await save();
+      const res = await authFetch(
+        `/api/courses/${state.courseId}/translations/translate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope, scopeId }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        console.error("Translation failed:", data?.error);
+      }
+      await fetchUnitStatus();
+    } catch (err) {
+      console.error("Translation error:", err);
+    } finally {
+      setTranslatingId(null);
+    }
+  }, [state.courseId, state.isDirty, save, fetchUnitStatus]);
+
+  const translationCtx: TranslationStatusCtx = {
+    status: unitStatus,
+    translatingId,
+    translateUnit,
+  };
 
   return (
-    <div className="w-72 bg-background border-r flex flex-col shrink-0">
+    <TranslationStatusContext.Provider value={translationCtx}>
+    <div className="w-72 bg-background border-r flex flex-col shrink-0 min-h-0">
       {/* Header */}
       <div className="p-3 border-b">
         <div className="flex items-center justify-between mb-2">
@@ -747,7 +901,7 @@ export function CourseTreeSidebar() {
       </div>
 
       {/* Modules tree */}
-      <ScrollArea className="flex-1 px-3 py-2 [&>[data-slot=scroll-area-viewport]>div]:!block">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
         {state.structure.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">{t("noModules")}</p>
@@ -784,7 +938,8 @@ export function CourseTreeSidebar() {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
+    </TranslationStatusContext.Provider>
   );
 }

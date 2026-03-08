@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useMemo } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { CourseModule, CourseCoverSettings, CourseSettings, SidebarTheme } from "@/types/course";
 import { WorksheetBlock, WorksheetSettings, Brand } from "@/types/worksheet";
 import { applyTranslations } from "@/lib/course-translation";
@@ -48,13 +49,40 @@ export function CourseProvider({
   value: CourseContextInitial;
   children: React.ReactNode;
 }) {
-  const [contentLocale, setContentLocale] = useState("de");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [contentLocale, setContentLocaleRaw] = useState(() => {
+    const fromUrl = searchParams.get("lang");
+    return fromUrl ?? "de";
+  });
+
+  const setContentLocale = useCallback((locale: string) => {
+    setContentLocaleRaw(locale);
+  }, []);
+
+  // Sync contentLocale → URL search params
+  useEffect(() => {
+    const current = searchParams.get("lang");
+    const target = contentLocale === "de" ? null : contentLocale;
+    if (target !== current) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (target) {
+        params.set("lang", target);
+      } else {
+        params.delete("lang");
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }
+  }, [contentLocale, pathname, router, searchParams]);
 
   const availableLocales = useMemo(() => {
     const locales = ["de"];
     if (value.translations) {
       for (const lang of Object.keys(value.translations)) {
-        if (!locales.includes(lang)) locales.push(lang);
+        if (!locales.includes(lang) && !lang.startsWith("_")) locales.push(lang);
       }
     }
     return locales;

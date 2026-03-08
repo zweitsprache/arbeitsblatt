@@ -529,6 +529,8 @@ export interface WritingRowsBlock extends BlockBase {
 export interface TextSnippetBlock extends BlockBase {
   type: "text-snippet";
   content: string; // HTML string for WYSIWYG
+  /** Populated by applyTranslations – holds the translated HTML while content stays DE. */
+  translatedContent?: string;
 }
 
 // ─── Email Skeleton block ─────────────────────────────────────

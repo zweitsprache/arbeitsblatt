@@ -92,7 +92,7 @@ if (errors > 0) {
     `❌ Validation FAILED: ${errors} missing key(s), ${warnings} warning(s)`
   );
   console.error(
-    "   Fix: Add the missing keys in i18nexus, then run: npm run i18n:pull"
+    "   Fix: Add the missing keys to both src/messages/de.json and src/messages/en.json"
   );
   process.exit(1);
 } else {

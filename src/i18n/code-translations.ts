@@ -31,7 +31,7 @@ function getBlockTranslations(locale: string): TranslationMap {
 
 /**
  * Merge BLOCK_LIBRARY fallback labels into the messages loaded from JSON.
- * JSON values (from i18nexus) always take precedence.
+ * JSON values always take precedence.
  */
 export function mergeCodeTranslations(
   messages: Record<string, unknown>,
