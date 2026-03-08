@@ -54,7 +54,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -148,22 +148,22 @@ function renderDeMarkers(text: string): React.ReactNode {
 }
 
 // ─── Task pill + container ───────────────────────────────────
-function TaskContainer({ showPill, children }: { showPill: boolean; children: React.ReactNode }) {
+function TaskContainer({ showPill, taskNumber, lessonLabel, children }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode }) {
   return (
     <div>
       {showPill && (
         <div className="flex">
           <div
             className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
-            style={{ backgroundColor: "#EFE9DA" }}
+            style={{ backgroundColor: "#F9F6ED" }}
           >
-            AUFGABE
+            AUFGABE{taskNumber != null ? ` ${lessonLabel ? `${lessonLabel}.` : ""}${String(taskNumber).padStart(2, "0")}` : ""}
           </div>
         </div>
       )}
       <div
-        className={`p-4 ${showPill ? "rounded-b-lg rounded-tr-lg" : "rounded-lg"}`}
-        style={{ backgroundColor: "#F9F6ED" }}
+        className={`p-4 border-2 ${showPill ? "rounded-b-lg rounded-tr-lg" : "rounded-lg"}`}
+        style={{ backgroundColor: "#FCFBF6", borderColor: "#F9F6ED" }}
       >
         {children}
       </div>
@@ -1739,6 +1739,8 @@ function TrueFalseMatrixView({
   interactive,
   showSolutions = false,
   showPill = true,
+  taskNumber,
+  lessonLabel,
 }: {
   block: TrueFalseMatrixBlock;
   interactive: boolean;
@@ -1747,6 +1749,8 @@ function TrueFalseMatrixView({
   showResults: boolean;
   showSolutions?: boolean;
   showPill?: boolean;
+  taskNumber?: number;
+  lessonLabel?: string;
 }) {
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
@@ -1757,7 +1761,7 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <TaskContainer showPill={showPill}>
+    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
       <div className="space-y-2 text-cv-sm">
       <table className="w-full border-collapse">
         <thead>
@@ -2025,6 +2029,8 @@ function OrderItemsView({
   showResults,
   showSolutions = false,
   showPill = true,
+  taskNumber,
+  lessonLabel,
 }: {
   block: OrderItemsBlock;
   mode: ViewMode;
@@ -2034,6 +2040,8 @@ function OrderItemsView({
   showResults: boolean;
   showSolutions?: boolean;
   showPill?: boolean;
+  taskNumber?: number;
+  lessonLabel?: string;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
@@ -2090,7 +2098,7 @@ function OrderItemsView({
   };
 
   return (
-    <TaskContainer showPill={showPill}>
+    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
     <div className="space-y-2 text-cv-sm">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
@@ -2703,6 +2711,8 @@ function UnscrambleWordsView({
   showResults,
   showSolutions = false,
   showPill = true,
+  taskNumber,
+  lessonLabel,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -2712,6 +2722,8 @@ function UnscrambleWordsView({
   showResults: boolean;
   showSolutions?: boolean;
   showPill?: boolean;
+  taskNumber?: number;
+  lessonLabel?: string;
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
@@ -2749,10 +2761,10 @@ function UnscrambleWordsView({
     : block.words;
 
   return (
-    <TaskContainer showPill={showPill}>
+    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
       <div className="space-y-2 text-cv-sm">
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        <p className="font-medium flex items-center gap-1.5"><SquareMousePointer className="h-4 w-4 text-muted-foreground shrink-0" />{block.instruction}</p>
       )}
       <div>
         {orderedWords.map((item, i) => {
@@ -4113,6 +4125,7 @@ export function ViewerBlockRenderer({
   primaryColor = "#1a1a1a",
   allBlocks,
   brand = "edoomio",
+  lessonLabel,
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
@@ -4123,9 +4136,27 @@ export function ViewerBlockRenderer({
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  lessonLabel?: string;
 }) {
   const interactive = mode === "online";
   const noop = () => {};
+
+  // Compute sequential task number for blocks with the AUFGABE pill
+  const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
+  const taskNumber = useMemo(() => {
+    if (!allBlocks || !TASK_BLOCK_TYPES.has(block.type)) return undefined;
+    const showsPill = "showPill" in block ? (block as { showPill?: boolean }).showPill !== false : true;
+    if (!showsPill) return undefined;
+    let count = 0;
+    for (const b of allBlocks) {
+      if (!TASK_BLOCK_TYPES.has(b.type)) continue;
+      const bShowsPill = "showPill" in b ? (b as { showPill?: boolean }).showPill !== false : true;
+      if (!bShowsPill) continue;
+      count++;
+      if (b.id === block.id) return count;
+    }
+    return undefined;
+  }, [allBlocks, block]);
 
   switch (block.type) {
     case "heading":
@@ -4234,6 +4265,8 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           showPill={block.showPill !== false}
+          taskNumber={taskNumber}
+          lessonLabel={lessonLabel}
         />
       );
     case "article-training":
@@ -4258,6 +4291,8 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           showPill={block.showPill !== false}
+          taskNumber={taskNumber}
+          lessonLabel={lessonLabel}
         />
       );
     case "inline-choices":
@@ -4304,6 +4339,8 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           showPill={block.showPill !== false}
+          taskNumber={taskNumber}
+          lessonLabel={lessonLabel}
         />
       );
     case "fix-sentences":

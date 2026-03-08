@@ -4,21 +4,33 @@ import { useState, useEffect } from "react";
 
 const PASTEL_COLORS_URL = "/colors/pastel-colors.md";
 
-let cachedColors: string[] | null = null;
+export interface PastelColorSet {
+  original: string[];
+  lighter: string[];
+}
 
-function parseColorsFromMarkdown(md: string): string[] {
-  const colors: string[] = [];
+let cachedColors: PastelColorSet | null = null;
+
+function parseColorsFromMarkdown(md: string): PastelColorSet {
+  const original: string[] = [];
+  const lighter: string[] = [];
   for (const line of md.split("\n")) {
-    const match = line.match(/\|\s*\w+\s*\|\s*`(#[0-9A-Fa-f]{6})`\s*\|/);
+    const match = line.match(/\|\s*\w+\s*\|\s*`(#[0-9A-Fa-f]{6})`\s*\|\s*`(#[0-9A-Fa-f]{6})`\s*\|/);
     if (match) {
-      colors.push(match[1]);
+      original.push(match[1]);
+      lighter.push(match[2]);
     }
   }
-  return colors;
+  return { original, lighter };
 }
 
 export function usePastelColors(): string[] {
-  const [colors, setColors] = useState<string[]>(cachedColors ?? []);
+  const set = usePastelColorSet();
+  return set.original;
+}
+
+export function usePastelColorSet(): PastelColorSet {
+  const [colors, setColors] = useState<PastelColorSet>(cachedColors ?? { original: [], lighter: [] });
 
   useEffect(() => {
     if (cachedColors) return;

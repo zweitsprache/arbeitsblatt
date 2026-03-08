@@ -11,6 +11,7 @@ import {
   CourseModule,
   CourseLesson,
   moduleNumber as getModuleNumber,
+  lessonNumber,
 } from "@/types/course";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,9 @@ interface FlatLesson {
   moduleIndex: number;
   topicId: string;
   topicTitle: string;
+  topicIndex: number;
   lesson: CourseLesson;
+  lessonIndex: number;
   globalIndex: number;
 }
 
@@ -68,19 +71,21 @@ interface FlatLesson {
 function flattenLessons(structure: CourseModule[]): FlatLesson[] {
   const flat: FlatLesson[] = [];
   structure.forEach((mod, mi) => {
-    for (const topic of mod.topics) {
-      for (const lesson of topic.lessons) {
+    mod.topics.forEach((topic, ti) => {
+      topic.lessons.forEach((lesson, li) => {
         flat.push({
           moduleId: mod.id,
           moduleTitle: mod.title,
           moduleIndex: mi,
           topicId: topic.id,
           topicTitle: topic.title,
+          topicIndex: ti,
           lesson,
+          lessonIndex: li,
           globalIndex: flat.length,
         });
-      }
-    }
+      });
+    });
   });
   return flat;
 }
@@ -922,7 +927,7 @@ function LessonContent({
         </div>
         <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-4 text-cv-base">
           {blocks.map((block) => (
-            <ViewerBlockRenderer key={block.id} block={block} mode="online" brand={brand} />
+            <ViewerBlockRenderer key={block.id} block={block} mode="online" brand={brand} allBlocks={blocks} lessonLabel={lessonNumber(currentFlat.moduleIndex, currentFlat.topicIndex, currentFlat.lessonIndex)} />
           ))}
           {blocks.length === 0 && (
             <p className="text-muted-foreground text-center py-8">

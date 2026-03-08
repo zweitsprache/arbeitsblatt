@@ -213,9 +213,6 @@ function extractSingleBlockStrings(
       addStr(strings, `${p}.statementColumnHeader`, block.statementColumnHeader);
       addStr(strings, `${p}.trueLabel`, block.trueLabel);
       addStr(strings, `${p}.falseLabel`, block.falseLabel);
-      for (const stmt of block.statements) {
-        addStr(strings, `${p}.statements.${stmt.id}.text`, stmt.text);
-      }
       break;
 
     // ── Order items
@@ -247,9 +244,6 @@ function extractSingleBlockStrings(
     // ── Unscramble words
     case "unscramble-words":
       addStr(strings, `${p}.instruction`, block.instruction);
-      for (const word of block.words) {
-        addStr(strings, `${p}.words.${word.id}.word`, word.word);
-      }
       break;
 
     // ── Fix sentences
@@ -615,8 +609,6 @@ function applySingleBlockTranslations(
       apply(`${p}.statementColumnHeader`, (v) => (block.statementColumnHeader = v));
       apply(`${p}.trueLabel`, (v) => (block.trueLabel = v));
       apply(`${p}.falseLabel`, (v) => (block.falseLabel = v));
-      for (const stmt of block.statements)
-        apply(`${p}.statements.${stmt.id}.text`, (v) => (stmt.text = v));
       break;
     case "order-items":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
@@ -636,8 +628,6 @@ function applySingleBlockTranslations(
       break;
     case "unscramble-words":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const word of block.words)
-        apply(`${p}.words.${word.id}.word`, (v) => (word.word = v));
       break;
     case "fix-sentences":
       apply(`${p}.instruction`, (v) => (block.instruction = v));

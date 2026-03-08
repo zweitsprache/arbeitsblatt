@@ -136,7 +136,7 @@ export default function ModulePage() {
                   data-block-id={block.id}
                   className="group/block relative"
                 >
-                  <ViewerBlockRenderer block={block} mode="online" brand={brand} />
+                  <ViewerBlockRenderer block={block} mode="online" brand={brand} allBlocks={resolvedBlocks} />
                   <BlockScreenshotButton
                     courseId={courseId}
                     moduleId={moduleId}
