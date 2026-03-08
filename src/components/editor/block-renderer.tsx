@@ -141,6 +141,15 @@ function useLocaleAwareEdit() {
           }
           if (rawBlock) break;
         }
+        if (b.type === "accordion") {
+          for (const item of b.items) {
+            for (const c of item.children) {
+              if (c.id === blockId) { rawBlock = c; break; }
+            }
+            if (rawBlock) break;
+          }
+          if (rawBlock) break;
+        }
       }
       const baseValue = rawBlock ? String(getByPath(rawBlock, fieldPath) ?? "") : "";
       const autoReplaced = replaceEszett(baseValue);
@@ -158,7 +167,7 @@ function useLocaleAwareEdit() {
 
 // ─── Heading ─────────────────────────────────────────────────
 
-// Helper: collect all numbered-label blocks in document order (top-level + inside columns)
+// Helper: collect all numbered-label blocks in document order (top-level + inside columns/accordion)
 function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; startNumber: number }[] {
   const result: { id: string; startNumber: number }[] = [];
   for (const b of blocks) {
@@ -166,6 +175,13 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
     if (b.type === "columns") {
       for (const col of b.children) {
         for (const child of col) {
+          if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
+        }
+      }
+    }
+    if (b.type === "accordion") {
+      for (const item of b.items) {
+        for (const child of item.children) {
           if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
         }
       }
@@ -3958,7 +3974,7 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
 }
 
 // ─── Accordion block ─────────────────────────────────────────
-function AccordionRenderer({ block }: { block: AccordionBlock }) {
+function AccordionRenderer({ block, mode }: { block: AccordionBlock; mode: ViewMode }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const [openIndex, setOpenIndex] = React.useState<number | null>(0);
@@ -3974,21 +3990,10 @@ function AccordionRenderer({ block }: { block: AccordionBlock }) {
     });
   };
 
-  const updateContent = (index: number, content: string) => {
-    localeUpdate(block.id, `items.${index}.content`, content, () => {
-      const newItems = [...block.items];
-      newItems[index] = { ...newItems[index], content };
-      dispatch({
-        type: "UPDATE_BLOCK",
-        payload: { id: block.id, updates: { items: newItems } },
-      });
-    });
-  };
-
   const addItem = () => {
     const newItems = [
       ...block.items,
-      { id: crypto.randomUUID(), title: "", content: "" },
+      { id: crypto.randomUUID(), title: "", children: [] as WorksheetBlock[] },
     ];
     dispatch({
       type: "UPDATE_BLOCK",
@@ -4041,13 +4046,22 @@ function AccordionRenderer({ block }: { block: AccordionBlock }) {
             )}
           </button>
           {openIndex === i && (
-            <div className="px-5 py-4 tiptap-compact">
-              <RichTextEditor
-                content={item.content}
-                onChange={(html) => updateContent(i, html)}
-                placeholder="Content…"
-                editorClassName="max-w-none focus:outline-none px-0 py-0"
-              />
+            <div className="px-3 py-3">
+              <DroppableColumn
+                blockId={block.id}
+                colIndex={i}
+                isEmpty={(item.children ?? []).length === 0}
+              >
+                {(item.children ?? []).map((childBlock) => (
+                  <ColumnChildBlock
+                    key={childBlock.id}
+                    block={childBlock}
+                    mode={mode}
+                    parentBlockId={block.id}
+                    colIndex={i}
+                  />
+                ))}
+              </DroppableColumn>
             </div>
           )}
         </div>
@@ -4430,7 +4444,7 @@ export function BlockRenderer({
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
     case "accordion":
-      return <AccordionRenderer block={block as AccordionBlock} />;
+      return <AccordionRenderer block={block as AccordionBlock} mode={mode} />;
     case "ai-prompt":
       return <AiPromptRenderer block={block as AiPromptBlock} />;
     case "ai-tool":

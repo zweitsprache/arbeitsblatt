@@ -2617,6 +2617,19 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
         </div>
       </div>
       <Separator />
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showPill !== false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showPill: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+      </div>
+      <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("statements")}</Label>
         <p className="text-xs text-muted-foreground">
@@ -2944,6 +2957,18 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
             })
           }
         />
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showPill !== false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showPill: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
@@ -3781,6 +3806,18 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
           }
         />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("lowercaseAll")}</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showPill !== false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showPill: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">

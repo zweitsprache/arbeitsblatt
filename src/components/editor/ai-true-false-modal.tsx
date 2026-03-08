@@ -90,6 +90,11 @@ export function AiTrueFalseModal({
             scan(col);
           }
         }
+        if (b.type === "accordion") {
+          for (const item of b.items) {
+            scan(item.children);
+          }
+        }
       }
     };
     scan(state.blocks);
@@ -107,6 +112,12 @@ export function AiTrueFalseModal({
               if (b.type === "columns") {
                 for (const col of b.children) {
                   const f = findBlock(col);
+                  if (f) return f;
+                }
+              }
+              if (b.type === "accordion") {
+                for (const item of b.items) {
+                  const f = findBlock(item.children);
                   if (f) return f;
                 }
               }

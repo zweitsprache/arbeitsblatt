@@ -326,7 +326,7 @@
   },
   "blocks": {
     "accordion": "Akkordeon",
-    "accordionDesc": "Aufklappbare Abschnitte mit formatiertem Text",
+    "accordionDesc": "Aufklappbare Abschnitte mit verschachtelten Blöcken",
     "aiPrompt": "KI-Prompt",
     "aiPromptDesc": "Texteingabe mit KI-Verarbeitung",
     "aiTool": "KI-Tool",
@@ -1163,6 +1163,7 @@
     "showWordList": "Wortliste anzeigen",
     "showWritingLine": "Schreiblinie anzeigen",
     "showNumbers": "Nummern anzeigen",
+    "showTaskLabel": "Aufgaben-Label anzeigen",
     "showWritingLines": "Schreiblinien anzeigen",
     "shuffleItems": "Reihenfolge mischen",
     "solid": "Durchgezogen",

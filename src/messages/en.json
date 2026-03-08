@@ -326,7 +326,7 @@
   },
   "blocks": {
     "accordion": "Accordion",
-    "accordionDesc": "Collapsible sections with rich text content",
+    "accordionDesc": "Collapsible sections with nested blocks",
     "aiPrompt": "AI Prompt",
     "aiPromptDesc": "Text input with AI processing",
     "aiTool": "AI Tool",
@@ -1163,6 +1163,7 @@
     "showWordList": "Show word list",
     "showWritingLine": "Show writing line",
     "showNumbers": "Show numbers",
+    "showTaskLabel": "Show task label",
     "showWritingLines": "Show writing lines",
     "shuffleItems": "Shuffle items",
     "solid": "Solid",

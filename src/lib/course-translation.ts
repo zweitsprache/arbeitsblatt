@@ -9,6 +9,7 @@ import {
   WorksheetBlock,
   TextBlock,
   ColumnsBlock,
+  AccordionBlock,
 } from "@/types/worksheet";
 
 // ─── AI instructions for special content ─────────────────────
@@ -358,6 +359,16 @@ function extractSingleBlockStrings(
       }
       break;
     }
+
+    // ── Accordion: extract titles + recurse into children
+    case "accordion": {
+      const ab = block as AccordionBlock;
+      for (const item of ab.items) {
+        addStr(strings, `${p}.items.${item.id}.title`, item.title);
+        extractBlockStrings(item.children, strings);
+      }
+      break;
+    }
   }
 }
 
@@ -633,6 +644,14 @@ function applySingleBlockTranslations(
     case "columns": {
       for (const col of (block as ColumnsBlock).children)
         applyBlockTranslations(col, t);
+      break;
+    }
+    case "accordion": {
+      const ab = block as AccordionBlock;
+      for (const item of ab.items) {
+        apply(`${p}.items.${item.id}.title`, (v) => (item.title = v));
+        applyBlockTranslations(item.children, t);
+      }
       break;
     }
   }

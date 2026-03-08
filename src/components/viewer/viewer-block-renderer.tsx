@@ -147,6 +147,30 @@ function renderDeMarkers(text: string): React.ReactNode {
   });
 }
 
+// ─── Task pill + container ───────────────────────────────────
+function TaskContainer({ showPill, children }: { showPill: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      {showPill && (
+        <div className="flex">
+          <div
+            className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
+            style={{ backgroundColor: "#EFE9DA" }}
+          >
+            AUFGABE
+          </div>
+        </div>
+      )}
+      <div
+        className={`p-4 ${showPill ? "rounded-b-lg rounded-tr-lg" : "rounded-lg"}`}
+        style={{ backgroundColor: "#F9F6ED" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Handwriting helper ──────────────────────────────────────
 /** Check whether a string contains ++…++ handwriting markers */
 function hasHandwriting(text: string): boolean {
@@ -174,7 +198,7 @@ function renderHandwriting(text: string): React.ReactNode {
 
 // ─── Static blocks ──────────────────────────────────────────
 
-// Helper: collect all numbered-label blocks in document order (top-level + inside columns)
+// Helper: collect all numbered-label blocks in document order (top-level + inside columns/accordion)
 function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; startNumber: number }[] {
   const result: { id: string; startNumber: number }[] = [];
   for (const b of blocks) {
@@ -182,6 +206,13 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
     if (b.type === "columns") {
       for (const col of b.children) {
         for (const child of col) {
+          if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
+        }
+      }
+    }
+    if (b.type === "accordion") {
+      for (const item of b.items) {
+        for (const child of item.children) {
           if (child.type === "numbered-label") result.push({ id: child.id, startNumber: child.startNumber });
         }
       }
@@ -1690,6 +1721,7 @@ function TrueFalseMatrixView({
   block,
   interactive,
   showSolutions = false,
+  showPill = true,
 }: {
   block: TrueFalseMatrixBlock;
   interactive: boolean;
@@ -1697,6 +1729,7 @@ function TrueFalseMatrixView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  showPill?: boolean;
 }) {
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
@@ -1707,7 +1740,8 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <div className="space-y-2 text-cv-sm">
+    <TaskContainer showPill={showPill}>
+      <div className="space-y-2 text-cv-sm">
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -1808,6 +1842,7 @@ function TrueFalseMatrixView({
         </tbody>
       </table>
     </div>
+    </TaskContainer>
   );
 }
 
@@ -1966,22 +2001,36 @@ function ColumnsView({
 // ─── Order Items View ────────────────────────────────────────
 function OrderItemsView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
   showResults,
   showSolutions = false,
+  showPill = true,
 }: {
   block: OrderItemsBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  showPill?: boolean;
 }) {
   const t = useTranslations("viewer");
-  // Answer is an array of item IDs in user-chosen order
-  const userOrder = (answer as string[] | undefined) || [];
+  const isPrint = mode === "print";
+  // Local state for when no external answer/onAnswer is provided (e.g. course viewer)
+  const [localOrder, setLocalOrder] = React.useState<string[]>([]);
+  const externalOrder = (answer as string[] | undefined) || [];
+  const userOrder = answer !== undefined ? externalOrder : localOrder;
+  const handleAnswer = (val: unknown) => {
+    if (answer !== undefined) {
+      onAnswer(val);
+    } else {
+      setLocalOrder(val as string[]);
+    }
+  };
 
   // Shuffle items deterministically based on block id for print/initial state
   const shuffledItems = useMemo(() => {
@@ -2000,10 +2049,10 @@ function OrderItemsView({
 
   // Initialize user order from shuffled if empty
   React.useEffect(() => {
-    if (interactive && userOrder.length === 0 && block.items.length > 0) {
-      onAnswer(shuffledItems.map((item) => item.id));
+    if (!isPrint && userOrder.length === 0 && block.items.length > 0) {
+      handleAnswer(shuffledItems.map((item) => item.id));
     }
-  }, [interactive, block.items.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPrint, block.items.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayItems =
     userOrder.length > 0
@@ -2013,86 +2062,62 @@ function OrderItemsView({
       : shuffledItems;
 
   const moveItem = (currentIndex: number, direction: -1 | 1) => {
-    if (showResults) return;
     const newIndex = currentIndex + direction;
     if (newIndex < 0 || newIndex >= displayItems.length) return;
-    const newOrder = [...userOrder];
-    [newOrder[currentIndex], newOrder[newIndex]] = [
-      newOrder[newIndex],
-      newOrder[currentIndex],
+    const order = userOrder.length > 0 ? [...userOrder] : shuffledItems.map((item) => item.id);
+    [order[currentIndex], order[newIndex]] = [
+      order[newIndex],
+      order[currentIndex],
     ];
-    onAnswer(newOrder);
+    handleAnswer(order);
   };
 
   return (
-    <div className="space-y-2">
+    <TaskContainer showPill={showPill}>
+    <div className="space-y-2 text-cv-sm">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
       <div>
         {displayItems.map((item, i) => {
           if (!item) return null;
-          const isCorrectPosition = item.correctPosition === i + 1;
-          let borderClass = "";
-          let bgClass = "";
-          if (showResults) {
-            bgClass = isCorrectPosition ? "bg-green-50" : "bg-red-50";
-          }
+          const isCorrect = item.correctPosition === i + 1;
 
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-3 py-2 border-b last:border-b-0 transition-colors ${borderClass} ${bgClass}`}
+              className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
-              {interactive ? (
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-              ) : showSolutions ? (
-                <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
-                  {item.correctPosition}
-                </span>
-              ) : (
-                <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
-              )}
-              <span className="flex-1">{item.text}</span>
-              {interactive && !showResults && (
-                <div className="flex flex-col gap-0.5">
+              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className={`flex-1 ${isCorrect ? "text-green-700" : ""}`}>{item.text}</span>
+              {!isPrint && (
+                <div className="flex items-center gap-1">
                   <button
-                    className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    className="p-1 hover:bg-muted rounded disabled:opacity-30"
                     onClick={() => moveItem(i, -1)}
                     disabled={i === 0}
                     aria-label={t("moveUp")}
                   >
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
                   <button
-                    className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                    className="p-1 hover:bg-muted rounded disabled:opacity-30"
                     onClick={() => moveItem(i, 1)}
                     disabled={i === displayItems.length - 1}
                     aria-label={t("moveDown")}
                   >
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                   </button>
                 </div>
-              )}
-              {showResults && (
-                <span className={`text-cv-xs font-medium ${isCorrectPosition ? "text-green-600" : "text-red-600"}`}>
-                  {isCorrectPosition ? "✓" : t("correctPosition", { position: item.correctPosition })}
-                </span>
               )}
             </div>
           );
         })}
       </div>
-      {showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {t("resultCount", { correct: displayItems.filter(
-            (item, i) => item && item.correctPosition === i + 1
-          ).length, total: block.items.length })}
-        </p>
-      )}
     </div>
+    </TaskContainer>
   );
 }
 
@@ -2660,6 +2685,7 @@ function UnscrambleWordsView({
   onAnswer,
   showResults,
   showSolutions = false,
+  showPill = true,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -2668,11 +2694,21 @@ function UnscrambleWordsView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  showPill?: boolean;
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
   const isPrint = mode === "print";
-  const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
+  const externalAnswers = (answer as Record<string, string> | undefined) || {};
+  const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
+  const handleAnswer = (val: unknown) => {
+    if (answer !== undefined) {
+      onAnswer(val);
+    } else {
+      setLocalAnswers(val as Record<string, string>);
+    }
+  };
 
   // Compute a seed per word based on block id + word id
   const getSeed = (wordId: string) => {
@@ -2696,7 +2732,8 @@ function UnscrambleWordsView({
     : block.words;
 
   return (
-    <div className="space-y-2">
+    <TaskContainer showPill={showPill}>
+      <div className="space-y-2 text-cv-sm">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
@@ -2709,81 +2746,55 @@ function UnscrambleWordsView({
             getSeed(item.id)
           );
           const userValue = userAnswers[item.id] || "";
+          const hasInput = userValue.trim() !== "";
           const isCorrect =
-            showResults &&
+            hasInput &&
             userValue.trim().toLowerCase() === item.word.toLowerCase();
-          const isWrong = showResults && userValue.trim() !== "" && !isCorrect;
+          const isWrong = hasInput && !isCorrect;
 
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-3 py-2 border-b last:border-b-0 transition-colors ${
-                showResults
-                  ? isCorrect
-                    ? "bg-green-50"
-                    : isWrong
-                      ? "bg-red-50"
-                      : ""
-                  : ""
-              }`}
+              className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
               <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-semibold select-none shrink-0 inline-block text-left tracking-widest" style={{ width: `${maxWordLength * 0.7}em` }}>
+              <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
               <span className="text-muted-foreground">→</span>
-              {interactive ? (
+              {isPrint && showSolutions ? (
+                <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
+              ) : isPrint ? (
+                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
+                  &nbsp;
+                </span>
+              ) : (
                 <div className="flex-1">
                   <input
                     type="text"
                     value={userValue}
-                    disabled={showResults}
                     onChange={(e) =>
-                      onAnswer({ ...userAnswers, [item.id]: e.target.value })
+                      handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
                     className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
-                      showResults
-                        ? isCorrect
-                          ? "border-green-500 text-green-700"
-                          : isWrong
-                            ? "border-red-500 text-red-700"
-                            : "border-muted-foreground/40"
-                        : "border-muted-foreground/40 focus:border-primary"
+                      isCorrect
+                        ? "border-green-500 text-green-700"
+                        : isWrong
+                          ? "border-red-500 text-red-700"
+                          : "border-muted-foreground/40 focus:border-primary"
                     }`}
                     placeholder="..."
                   />
-                  {showResults && isWrong && (
-                    <span className="text-cv-xs text-green-600 mt-0.5 block">
-                      {item.word}
-                    </span>
-                  )}
                 </div>
-              ) : showSolutions ? (
-                <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
-              ) : (
-                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
-                  &nbsp;
-                </span>
               )}
             </div>
           );
         })}
       </div>
-      {showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {t("resultCount", {
-            correct: block.words.filter(
-              (w) =>
-                (userAnswers[w.id] || "").trim().toLowerCase() ===
-                w.word.toLowerCase()
-            ).length,
-            total: block.words.length,
-          })}
-        </p>
-      )}
     </div>
+    </TaskContainer>
   );
 }
 
@@ -3526,8 +3537,29 @@ function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
 }
 
 // ─── Accordion View ────────────────────────────────────────────
-function AccordionView({ block }: { block: AccordionBlock }) {
+function AccordionView({
+  block,
+  mode,
+  answer,
+  onAnswer,
+  showResults,
+  showSolutions = false,
+  primaryColor,
+  allBlocks,
+  brand = "edoomio",
+}: {
+  block: AccordionBlock;
+  mode: ViewMode;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  primaryColor?: string;
+  allBlocks?: WorksheetBlock[];
+  brand?: Brand;
+}) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const answers = (answer as Record<string, unknown> | undefined) || {};
 
   return (
     <div className="space-y-1">
@@ -3549,11 +3581,26 @@ function AccordionView({ block }: { block: AccordionBlock }) {
             )}
           </button>
           {openIndex === i && (
-            <div className="px-5 py-4 tiptap-compact">
-              <div
-                className="tiptap max-w-none"
-                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
-              />
+            <div className="px-5 py-4 space-y-4">
+              {(item.children ?? []).map((childBlock) => (
+                <ViewerBlockRenderer
+                  key={childBlock.id}
+                  block={childBlock}
+                  mode={mode}
+                  answer={answers[childBlock.id]}
+                  onAnswer={(value) =>
+                    onAnswer({ ...answers, [childBlock.id]: value })
+                  }
+                  showResults={showResults}
+                  showSolutions={showSolutions}
+                  primaryColor={primaryColor}
+                  allBlocks={allBlocks}
+                  brand={brand}
+                />
+              ))}
+              {(item.children ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground italic">{"\u2026"}</p>
+              )}
             </div>
           )}
         </div>
@@ -4169,6 +4216,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          showPill={block.showPill !== false}
         />
       );
     case "article-training":
@@ -4186,11 +4234,13 @@ export function ViewerBlockRenderer({
       return (
         <OrderItemsView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          showPill={block.showPill !== false}
         />
       );
     case "inline-choices":
@@ -4236,6 +4286,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          showPill={block.showPill !== false}
         />
       );
     case "fix-sentences":
@@ -4315,7 +4366,19 @@ export function ViewerBlockRenderer({
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} />;
     case "accordion":
-      return <AccordionView block={block as AccordionBlock} />;
+      return (
+        <AccordionView
+          block={block as AccordionBlock}
+          mode={mode}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          primaryColor={primaryColor}
+          allBlocks={allBlocks}
+          brand={brand}
+        />
+      );
     case "ai-prompt":
       return <AiPromptView block={block as AiPromptBlock} />;
     case "ai-tool":

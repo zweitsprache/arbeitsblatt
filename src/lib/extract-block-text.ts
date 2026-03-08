@@ -216,7 +216,8 @@ export function extractBlocksText(
       case "accordion":
         for (const item of block.items ?? []) {
           if (item.title) parts.push(item.title);
-          if (item.content) parts.push(stripHtml(item.content));
+          const childText = extractBlocksText(item.children ?? [], worksheets);
+          if (childText) parts.push(childText);
         }
         break;
 

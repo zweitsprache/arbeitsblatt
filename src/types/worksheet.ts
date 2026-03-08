@@ -279,6 +279,7 @@ export interface TrueFalseMatrixBlock extends BlockBase {
   statementColumnHeader?: string;
   trueLabel?: string;
   falseLabel?: string;
+  showPill?: boolean;
   statements: {
     id: string;
     text: string;
@@ -305,6 +306,7 @@ export interface ArticleTrainingBlock extends BlockBase {
 export interface OrderItemsBlock extends BlockBase {
   type: "order-items";
   instruction: string;
+  showPill?: boolean;
   items: {
     id: string;
     text: string;
@@ -409,6 +411,7 @@ export interface UnscrambleWordsBlock extends BlockBase {
   words: UnscrambleWordItem[];
   keepFirstLetter: boolean; // keep first letter at correct position
   lowercaseAll: boolean; // show all letters in lowercase
+  showPill?: boolean;
   itemOrder?: string[]; // persisted shuffled order of word IDs
 }
 
@@ -604,7 +607,7 @@ export interface NumberedItemsBlock extends BlockBase {
 export interface AccordionItem {
   id: string;
   title: string;
-  content: string; // HTML string for WYSIWYG
+  children: WorksheetBlock[];
 }
 
 export interface AccordionBlock extends BlockBase {
@@ -1598,16 +1601,16 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
 {
   type: "accordion",
   label: "Accordion",
-  description: "Collapsible sections with rich text content",
+  description: "Collapsible sections with nested blocks",
   labelKey: "accordion",
   descriptionKey: "accordionDesc",
   icon: "ChevronDown",
   category: "content",
-  translations: { de: { label: "Akkordeon", description: "Aufklappbare Abschnitte mit formatiertem Text" } },
+  translations: { de: { label: "Akkordeon", description: "Aufklappbare Abschnitte mit verschachtelten Blöcken" } },
   defaultData: {
     type: "accordion",
     items: [
-      { id: crypto.randomUUID(), title: "", content: "" },
+      { id: crypto.randomUUID(), title: "", children: [] },
     ],
     showNumbers: false,
     visibility: "both",

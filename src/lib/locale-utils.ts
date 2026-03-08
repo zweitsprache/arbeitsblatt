@@ -75,6 +75,16 @@ export function applyChOverrides(
         children: block.children.map((col) => applyChOverrides(col, overrides)),
       } as WorksheetBlock;
     }
+    // Handle accordion recursively
+    if (block.type === "accordion") {
+      return {
+        ...block,
+        items: block.items.map((item) => ({
+          ...item,
+          children: applyChOverrides(item.children, overrides),
+        })),
+      } as WorksheetBlock;
+    }
 
     const blockOverrides = overrides[block.id];
     if (!blockOverrides || Object.keys(blockOverrides).length === 0) return block;

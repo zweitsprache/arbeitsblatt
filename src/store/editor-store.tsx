@@ -75,7 +75,7 @@ type EditorAction =
 
 // ─── Reducer ─────────────────────────────────────────────────
 
-/** Recursively map over all blocks, including children inside columns */
+/** Recursively map over all blocks, including children inside columns and accordion items */
 function deepMapBlocks(
   blocks: WorksheetBlock[],
   fn: (b: WorksheetBlock) => WorksheetBlock
@@ -86,6 +86,15 @@ function deepMapBlocks(
       return {
         ...mapped,
         children: mapped.children.map((col) => deepMapBlocks(col, fn)),
+      } as WorksheetBlock;
+    }
+    if (mapped.type === "accordion") {
+      return {
+        ...mapped,
+        items: mapped.items.map((item) => ({
+          ...item,
+          children: deepMapBlocks(item.children, fn),
+        })),
       } as WorksheetBlock;
     }
     return mapped;
@@ -104,6 +113,15 @@ function deepFilterBlocks(
         return {
           ...b,
           children: b.children.map((col) => deepFilterBlocks(col, predicate)),
+        } as WorksheetBlock;
+      }
+      if (b.type === "accordion") {
+        return {
+          ...b,
+          items: b.items.map((item) => ({
+            ...item,
+            children: deepFilterBlocks(item.children, predicate),
+          })),
         } as WorksheetBlock;
       }
       return b;
@@ -126,8 +144,62 @@ function deepFindBlock(
         }
       }
     }
+    if (b.type === "accordion") {
+      for (let ai = 0; ai < b.items.length; ai++) {
+        const children = b.items[ai].children;
+        const idx = children.findIndex((c) => c.id === id);
+        if (idx !== -1) {
+          return { block: children[idx], parentBlockId: b.id, colIndex: ai, indexInCol: idx };
+        }
+      }
+    }
   }
   return null;
+}
+
+/** Types that act as block containers (cannot be nested inside each other) */
+const CONTAINER_TYPES: Set<string> = new Set(["columns", "accordion"]);
+
+/** Get children array at given slot index from a container block */
+function getContainerSlot(b: WorksheetBlock, slotIndex: number): WorksheetBlock[] | null {
+  if (b.type === "columns") return b.children[slotIndex] ?? null;
+  if (b.type === "accordion") return b.items[slotIndex]?.children ?? null;
+  return null;
+}
+
+/** Return a new block with the slot at slotIndex replaced */
+function setContainerSlot(b: WorksheetBlock, slotIndex: number, newSlot: WorksheetBlock[]): WorksheetBlock {
+  if (b.type === "columns") {
+    const newChildren = [...b.children];
+    newChildren[slotIndex] = newSlot;
+    return { ...b, children: newChildren } as WorksheetBlock;
+  }
+  if (b.type === "accordion") {
+    const newItems = [...b.items];
+    newItems[slotIndex] = { ...newItems[slotIndex], children: newSlot };
+    return { ...b, items: newItems } as WorksheetBlock;
+  }
+  return b;
+}
+
+/** Remove a child block by id from all slots of a container */
+function removeFromContainer(b: WorksheetBlock, childId: string): WorksheetBlock {
+  if (b.type === "columns") {
+    return {
+      ...b,
+      children: b.children.map((col: WorksheetBlock[]) => col.filter((c) => c.id !== childId)),
+    } as WorksheetBlock;
+  }
+  if (b.type === "accordion") {
+    return {
+      ...b,
+      items: b.items.map((item) => ({
+        ...item,
+        children: item.children.filter((c) => c.id !== childId),
+      })),
+    } as WorksheetBlock;
+  }
+  return b;
 }
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
@@ -302,12 +374,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         blocks: state.blocks.map((b) => {
-          if (b.id !== parentBlockId || b.type !== "columns") return b;
-          const newChildren = [...b.children];
-          const newCol = [...newChildren[colIndex]];
-          newCol.splice(afterIndex, 0, newBlock);
-          newChildren[colIndex] = newCol;
-          return { ...b, children: newChildren } as WorksheetBlock;
+          if (b.id !== parentBlockId || !CONTAINER_TYPES.has(b.type)) return b;
+          const slot = getContainerSlot(b, colIndex);
+          if (!slot) return b;
+          const newSlot = [...slot];
+          newSlot.splice(afterIndex, 0, newBlock);
+          return setContainerSlot(b, colIndex, newSlot);
         }),
         selectedBlockId: newBlock.id,
         isDirty: true,
@@ -315,41 +387,36 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
 
     case "MOVE_BLOCK_TO_COLUMN": {
-      // Move a top-level block into a column
+      // Move a top-level block into a container (column or accordion item)
       const { blockId, targetParentId, targetColIndex } = action.payload;
       const blockIndex = state.blocks.findIndex((b) => b.id === blockId);
       if (blockIndex === -1) return state;
       const block = state.blocks[blockIndex];
-      // Don't allow dropping a columns block into a column
-      if (block.type === "columns") return state;
+      // Don't allow dropping a container block into a container
+      if (CONTAINER_TYPES.has(block.type)) return state;
       const newBlocks = state.blocks.filter((b) => b.id !== blockId);
       return {
         ...state,
         blocks: newBlocks.map((b) => {
-          if (b.id !== targetParentId || b.type !== "columns") return b;
-          const newChildren = [...b.children];
-          newChildren[targetColIndex] = [...newChildren[targetColIndex], block];
-          return { ...b, children: newChildren } as WorksheetBlock;
+          if (b.id !== targetParentId || !CONTAINER_TYPES.has(b.type)) return b;
+          const slot = getContainerSlot(b, targetColIndex);
+          if (!slot) return b;
+          return setContainerSlot(b, targetColIndex, [...slot, block]);
         }),
         isDirty: true,
       };
     }
 
     case "MOVE_BLOCK_FROM_COLUMN_TO_TOP": {
-      // Move a block from inside a column to the top level
+      // Move a block from inside a container to the top level
       const { blockId, insertAfterBlockId } = action.payload;
       const found = deepFindBlock(state.blocks, blockId);
       if (!found || found.parentBlockId === undefined) return state;
       const block = found.block;
-      // Remove from column
+      // Remove from container
       const cleanedBlocks = state.blocks.map((b) => {
-        if (b.id !== found.parentBlockId || b.type !== "columns") return b;
-        return {
-          ...b,
-          children: b.children.map((col: WorksheetBlock[]) =>
-            col.filter((c) => c.id !== blockId)
-          ),
-        } as WorksheetBlock;
+        if (b.id !== found.parentBlockId) return b;
+        return removeFromContainer(b, blockId);
       });
       // Insert at position
       if (insertAfterBlockId) {
@@ -366,7 +433,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
 
     case "MOVE_BLOCK_BETWEEN_COLUMNS": {
-      // Move a block from one column to another (same or different parent)
+      // Move a block between containers (columns/accordion, same or different parent)
       const { blockId, targetParentId, targetColIndex } = action.payload;
       const found = deepFindBlock(state.blocks, blockId);
       if (!found) return state;
@@ -374,29 +441,24 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       // Remove block from its current location (could be top-level or nested)
       let newBlocks: WorksheetBlock[];
       if (found.parentBlockId !== undefined) {
-        // Currently in a column — remove from there
+        // Currently in a container — remove from there
         newBlocks = state.blocks.map((b) => {
-          if (b.id !== found.parentBlockId || b.type !== "columns") return b;
-          return {
-            ...b,
-            children: b.children.map((col: WorksheetBlock[]) =>
-              col.filter((c) => c.id !== blockId)
-            ),
-          } as WorksheetBlock;
+          if (b.id !== found.parentBlockId) return b;
+          return removeFromContainer(b, blockId);
         });
       } else {
         // Currently top-level
-        if (block.type === "columns") return state; // Don't nest columns
+        if (CONTAINER_TYPES.has(block.type)) return state; // Don't nest containers
         newBlocks = state.blocks.filter((b) => b.id !== blockId);
       }
-      // Insert into target column
+      // Insert into target container
       return {
         ...state,
         blocks: newBlocks.map((b) => {
-          if (b.id !== targetParentId || b.type !== "columns") return b;
-          const newChildren = [...b.children];
-          newChildren[targetColIndex] = [...newChildren[targetColIndex], block];
-          return { ...b, children: newChildren } as WorksheetBlock;
+          if (b.id !== targetParentId || !CONTAINER_TYPES.has(b.type)) return b;
+          const slot = getContainerSlot(b, targetColIndex);
+          if (!slot) return b;
+          return setContainerSlot(b, targetColIndex, [...slot, block]);
         }),
         isDirty: true,
       };

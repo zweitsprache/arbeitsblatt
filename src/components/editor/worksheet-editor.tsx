@@ -115,20 +115,25 @@ function EditorInner({
     if (activeData?.type === "library-block") {
       const blockType = activeData.blockType as BlockType;
 
-      // Dropped into a column
+      // Dropped into a container (column or accordion panel)
       if (overData?.type === "column-drop") {
         const { blockId, colIndex } = overData as { blockId: string; colIndex: number };
-        const columnsBlock = state.blocks.find((b) => b.id === blockId);
-        if (columnsBlock && columnsBlock.type === "columns") {
-          const def = BLOCK_LIBRARY.find((b) => b.type === blockType);
-          if (!def) return;
-          const newChildBlock = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
-          const newChildren = columnsBlock.children.map((col: WorksheetBlock[], i: number) =>
-            i === colIndex ? [...col, newChildBlock] : col
-          );
+        const def = BLOCK_LIBRARY.find((b) => b.type === blockType);
+        if (!def) return;
+        const newChildBlock = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
+        const containerBlock = state.blocks.find((b) => b.id === blockId);
+        if (!containerBlock) return;
+        if (containerBlock.type === "columns") {
+          const slot = containerBlock.children[colIndex] ?? [];
           dispatch({
-            type: "UPDATE_BLOCK",
-            payload: { id: blockId, updates: { children: newChildren } },
+            type: "DUPLICATE_IN_COLUMN",
+            payload: { parentBlockId: blockId, colIndex, block: newChildBlock, afterIndex: slot.length },
+          });
+        } else if (containerBlock.type === "accordion") {
+          const slot = containerBlock.items[colIndex]?.children ?? [];
+          dispatch({
+            type: "DUPLICATE_IN_COLUMN",
+            payload: { parentBlockId: blockId, colIndex, block: newChildBlock, afterIndex: slot.length },
           });
         }
         return;

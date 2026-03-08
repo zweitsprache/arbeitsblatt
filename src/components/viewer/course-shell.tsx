@@ -8,11 +8,16 @@ import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
 import {
+  BookOpen,
   ChevronRight,
   ChevronLeft,
   Menu,
   MessageCircle,
+  Search,
+  ToyBrick,
+  X,
 } from "lucide-react";
+import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CourseChatSidebar } from "./course-chat-sidebar";
@@ -297,7 +302,7 @@ function SidebarTopicSection({
 
   return (
     <div className="mb-0.5">
-      <div className="flex items-center gap-3 py-2 pl-3 pr-3 rounded-[2px]" style={{ backgroundColor: tk.slateBg }}>
+      <div className="flex items-center gap-3 py-2 pl-3 pr-3 rounded-[5px]" style={{ backgroundColor: tk.slateBg }}>
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
             "h-3.5 w-3.5 transition-transform duration-200",
@@ -383,8 +388,8 @@ function SidebarModuleSection({
   };
 
   return (
-    <div className="mb-1 rounded-[2px]">
-      <div className="flex items-center gap-7 px-3 py-2 rounded-[2px]" style={{ backgroundColor: pastelBg }}>
+    <div className="mb-1 rounded-[5px]">
+      <div className="flex items-center gap-7 px-3 py-2 rounded-[5px]" style={{ backgroundColor: pastelBg }}>
         <ModuleNumber number={moduleNumber} />
         <button
           onClick={() => {
@@ -444,6 +449,8 @@ function SidebarNav({
   onSelectTopic,
   onShowOverview,
   onContinue,
+  searchQuery,
+  onSearchChange,
 }: {
   title: string;
   structure: CourseModule[];
@@ -455,12 +462,20 @@ function SidebarNav({
   onSelectTopic: (moduleId: string, topicId: string) => void;
   onShowOverview: () => void;
   onContinue?: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }) {
   const { brand, sidebarTheme, image: courseImage } = useCourse();
   const tk = getSidebarTokens(sidebarTheme, brand as Brand);
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
   const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  // Find current module from currentLessonId
+  const currentModuleIndex = structure.findIndex((mod) =>
+    mod.topics.some((t) => t.lessons.some((l) => l.id === currentLessonId))
+  );
+  const currentModule = currentModuleIndex >= 0 ? structure[currentModuleIndex] : null;
 
   const moduleHasProgress = (mod: CourseModule) => {
     const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
@@ -473,29 +488,63 @@ function SidebarNav({
     <div className="flex flex-col h-full relative overflow-hidden"
       style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
-      {/* Header — matches breadcrumb / chat sidebar header */}
-      <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0">
-        <button
-          onClick={onShowOverview}
-          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ←&ensp;Start
-        </button>
-      </div>
-
-      <div className="p-5 pb-4 shrink-0 relative">
-        <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>{title}</h1>
-
-        {courseImage && (
-          <div className="mt-3 w-full overflow-hidden rounded-sm">
-            <img src={courseImage} alt="" className="w-full h-auto object-contain" />
+      <div className="shrink-0 relative">
+        {currentModule?.image ? (
+          <div className="relative w-full overflow-hidden">
+            <img src={currentModule.image} alt="" className="w-full h-auto object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-sm backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shrink-0">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <h1 className="text-cv-sm text-white drop-shadow-md leading-snug" style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
+                  {title}
+                </h1>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-5 pb-4">
+            <div className="flex items-start gap-3">
+              <BookOpen className="h-7 w-7 shrink-0" style={{ color: tk.text }} />
+              <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
+                {title}
+              </h1>
+            </div>
           </div>
         )}
       </div>
 
+      {/* Search field */}
+      <div className="px-5 pt-4 pb-2 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tk.textFaint }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Suchen…"
+            className="w-full py-2 pl-9 pr-9 rounded-[5px] text-cv-xs outline-none transition-colors"
+            style={{
+              backgroundColor: tk.slateBg,
+              color: tk.text,
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <X className="h-3.5 w-3.5" style={{ color: tk.textMuted }} />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="h-px mx-5" style={{ backgroundColor: tk.divider }} />
 
-      <div className="flex-1 overflow-y-auto p-3 pb-6 sidebar-scroll">
+      <div className="flex-1 overflow-y-auto pt-5 px-5 pb-6 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
             key={mod.id}
@@ -549,6 +598,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
   const [visitedLessons, setVisitedLessons] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   const flatLessons = useMemo(() => flattenLessons(structure), [structure]);
 
@@ -588,6 +638,63 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       context: extractBlocksText(resolvedBlocks, worksheets),
     };
   }, [pathname, structure, worksheets]);
+
+  // ─── Full-text search across all lessons ──────────────────
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+    const results: {
+      moduleId: string;
+      moduleTitle: string;
+      topicId: string;
+      topicTitle: string;
+      lessonId: string;
+      lessonTitle: string;
+      snippet: string;
+    }[] = [];
+
+    for (const mod of structure) {
+      for (const topic of mod.topics) {
+        for (const lesson of topic.lessons) {
+          const resolvedBlocks = (lesson.blocks ?? []).flatMap((block) => {
+            if (block.type === "linked-blocks" && worksheets[block.worksheetId]) {
+              return worksheets[block.worksheetId].blocks;
+            }
+            return [block];
+          });
+          const fullText = extractBlocksText(resolvedBlocks, worksheets);
+          const idx = fullText.toLowerCase().indexOf(q);
+          if (idx !== -1) {
+            const start = Math.max(0, idx - 40);
+            const end = Math.min(fullText.length, idx + q.length + 40);
+            const snippet =
+              (start > 0 ? "\u2026" : "") +
+              fullText.slice(start, end) +
+              (end < fullText.length ? "\u2026" : "");
+            results.push({
+              moduleId: mod.id,
+              moduleTitle: mod.shortTitle || mod.title,
+              topicId: topic.id,
+              topicTitle: topic.shortTitle || topic.title,
+              lessonId: lesson.id,
+              lessonTitle: lesson.shortTitle || lesson.title || "Untitled Lesson",
+              snippet,
+            });
+          }
+        }
+      }
+    }
+    return results;
+  }, [searchQuery, structure, worksheets]);
+
+  const handleSearchSelect = useCallback(
+    (moduleId: string, topicId: string, lessonId: string) => {
+      setSearchQuery("");
+      setMobileNavOpen(false);
+      router.push(`/${locale}/course/${slug}/${moduleId}/${topicId}/${lessonId}`);
+    },
+    [router, locale, slug]
+  );
 
   // Mark visited
   React.useEffect(() => {
@@ -693,6 +800,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             onSelectTopic={handleSelectTopic}
             onShowOverview={handleShowOverview}
             onContinue={firstUnvisited ? handleContinue : undefined}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         </SheetContent>
       </Sheet>
@@ -741,6 +850,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 onSelectTopic={handleSelectTopic}
                 onShowOverview={handleShowOverview}
                 onContinue={firstUnvisited ? handleContinue : undefined}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
               />
             </aside>
             <button
@@ -790,7 +901,15 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             `}</style>
             <div className="h-full flex flex-col">
               {/* Breadcrumb path */}
-              {breadcrumb && (
+              {searchResults ? (
+                <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground border-b shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+                  <button onClick={() => { setSearchQuery(""); router.push(`/${locale}/course/${slug}`); }} className="font-medium hover:text-foreground/80 transition-colors">
+                    Start
+                  </button>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-medium text-foreground">Suchresultate</span>
+                </div>
+              ) : breadcrumb && (
                 <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground border-b shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
                   {breadcrumb.isOverview ? (
                     <span className="font-medium text-foreground">Start</span>
@@ -833,7 +952,49 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
               )}
               <div className="flex-1 min-h-0 flex">
                 <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
-                  {children}
+                  {searchResults ? (
+                    <div className="p-6" style={{ fontFamily: brandFonts.bodyFont }}>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {searchResults.length === 0
+                          ? "Keine Ergebnisse gefunden."
+                          : `${searchResults.length} Ergebnis${searchResults.length !== 1 ? "se" : ""} gefunden`}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {searchResults.map((r) => {
+                          const q = searchQuery.trim().toLowerCase();
+                          const snippetLower = r.snippet.toLowerCase();
+                          const matchIdx = snippetLower.indexOf(q);
+                          return (
+                            <button
+                              key={`${r.moduleId}-${r.topicId}-${r.lessonId}`}
+                              onClick={() => handleSearchSelect(r.moduleId, r.topicId, r.lessonId)}
+                              className="text-left p-4 rounded-md border hover:bg-muted/50 transition-colors"
+                            >
+                              <p className="text-sm font-semibold">{r.lessonTitle}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {r.moduleTitle} › {r.topicTitle}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                {matchIdx >= 0 ? (
+                                  <>
+                                    {r.snippet.slice(0, matchIdx)}
+                                    <mark className="bg-yellow-200 text-foreground rounded-sm px-0.5">
+                                      {r.snippet.slice(matchIdx, matchIdx + q.length)}
+                                    </mark>
+                                    {r.snippet.slice(matchIdx + q.length)}
+                                  </>
+                                ) : (
+                                  r.snippet
+                                )}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    children
+                  )}
                 </div>
                 <div className="w-6 shrink-0" />
               </div>
