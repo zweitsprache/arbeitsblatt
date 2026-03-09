@@ -1,17 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-
-const UserButton = dynamic(
-  () =>
-    import("@neondatabase/auth/react").then((mod) => ({
-      default: mod.UserButton,
-    })),
-  { ssr: false },
-);
 
 const localeLabels: Record<string, string> = {
   de: "DE",
@@ -59,7 +50,6 @@ export function ProjectHeader({ brandLogo, projectName }: ProjectHeaderProps) {
               </button>
             ))}
           </div>
-          <UserButton size="icon" />
         </div>
       </div>
 
@@ -86,7 +76,6 @@ export function ProjectHeader({ brandLogo, projectName }: ProjectHeaderProps) {
               </button>
             ))}
           </div>
-          <UserButton size="icon" />
         </div>
       </div>
     </>
