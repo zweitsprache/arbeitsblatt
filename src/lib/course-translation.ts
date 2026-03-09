@@ -211,8 +211,6 @@ function extractSingleBlockStrings(
     case "true-false-matrix":
       addStr(strings, `${p}.instruction`, block.instruction);
       addStr(strings, `${p}.statementColumnHeader`, block.statementColumnHeader);
-      addStr(strings, `${p}.trueLabel`, block.trueLabel);
-      addStr(strings, `${p}.falseLabel`, block.falseLabel);
       break;
 
     // ── Order items
@@ -607,8 +605,6 @@ function applySingleBlockTranslations(
     case "true-false-matrix":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
       apply(`${p}.statementColumnHeader`, (v) => (block.statementColumnHeader = v));
-      apply(`${p}.trueLabel`, (v) => (block.trueLabel = v));
-      apply(`${p}.falseLabel`, (v) => (block.falseLabel = v));
       break;
     case "order-items":
       apply(`${p}.instruction`, (v) => (block.instruction = v));

@@ -1767,8 +1767,8 @@ function TrueFalseMatrixView({
         <thead>
           <tr>
             <th className="text-left py-2 pr-2 border-b font-bold text-foreground">{block.statementColumnHeader || ""}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground text-xs uppercase">{block.trueLabel || tc("true")}</th>
+            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground text-xs uppercase">{block.falseLabel || tc("false")}</th>
           </tr>
         </thead>
         <tbody>
