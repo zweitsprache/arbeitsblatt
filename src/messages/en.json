@@ -458,6 +458,8 @@
     "saveFirst": "Please save first before downloading the PDF",
     "settings": "Settings",
     "showCuttingLines": "Show cut lines",
+    "textColor_default": "Black (default)",
+    "textColor_white": "White",
     "textPlaceholder": "Enter text…",
     "textPosition_bottom": "Text bottom",
     "textPosition_center": "Text centered",

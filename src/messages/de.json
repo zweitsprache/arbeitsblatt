@@ -458,6 +458,8 @@
     "saveFirst": "Bitte zuerst speichern, bevor du das PDF herunterlädst",
     "settings": "Einstellungen",
     "showCuttingLines": "Schnittlinien anzeigen",
+    "textColor_default": "Schwarz (Standard)",
+    "textColor_white": "Weiss",
     "textPlaceholder": "Text eingeben…",
     "textPosition_bottom": "Text unten",
     "textPosition_center": "Text zentriert",

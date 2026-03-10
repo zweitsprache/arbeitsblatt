@@ -263,7 +263,8 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
     display: block;
   }
   /* Rich text (TipTap) content inside cards */
-  p { margin: 0; }
+  p { margin: 0 0 0.4em 0; }
+  p:last-child { margin-bottom: 0; }
   mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
   sup { font-size: 0.65em; }
   sub { font-size: 0.65em; }

@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { Slider } from "@/components/ui/slider";
+import { CardRichTextEditor } from "./card-rich-text-editor";
 
 // ─── Print preview component (A4 landscape, 2×2 grid) ───────
 
@@ -166,9 +167,18 @@ function CardPrintPreview() {
                         {/* Text area — position depends on textPosition */}
                         {(() => {
                           const effectiveText = card ? getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides) : "";
+                          const hasText = effectiveText && effectiveText.replace(/<[^>]*>/g, "").trim() !== "";
+                          const textSizeClass =
+                            card.textSize === "sm"
+                              ? "text-[6px]"
+                              : card.textSize === "lg"
+                              ? "text-[10px]"
+                              : card.textSize === "xl"
+                              ? "text-xs"
+                              : "text-[8px]";
                           return (
                             <>
-                        {effectiveText && (card.textPosition || "top") === "top" && (
+                        {hasText && (card.textPosition || "top") === "top" && (
                           <div
                             className="flex items-center justify-center px-2 pointer-events-none"
                             style={{
@@ -180,21 +190,12 @@ function CardPrintPreview() {
                             }}
                           >
                             <span
-                              className={`text-center leading-tight max-w-[95%] break-words ${
-                                card.textSize === "sm"
-                                  ? "text-[6px]"
-                                  : card.textSize === "lg"
-                                  ? "text-[10px]"
-                                  : card.textSize === "xl"
-                                  ? "text-xs"
-                                  : "text-[8px]"
-                              }`}
-                            >
-                              {effectiveText}
-                            </span>
+                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              dangerouslySetInnerHTML={{ __html: effectiveText }}
+                            />
                           </div>
                         )}
-                        {effectiveText && card.textPosition === "center" && (
+                        {hasText && card.textPosition === "center" && (
                           <div
                             className="pointer-events-none z-20 rounded px-2 py-1"
                             style={{
@@ -207,21 +208,12 @@ function CardPrintPreview() {
                             }}
                           >
                             <span
-                              className={`block text-center leading-tight break-words ${
-                                card.textSize === "sm"
-                                  ? "text-[6px]"
-                                  : card.textSize === "lg"
-                                  ? "text-[10px]"
-                                  : card.textSize === "xl"
-                                  ? "text-xs"
-                                  : "text-[8px]"
-                              }`}
-                            >
-                              {effectiveText}
-                            </span>
+                              className={`block text-center leading-tight break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              dangerouslySetInnerHTML={{ __html: effectiveText }}
+                            />
                           </div>
                         )}
-                        {effectiveText && card.textPosition === "bottom" && (
+                        {hasText && card.textPosition === "bottom" && (
                           <div
                             className="flex items-center justify-center px-2 pointer-events-none"
                             style={{
@@ -233,18 +225,9 @@ function CardPrintPreview() {
                             }}
                           >
                             <span
-                              className={`text-center leading-tight max-w-[95%] break-words ${
-                                card.textSize === "sm"
-                                  ? "text-[6px]"
-                                  : card.textSize === "lg"
-                                  ? "text-[10px]"
-                                  : card.textSize === "xl"
-                                  ? "text-xs"
-                                  : "text-[8px]"
-                              }`}
-                            >
-                              {effectiveText}
-                            </span>
+                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              dangerouslySetInnerHTML={{ __html: effectiveText }}
+                            />
                           </div>
                         )}
                             </>
@@ -786,27 +769,25 @@ function CardTile({
               );
             })}
           </div>
-          <textarea
-            className={`w-full min-h-[48px] resize-y rounded-md border border-input px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-              state.localeMode === "CH" && hasChOverride(card.id, "text", state.settings.chOverrides)
-                ? "bg-amber-50/50 border-l-2 border-l-amber-400"
-                : "bg-background"
-            }`}
-            placeholder={t("textPlaceholder")}
-            value={getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides)}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
+          <CardRichTextEditor
+            content={getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides)}
+            onChange={(html) => {
               if (state.localeMode === "CH") {
                 const autoReplaced = replaceEszett(card.text);
-                if (e.target.value === autoReplaced) {
+                if (html === autoReplaced) {
                   dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text" } });
                 } else {
-                  dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text", value: e.target.value } });
+                  dispatch({ type: "SET_CH_OVERRIDE", payload: { cardId: card.id, fieldPath: "text", value: html } });
                 }
               } else {
-                onUpdate({ text: e.target.value });
+                onUpdate({ text: html });
               }
             }}
+            className={
+              state.localeMode === "CH" && hasChOverride(card.id, "text", state.settings.chOverrides)
+                ? "border-l-2 border-l-amber-400 bg-amber-50/50"
+                : ""
+            }
           />
           {state.localeMode === "CH" && (
             <div className="flex items-center gap-1">
@@ -823,7 +804,7 @@ function CardTile({
                 </button>
               )}
               <p className="text-[10px] text-muted-foreground/60 truncate" title={card.text}>
-                {"🇩🇪 "}{card.text.length > 60 ? card.text.slice(0, 60) + "…" : (card.text || "–")}
+                {"🇩🇪 "}{card.text.replace(/<[^>]*>/g, "").length > 60 ? card.text.replace(/<[^>]*>/g, "").slice(0, 60) + "…" : (card.text.replace(/<[^>]*>/g, "") || "–")}
               </p>
             </div>
           )}

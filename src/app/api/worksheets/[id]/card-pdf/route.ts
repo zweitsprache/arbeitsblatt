@@ -129,22 +129,26 @@ function renderCardSlot(
   const textPosition = card.textPosition || "top";
 
   // Text area — position depends on textPosition
+  // Detect if text is HTML (from TipTap rich text editor) or plain text (legacy)
+  const isHtmlContent = card.text ? /^<[a-z][\s\S]*>/i.test(card.text.trim()) : false;
+  const hasTextContent = card.text && card.text.replace(/<[^>]*>/g, "").trim() !== "";
   let textHTML = "";
-  if (card.text) {
+  if (hasTextContent) {
+    const textInner = isHtmlContent ? card.text! : `<span>${escapeHtml(card.text)}</span>`;
     if (textPosition === "top") {
       textHTML = `<div class="text-area ${textSizeClass}" style="top:${TEXT_TOP_OFFSET}%;left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% + ((100% - ${MX * 2}%) / ${IMG_RATIO}) + 1%)">
-         <span>${escapeHtml(card.text)}</span>
+         ${textInner}
        </div>`;
     } else if (textPosition === "center") {
       const yOff = settings.centerTextYOffset ?? 0;
       const centerW = dims.landscape ? "60%" : "80%";
       textHTML = `<div class="text-area-center ${textSizeClass}" style="top:${50 + yOff}%;left:50%;transform:translate(-50%,-50%);width:${centerW};z-index:20">
-         <span>${escapeHtml(card.text)}</span>
+         ${textInner}
        </div>`;
     } else {
       // bottom
       textHTML = `<div class="text-area ${textSizeClass}" style="top:calc(100% - ${IMG_BOTTOM}% + ${TEXT_TOP_OFFSET}%);left:${MX}%;right:${MX}%;bottom:calc(${IMG_BOTTOM}% - ${TEXT_TOP_OFFSET}%)">
-         <span>${escapeHtml(card.text)}</span>
+         ${textInner}
        </div>`;
     }
   }
@@ -325,6 +329,12 @@ function buildFullHtml(
     height: 1px;
   }
   img { display: block; }
+  /* Rich text (TipTap) content inside cards */
+  p { margin: 0 0 0.4em 0; }
+  p:last-child { margin-bottom: 0; }
+  mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
+  sup { font-size: 0.65em; }
+  sub { font-size: 0.65em; }
 </style>
 </head>
 <body>
