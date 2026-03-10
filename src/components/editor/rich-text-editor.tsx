@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -154,6 +154,32 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const t = useTranslations("richtext");
   const resolvedPlaceholder = placeholder ?? t("startTyping");
+  // Track whether this editor's toolbar should be visible.
+  // We use TipTap's onFocus/onBlur plus a wrapper ref to keep
+  // the toolbar visible while interacting with toolbar buttons.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleEditorFocus = useCallback(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setShowToolbar(true);
+  }, []);
+
+  const handleEditorBlur = useCallback(() => {
+    // Small delay so that clicking a toolbar button (which briefly
+    // removes focus from the editor) doesn't hide the toolbar.
+    blurTimeoutRef.current = setTimeout(() => {
+      // If focus is still inside the wrapper (e.g. on a toolbar button),
+      // keep the toolbar visible.
+      if (wrapperRef.current?.contains(document.activeElement)) return;
+      setShowToolbar(false);
+    }, 150);
+  }, []);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -187,6 +213,8 @@ export function RichTextEditor({
     ],
     content,
     editable,
+    onFocus: handleEditorFocus,
+    onBlur: handleEditorBlur,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -208,6 +236,22 @@ export function RichTextEditor({
     }
   }, [content, editor]);
 
+  // Clean up blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  // When the toolbar receives focus (e.g. clicking a button), cancel
+  // any pending blur so the toolbar stays visible.
+  const handleToolbarFocusIn = useCallback(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+  }, []);
+
   const setLink = useCallback(() => {
     if (!editor) return;
     const previousUrl = editor.getAttributes("link").href;
@@ -223,16 +267,16 @@ export function RichTextEditor({
       .extendMarkRange("link")
       .setLink({ href: url })
       .run();
-  }, [editor]);
+  }, [editor, t]);
 
   if (!editor) return null;
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="rounded-md border border-input bg-background">
-        {/* Fixed toolbar */}
-        {editable && (
-          <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1">
+      <div ref={wrapperRef} className="rounded-md border border-input bg-background">
+        {/* Toolbar – only shown when this editor has focus */}
+        {editable && showToolbar && (
+          <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1" onFocus={handleToolbarFocusIn}>
             {/* Undo / Redo */}
             <ToolbarButton
               onClick={() => editor.chain().focus().undo().run()}
