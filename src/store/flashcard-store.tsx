@@ -43,6 +43,7 @@ type FlashcardAction =
   | { type: "LOAD"; payload: { id: string; title: string; slug: string; cards: FlashcardItem[]; settings: FlashcardSettings; published: boolean } }
   | { type: "SET_TITLE"; payload: string }
   | { type: "ADD_CARD"; payload: { card: FlashcardItem; index?: number } }
+  | { type: "BULK_ADD_CARDS"; payload: FlashcardItem[] }
   | { type: "UPDATE_CARD"; payload: { id: string; updates: Partial<FlashcardItem> } }
   | { type: "REMOVE_CARD"; payload: string }
   | { type: "REORDER_CARDS"; payload: FlashcardItem[] }
@@ -93,6 +94,13 @@ function flashcardReducer(state: FlashcardState, action: FlashcardAction): Flash
       }
       return { ...state, cards: newCards, selectedCardId: card.id, isDirty: true };
     }
+
+    case "BULK_ADD_CARDS":
+      return {
+        ...state,
+        cards: [...state.cards, ...action.payload],
+        isDirty: true,
+      };
 
     case "UPDATE_CARD":
       return {

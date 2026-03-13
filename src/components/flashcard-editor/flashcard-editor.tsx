@@ -38,6 +38,7 @@ import {
   ALargeSmall,
 } from "lucide-react";
 import { FlashcardRichTextEditor } from "./flashcard-rich-text-editor";
+import { CsvImportModal } from "./csv-import-modal";
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
 import { Slider } from "@/components/ui/slider";
@@ -487,6 +488,7 @@ function FlashcardEditorInner({
     open: boolean;
     mode?: "cover" | "pdf";
   }>({ open: false });
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   const handleDownloadCover = useCallback(async (locale: "DE" | "CH" = "DE") => {
     if (!state.worksheetId) {
@@ -595,6 +597,20 @@ function FlashcardEditorInner({
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("cardCount", { count: state.cards.length })}
         </Badge>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCsvImportOpen(true)}
+              className="gap-1.5"
+            >
+              <Upload className="h-4 w-4" />
+              {t("csvImport")}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("csvImportTooltip")}</TooltipContent>
+        </Tooltip>
         {/* DE / CH locale toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
           <Button
@@ -769,6 +785,13 @@ function FlashcardEditorInner({
           )}
         </div>
       </div>
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        onImport={(cards) => dispatch({ type: "BULK_ADD_CARDS", payload: cards })}
+      />
 
       {/* Locale Picker Dialog */}
       <Dialog

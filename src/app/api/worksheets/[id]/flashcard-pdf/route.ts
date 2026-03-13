@@ -32,13 +32,12 @@ function escapeHtml(str: string): string {
     .replace(/\n/g, "<br>");
 }
 
-/** Escape HTML and make the first line semibold, render {{hl}}…{{/hl}} as yellow highlight, {{sup}}…{{/sup}} as superscript.
- *  When skipFirstLineBold is true (explicit fontWeight set), don't wrap the first line in <strong>. */
-function escapeHtmlBoldFirst(str: string, skipFirstLineBold = false): string {
+/** Escape HTML, render {{hl}}…{{/hl}} as yellow highlight, {{sup}}…{{/sup}} as superscript. */
+function escapeHtmlFrontPage(str: string): string {
   const lines = str.split("\n");
   return lines
-    .map((line, i) => {
-      const escaped = line
+    .map((line) => {
+      return line
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -46,7 +45,6 @@ function escapeHtmlBoldFirst(str: string, skipFirstLineBold = false): string {
         .replace(/\{\{hl\}\}(.*?)\{\{\/hl\}\}/g, '<span style="background:#5a4540;color:#fff;font-weight:600;padding:0 2px;border-radius:2px;">$1</span>')
         .replace(/\{\{sup\}\}(.*?)\{\{\/sup\}\}/g, '<sup style="font-size:0.65em;color:#888;font-weight:normal;">$1</sup>')
         .replace(/\{\{verb\}\}/g, "");
-      return i === 0 && !skipFirstLineBold ? `<strong>${escaped}</strong>` : escaped;
     })
     .join("<br>");
 }
@@ -103,7 +101,6 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
 
   const fontSize = side.fontSize ?? 11;
   const fontWeightVal = side.fontWeight === "bold" ? 700 : 400;
-  const hasExplicitWeight = !!side.fontWeight;
   const textColor = side.textColor || "#000";
 
   // Detect if text is HTML (from TipTap rich text editor) or plain text (legacy format)
@@ -117,7 +114,7 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
       textInner = side.text!;
     } else {
       // Legacy plain text with {{hl}}/{{sup}}/{{verb}} markers
-      textInner = pageSide === "back" ? escapeHtmlBackPage(side.text!) : escapeHtmlBoldFirst(side.text!, hasExplicitWeight);
+      textInner = pageSide === "back" ? escapeHtmlBackPage(side.text!) : escapeHtmlFrontPage(side.text!);
     }
   }
 

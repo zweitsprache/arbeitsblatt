@@ -50,7 +50,7 @@ function renderCardTextElements(
           flexWrap: "wrap",
           justifyContent: "center",
           alignItems: "baseline",
-          fontWeight: lineIdx === 0 && side === "front" ? 600 : 400,
+          fontWeight: 400,
         }}
       >
         {elements}
