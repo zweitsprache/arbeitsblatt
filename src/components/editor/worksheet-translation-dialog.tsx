@@ -44,7 +44,7 @@ const LANGUAGE_LABELS: Record<string, string> = Object.fromEntries(
 
 export function WorksheetTranslationDialog() {
   const t = useTranslations("toolbar");
-  const { state, save } = useEditor();
+  const { state, save, dispatch } = useEditor();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<TranslationStatus | null>(null);
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
@@ -91,6 +91,8 @@ export function WorksheetTranslationDialog() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: newSettings }),
       });
+      // Keep editor store in sync so the PDF dialog language selector updates immediately
+      dispatch({ type: "UPDATE_SETTINGS", payload: { translationLanguages: selectedLangs } });
       await fetchStatus();
     } catch {
       /* silent */
