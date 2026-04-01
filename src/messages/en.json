@@ -1365,7 +1365,22 @@
     "saveTooltip": "Save",
     "teacher": "Teacher",
     "teacherPlaceholder": "Name of the teacher",
-    "titlePlaceholder": "Enter title…"
+    "titlePlaceholder": "Enter title…",
+    "translations": "Translate",
+    "translationsTitle": "Manage Translations",
+    "translationsDescription": "Automatically translate worksheet content into other languages using AI.",
+    "translationsTooltip": "Manage translations",
+    "translateWorksheet": "Translate worksheet",
+    "translateInProgress": "Translating…",
+    "translateSuccess": "{count} strings translated ({languages})",
+    "translateUpToDate": "All translations are up to date",
+    "translateFailed": "Translation failed",
+    "stringCount": "Translatable strings",
+    "translatedLanguages": "Languages",
+    "lastSynced": "Last translated",
+    "noTranslationsYet": "No translations yet.",
+    "targetLanguages": "Target languages",
+    "targetLanguagesHelp": "Select the languages this worksheet should be translated into."
   },
   "viewer": {
     "aiPromptPlaceholder": "Enter text here…",

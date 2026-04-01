@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
+import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 
 export function EditorToolbar() {
   const { state, dispatch, save } = useEditor();
@@ -87,6 +88,7 @@ export function EditorToolbar() {
     mode?: "pdf" | "cover";
   }>({ open: false });
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
+  const [pdfLang, setPdfLang] = useState<string>("de"); // "de" = base German, other codes = translation
 
   // Get current brand settings with fallbacks
   const currentBrandSettings: BrandSettings = {
@@ -114,6 +116,7 @@ export function EditorToolbar() {
       const params = new URLSearchParams({ locale });
       if (outputMode === "solutions") params.set("solutions", "1");
       if (outputMode === "both") params.set("both", "1");
+      if (pdfLang && pdfLang !== "de") params.set("lang", pdfLang);
       const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v3?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,10 +141,13 @@ export function EditorToolbar() {
       a.download = preview
         ? `${shortId}_preview_${fileSuffix}${modeSuffix}.pdf`
         : `${shortId}_${fileSuffix}${modeSuffix}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF download error:", err);
+      alert(t("pdfFailed", { error: err instanceof Error ? err.message : "Unknown error" }));
     } finally {
       const setLoading = preview ? setIsGeneratingPreview : setIsGeneratingPdf;
       setLoading(false);
@@ -245,12 +251,17 @@ export function EditorToolbar() {
     const outputMode = pdfOutputMode;
     setPdfLocaleDialog({ open: false });
     setPdfOutputMode("worksheet");
+    setPdfLang("de");
     if (mode === "cover") {
       handleDownloadCover(locale);
     } else {
       handleDownloadPdf(preview, locale, outputMode);
     }
   };
+
+  // Available translation languages for this worksheet (from settings)
+  const worksheetTranslationLangs = state.settings.translationLanguages ?? [];
+  const LANG_LABELS: Record<string, string> = { de: "Deutsch (Original)", en: "English", uk: "Українська", fr: "Français", es: "Español", it: "Italiano", pt: "Português", tr: "Türkçe", pl: "Polski", ar: "العربية" };
 
   return (
     <>
@@ -401,6 +412,8 @@ export function EditorToolbar() {
 
 
         {/* Actions */}
+        <WorksheetTranslationDialog />
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -528,8 +541,35 @@ export function EditorToolbar() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
-            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
+            <DialogDescription>
+              {worksheetTranslationLangs.length > 0 && pdfLocaleDialog.mode !== "cover"
+                ? "Wähle optional eine Übersetzungssprache, dann den Länderkontext zum Herunterladen."
+                : t("pdfLocaleDescription")}
+            </DialogDescription>
           </DialogHeader>
+          {worksheetTranslationLangs.length > 0 && pdfLocaleDialog.mode !== "cover" && (
+            <div className="space-y-2 pt-1">
+              <Label className="text-sm font-medium">{t("translatedLanguages")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {["de", ...worksheetTranslationLangs].map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setPdfLang(code)}
+                    className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                      pdfLang === code
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input bg-background text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {LANG_LABELS[code] ?? code.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Translated language selected: single download button (DE/CH irrelevant for non-German) */}
           <div className="flex gap-3 pt-2">
             <Button className="flex-1 gap-2" variant="outline"
               onClick={() => handleLocaleClick("DE")}
@@ -547,6 +587,7 @@ export function EditorToolbar() {
               {"🌐 Neutral"}
             </Button>
           </div>
+
           {pdfLocaleDialog.mode !== "cover" && (
           <div className="space-y-2 pt-2 border-t">
             <Label className="text-sm font-medium">{t("pdfContent")}</Label>

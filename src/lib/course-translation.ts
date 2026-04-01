@@ -8,6 +8,7 @@ import {
 import {
   WorksheetBlock,
   TextBlock,
+  TextSnippetBlock,
   ColumnsBlock,
   AccordionBlock,
 } from "@/types/worksheet";
@@ -80,7 +81,7 @@ function addStr(
   }
 }
 
-function extractBlockStrings(
+export function extractBlockStrings(
   blocks: WorksheetBlock[],
   strings: Record<string, string>
 ) {
@@ -108,7 +109,7 @@ function extractSingleBlockStrings(
     case "linked-blocks":
     case "word-search":
     case "text-snippet":
-      addStr(strings, `${p}.content`, (block as import("@/types/worksheet").TextSnippetBlock).content);
+      addStr(strings, `${p}.content`, (block as TextSnippetBlock).content);
       break;
     case "job-application":  // form blocks not translated
       break;
@@ -520,7 +521,7 @@ export function applyTranslations(
   return { structure, coverSettings, settings };
 }
 
-function applyBlockTranslations(
+export function applyBlockTranslations(
   blocks: WorksheetBlock[],
   translations: Record<string, string>
 ) {
@@ -684,7 +685,7 @@ function applySingleBlockTranslations(
       break;
     case "text-snippet":
       apply(`${p}.content`, (v) => {
-        (block as import("@/types/worksheet").TextSnippetBlock).translatedContent = v;
+        (block as TextSnippetBlock).translatedContent = v;
       });
       break;
     case "text-comparison":

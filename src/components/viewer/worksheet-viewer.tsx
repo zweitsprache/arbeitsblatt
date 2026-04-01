@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
+import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
+import { applyWorksheetTranslations } from "@/lib/worksheet-translation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+/** Language codes that use non-Latin scripts and should default to Noto Sans */
+const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
+const NOTO_SANS_BODY = "'Noto Sans', sans-serif";
 
 export function WorksheetViewer({
   title,
@@ -16,6 +22,8 @@ export function WorksheetViewer({
   mode,
   worksheetId,
   showSolutions = false,
+  translations,
+  initialLocale = "de",
 }: {
   title: string;
   blocks: WorksheetBlock[];
@@ -23,20 +31,45 @@ export function WorksheetViewer({
   mode: ViewMode;
   worksheetId?: string;
   showSolutions?: boolean;
+  /** Flat translation maps keyed by language code. e.g. { en: { "block.id.content": "..." } } */
+  translations?: Record<string, Record<string, string>>;
+  /** Starting locale (used in print mode where there is no locale switcher). Defaults to "de". */
+  initialLocale?: string;
 }) {
   const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [showResults, setShowResults] = useState(false);
+  const [contentLocale, setContentLocale] = useState(initialLocale);
 
-  // Filter blocks based on mode visibility
-  const visibleBlocks = blocks.filter(
+  // Determine available languages (always includes de as base)
+  const availableLocales = useMemo(() => {
+    const locales = ["de"];
+    if (translations) {
+      for (const lang of Object.keys(translations)) {
+        if (!lang.startsWith("_") && !locales.includes(lang)) {
+          locales.push(lang);
+        }
+      }
+    }
+    return locales;
+  }, [translations]);
+
+  // Apply translations when a non-DE locale is active
+  const displayBlocks = useMemo(() => {
+    if (contentLocale === "de" || !translations?.[contentLocale]) return blocks;
+    return applyWorksheetTranslations(blocks, translations[contentLocale]);
+  }, [blocks, translations, contentLocale]);
+
+  // Filter blocks based on mode visibility (use displayBlocks)
+  const visibleBlocks = displayBlocks.filter(
     (b) => b.visibility === "both" || b.visibility === mode
   );
 
   const pageWidth = settings.pageSize === "a4" ? 794 : 816;
   const brandFonts = BRAND_FONTS[settings.brand || "edoomio"];
-  const fontFamily = brandFonts.bodyFont;
-  const headlineFont = brandFonts.headlineFont;
+  const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
+  const fontFamily = isNonLatin ? NOTO_SANS_BODY : brandFonts.bodyFont;
+  const headlineFont = isNonLatin ? NOTO_SANS_BODY : brandFonts.headlineFont;
   const fontUrl = brandFonts.googleFontsUrl;
 
   // Get brand settings with fallbacks
@@ -116,6 +149,12 @@ export function WorksheetViewer({
           <link
             rel="stylesheet"
             href={fontUrl}
+          />
+          {/* Noto Sans as universal fallback for non-Latin scripts (Cyrillic, Arabic, etc.) */}
+          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap"
           />
           <style
             dangerouslySetInnerHTML={{
@@ -302,6 +341,13 @@ export function WorksheetViewer({
                 height={28}
               />
               <h1 className="font-bold" style={{ fontSize: 18 }}>{title}</h1>
+              <div className="ml-auto">
+                <WorksheetLanguageSwitcher
+                  contentLocale={contentLocale}
+                  availableLocales={availableLocales}
+                  setContentLocale={setContentLocale}
+                />
+              </div>
             </div>
             {settings.showHeader && settings.headerText && (
               <p className="text-sm text-muted-foreground mt-2">{settings.headerText}</p>

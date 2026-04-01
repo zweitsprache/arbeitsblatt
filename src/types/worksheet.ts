@@ -821,6 +821,8 @@ export interface WorksheetSettings {
   coverInfoText: string;       // Info text shown below the cover images
   coverImages: string[];       // Up to 4 cover images for the title page
   coverImageBorder: boolean;   // Show border around cover images
+  /** ISO language codes to translate into, e.g. ["en", "uk"] */
+  translationLanguages?: string[];
 }
 
 // ─── Worksheet document ─────────────────────────────────────
@@ -845,7 +847,7 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   showFooter: true,
   headerText: "",
   footerText: "",
-  fontSize: 14,
+  fontSize: 12.5,
   fontFamily: "Asap Condensed, sans-serif",
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
@@ -853,6 +855,7 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   coverInfoText: "",
   coverImages: [],
   coverImageBorder: false,
+  translationLanguages: [],
 };
 
 // ─── Block library definitions ──────────────────────────────

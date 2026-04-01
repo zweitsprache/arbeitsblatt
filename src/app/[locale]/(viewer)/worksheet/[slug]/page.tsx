@@ -22,6 +22,10 @@ export default async function PublicWorksheetPage({
     ...DEFAULT_SETTINGS,
     ...(worksheet.settings as unknown as Partial<WorksheetSettings>),
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const translations = ((worksheet as any).translations ?? {}) as Record<string, Record<string, string>>;
+  // Strip internal _source key before passing to viewer
+  const { _source: _ignored, ...displayTranslations } = translations;
 
   return (
     <WorksheetViewer
@@ -30,6 +34,7 @@ export default async function PublicWorksheetPage({
       settings={settings}
       mode="online"
       worksheetId={worksheet.id}
+      translations={Object.keys(displayTranslations).length > 0 ? displayTranslations : undefined}
     />
   );
 }

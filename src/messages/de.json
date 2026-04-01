@@ -1365,7 +1365,22 @@
     "saveTooltip": "Speichern",
     "teacher": "Lehrperson",
     "teacherPlaceholder": "Name der Lehrperson",
-    "titlePlaceholder": "Titel eingeben…"
+    "titlePlaceholder": "Titel eingeben…",
+    "translations": "Übersetzen",
+    "translationsTitle": "Übersetzungen verwalten",
+    "translationsDescription": "Arbeitsblattinhalte automatisch per KI in andere Sprachen übersetzen.",
+    "translationsTooltip": "Übersetzungen verwalten",
+    "translateWorksheet": "Arbeitsblatt übersetzen",
+    "translateInProgress": "Wird übersetzt…",
+    "translateSuccess": "{count} Strings übersetzt ({languages})",
+    "translateUpToDate": "Alle Übersetzungen sind aktuell",
+    "translateFailed": "Übersetzung fehlgeschlagen",
+    "stringCount": "Übersetzbare Strings",
+    "translatedLanguages": "Sprachen",
+    "lastSynced": "Letzte Übersetzung",
+    "noTranslationsYet": "Noch keine Übersetzungen vorhanden.",
+    "targetLanguages": "Zielsprachen",
+    "targetLanguagesHelp": "Wähle die Sprachen, in die dieses Arbeitsblatt übersetzt werden soll."
   },
   "viewer": {
     "aiPromptPlaceholder": "Text hier eingeben…",

@@ -20,6 +20,7 @@ export async function POST(
   const locale = req.nextUrl.searchParams.get("locale") as "DE" | "CH" | "NEUTRAL" | null;
   const showSolutions = req.nextUrl.searchParams.get("solutions") === "1";
   const showBoth = req.nextUrl.searchParams.get("both") === "1";
+  const lang = req.nextUrl.searchParams.get("lang"); // translation language code, e.g. "en"
 
   const worksheet = await prisma.worksheet.findFirst({
     where: { id, userId } as Parameters<typeof prisma.worksheet.findFirst>[0] extends { where?: infer W } ? W : never,
@@ -103,6 +104,7 @@ export async function POST(
       const printParams = new URLSearchParams();
       if (locale === "CH") printParams.set("ch", "1");
       if (solutions) printParams.set("solutions", "1");
+      if (lang) printParams.set("lang", lang);
       const qs = printParams.toString();
       return `${baseUrl}/de/worksheet/${worksheet.slug}/print${qs ? `?${qs}` : ""}`;
     };

@@ -4,6 +4,7 @@ import { setRequestLocale } from "next-intl/server";
 import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS, DEFAULT_BRAND_SETTINGS, BrandSettings, Brand } from "@/types/worksheet";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { replaceEszett, applyChOverrides } from "@/lib/locale-utils";
+import { applyWorksheetTranslations } from "@/lib/worksheet-translation";
 
 // This page is used by Puppeteer for PDF rendering
 export default async function PrintWorksheetPage({
@@ -24,6 +25,7 @@ export default async function PrintWorksheetPage({
 
   const isCH = sp.ch === "1";
   const showSolutions = sp.solutions === "1";
+  const lang = typeof sp.lang === "string" ? sp.lang : null;
 
   let blocks = worksheet.blocks as unknown as WorksheetBlock[];
   const rawSettings = worksheet.settings as unknown as Partial<WorksheetSettings>;
@@ -50,6 +52,16 @@ export default async function PrintWorksheetPage({
 
   let title = worksheet.title;
 
+  // Apply translation if lang param is provided
+  if (lang && lang !== "de") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allTranslations = ((worksheet as any).translations ?? {}) as Record<string, Record<string, string>>;
+    const langMap = allTranslations[lang];
+    if (langMap) {
+      blocks = applyWorksheetTranslations(blocks, langMap);
+    }
+  }
+
   // Apply ß→ss replacement for Swiss locale, then layer manual CH overrides
   if (isCH) {
     title = replaceEszett(title);
@@ -67,6 +79,7 @@ export default async function PrintWorksheetPage({
       mode="print"
       worksheetId={worksheet.id}
       showSolutions={showSolutions}
+      initialLocale={lang ?? "de"}
     />
   );
 }
