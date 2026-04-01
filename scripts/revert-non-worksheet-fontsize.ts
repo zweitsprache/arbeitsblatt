@@ -20,7 +20,7 @@ async function main() {
     if (settings.fontSize === 12.5) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { fontSize: _, ...rest } = settings;
-      await prisma.worksheet.update({ where: { id: r.id }, data: { settings: rest } });
+      await prisma.worksheet.update({ where: { id: r.id }, data: { settings: rest as object } });
       console.log(`  Reverted: "${r.title}" (${r.type})`);
     } else {
       console.log(`  Skipped (fontSize=${settings.fontSize ?? "none"}): "${r.title}" (${r.type})`);
