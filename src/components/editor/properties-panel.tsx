@@ -255,6 +255,19 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
           </SelectContent>
         </Select>
       </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { bilingual: checked } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -2395,6 +2408,7 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
           <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>
           <option value="lernziel">{t("textStyleLernziel")}</option>
+          <option value="metadaten">{t("textStyleMetadaten")}</option>
           <option value="rows">{t("textStyleRows")}</option>
         </select>
       </div>
@@ -2418,6 +2432,19 @@ function TextProps({ block }: { block: TextBlock }) {
           </div>
         </>
       )}
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { bilingual: checked } },
+            })
+          }
+        />
+      </div>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textImage")}</Label>

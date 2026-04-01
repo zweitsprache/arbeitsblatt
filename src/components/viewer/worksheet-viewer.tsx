@@ -24,6 +24,7 @@ export function WorksheetViewer({
   showSolutions = false,
   translations,
   initialLocale = "de",
+  originalBlockMap: externalOriginalBlockMap,
 }: {
   title: string;
   blocks: WorksheetBlock[];
@@ -35,6 +36,8 @@ export function WorksheetViewer({
   translations?: Record<string, Record<string, string>>;
   /** Starting locale (used in print mode where there is no locale switcher). Defaults to "de". */
   initialLocale?: string;
+  /** Pre-built map of original (German) blocks by id, for bilingual rendering in print mode. */
+  originalBlockMap?: Record<string, WorksheetBlock>;
 }) {
   const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -59,6 +62,17 @@ export function WorksheetViewer({
     if (contentLocale === "de" || !translations?.[contentLocale]) return blocks;
     return applyWorksheetTranslations(blocks, translations[contentLocale]);
   }, [blocks, translations, contentLocale]);
+
+  // Build a map of original (German) blocks by id for bilingual rendering
+  // Use externally provided map (print mode) or build from blocks (online mode with translations)
+  const isTranslated = contentLocale !== "de" && !!translations?.[contentLocale];
+  const originalBlockMap = useMemo(() => {
+    if (externalOriginalBlockMap) return externalOriginalBlockMap;
+    if (!isTranslated) return undefined;
+    const map: Record<string, WorksheetBlock> = {};
+    for (const b of blocks) map[b.id] = b;
+    return map;
+  }, [blocks, isTranslated, externalOriginalBlockMap]);
 
   // Filter blocks based on mode visibility (use displayBlocks)
   const visibleBlocks = displayBlocks.filter(
@@ -316,7 +330,7 @@ export function WorksheetViewer({
                           data-block-id={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} />
                         </div>
                       ))}
                     </div>
@@ -372,6 +386,8 @@ export function WorksheetViewer({
                     primaryColor={brandFonts.primaryColor}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
+                    originalBlock={originalBlockMap?.[block.id]}
+                    isNonLatin={isNonLatin}
                   />
                   {worksheetId && mode === "online" && (
                     <BlockScreenshotButton worksheetId={worksheetId} blockId={block.id} />

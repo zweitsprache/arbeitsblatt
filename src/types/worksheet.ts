@@ -65,10 +65,11 @@ export interface HeadingBlock extends BlockBase {
   type: "heading";
   content: string;
   level: 1 | 2 | 3;
+  bilingual?: boolean;
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
-export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "rows";
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "metadaten" | "rows";
 
 export interface TextBlock extends BlockBase {
   type: "text";
@@ -78,6 +79,7 @@ export interface TextBlock extends BlockBase {
   imageSrc?: string;
   imageAlign?: "left" | "right";
   imageScale?: number; // 10-100, percentage of container width
+  bilingual?: boolean; // Show original + translation side-by-side in translated worksheets
 }
 
 // ─── Image block ─────────────────────────────────────────────

@@ -52,6 +52,9 @@ export default async function PrintWorksheetPage({
 
   let title = worksheet.title;
 
+  // Keep original blocks for bilingual rendering before applying translations
+  const originalBlocks = worksheet.blocks as unknown as WorksheetBlock[];
+
   // Apply translation if lang param is provided
   if (lang && lang !== "de") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +74,11 @@ export default async function PrintWorksheetPage({
     }
   }
 
+  // Build original blocks map for bilingual text blocks (only when translated)
+  const originalBlockMap = (lang && lang !== "de")
+    ? Object.fromEntries(originalBlocks.map((b) => [b.id, b]))
+    : undefined;
+
   return (
     <WorksheetViewer
       title={title}
@@ -80,6 +88,7 @@ export default async function PrintWorksheetPage({
       worksheetId={worksheet.id}
       showSolutions={showSolutions}
       initialLocale={lang ?? "de"}
+      originalBlockMap={originalBlockMap}
     />
   );
 }
