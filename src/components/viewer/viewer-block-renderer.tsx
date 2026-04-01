@@ -2793,7 +2793,7 @@ function UnscrambleWordsView({
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
-              <span className="text-muted-foreground">→</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
               {isPrint && showSolutions ? (
                 <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : isPrint ? (
