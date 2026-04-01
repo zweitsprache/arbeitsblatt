@@ -143,6 +143,9 @@ export function WorksheetViewer({
                 .worksheet-block-image-cards .image-card-row { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-text-cards { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-text-cards .text-card-row { break-inside: avoid; page-break-inside: avoid; }
+                .worksheet-block-glossary { break-inside: auto; page-break-inside: auto; }
+                .glossary-row { break-inside: avoid; page-break-inside: avoid; }
+                .glossary-row:nth-child(3n+1), .glossary-row:nth-child(3n+2) { break-after: avoid; page-break-after: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
                 h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }

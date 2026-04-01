@@ -2092,6 +2092,28 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
         />
       </div>
       <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryLeftColWidth")}</Label>
+        <div className="flex gap-1">
+          {([25, 33, 50, 66] as const).map((w) => (
+            <Button
+              key={w}
+              variant={(block.leftColWidth ?? 25) === w ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { leftColWidth: w } },
+                })
+              }
+            >
+              {w}%
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Separator />
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryTerms")}</Label>
         {block.pairs.map((pair, i) => (

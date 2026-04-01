@@ -164,6 +164,7 @@ export interface TableBlock extends BlockBase {
 export const BRAND_ICON_LOGOS: Record<Brand, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
+  "agi-frauenfeld": "/logo/logo-stadt-frauenfeld.svg",
 };
 
 // ─── Multiple-choice block ──────────────────────────────────
@@ -241,6 +242,7 @@ export interface GlossaryBlock extends BlockBase {
   type: "glossary";
   instruction: string;
   pairs: GlossaryPair[];
+  leftColWidth?: 25 | 33 | 50 | 66;
 }
 
 // ─── Open response block ────────────────────────────────────
@@ -703,7 +705,7 @@ export type WorksheetBlock =
   | TableBlock;
 
 // ─── Brand types ────────────────────────────────────────────
-export type Brand = "edoomio" | "lingostar";
+export type Brand = "edoomio" | "lingostar" | "agi-frauenfeld";
 
 export interface BrandSettings {
   logo: string;
@@ -745,6 +747,15 @@ export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
     footerCenter: "",
     footerRight: "",
   },
+  "agi-frauenfeld": {
+    logo: "/logo/logo-stadt-frauenfeld.svg",
+    organization: "",
+    teacher: "",
+    headerRight: "",
+    footerLeft: "",
+    footerCenter: "",
+    footerRight: "",
+  },
 };
 
 export const BRAND_FONTS: Record<Brand, BrandFonts> = {
@@ -767,6 +778,16 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
     headerFooterFont: "Encode Sans, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
     primaryColor: "#3a4f40",
+  },
+  "agi-frauenfeld": {
+    bodyFont: "Asap Condensed, sans-serif",
+    headlineFont: "Asap Condensed, sans-serif",
+    headlineWeight: 700,
+    subHeadlineFont: "Asap Condensed, sans-serif",
+    subHeadlineWeight: 700,
+    headerFooterFont: "Asap Condensed, sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
+    primaryColor: "#1a1a1a",
   },
 };
 
@@ -1351,6 +1372,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "g2", term: "Term 2", definition: "Definition 2" },
         { id: "g3", term: "Term 3", definition: "Definition 3" },
       ],
+      leftColWidth: 25,
       visibility: "both",
     },
   },

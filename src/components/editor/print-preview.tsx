@@ -205,7 +205,6 @@ export function PrintPreview({
 .worksheet-block-multiple-choice,
 .worksheet-block-matching,
 .worksheet-block-two-column-fill,
-.worksheet-block-glossary,
 .worksheet-block-true-false-matrix,
 .worksheet-block-article-training,
 .worksheet-block-order-items,
@@ -220,6 +219,20 @@ export function PrintPreview({
 .worksheet-block-complete-sentences {
   break-inside: avoid;
   page-break-inside: avoid;
+}
+
+.worksheet-block-glossary {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+.glossary-row {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.glossary-row:nth-child(3n+1),
+.glossary-row:nth-child(3n+2) {
+  break-after: avoid;
+  page-break-after: avoid;
 }
 
 .worksheet-block-image {

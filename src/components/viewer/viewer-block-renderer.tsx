@@ -241,7 +241,7 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
 
 function HeadingView({ block }: { block: HeadingBlock }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-cv-xl", 2: "text-cv-xl", 3: "text-cv-lg" };
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const style: React.CSSProperties = {
     ...(block.level === 1 ? { marginBottom: -4 } : {}),
     ...(block.level === 3 ? { fontWeight: 800 } : {}),
@@ -1610,6 +1610,7 @@ function GlossaryView({
 }: {
   block: GlossaryBlock;
 }) {
+  const colWidth = `${block.leftColWidth ?? 25}%`;
   return (
     <div className={`space-y-2 ${s.glossary}`}>
       {block.instruction && (
@@ -1619,9 +1620,9 @@ function GlossaryView({
         {block.pairs.map((pair) => (
           <div
             key={pair.id}
-            className="flex items-start gap-4 py-2 border-b"
+            className="glossary-row flex items-start gap-4 py-1 border-b"
           >
-            <span className={`font-semibold ${s.glossaryTerm}`}>
+            <span className={`font-semibold ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth }}>
               {pair.term}
             </span>
             <span className="flex-1">

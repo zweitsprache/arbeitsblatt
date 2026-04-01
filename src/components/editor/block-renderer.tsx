@@ -1479,6 +1479,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
 
 // ─── Glossary ────────────────────────────────────────────────
 function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
+  const colWidth = `${block.leftColWidth ?? 25}%`;
   return (
     <div className="space-y-3">
       {block.instruction && (
@@ -1488,9 +1489,9 @@ function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
         {block.pairs.map((pair) => (
           <div
             key={pair.id}
-            className="flex items-start gap-4 py-2 border-b"
+            className="flex items-start gap-4 py-1 border-b"
           >
-            <span className="text-base font-semibold" style={{ width: "25%", minWidth: "25%", flexShrink: 0 }}>
+            <span className="text-base font-semibold" style={{ width: colWidth, minWidth: colWidth, flexShrink: 0 }}>
               {pair.term}
             </span>
             <span className="text-base flex-1">

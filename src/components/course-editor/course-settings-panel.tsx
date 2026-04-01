@@ -154,6 +154,7 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
             <SelectContent>
               <SelectItem value="edoomio">Edoomio</SelectItem>
               <SelectItem value="lingostar">LingoStar</SelectItem>
+              <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
             </SelectContent>
           </Select>
         </div>

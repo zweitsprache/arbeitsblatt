@@ -2510,6 +2510,7 @@ function EditorToolbar() {
           <SelectContent>
             <SelectItem value="edoomio">edoomio</SelectItem>
             <SelectItem value="lingostar">lingostar</SelectItem>
+            <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
           </SelectContent>
         </Select>
       </div>
