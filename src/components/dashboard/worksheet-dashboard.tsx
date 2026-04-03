@@ -117,6 +117,10 @@ export function WorksheetDashboard() {
         authFetch(`/api/folders?parentId=${folderId || ""}`),
         authFetch(`/api/worksheets?folderId=${folderParam}`),
       ]);
+      if (!foldersRes.ok || !worksheetsRes.ok) {
+        console.error("Failed to fetch contents: HTTP", foldersRes.ok ? worksheetsRes.status : foldersRes.status);
+        return;
+      }
       const foldersData = await foldersRes.json();
       const worksheetsData = await worksheetsRes.json();
       setFolders(foldersData);
@@ -145,6 +149,7 @@ export function WorksheetDashboard() {
         const res = await authFetch(
           `/api/worksheets?search=${encodeURIComponent(search.trim())}`
         );
+        if (!res.ok) { setSearchResults([]); return; }
         const data = await res.json();
         setSearchResults(data);
       } catch {

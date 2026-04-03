@@ -52,7 +52,8 @@ export type BlockType =
   | "text-comparison"
   | "accordion"
   | "audio"
-  | "schedule";
+  | "schedule"
+  | "checklist";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -610,6 +611,20 @@ export interface NumberedItemsBlock extends BlockBase {
   startNumber: number;
   bgColor?: string;
   borderRadius?: number;
+  bilingual?: boolean;
+}
+
+// ─── Checklist block ────────────────────────────────────────
+export interface ChecklistItem {
+  id: string;
+  content: string; // HTML string for WYSIWYG
+  writingLines?: number;
+}
+
+export interface ChecklistBlock extends BlockBase {
+  type: "checklist";
+  items: ChecklistItem[];
+  bilingual?: boolean;
 }
 
 // ─── Accordion block ─────────────────────────────────────────
@@ -717,6 +732,7 @@ export type WorksheetBlock =
   | TextComparisonBlock
   | DosAndDontsBlock
   | NumberedItemsBlock
+  | ChecklistBlock
   | LogoDividerBlock
   | AccordionBlock
   | AudioBlock
@@ -1843,7 +1859,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     ],
     startNumber: 1,
     bgColor: "",
-    borderRadius: 8,
+    borderRadius: 6,
     visibility: "both",
   },
 },
@@ -1862,6 +1878,24 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       { id: crypto.randomUUID(), title: "", children: [] },
     ],
     showNumbers: false,
+    visibility: "both",
+  },
+},
+{
+  type: "checklist",
+  label: "Checklist",
+  description: "Item list with checkboxes and rich text",
+  labelKey: "checklist",
+  descriptionKey: "checklistDesc",
+  icon: "CheckSquare",
+  category: "content",
+  translations: { de: { label: "Checkliste", description: "Aufzählung mit Checkboxen und formatiertem Text" } },
+  defaultData: {
+    type: "checklist",
+    items: [
+      { id: crypto.randomUUID(), content: "" },
+    ],
+    bilingual: false,
     visibility: "both",
   },
 },

@@ -44,6 +44,7 @@ import {
   DosAndDontsBlock,
   TextComparisonBlock,
   NumberedItemsBlock,
+  ChecklistBlock,
   AccordionBlock,
   LogoDividerBlock,
   AiPromptBlock,
@@ -56,7 +57,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
@@ -3638,39 +3639,92 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
 
 // ─── Numbered Items ─────────────────────────────────────────
 
-function NumberedItemsView({ block }: { block: NumberedItemsBlock }) {
-  const MAIN_HEX = new Set(["#4a3d55","#7a5550","#3a4f40","#5a4540","#3a6570","#990033"]);
+function isDarkColor(hex: string): boolean {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  const toLinear = (c: number) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return L < 0.35;
+}
+
+function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale, brand }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number; brand?: Brand }) {
   const hasBg = !!block.bgColor;
-  const textWhite = hasBg && MAIN_HEX.has(block.bgColor!.toLowerCase());
-  const radius = block.borderRadius ?? 8;
+  const textWhite = hasBg && isDarkColor(block.bgColor!);
+  const radius = block.borderRadius ?? 6;
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const isBilingual = block.bilingual && !!originalBlock;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
 
   return (
     <div className="space-y-3">
-      {block.items.map((item, i) => (
-        <div
-          key={item.id}
-          className="flex gap-0 font-semibold tiptap-compact"
-          style={hasBg ? {
-            backgroundColor: `${block.bgColor}18`,
-            borderRadius: `${radius}px`,
-            color: block.bgColor,
-          } : undefined}
-        >
+      {block.items.map((item, i) => {
+        const originalItem = originalBlock?.items[i];
+        const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+        return (
           <div
-            className="shrink-0 w-10 flex items-center justify-center text-base font-bold"
-            style={{
-              backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
-              color: textWhite ? '#fff' : hasBg ? undefined : 'var(--color-primary, #1a1a1a)',
-              borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
-            }}
+            key={item.id}
+            className="flex gap-0 font-semibold tiptap-compact"
+            style={hasBg ? {
+              backgroundColor: `${block.bgColor}18`,
+              borderRadius: `${radius}px`,
+              color: block.bgColor,
+            } : undefined}
           >
-            {String(block.startNumber + i).padStart(2, '0')}
+            <div
+              className="shrink-0 w-[30px] flex items-center justify-center text-base font-bold"
+              style={{
+                backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
+                color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
+                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+              }}
+            >
+              {String(block.startNumber + i).padStart(2, '0')}
+            </div>
+            {showBilingual ? (
+              <div className="flex-1 min-w-0" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1em' }}>
+                <div className="px-3 py-1.5" style={{ borderRight: '1px solid #e2e8f0', fontFamily: brandFonts.bodyFont }}>
+                  <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(originalItem.content) }} />
+                </div>
+                <div className="px-3 py-1.5" style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined}>
+                  <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }} />
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 px-3 py-1.5">
+                <div
+                  className="tiptap max-w-none"
+                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex-1 min-w-0 px-3 py-2">
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Checklist View ────────────────────────────────────────────
+function ChecklistView({ block }: { block: ChecklistBlock }) {
+  return (
+    <div className="divide-y divide-border/40">
+      {block.items.map((item) => (
+        <div key={item.id} className="flex items-start gap-2 py-2.5">
+          <Square className="h-4 w-4 shrink-0 text-foreground/60" style={{ marginTop: "0.2em" }} />
+          <div className="flex-1 min-w-0 tiptap-compact">
             <div
               className="tiptap max-w-none"
               dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
             />
+            {(item.writingLines ?? 0) > 0 && (
+              <div className="mt-2 space-y-2">
+                {Array.from({ length: item.writingLines! }).map((_, i) => (
+                  <div key={i} style={{ height: 20, borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 0.5 }} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -4577,7 +4631,9 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} brand={brand} />;
+    case "checklist":
+      return <ChecklistView block={block as ChecklistBlock} />;
     case "accordion":
       return (
         <AccordionView

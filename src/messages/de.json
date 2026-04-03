@@ -393,6 +393,8 @@
     "articleTrainingDesc": "Deutsche Artikel (der/das/die) üben",
     "audio": "Audio",
     "audioDesc": "Audioplayer mit Wiedergabesteuerung",
+    "checklist": "Checkliste",
+    "checklistDesc": "Aufzählung mit Checkboxen und formatiertem Text",
     "columnsDesc": "Inhalt in Spalten anordnen",
     "columnsLabel": "Spalten",
     "completeSentences": "Sätze vervollständigen",

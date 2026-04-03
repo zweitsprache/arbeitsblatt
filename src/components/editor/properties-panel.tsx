@@ -52,6 +52,7 @@ import {
   ChartBlock,
   ChartDataPoint,
   NumberedItemsBlock,
+  ChecklistBlock,
   NumberedLabelBlock,
   DialogueBlock,
   DialogueItem,
@@ -5023,13 +5024,23 @@ function isMainColor(hex: string) {
 }
 
 function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
   const update = (updates: Partial<NumberedItemsBlock>) =>
     dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
 
+  const brandPrimary = state.brandProfile.primaryColor;
+
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) => update({ bilingual: checked })}
+        />
+      </div>
+      <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
         <Input
@@ -5056,6 +5067,17 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
             >
               ✕
             </button>
+            {/* Brand primary color */}
+            <button
+              title="Brand Primary"
+              className={`w-7 h-7 rounded border-2 transition-all cursor-pointer ring-1 ring-offset-1 ring-transparent ${
+                block.bgColor?.toLowerCase() === brandPrimary.toLowerCase()
+                  ? "border-primary scale-110"
+                  : "border-border hover:border-primary/50"
+              }`}
+              style={{ backgroundColor: brandPrimary }}
+              onClick={() => update({ bgColor: brandPrimary })}
+            />
             {NUMBERED_ITEMS_MAIN_COLORS.map((c) => (
               <button
                 key={c.hex}
@@ -5093,10 +5115,29 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
           min={0}
           max={24}
           step={1}
-          value={[block.borderRadius ?? 8]}
+          value={[block.borderRadius ?? 6]}
           onValueChange={([v]) => update({ borderRadius: v })}
         />
-        <span className="text-xs text-muted-foreground">{block.borderRadius ?? 8}px</span>
+        <span className="text-xs text-muted-foreground">{block.borderRadius ?? 6}px</span>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistProps({ block }: { block: ChecklistBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const update = (updates: Partial<ChecklistBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) => update({ bilingual: checked })}
+        />
       </div>
     </div>
   );
@@ -6220,6 +6261,8 @@ export function PropertiesPanel() {
         return <TextComparisonProps block={selectedBlock as TextComparisonBlock} />;
       case "numbered-items":
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
+      case "checklist":
+        return <ChecklistProps block={selectedBlock as ChecklistBlock} />;
       case "accordion":
         return <AccordionProps block={selectedBlock as AccordionBlock} />;
       case "ai-prompt":

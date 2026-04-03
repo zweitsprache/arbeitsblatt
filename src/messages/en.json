@@ -393,6 +393,8 @@
     "articleTrainingDesc": "Practice German articles (der/das/die)",
     "audio": "Audio",
     "audioDesc": "Audio player with playback controls",
+    "checklist": "Checklist",
+    "checklistDesc": "Item list with checkboxes and rich text",
     "columnsDesc": "Arrange content in columns",
     "columnsLabel": "Columns",
     "completeSentences": "Complete sentences",

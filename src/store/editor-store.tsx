@@ -540,9 +540,12 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
         ...def.defaultData,
         id: uuidv4(),
       } as WorksheetBlock;
+      if (type === "numbered-items") {
+        (block as import("@/types/worksheet").NumberedItemsBlock).bgColor = state.brandProfile.primaryColor;
+      }
       dispatch({ type: "ADD_BLOCK", payload: { block, index } });
     },
-    []
+    [state.brandProfile.primaryColor]
   );
 
   const duplicateBlock = useCallback(

@@ -8,7 +8,13 @@ import { auth } from "@/lib/auth/server";
 export async function requireAuth(): Promise<
   { userId: string } | NextResponse
 > {
-  const { data: session } = await auth.getSession();
+  let session;
+  try {
+    const result = await auth.getSession();
+    session = result.data;
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

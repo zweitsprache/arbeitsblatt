@@ -49,6 +49,8 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
+  ChecklistBlock,
+  ChecklistItem,
   AccordionBlock,
   AccordionItem,
   LogoDividerBlock,
@@ -68,7 +70,7 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot } from "lucide-react";
+import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -3892,6 +3894,17 @@ function TextComparisonRenderer({ block }: { block: TextComparisonBlock }) {
 
 // ─── Numbered Items ─────────────────────────────────────────
 
+/** Returns true if the hex color is dark enough to warrant white text. */
+function isDarkColor(hex: string): boolean {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  const toLinear = (c: number) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return L < 0.35;
+}
+
 function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
@@ -3927,10 +3940,9 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
     });
   };
 
-  const MAIN_HEX = new Set(["#4a3d55","#7a5550","#3a4f40","#5a4540","#3a6570","#990033"]);
   const hasBg = !!block.bgColor;
-  const textWhite = hasBg && MAIN_HEX.has(block.bgColor!.toLowerCase());
-  const radius = block.borderRadius ?? 8;
+  const textWhite = hasBg && isDarkColor(block.bgColor!);
+  const radius = block.borderRadius ?? 6;
 
   return (
     <div className="space-y-2">
@@ -3945,15 +3957,15 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
             } : undefined}
           >
             <div
-              className={`shrink-0 w-10 flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+              className={`shrink-0 w-[30px] flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
               style={{
-                ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : undefined } : {}),
+                ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : '#000' } : {}),
                 borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
               }}
             >
               {String(block.startNumber + i).padStart(2, '0')}
             </div>
-            <div className="flex-1 min-w-0 px-3 py-2">
+            <div className="flex-1 min-w-0 px-3 py-1.5">
               <RichTextEditor
                 content={item.content}
                 onChange={(html) => updateItem(i, html)}
@@ -3973,6 +3985,137 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
       <button
         onClick={addItem}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-11"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+    </div>
+  );
+}
+
+// ─── Checklist block ─────────────────────────────────────────
+function ChecklistRenderer({ block }: { block: ChecklistBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+
+  const updateItem = (index: number, content: string) => {
+    localeUpdate(block.id, `items.${index}.content`, content, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], content };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), content: "" } as ChecklistItem,
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newItems = [...block.items];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const adjustLines = (index: number, delta: number) => {
+    const newItems = [...block.items];
+    const current = newItems[index].writingLines ?? 0;
+    const next = Math.max(0, current + delta);
+    newItems[index] = { ...newItems[index], writingLines: next };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="divide-y divide-border/40">
+      {block.items.map((item, i) => (
+        <div key={item.id} className="flex items-start gap-2 group py-2">
+          <Square className="h-4 w-4 shrink-0 text-muted-foreground" style={{ marginTop: "0.2em" }} />
+          <div className="flex-1 min-w-0 tiptap-compact">
+            <RichTextEditor
+              content={item.content}
+              onChange={(html) => updateItem(i, html)}
+              placeholder="…"
+              editorClassName="prose prose-sm max-w-none focus:outline-none px-0 py-0"
+            />
+            {(item.writingLines ?? 0) > 0 && (
+              <div className="mt-1 space-y-1.5 pointer-events-none">
+                {Array.from({ length: item.writingLines! }).map((_, li) => (
+                  <div key={li} style={{ height: 20, borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 0.4 }} />
+                ))}
+              </div>
+            )}
+          </div>
+          {/* hover controls */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
+            <button
+              onClick={() => moveItem(i, "up")}
+              disabled={i === 0}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => moveItem(i, "down")}
+              disabled={i === block.items.length - 1}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-border/60 select-none text-xs px-0.5">|</span>
+            <button
+              onClick={() => adjustLines(i, -1)}
+              disabled={(item.writingLines ?? 0) === 0}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-xs text-muted-foreground w-3 text-center tabular-nums">
+              {item.writingLines ?? 0}
+            </span>
+            <button
+              onClick={() => adjustLines(i, 1)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-border/60 select-none text-xs px-0.5">|</span>
+            <button
+              onClick={() => removeItem(i)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors pt-2 ml-6"
       >
         <Plus className="h-3 w-3" /> Add
       </button>
@@ -4477,6 +4620,8 @@ export function BlockRenderer({
       return <TextComparisonRenderer block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
+    case "checklist":
+      return <ChecklistRenderer block={block as ChecklistBlock} />;
     case "accordion":
       return <AccordionRenderer block={block as AccordionBlock} mode={mode} />;
     case "ai-prompt":

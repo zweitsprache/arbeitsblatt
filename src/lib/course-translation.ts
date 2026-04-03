@@ -367,6 +367,13 @@ function extractSingleBlockStrings(
       }
       break;
     }
+
+    // ── Checklist
+    case "checklist":
+      for (const item of block.items) {
+        addStr(strings, `${p}.items.${item.id}.content`, item.content);
+      }
+      break;
   }
 }
 
@@ -719,5 +726,9 @@ function applySingleBlockTranslations(
       }
       break;
     }
+    case "checklist":
+      for (const item of block.items)
+        apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
+      break;
   }
 }
