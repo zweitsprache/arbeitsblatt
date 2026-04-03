@@ -8,6 +8,7 @@ import {
   BookOpen,
   GraduationCap,
   Bot,
+  Monitor,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ContentType, ClientBrandSettings } from "@/types/project";
@@ -21,6 +22,7 @@ const CONTENT_TYPE_ICONS: Record<
   EBOOK: BookOpen,
   COURSE: GraduationCap,
   AI_TOOL: Bot,
+  PRESENTATION: Monitor,
 };
 
 const CONTENT_TYPE_VIEWER_PREFIX: Record<ContentType, string> = {
@@ -28,6 +30,7 @@ const CONTENT_TYPE_VIEWER_PREFIX: Record<ContentType, string> = {
   EBOOK: "ebook",
   COURSE: "course",
   AI_TOOL: "ai-tool",
+  PRESENTATION: "presentation",
 };
 
 interface ContentItem {
