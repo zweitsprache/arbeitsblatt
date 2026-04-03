@@ -100,7 +100,7 @@ async function main() {
 
     await prisma.worksheet.update({
       where: { id: ws.id },
-      data: { settings: updatedSettings as unknown as Record<string, unknown> },
+      data: { settings: updatedSettings as object },
     });
     migrated++;
     console.log(`  ✅ ${ws.title} (id: ${ws.id}) — migrated ${Object.keys(overrides).length} overrides`);
