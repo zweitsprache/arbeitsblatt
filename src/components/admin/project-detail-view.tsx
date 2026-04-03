@@ -26,6 +26,7 @@ import {
   BookOpen,
   GraduationCap,
   Bot,
+  Monitor,
 } from "lucide-react";
 import type {
   Project,
@@ -42,6 +43,7 @@ const CONTENT_TYPE_ICONS: Record<
   EBOOK: BookOpen,
   COURSE: GraduationCap,
   AI_TOOL: Bot,
+  PRESENTATION: Monitor,
 };
 
 const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
@@ -49,6 +51,7 @@ const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
   EBOOK: "typeEbook",
   COURSE: "typeCourse",
   AI_TOOL: "typeAiTool",
+  PRESENTATION: "typePresentation",
 };
 
 interface SearchResult {
