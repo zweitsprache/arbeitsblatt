@@ -3906,8 +3906,9 @@ function isDarkColor(hex: string): boolean {
 }
 
 function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
+  const textBaseSize = state.brandProfile.textBaseSize;
 
   const updateItem = (index: number, content: string) => {
     localeUpdate(block.id, `items.${index}.content`, content, () => {
@@ -3957,10 +3958,11 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
             } : undefined}
           >
             <div
-              className={`shrink-0 w-[30px] flex items-center justify-center text-base font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+              className={`shrink-0 w-[30px] flex items-center justify-center font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
               style={{
                 ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : '#000' } : {}),
                 borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+                ...(textBaseSize ? { fontSize: textBaseSize } : {}),
               }}
             >
               {String(block.startNumber + i).padStart(2, '0')}

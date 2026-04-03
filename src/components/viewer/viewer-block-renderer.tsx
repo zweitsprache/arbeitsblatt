@@ -137,6 +137,11 @@ function prepareTiptapHtml(html: string): string {
   return resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)));
 }
 
+/** Strip outer <p>…</p> wrapper so content can render inline */
+function stripOuterP(html: string): string {
+  return html.replace(/^<p[^>]*>(.*)<\/p>$/is, "$1");
+}
+
 // ─── German marker helper ────────────────────────────────────
 /** Parse {{de:…}} markers and render the German text in italic */
 function renderDeMarkers(text: string): React.ReactNode {
@@ -287,6 +292,7 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
   const rowsClass = isKompetenzziele ? "tiptap-rows tiptap-rows-goal" : isHandlungsziele ? "tiptap-rows tiptap-rows-arrow-right-to-line" : isRows ? "tiptap-rows" : "";
   const isMetadaten = block.textStyle === "metadaten";
+  const isStandard = block.textStyle === "standard" || !block.textStyle;
 
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
@@ -360,6 +366,28 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "0.375rem", width: 14, height: 14, background: arrowBg, marginTop: 8 }} />
+                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      );
+    }
+
+    // For standard style bilingual: paragraph-by-paragraph aligned rows without cell padding
+    if (isStandard) {
+      const originalParas = splitParagraphs(originalHtml);
+      const translatedParas = splitParagraphs(translatedHtml);
+      const maxLen = Math.max(originalParas.length, translatedParas.length);
+      const hasMultipleRows = maxLen > 1;
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: hasMultipleRows ? "0.5em 1em" : "0 1em" }}>
+          {Array.from({ length: maxLen }, (_, i) => (
+            <React.Fragment key={i}>
+              <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
+                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
+              </div>
+              <div className="tiptap-compact" style={translatedFontStyle}>
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -3673,7 +3701,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
             } : undefined}
           >
             <div
-              className="shrink-0 w-[30px] flex items-center justify-center text-base font-bold"
+              className="shrink-0 w-[30px] flex items-center justify-center font-bold"
               style={{
                 backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
                 color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
@@ -3683,13 +3711,10 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
               {String(block.startNumber + i).padStart(2, '0')}
             </div>
             {showBilingual ? (
-              <div className="flex-1 min-w-0" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1em' }}>
-                <div className="px-3 py-1.5" style={{ borderRight: '1px solid #e2e8f0', fontFamily: brandFonts.bodyFont }}>
-                  <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(originalItem.content) }} />
-                </div>
-                <div className="px-3 py-1.5" style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined}>
-                  <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }} />
-                </div>
+              <div className="flex-1 min-w-0 px-3 py-1.5">
+                <span style={{ fontFamily: brandFonts.bodyFont }} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
+                <span style={{ fontWeight: 400 }}> | </span>
+                <span style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(item.content)) }} />
               </div>
             ) : (
               <div className="flex-1 min-w-0 px-3 py-1.5">

@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { WorksheetEditor } from "@/components/editor/worksheet-editor";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { WorksheetDocument, DEFAULT_SETTINGS, WorksheetBlock, WorksheetSettings } from "@/types/worksheet";
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { auth } from "@/lib/auth/server";
+import { WorksheetEditorLoader } from "@/components/editor/worksheet-editor-loader";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,7 @@ export default async function EditWorksheetPage({
 
   return (
     <DashboardLayout>
-      <WorksheetEditor initialData={doc} />
+      <WorksheetEditorLoader initialData={doc} />
     </DashboardLayout>
   );
 }
