@@ -211,7 +211,7 @@ function EditorInner({
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <BlockSidebar />
+          <BlockSidebar onAddBlock={(type) => addBlock(type)} />
           <WorksheetCanvas
             activeId={activeId}
             overId={overId}
