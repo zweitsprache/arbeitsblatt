@@ -8,6 +8,7 @@ import {
 import {
   WorksheetBlock,
   TextBlock,
+  HeadingBlock,
   TextSnippetBlock,
   ColumnsBlock,
   AccordionBlock,
@@ -117,7 +118,7 @@ function extractSingleBlockStrings(
     // ── Text block: content only if no set style; comment always
     case "text": {
       const tb = block as TextBlock;
-      if (!tb.textStyle || tb.textStyle === "standard" || tb.textStyle === "hinweis" || tb.textStyle === "hinweis-wichtig" || tb.textStyle === "hinweis-alarm" || tb.textStyle === "lernziel" || tb.textStyle === "rows") {
+      if (!tb.textStyle || tb.textStyle === "standard" || tb.textStyle === "hinweis" || tb.textStyle === "hinweis-wichtig" || tb.textStyle === "hinweis-alarm" || tb.textStyle === "lernziel" || tb.textStyle === "rows" || tb.textStyle === "kompetenzziele" || tb.textStyle === "handlungsziele") {
         addStr(strings, `${p}.content`, tb.content);
       }
       addStr(strings, `${p}.comment`, tb.comment);
@@ -126,7 +127,9 @@ function extractSingleBlockStrings(
 
     // ── Heading
     case "heading":
-      addStr(strings, `${p}.content`, block.content);
+      if (!(block as HeadingBlock).skipTranslation) {
+        addStr(strings, `${p}.content`, block.content);
+      }
       break;
 
     // ── Image
@@ -542,14 +545,16 @@ function applySingleBlockTranslations(
 
   switch (block.type) {
     case "text": {
-      if (!block.textStyle || block.textStyle === "standard" || block.textStyle === "hinweis" || block.textStyle === "hinweis-wichtig" || block.textStyle === "hinweis-alarm" || block.textStyle === "lernziel" || block.textStyle === "rows") {
+      if (!block.textStyle || block.textStyle === "standard" || block.textStyle === "hinweis" || block.textStyle === "hinweis-wichtig" || block.textStyle === "hinweis-alarm" || block.textStyle === "lernziel" || block.textStyle === "rows" || block.textStyle === "kompetenzziele" || block.textStyle === "handlungsziele") {
         apply(`${p}.content`, (v) => (block.content = v));
       }
       apply(`${p}.comment`, (v) => (block.comment = v));
       break;
     }
     case "heading":
-      apply(`${p}.content`, (v) => (block.content = v));
+      if (!(block as HeadingBlock).skipTranslation) {
+        apply(`${p}.content`, (v) => (block.content = v));
+      }
       break;
     case "image":
       apply(`${p}.alt`, (v) => (block.alt = v));

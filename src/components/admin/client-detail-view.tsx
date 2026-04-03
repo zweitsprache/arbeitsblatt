@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, FolderKanban, Save } from "lucide-react";
-import type { Client, BrandSettings } from "@/types/project";
+import type { Client, ClientBrandSettings } from "@/types/project";
 
 export function ClientDetailView({ clientId }: { clientId: string }) {
   const t = useTranslations("admin");
@@ -20,7 +20,7 @@ export function ClientDetailView({ clientId }: { clientId: string }) {
   // Editable fields
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [brand, setBrand] = useState<BrandSettings>({});
+  const [brand, setBrand] = useState<ClientBrandSettings>({});
 
   const fetchClient = useCallback(async () => {
     try {
@@ -31,7 +31,7 @@ export function ClientDetailView({ clientId }: { clientId: string }) {
         setName(data.name);
         setSlug(data.slug);
         setBrand(
-          (data.brandSettings as BrandSettings) || {}
+          (data.brandSettings as ClientBrandSettings) || {}
         );
       }
     } finally {
@@ -60,7 +60,7 @@ export function ClientDetailView({ clientId }: { clientId: string }) {
     }
   };
 
-  const updateBrand = (key: keyof BrandSettings, value: string) => {
+  const updateBrand = (key: keyof ClientBrandSettings, value: string) => {
     setBrand((prev) => ({ ...prev, [key]: value || undefined }));
   };
 

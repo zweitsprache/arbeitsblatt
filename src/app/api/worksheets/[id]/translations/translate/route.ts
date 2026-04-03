@@ -108,7 +108,34 @@ export async function POST(
     });
   }
 
+  // ── Removal-only: no AI call needed, just clean up ────────
+  if (Object.keys(delta).length === 0 && removedKeys.length > 0) {
+    const merged: Record<string, Record<string, string>> = {};
+    for (const [lang, map] of Object.entries(existingTranslations)) {
+      if (!lang.startsWith("_")) merged[lang] = { ...map };
+    }
+    for (const removedKey of removedKeys) {
+      for (const lang of Object.keys(merged)) delete merged[lang][removedKey];
+    }
+    const updatedSource = { ...previousSource };
+    for (const removedKey of removedKeys) delete updatedSource[removedKey];
+    merged._source = updatedSource;
+    await prisma.worksheet.update({
+      where: { id },
+      data: { translations: merged, translatedAt: new Date() } as Parameters<typeof prisma.worksheet.update>[0]["data"],
+    });
+    return NextResponse.json({
+      success: true,
+      stringCount: 0,
+      languages: Object.keys(merged).filter((k) => !k.startsWith("_")),
+      message: `Removed ${removedKeys.length} obsolete translation key(s)`,
+    });
+  }
+
   const deltaEntries = Object.entries(delta);
+
+  console.log(`[translate] Delta: ${deltaEntries.length} changed, ${removedKeys.length} removed. Keys: ${deltaEntries.map(([k]) => k).join(", ")}`);
+  console.log(`[translate] Delta values sample:`, JSON.stringify(delta).slice(0, 500));
 
   // Build per-key AI instructions
   const specialInstructions: string[] = [];
@@ -162,24 +189,50 @@ Return ONLY valid JSON — no markdown fences, no commentary.`;
         system: systemPrompt,
       });
 
+      console.log(`[translate] ${langCode}: stop_reason=${message.stop_reason}, content_blocks=${message.content.length}`);
+
       const textBlock = message.content.find((c) => c.type === "text");
       if (!textBlock || textBlock.type !== "text") {
-        console.warn(`No AI response for language ${langCode}`);
+        console.warn(`[translate] ${langCode}: No text block in AI response`);
         continue;
       }
 
+      console.log(`[translate] ${langCode}: response length=${textBlock.text.length}, first 200 chars: ${textBlock.text.slice(0, 200)}`);
+
       try {
         let raw = textBlock.text.trim();
-        if (raw.startsWith("```")) {
-          raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        // Strip markdown fences (case-insensitive)
+        raw = raw.replace(/^```[a-z]*\s*\n?/i, "").replace(/\n?```\s*$/, "");
+        // If there's still non-JSON text around the object, extract { … }
+        const firstBrace = raw.indexOf("{");
+        const lastBrace = raw.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          raw = raw.slice(firstBrace, lastBrace + 1);
         }
+
+        // If response was truncated (max_tokens), try to salvage partial JSON
+        if (message.stop_reason === "max_tokens" && !raw.endsWith("}")) {
+          // Find the last complete key-value pair and close the object
+          const lastCompleteComma = raw.lastIndexOf(",\n");
+          const lastCompleteQuote = raw.lastIndexOf('"\n');
+          const cutoff = Math.max(lastCompleteComma, lastCompleteQuote);
+          if (cutoff > 0) {
+            raw = raw.slice(0, cutoff) + "\n}";
+            console.warn(`[translate] ${langCode}: Truncated response — salvaged partial JSON at offset ${cutoff}`);
+          }
+        }
+
         const langTranslations = JSON.parse(raw);
         if (typeof langTranslations === "object" && Object.keys(langTranslations).length > 0) {
           newTranslationsByLang[langCode] = langTranslations;
           translatedLanguages.push(langCode);
+          console.log(`[translate] ${langCode}: parsed ${Object.keys(langTranslations).length} keys`);
+        } else {
+          console.warn(`[translate] ${langCode}: Parsed OK but empty object`);
         }
-      } catch {
-        console.error(`Failed to parse ${langCode} translation response:`, textBlock.text.slice(0, 500));
+      } catch (parseErr) {
+        console.error(`[translate] ${langCode}: JSON parse failed:`, parseErr instanceof Error ? parseErr.message : parseErr);
+        console.error(`[translate] ${langCode}: Raw response (first 500):`, textBlock.text.slice(0, 500));
       }
     }
 

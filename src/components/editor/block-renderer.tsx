@@ -55,6 +55,8 @@ import {
   AiPromptBlock,
   AiToolBlock,
   AudioBlock,
+  ScheduleBlock,
+  ScheduleItem,
   TableBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
@@ -66,7 +68,7 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, BadgeAlert, Siren, Goal, Loader2, Bot } from "lucide-react";
+import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -225,8 +227,11 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
   const isLernziel = block.textStyle === "lernziel";
+  const isKompetenzziele = block.textStyle === "kompetenzziele";
+  const isHandlungsziele = block.textStyle === "handlungsziele";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows";
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
+  const rowsClass = isKompetenzziele ? "tiptap-rows tiptap-rows-goal" : isHandlungsziele ? "tiptap-rows tiptap-rows-arrow-right-to-line" : isRows ? "tiptap-rows" : "";
 
   const hinweisConfig = isHinweisAlarm
     ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
@@ -272,7 +277,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
       <>
         <div className="relative group/text flex gap-0 border-2 rounded-sm overflow-hidden" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D5510", color: "#4A3D55" }}>
           <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: "#4A3D55" }}>
-            <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
+            <Flag className="h-5 w-5" style={{ color: "#ffffff" }} />
           </div>
           <div className="flex-1 min-w-0 px-3 py-2">
             {richTextEl}
@@ -293,7 +298,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
   return (
     <>
-      <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-sm" : ""} ${isRows ? "tiptap-rows" : ""}`}
+      <div className={`relative group/text ${hasHinweisBox ? "flex gap-0 border-2 rounded-sm" : ""} ${rowsClass}`}
         style={hasHinweisBox ? { borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color } : undefined}
       >
         {hasHinweisBox && (
@@ -962,12 +967,13 @@ function LogoDividerRenderer({ block }: { block: LogoDividerBlock }) {
 }
 
 // ─── Page Break ──────────────────────────────────────────────
-function PageBreakRenderer({ block: _block }: { block: PageBreakBlock }) {
+function PageBreakRenderer({ block }: { block: PageBreakBlock }) {
+  const t = useTranslations("blockRenderer");
   return (
     <div className="relative flex items-center justify-center py-2">
       <div className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-blue-300" />
       <span className="relative z-10 bg-white px-3 py-0.5 text-xs font-medium text-blue-500 border border-blue-200 rounded-full">
-        Seitenumbruch
+        {t("pageBreak")}{block.restartPageNumbering ? ` · ${t("restartPageNumbering")}` : ""}
       </span>
     </div>
   );
@@ -4177,6 +4183,33 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
   );
 }
 
+// ─── Schedule block ──────────────────────────────────────────
+function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <p className="text-base text-muted-foreground">{block.instruction}</p>
+      )}
+      <div className="space-y-0 border-t">
+        {block.items.map((item) => (
+          <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
+            <span className="text-base tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
+            <span className="text-base flex-1">
+              <span className="font-semibold">{item.title}</span>
+              {item.description && (
+                <>
+                  <br />
+                  <span className="text-muted-foreground">{item.description}</span>
+                </>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
   const { dispatch } = useEditor();
@@ -4454,6 +4487,8 @@ export function BlockRenderer({
       return <TableBlockRenderer block={block as TableBlock} />;
     case "audio":
       return <AudioRenderer block={block as AudioBlock} />;
+    case "schedule":
+      return <ScheduleRenderer block={block as ScheduleBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

@@ -11,7 +11,7 @@ import {
   DEFAULT_EBOOK_COVER_SETTINGS,
   EBookContentType,
 } from "@/types/ebook";
-import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS, BrandProfile, getStaticBrandProfile } from "@/types/worksheet";
 
 export const maxDuration = 120;
 
@@ -86,10 +86,16 @@ export async function GET(
   };
 
   const brandName = settings.brand as Brand;
+  const dbBrand = await prisma.brandProfile.findUnique({ where: { slug: brandName || "edoomio" } });
+  const brandProfile: BrandProfile = dbBrand
+    ? (dbBrand as unknown as BrandProfile)
+    : getStaticBrandProfile(brandName || "edoomio");
   const brandFonts = BRAND_FONTS[brandName] || BRAND_FONTS.edoomio;
   const brandSettingsResolved = {
     ...(DEFAULT_BRAND_SETTINGS[brandName] || DEFAULT_BRAND_SETTINGS.edoomio),
     ...settings.brandSettings,
+    logo: brandProfile.logo ?? (DEFAULT_BRAND_SETTINGS[brandName] || DEFAULT_BRAND_SETTINGS.edoomio)?.logo,
+    organization: brandProfile.organization ?? (DEFAULT_BRAND_SETTINGS[brandName] || DEFAULT_BRAND_SETTINGS.edoomio)?.organization,
   };
 
   // Unified brand info for HTML builders

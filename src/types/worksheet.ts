@@ -51,7 +51,8 @@ export type BlockType =
   | "table"
   | "text-comparison"
   | "accordion"
-  | "audio";
+  | "audio"
+  | "schedule";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -66,10 +67,11 @@ export interface HeadingBlock extends BlockBase {
   content: string;
   level: 1 | 2 | 3;
   bilingual?: boolean;
+  skipTranslation?: boolean;
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
-export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "metadaten" | "rows";
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "metadaten" | "rows";
 
 export interface TextBlock extends BlockBase {
   type: "text";
@@ -163,7 +165,7 @@ export interface TableBlock extends BlockBase {
   columnWidths?: number[];
 }
 
-export const BRAND_ICON_LOGOS: Record<Brand, string> = {
+export const BRAND_ICON_LOGOS: Record<string, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
   "agi-frauenfeld": "/logo/logo-stadt-frauenfeld.svg",
@@ -514,6 +516,7 @@ export interface NumberedLabelBlock extends BlockBase {
 // ─── Page Break block ────────────────────────────────────────
 export interface PageBreakBlock extends BlockBase {
   type: "page-break";
+  restartPageNumbering?: boolean;
 }
 
 // ─── Writing Lines block ─────────────────────────────────────
@@ -629,6 +632,21 @@ export interface AudioBlock extends BlockBase {
   title?: string;    // optional display title
 }
 
+// ─── Schedule block ──────────────────────────────────────────
+export interface ScheduleItem {
+  id: string;
+  start: string; // HH:mm
+  end: string;   // HH:mm
+  title: string;
+  description: string;
+}
+
+export interface ScheduleBlock extends BlockBase {
+  type: "schedule";
+  instruction: string;
+  items: ScheduleItem[];
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 export interface AiPromptBlock extends BlockBase {
   type: "ai-prompt";
@@ -702,13 +720,114 @@ export type WorksheetBlock =
   | LogoDividerBlock
   | AccordionBlock
   | AudioBlock
+  | ScheduleBlock
   | AiPromptBlock
   | AiToolBlock
   | TableBlock;
 
 // ─── Brand types ────────────────────────────────────────────
-export type Brand = "edoomio" | "lingostar" | "agi-frauenfeld";
 
+/**
+ * DB-backed brand profile. All brand-specific settings live here.
+ * Worksheets reference a brand by slug and inherit everything.
+ */
+export interface BrandProfile {
+  id: string;
+  name: string;
+  slug: string;
+
+  // Typography
+  bodyFont: string;
+  headlineFont: string;
+  headlineWeight: number;
+  subHeadlineFont: string;
+  subHeadlineWeight: number;
+  headerFooterFont: string;
+  googleFontsUrl: string;
+
+  // Font sizes & weights per heading level and text base
+  h1Size?: string | null;
+  h1Weight?: number | null;
+  h2Size?: string | null;
+  h2Weight?: number | null;
+  h3Size?: string | null;
+  h3Weight?: number | null;
+  textBaseSize?: string | null;
+
+  // Colors
+  primaryColor: string;
+  accentColor?: string | null;
+
+  // Assets
+  logo: string;
+  iconLogo?: string | null;
+  favicon?: string | null;
+
+  // Layout defaults
+  organization: string;
+  teacher: string;
+  headerRight: string;
+  footerLeft: string;
+  footerCenter: string;
+  footerRight: string;
+
+  // PDF settings
+  pdfFontSize?: number | null;
+  pdfTranslationScale?: number | null;
+
+  // Meta
+  pageTitle?: string | null;
+
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Sub-profiles
+  subProfiles?: BrandSubProfile[];
+}
+
+/**
+ * Sub-profile for a brand. Provides two variants of header/footer content:
+ * - Variant 1 (v1): multiline (detailed)
+ * - Variant 2 (v2): single line (compact)
+ * Layouts choose which variant to use.
+ */
+export interface BrandSubProfile {
+  id: string;
+  name: string;
+  brandProfileId: string;
+
+  // Variant 1 — multiline
+  headerLeftV1: string;
+  headerRightV1: string;
+  footerLeftV1: string;
+  footerRightV1: string;
+
+  // Variant 2 — single line
+  headerLeftV2: string;
+  headerRightV2: string;
+  footerLeftV2: string;
+  footerRightV2: string;
+
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Per-worksheet overrides — only layout fields can be overridden. */
+export interface BrandOverrides {
+  logo?: string;
+  organization?: string;
+  teacher?: string;
+  headerRight?: string;
+  footerLeft?: string;
+  footerCenter?: string;
+  footerRight?: string;
+}
+
+// ─── Legacy Brand types (backward compat) ───────────────────
+/** @deprecated Use BrandProfile.slug instead */
+export type Brand = string;
+
+/** @deprecated Use BrandOverrides instead */
 export interface BrandSettings {
   logo: string;
   organization: string;
@@ -719,6 +838,7 @@ export interface BrandSettings {
   footerRight: string;
 }
 
+/** @deprecated Fonts now live on BrandProfile */
 export interface BrandFonts {
   bodyFont: string;
   headlineFont: string;
@@ -730,7 +850,8 @@ export interface BrandFonts {
   primaryColor: string;
 }
 
-export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
+/** @deprecated Use BrandProfile from API. Kept as static fallback. */
+export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = {
   edoomio: {
     logo: "/logo/arbeitsblatt_logo_full_brand.svg",
     organization: "",
@@ -760,7 +881,8 @@ export const DEFAULT_BRAND_SETTINGS: Record<Brand, BrandSettings> = {
   },
 };
 
-export const BRAND_FONTS: Record<Brand, BrandFonts> = {
+/** @deprecated Use BrandProfile from API. Kept as static fallback. */
+export const BRAND_FONTS: Record<string, BrandFonts> = {
   edoomio: {
     bodyFont: "Asap Condensed, sans-serif",
     headlineFont: "Asap Condensed, sans-serif",
@@ -793,6 +915,95 @@ export const BRAND_FONTS: Record<Brand, BrandFonts> = {
   },
 };
 
+/**
+ * Build a BrandProfile from the static fallback constants.
+ * Used when the DB profile is not yet loaded.
+ */
+export function getStaticBrandProfile(slug: string): BrandProfile {
+  const fonts = BRAND_FONTS[slug] ?? BRAND_FONTS["edoomio"];
+  const settings = DEFAULT_BRAND_SETTINGS[slug] ?? DEFAULT_BRAND_SETTINGS["edoomio"];
+  return {
+    id: "",
+    name: slug,
+    slug,
+    bodyFont: fonts.bodyFont,
+    headlineFont: fonts.headlineFont,
+    headlineWeight: fonts.headlineWeight,
+    subHeadlineFont: fonts.subHeadlineFont,
+    subHeadlineWeight: fonts.subHeadlineWeight,
+    headerFooterFont: fonts.headerFooterFont,
+    googleFontsUrl: fonts.googleFontsUrl,
+    primaryColor: fonts.primaryColor,
+    logo: settings.logo,
+    iconLogo: BRAND_ICON_LOGOS[slug] ?? BRAND_ICON_LOGOS["edoomio"],
+    organization: settings.organization,
+    teacher: settings.teacher,
+    headerRight: settings.headerRight,
+    footerLeft: settings.footerLeft,
+    footerCenter: settings.footerCenter,
+    footerRight: settings.footerRight,
+  };
+}
+
+/**
+ * Apply per-worksheet brandOverrides on top of a BrandProfile.
+ */
+export function applyBrandOverrides(
+  profile: BrandProfile,
+  overrides?: BrandOverrides | null,
+): BrandProfile {
+  if (!overrides) return profile;
+  return { ...profile, ...stripUndefined(overrides) };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function stripUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+  const result: Partial<T> = {};
+  for (const key of Object.keys(obj) as (keyof T)[]) {
+    if (obj[key] !== undefined) result[key] = obj[key];
+  }
+  return result;
+}
+
+/** Resolved header/footer fields from a sub-profile variant. */
+export interface SubProfileHeaderFooter {
+  headerLeft: string;
+  headerRight: string;
+  footerLeft: string;
+  footerRight: string;
+}
+
+/**
+ * Resolve sub-profile header/footer overrides.
+ * @param profile   The brand profile (must include subProfiles array)
+ * @param subProfileId  The selected sub-profile ID (from worksheet settings)
+ * @param variant   Which variant to use: 1 = multiline, 2 = single line
+ * @returns Resolved header/footer fields, or null if no sub-profile found
+ */
+export function resolveSubProfileHeaderFooter(
+  profile: BrandProfile,
+  subProfileId: string | undefined,
+  variant: 1 | 2 = 1,
+): SubProfileHeaderFooter | null {
+  if (!subProfileId || !profile.subProfiles?.length) return null;
+  const sp = profile.subProfiles.find((s) => s.id === subProfileId);
+  if (!sp) return null;
+  if (variant === 2) {
+    return {
+      headerLeft: sp.headerLeftV2,
+      headerRight: sp.headerRightV2,
+      footerLeft: sp.footerLeftV2,
+      footerRight: sp.footerRightV2,
+    };
+  }
+  return {
+    headerLeft: sp.headerLeftV1,
+    headerRight: sp.headerRightV1,
+    footerLeft: sp.footerLeftV1,
+    footerRight: sp.footerRightV1,
+  };
+}
+
 // ─── CH overrides for Swiss locale ──────────────────────────
 /** Per-block, per-field Swiss German text overrides.
  *  Keyed by blockId → fieldPath (dot-notation) → override text.
@@ -817,7 +1028,12 @@ export interface WorksheetSettings {
   fontSize: number;
   fontFamily: string;
   brand: Brand;
+  /** @deprecated Use brandOverrides instead. Kept for backward compat with existing data. */
   brandSettings: BrandSettings;
+  /** Per-worksheet overrides on top of the brand profile (layout fields only). */
+  brandOverrides?: BrandOverrides;
+  /** Selected sub-profile ID (overrides header/footer with variant content) */
+  subProfileId?: string;
   chOverrides?: ChOverrides;
   coverSubtitle: string;       // Subtitle shown on the cover page
   coverInfoText: string;       // Info text shown below the cover images
@@ -825,6 +1041,10 @@ export interface WorksheetSettings {
   coverImageBorder: boolean;   // Show border around cover images
   /** ISO language codes to translate into, e.g. ["en", "uk"] */
   translationLanguages?: string[];
+  /** @deprecated Use BrandProfile.pdfFontSize. Kept for backward compat. */
+  pdfFontSize?: number;
+  /** @deprecated Use BrandProfile.pdfTranslationScale. Kept for backward compat. */
+  pdfTranslationScale?: number;
 }
 
 // ─── Worksheet document ─────────────────────────────────────
@@ -1716,6 +1936,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     src: "",
     title: "",
     visibility: "online",
+  },
+},
+// ── Schedule ──────────────────────────────────────────────────
+{
+  type: "schedule",
+  label: "Schedule",
+  description: "Timetable with start/end times, title and description",
+  labelKey: "schedule",
+  descriptionKey: "scheduleDesc",
+  icon: "Clock",
+  category: "content",
+  translations: { de: { label: "Zeitplan", description: "Zeitplan mit Start-/Endzeit, Titel und Beschreibung" } },
+  defaultData: {
+    type: "schedule",
+    instruction: "",
+    items: [
+      { id: "s1", start: "08:00", end: "09:30", title: "Titel 1", description: "" },
+      { id: "s2", start: "09:45", end: "11:15", title: "Titel 2", description: "" },
+      { id: "s3", start: "11:30", end: "13:00", title: "Titel 3", description: "" },
+    ],
+    visibility: "both",
   },
 },
 ];

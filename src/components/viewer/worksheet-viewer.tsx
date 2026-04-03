@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -25,6 +25,7 @@ export function WorksheetViewer({
   translations,
   initialLocale = "de",
   originalBlockMap: externalOriginalBlockMap,
+  brandProfile,
 }: {
   title: string;
   blocks: WorksheetBlock[];
@@ -38,6 +39,8 @@ export function WorksheetViewer({
   initialLocale?: string;
   /** Pre-built map of original (German) blocks by id, for bilingual rendering in print mode. */
   originalBlockMap?: Record<string, WorksheetBlock>;
+  /** Resolved brand profile. When provided, replaces static BRAND_FONTS / DEFAULT_BRAND_SETTINGS lookup. */
+  brandProfile?: BrandProfile;
 }) {
   const t = useTranslations("viewer");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -80,17 +83,63 @@ export function WorksheetViewer({
   );
 
   const pageWidth = settings.pageSize === "a4" ? 794 : 816;
-  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"];
+
+  // Resolve brand profile: prefer prop, then static fallback, then apply per-worksheet overrides
+  const resolvedProfile = applyBrandOverrides(
+    brandProfile ?? getStaticBrandProfile(settings.brand || "edoomio"),
+    settings.brandOverrides,
+  );
+
+  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"] ?? {
+    bodyFont: resolvedProfile.bodyFont,
+    headlineFont: resolvedProfile.headlineFont,
+    headlineWeight: resolvedProfile.headlineWeight,
+    subHeadlineFont: resolvedProfile.subHeadlineFont,
+    subHeadlineWeight: resolvedProfile.subHeadlineWeight,
+    headerFooterFont: resolvedProfile.headerFooterFont,
+    googleFontsUrl: resolvedProfile.googleFontsUrl,
+    primaryColor: resolvedProfile.primaryColor,
+  };
+
+  // If a brand profile was provided, prefer its values over the static map
+  if (brandProfile) {
+    brandFonts.bodyFont = resolvedProfile.bodyFont;
+    brandFonts.headlineFont = resolvedProfile.headlineFont;
+    brandFonts.headlineWeight = resolvedProfile.headlineWeight;
+    brandFonts.subHeadlineFont = resolvedProfile.subHeadlineFont;
+    brandFonts.subHeadlineWeight = resolvedProfile.subHeadlineWeight;
+    brandFonts.headerFooterFont = resolvedProfile.headerFooterFont;
+    brandFonts.googleFontsUrl = resolvedProfile.googleFontsUrl;
+    brandFonts.primaryColor = resolvedProfile.primaryColor;
+  }
+
   const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
   const fontFamily = isNonLatin ? NOTO_SANS_BODY : brandFonts.bodyFont;
   const headlineFont = isNonLatin ? NOTO_SANS_BODY : brandFonts.headlineFont;
   const fontUrl = brandFonts.googleFontsUrl;
 
-  // Get brand settings with fallbacks
+  // Get brand settings — prefer per-worksheet brandSettings (which includes
+  // print-page defaults like pagination placeholders), then resolved profile, then empty
+  const legacyBrandSettings = settings.brandSettings;
   const brandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[settings.brand || "edoomio"],
-    ...settings.brandSettings,
+    logo: legacyBrandSettings?.logo || resolvedProfile.logo,
+    organization: legacyBrandSettings?.organization || resolvedProfile.organization,
+    teacher: legacyBrandSettings?.teacher || resolvedProfile.teacher,
+    headerLeft: "",
+    headerRight: legacyBrandSettings?.headerRight || resolvedProfile.headerRight,
+    footerLeft: legacyBrandSettings?.footerLeft || resolvedProfile.footerLeft,
+    footerCenter: legacyBrandSettings?.footerCenter || resolvedProfile.footerCenter,
+    footerRight: legacyBrandSettings?.footerRight || resolvedProfile.footerRight,
   };
+
+  // Apply sub-profile header/footer overrides (variant 1 = multiline for now)
+  const subHeaders = resolveSubProfileHeaderFooter(resolvedProfile, settings.subProfileId, 1);
+  if (subHeaders) {
+    brandSettings.headerLeft = subHeaders.headerLeft;
+    brandSettings.headerRight = subHeaders.headerRight;
+    brandSettings.footerLeft = subHeaders.footerLeft;
+    brandSettings.footerRight = subHeaders.footerRight;
+  }
 
   const hasInteractiveBlocks = visibleBlocks.some(
     (b) =>
@@ -142,16 +191,18 @@ export function WorksheetViewer({
     return result;
   };
 
+  const processedHeaderLeft = replaceVariables(brandSettings.headerLeft || "");
   const processedHeaderRight = replaceVariables(brandSettings.headerRight || "");
   const processedFooterLeft = replaceVariables(brandSettings.footerLeft || "");
   const processedFooterCenter = replaceVariables(brandSettings.footerCenter || "");
   const processedFooterRight = replaceVariables(brandSettings.footerRight || "");
 
+  const hasHeaderLeft = !!processedHeaderLeft;
   const hasHeaderRight = !!processedHeaderRight;
   const hasFooterLeft = !!processedFooterLeft;
   const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
   const hasFooterRight = !!processedFooterRight;
-  const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderRight);
+  const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
 
   return (
@@ -179,6 +230,7 @@ export function WorksheetViewer({
                 .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
                 .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
                 .worksheet-block-page-break { break-after: page; page-break-after: always; height: 0; overflow: hidden; margin: 0 !important; padding: 0 !important; }
+                .worksheet-block-page-break + .worksheet-block { margin-top: 0 !important; }
                 .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-true-false-matrix { break-inside: auto; page-break-inside: auto; }
@@ -198,10 +250,18 @@ export function WorksheetViewer({
                 .worksheet-block-text-cards .text-card-row { break-inside: avoid; page-break-inside: avoid; }
                 .worksheet-block-glossary { break-inside: auto; page-break-inside: auto; }
                 .glossary-row { break-inside: avoid; page-break-inside: avoid; }
-                .glossary-row:nth-child(3n+1), .glossary-row:nth-child(3n+2) { break-after: avoid; page-break-after: avoid; }
+                .tiptap-rows p { break-inside: avoid; page-break-inside: avoid; }
+                [data-text-style="lernziel"] { break-inside: avoid; page-break-inside: avoid; }
                 p { widows: 2; orphans: 2; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
                 h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
+                h3 { font-weight: ${resolvedProfile.h3Weight ?? 800}; }
+                ${resolvedProfile.h1Weight ? `h1 { font-weight: ${resolvedProfile.h1Weight}; }` : ""}
+                ${resolvedProfile.h2Weight ? `h2 { font-weight: ${resolvedProfile.h2Weight}; }` : ""}
+                ${resolvedProfile.textBaseSize ? `.text-cv-base { font-size: ${resolvedProfile.textBaseSize}; }` : ""}
+                ${resolvedProfile.h1Size ? `.text-cv-3xl { font-size: ${resolvedProfile.h1Size}; }` : ""}
+                ${resolvedProfile.h2Size ? `.text-cv-2xl { font-size: ${resolvedProfile.h2Size}; }` : ""}
+                ${resolvedProfile.h3Size ? `.text-cv-xl { font-size: ${resolvedProfile.h3Size}; }` : ""}
 
                 /* Table-based repeating header */
                 .print-table { width: 100%; border-collapse: collapse; }
@@ -298,9 +358,14 @@ export function WorksheetViewer({
                   <td>
                     <div className="print-header-content">
                       <div>
-                        {hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+                        {hasHeaderLeft ? (
+                          <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                        ) : (
+                          hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                        )}
                       </div>
-                      <div style={{ textAlign: "right" }}>
+                      <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                        {hasHeaderLeft && hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
                         {hasLogo && <img src={brandSettings.logo} alt="" />}
                       </div>
                     </div>
@@ -321,7 +386,7 @@ export function WorksheetViewer({
               <tr>
                 <td>
                   <div className="print-body-content"
-                    style={{ fontSize: settings.fontSize, fontFamily: fontFamily }}
+                    style={{ fontSize: resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`, fontFamily: fontFamily }}
                   >
                     <div className="space-y-6">
                       {visibleBlocks.map((block) => (
@@ -329,8 +394,10 @@ export function WorksheetViewer({
                           key={block.id}
                           data-block-id={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
+                          {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
+                          {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -388,6 +455,7 @@ export function WorksheetViewer({
                     brand={settings.brand || "edoomio"}
                     originalBlock={originalBlockMap?.[block.id]}
                     isNonLatin={isNonLatin}
+                    translationScale={resolvedProfile.pdfTranslationScale ?? undefined}
                   />
                   {worksheetId && mode === "online" && (
                     <BlockScreenshotButton worksheetId={worksheetId} blockId={block.id} />

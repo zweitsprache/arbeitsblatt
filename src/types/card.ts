@@ -3,7 +3,7 @@
 import { Brand, BrandSettings, ChOverrides, DEFAULT_BRAND_SETTINGS } from "./worksheet";
 
 /** Layout variant for card PDF export */
-export type CardLayout = "landscape-4" | "portrait-2";
+export type CardLayout = "landscape-4" | "portrait-2" | "landscape-1";
 
 export interface CardItem {
   id: string;
@@ -12,7 +12,7 @@ export interface CardItem {
   imageScale?: number; // 10-100, default 100
   imageRatio?: number; // natural width / height of uploaded image
   textPosition?: "top" | "center" | "bottom";
-  textSize?: "sm" | "md" | "lg" | "xl";
+  textSize?: "sm" | "md" | "lg" | "xl" | "xxl";
   backgroundColor?: string;
 }
 
@@ -24,12 +24,14 @@ export interface CardSettings {
   centerTextYOffset: number; // percent offset from center (-50 to 50)
   brand: Brand;
   brandSettings: BrandSettings;
+  subProfileId?: string;
   chOverrides?: ChOverrides;
 }
 
 /** Cards per page for each layout variant */
 export const CARDS_PER_PAGE: Record<CardLayout, number> = {
   "landscape-4": 4,
+  "landscape-1": 1,
   "portrait-2": 2,
 };
 

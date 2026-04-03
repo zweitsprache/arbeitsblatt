@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS, DEFAULT_BRAND_SETTINGS, BrandSettings, Brand } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS, DEFAULT_BRAND_SETTINGS, BrandSettings, Brand, BrandProfile, getStaticBrandProfile, applyBrandOverrides } from "@/types/worksheet";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { replaceEszett, applyChOverrides } from "@/lib/locale-utils";
 import { applyWorksheetTranslations } from "@/lib/worksheet-translation";
@@ -34,14 +34,21 @@ export default async function PrintWorksheetPage({
   const year = now.getFullYear();
   const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+  // Resolve brand profile from DB, falling back to static data
+  const dbBrand = await prisma.brandProfile.findUnique({ where: { slug: brand }, include: { subProfiles: true } });
+  const brandProfile: BrandProfile = dbBrand
+    ? (dbBrand as unknown as BrandProfile)
+    : getStaticBrandProfile(brand);
+
   // Resolve brand settings with fallback footer defaults (matching v2 behaviour)
   const userBrandSettings = (rawSettings?.brandSettings as Partial<BrandSettings>) || {};
+  const resolvedProfile = applyBrandOverrides(brandProfile, rawSettings?.brandOverrides);
   const resolvedBrandSettings: BrandSettings = {
     ...DEFAULT_BRAND_SETTINGS[brand],
     ...userBrandSettings,
-    footerLeft: userBrandSettings.footerLeft || `© ${year} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`,
-    footerCenter: userBrandSettings.footerCenter || "{current_page} / {no_of_pages}",
-    footerRight: userBrandSettings.footerRight || `{worksheet_uuid}<br/>${dateStr}`,
+    footerLeft: userBrandSettings.footerLeft || resolvedProfile.footerLeft || `© ${year} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`,
+    footerCenter: userBrandSettings.footerCenter || resolvedProfile.footerCenter || "{current_page} / {no_of_pages}",
+    footerRight: userBrandSettings.footerRight || resolvedProfile.footerRight || `{worksheet_uuid}<br/>${dateStr}`,
   };
 
   const settings: WorksheetSettings = {
@@ -89,6 +96,7 @@ export default async function PrintWorksheetPage({
       showSolutions={showSolutions}
       initialLocale={lang ?? "de"}
       originalBlockMap={originalBlockMap}
+      brandProfile={brandProfile}
     />
   );
 }

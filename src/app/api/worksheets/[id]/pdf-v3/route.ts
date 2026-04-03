@@ -70,6 +70,73 @@ export async function POST(
       return new Uint8Array(pdfBuffer);
     }
 
+    // Check for restart-page-numbering markers
+    const restartBlockIndices: number[] = await page.evaluate(() => {
+      const blocks = document.querySelectorAll(".worksheet-block");
+      const indices: number[] = [];
+      blocks.forEach((block, i) => {
+        if (block.hasAttribute("data-restart-page-numbering")) {
+          indices.push(i);
+        }
+      });
+      return indices;
+    });
+
+    if (restartBlockIndices.length > 0) {
+      // Render in independent sections, each with its own page numbering.
+      // Section boundaries are defined by page-break blocks with restart markers.
+      // The restart page-break block itself is excluded from both sections.
+      const blockCount = await page.evaluate(() =>
+        document.querySelectorAll(".worksheet-block").length,
+      );
+      const sections: { start: number; end: number }[] = [];
+      let currentStart = 0;
+      for (const idx of restartBlockIndices) {
+        if (idx > currentStart) sections.push({ start: currentStart, end: idx });
+        currentStart = idx + 1;
+      }
+      if (currentStart < blockCount) {
+        sections.push({ start: currentStart, end: blockCount });
+      }
+
+      const finalPdf = await PDFDocument.create();
+      for (const section of sections) {
+        // Show only blocks in this section
+        await page.evaluate(({ start, end }: { start: number; end: number }) => {
+          document.querySelectorAll(".worksheet-block").forEach((block, i) => {
+            (block as HTMLElement).style.display =
+              i >= start && i < end ? "" : "none";
+          });
+        }, section);
+
+        // Render this section with its own page numbering
+        const sectionBytes = await renderSectionWithPageNumbers(page);
+        const sectionPdf = await PDFDocument.load(sectionBytes);
+        const copiedPages = await finalPdf.copyPages(
+          sectionPdf,
+          sectionPdf.getPageIndices(),
+        );
+        copiedPages.forEach((p) => finalPdf.addPage(p));
+      }
+
+      // Restore all blocks
+      await page.evaluate(() => {
+        document.querySelectorAll(".worksheet-block").forEach((block) => {
+          (block as HTMLElement).style.display = "";
+        });
+      });
+
+      return await finalPdf.save();
+    }
+
+    // No restart markers — single-pass page numbering
+    return await renderSectionWithPageNumbers(page);
+  }
+
+  /** Render the currently visible blocks as a PDF with page numbering injected. */
+  async function renderSectionWithPageNumbers(
+    page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
+  ): Promise<Uint8Array> {
     // Two-pass: first count pages, then generate per-page with correct page numbers
     const firstPassBuffer = await page.pdf(pdfOptions);
     const firstPassText = Buffer.from(firstPassBuffer).toString("latin1");

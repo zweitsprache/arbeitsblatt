@@ -19,6 +19,7 @@ import {
   Image,
   GraduationCap,
   Bot,
+  Monitor,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import React, { useState } from "react";
 import { useIsAdmin } from "@/lib/auth/use-is-admin";
-import { Building2, FolderKanban } from "lucide-react";
+import { Building2, FolderKanban, Palette } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -99,6 +100,14 @@ const sections: NavSection[] = [
     ],
   },
   {
+    titleKey: "presentations",
+    icon: Monitor,
+    items: [
+      { href: "/presentations/new", labelKey: "newPresentation", icon: Plus },
+      { href: "/presentations", labelKey: "presentationLibrary", icon: Library },
+    ],
+  },
+  {
     titleKey: "covers",
     icon: Image,
     items: [
@@ -129,6 +138,7 @@ const adminSection: NavSection = {
   items: [
     { href: "/admin/clients", labelKey: "adminClients", icon: Building2 },
     { href: "/admin/projects", labelKey: "adminProjects", icon: FolderKanban },
+    { href: "/admin/brands", labelKey: "adminBrands", icon: Palette },
   ],
 };
 

@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CardProvider, useCardEditor } from "@/store/card-store";
 import { CardDocument, CardItem, CardLayout, CARDS_PER_PAGE, getImageObjectFit } from "@/types/card";
-import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Brand, BrandSettings, BrandSubProfile, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
+import { useAvailableBrands } from "@/lib/use-available-brands";
 import { replaceEszett, getEffectiveValue, hasChOverride, countChOverrides } from "@/lib/locale-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -82,10 +85,11 @@ function CardPrintPreview() {
   const layout = settings.layout || "landscape-4";
   const perPage = CARDS_PER_PAGE[layout];
   const isPortrait = layout === "portrait-2";
+  const isLandscape1 = layout === "landscape-1";
 
   // Card dimensions in mm for margin calculation
-  const cardW = isPortrait ? 210 : 148.5;
-  const cardH = isPortrait ? 148.5 : 105;
+  const cardW = isLandscape1 ? 297 : isPortrait ? 210 : 148.5;
+  const cardH = isLandscape1 ? 70 : isPortrait ? 148.5 : 105;
 
   // Group cards into pages
   const pages: CardItem[][] = [];
@@ -104,7 +108,7 @@ function CardPrintPreview() {
   return (
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground text-center">
-        {t(isPortrait ? "previewDescriptionPortrait" : "previewDescription")}
+        {t(isLandscape1 ? "previewDescriptionLandscape1" : isPortrait ? "previewDescriptionPortrait" : "previewDescription")}
       </p>
       {pages.map((pageCards, pageIdx) => (
         <div key={pageIdx} className="mx-auto">
@@ -116,13 +120,16 @@ function CardPrintPreview() {
               aspectRatio: isPortrait ? "210 / 297" : "297 / 210",
             }}
           >
-            {/* Grid: 2×2 for landscape, 1×2 for portrait */}
+            {/* Grid: 2×2 for landscape-4, 1×2 for portrait, 1×1 at bottom for landscape-1 */}
             <div
-              className={`absolute inset-0 grid ${
-                isPortrait
-                  ? "grid-cols-1 grid-rows-2"
-                  : "grid-cols-2 grid-rows-2"
+              className={`absolute grid ${
+                isLandscape1
+                  ? "grid-cols-1 grid-rows-1 bottom-0 left-0 right-0"
+                  : isPortrait
+                    ? "grid-cols-1 grid-rows-2 inset-0"
+                    : "grid-cols-2 grid-rows-2 inset-0"
               }`}
+              style={isLandscape1 ? { height: `${(70 / 210) * 100}%` } : undefined}
             >
               {Array.from({ length: perPage }).map((_, slot) => {
                 const card = pageCards[slot];
@@ -139,6 +146,82 @@ function CardPrintPreview() {
                   >
                     {card ? (
                       <>
+                        {/* ─── Landscape-1: full-width text-only ─── */}
+                        {isLandscape1 ? (
+                          <>
+                            {/* Logo — at 10mm from card top, right 10mm, 12mm height */}
+                            {settings.brandSettings?.logo && (
+                              <img
+                                src={settings.brandSettings.logo}
+                                alt=""
+                                className="absolute z-10 object-contain"
+                                style={{
+                                  top: `${(10 / cardH) * 100}%`,
+                                  right: `${mX}%`,
+                                  height: `${(12 / cardH) * 100}%`,
+                                  width: "auto",
+                                }}
+                              />
+                            )}
+                            {/* Text container — 10mm from card top, 50mm tall */}
+                            {(() => {
+                              const effectiveText = card ? getEffectiveValue(card.text, card.id, "text", state.localeMode, state.settings.chOverrides) : "";
+                              const hasText = effectiveText && effectiveText.replace(/<[^>]*>/g, "").trim() !== "";
+                              const textSizeClass =
+                                card.textSize === "sm"
+                                  ? "text-[6px]"
+                                  : card.textSize === "lg"
+                                  ? "text-[10px]"
+                                  : card.textSize === "xl"
+                                  ? "text-xs"
+                                  : card.textSize === "xxl"
+                                  ? "text-base font-semibold"
+                                  : "text-[8px]";
+                              return hasText ? (
+                                <div
+                                  className="absolute flex items-center justify-center pointer-events-none"
+                                  style={{
+                                    top: `${(10 / cardH) * 100}%`,
+                                    height: `${(50 / cardH) * 100}%`,
+                                    left: `${mX}%`,
+                                    right: `${mX}%`,
+                                  }}
+                                >
+                                  <span
+                                    className={`text-center leading-tight w-full break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 [&_p]:text-center ${textSizeClass}`}
+                                    dangerouslySetInnerHTML={{ __html: effectiveText }}
+                                  />
+                                </div>
+                              ) : null;
+                            })()}
+                            {/* Footer — 10mm from bottom */}
+                            <div
+                              className="absolute z-10 flex justify-between items-end text-[5px] leading-tight text-gray-600"
+                              style={{
+                                bottom: `${(10 / cardH) * 100}%`,
+                                left: `${mX}%`,
+                                right: `${mX}%`,
+                              }}
+                            >
+                              <div
+                                dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings?.footerLeft || '', settings.brandSettings) }}
+                              />
+                              <div className="text-right"
+                                dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings?.footerRight || '', settings.brandSettings) }}
+                              />
+                            </div>
+                            {/* Empty card placeholder */}
+                            {!card.text && state.localeMode === "DE" && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-muted-foreground/30 text-[7px]">
+                                  {t("emptyCard")}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                        <>
+                        {/* ─── Standard multi-card layouts ─── */}
                         {/* Brand logo — 7mm from top, 10mm from right, 6mm height */}
                         {settings.brandSettings?.logo && (
                           <img
@@ -175,6 +258,8 @@ function CardPrintPreview() {
                               ? "text-[10px]"
                               : card.textSize === "xl"
                               ? "text-xs"
+                              : card.textSize === "xxl"
+                              ? "text-base font-semibold"
                               : "text-[8px]";
                           return (
                             <>
@@ -190,7 +275,7 @@ function CardPrintPreview() {
                             }}
                           >
                             <span
-                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 [&_p]:text-center ${textSizeClass}`}
                               dangerouslySetInnerHTML={{ __html: effectiveText }}
                             />
                           </div>
@@ -203,12 +288,12 @@ function CardPrintPreview() {
                               top: `${50 + (settings.centerTextYOffset ?? 0)}%`,
                               left: "50%",
                               transform: "translate(-50%, -50%)",
-                              width: "60%",
+                              width: isLandscape1 ? "95%" : "60%",
                               backgroundColor: "rgba(255,255,255,0.9)",
                             }}
                           >
                             <span
-                              className={`block text-center leading-tight break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              className={`block text-center leading-tight break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 [&_p]:text-center ${textSizeClass}`}
                               dangerouslySetInnerHTML={{ __html: effectiveText }}
                             />
                           </div>
@@ -225,7 +310,7 @@ function CardPrintPreview() {
                             }}
                           >
                             <span
-                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 ${textSizeClass}`}
+                              className={`text-center leading-tight max-w-[95%] break-words [&_p]:mb-[0.3em] [&_p:last-child]:mb-0 [&_p]:text-center ${textSizeClass}`}
                               dangerouslySetInnerHTML={{ __html: effectiveText }}
                             />
                           </div>
@@ -289,6 +374,8 @@ function CardPrintPreview() {
                             dangerouslySetInnerHTML={{ __html: replaceCardVariables(settings.brandSettings?.footerRight || '', settings.brandSettings) }}
                           />
                         </div>
+                        </>
+                        )}
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -302,8 +389,8 @@ function CardPrintPreview() {
               })}
             </div>
 
-            {/* Cutting lines */}
-            {settings.showCuttingLines && (
+            {/* Cutting lines (not applicable for landscape-1 single card) */}
+            {settings.showCuttingLines && !isLandscape1 && (
               <>
                 {/* Vertical center line — landscape only */}
                 {!isPortrait && (
@@ -543,6 +630,8 @@ function CardTile({
                       ? "text-sm"
                       : card.textSize === "xl"
                       ? "text-base font-medium"
+                      : card.textSize === "xxl"
+                      ? "text-xl font-semibold"
                       : "text-xs"
                   }`}
                 >
@@ -571,6 +660,8 @@ function CardTile({
                       ? "text-sm"
                       : card.textSize === "xl"
                       ? "text-base font-medium"
+                      : card.textSize === "xxl"
+                      ? "text-xl font-semibold"
                       : "text-xs"
                   }`}
                 >
@@ -598,6 +689,8 @@ function CardTile({
                       ? "text-sm"
                       : card.textSize === "xl"
                       ? "text-base font-medium"
+                      : card.textSize === "xxl"
+                      ? "text-xl font-semibold"
                       : "text-xs"
                   }`}
                 >
@@ -727,7 +820,7 @@ function CardTile({
         <div className="space-y-1.5">
           <div className="flex items-center gap-1">
             {/* Text size */}
-            {(["sm", "md", "lg", "xl"] as const).map((size) => (
+            {(["sm", "md", "lg", "xl", "xxl"] as const).map((size) => (
               <button
                 key={size}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
@@ -831,7 +924,7 @@ function CardSettingsPanel() {
       <div className="space-y-1.5">
         <span className="text-xs text-muted-foreground">{t("layout")}</span>
         <div className="flex gap-1">
-          {(["landscape-4", "portrait-2"] as const).map((layout) => (
+          {(["landscape-4", "landscape-1", "portrait-2"] as const).map((layout) => (
             <button
               key={layout}
               className={`flex-1 text-xs px-2 py-1.5 rounded border transition-colors ${
@@ -954,6 +1047,7 @@ function CardEditorInner({
   const [showPreview, setShowPreview] = useState(false);
   const [showBrandSettings, setShowBrandSettings] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const availableBrands = useAvailableBrands();
 
   // Brand settings helpers
   const currentBrandSettings: BrandSettings = {
@@ -1059,24 +1153,57 @@ function CardEditorInner({
         {/* Brand selector */}
         <div className="flex items-center gap-1">
           <Select
-            value={state.settings.brand || "edoomio"}
-            onValueChange={(value: string) =>
+            value={
+              state.settings.subProfileId
+                ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
+                : state.settings.brand || "edoomio"
+            }
+            onValueChange={(value: string) => {
+              const [slug, subId] = value.split("::");
               dispatch({
                 type: "UPDATE_SETTINGS",
                 payload: {
-                  brand: value as Brand,
-                  brandSettings: DEFAULT_BRAND_SETTINGS[value as Brand],
+                  brand: slug as Brand,
+                  subProfileId: subId || undefined,
+                  brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
                 },
-              })
-            }
+              });
+            }}
           >
-            <SelectTrigger className="h-8 w-[130px]">
+            <SelectTrigger className="h-8 w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="edoomio">edoomio</SelectItem>
-              <SelectItem value="lingostar">lingostar</SelectItem>
-              <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+              {availableBrands.length > 0
+                ? availableBrands.map((bp) => {
+                    const subs = bp.subProfiles ?? [];
+                    if (subs.length === 0) {
+                      return (
+                        <SelectItem key={bp.slug} value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                      );
+                    }
+                    return (
+                      <SelectGroup key={bp.slug}>
+                        <SelectLabel className="text-xs text-muted-foreground">{bp.name}</SelectLabel>
+                        <SelectItem value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                        {subs.map((sp: BrandSubProfile) => (
+                          <SelectItem key={sp.id} value={`${bp.slug}::${sp.id}`}>
+                            {bp.name} / {sp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })
+                : <>
+                    <SelectItem value="edoomio">edoomio</SelectItem>
+                    <SelectItem value="lingostar">lingostar</SelectItem>
+                    <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+                  </>
+              }
             </SelectContent>
           </Select>
           <Tooltip>

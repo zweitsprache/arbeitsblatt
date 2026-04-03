@@ -116,6 +116,7 @@ export interface GrammarTableSettings {
   showIrregularHighlights: boolean;
   brand: Brand;
   brandSettings: BrandSettings;
+  subProfileId?: string;
   /** Second title shown on the content page (page 2) */
   contentTitle: string;
   /** Up to 4 cover images for the title page */

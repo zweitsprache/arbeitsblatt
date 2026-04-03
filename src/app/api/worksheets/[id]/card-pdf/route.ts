@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { launchBrowser, fetchImageAsDataUri } from "@/lib/puppeteer";
 import { CardItem, CardSettings, CardLayout } from "@/types/card";
-import { DEFAULT_BRAND_SETTINGS, BrandSettings } from "@/types/worksheet";
+import { DEFAULT_BRAND_SETTINGS, BrandSettings, BrandProfile, getStaticBrandProfile, resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
@@ -20,11 +20,17 @@ interface LayoutDims {
   rows: number;
   perPage: number;
   landscape: boolean;
+  /** Optional top offset (mm) to push the grid down from the page top */
+  gridTopMm?: number;
 }
 
 function getLayoutDims(layout: CardLayout): LayoutDims {
   if (layout === "portrait-2") {
     return { pageW: 210, pageH: 297, cardW: 210, cardH: 148.5, cols: 1, rows: 2, perPage: 2, landscape: false };
+  }
+  if (layout === "landscape-1") {
+    // DIN A4 landscape, 1 card per page, content 297×70mm starting at y=140mm
+    return { pageW: 297, pageH: 210, cardW: 297, cardH: 70, cols: 1, rows: 1, perPage: 1, landscape: true, gridTopMm: 140 };
   }
   // landscape-4 (default)
   return { pageW: 297, pageH: 210, cardW: 148.5, cardH: 105, cols: 2, rows: 2, perPage: 4, landscape: true };
@@ -90,6 +96,53 @@ function renderCardSlot(
 
   const { MX, MY, LOGO_TOP, LOGO_H, IMG_RATIO, IMG_BOTTOM, FOOTER_BOTTOM, TEXT_TOP_OFFSET } = margins(dims);
 
+  // ─── Landscape-1: simplified full-width text-only slot ─────
+  if (dims.perPage === 1) {
+    const isHtmlContent = card.text ? /^<[a-z][\s\S]*>/i.test(card.text.trim()) : false;
+    const hasTextContent = card.text && card.text.replace(/<[^>]*>/g, "").trim() !== "";
+    const textSizeClass =
+      card.textSize === "sm" ? "text-sm" :
+      card.textSize === "lg" ? "text-lg" :
+      card.textSize === "xl" ? "text-xl" :
+      card.textSize === "xxl" ? "text-xxl" : "text-md";
+    // Text container: 297×50mm at y=150mm → within 70mm card: top=10mm, height=50mm
+    const textTop = (10 / dims.cardH) * 100;
+    const textH = (50 / dims.cardH) * 100;
+    let textHTML = "";
+    if (hasTextContent) {
+      const textInner = isHtmlContent ? card.text! : `<span>${escapeHtml(card.text)}</span>`;
+      textHTML = `<div class="text-area-full ${textSizeClass}" style="left:${MX}%;right:${MX}%;top:${textTop}%;height:${textH}%">
+         ${textInner}
+       </div>`;
+    }
+    // Footer at y=200mm → within card: 10mm from bottom, align to bottom
+    const footerBot = (10 / dims.cardH) * 100;
+    const now = new Date();
+    const year = now.getFullYear();
+    const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const footerLeftText = replaceVariables(
+      brandSettings.footerLeft || `© ${year} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`,
+      brandSettings, worksheetId
+    );
+    const footerRightText = replaceVariables(
+      brandSettings.footerRight || `{worksheet_uuid}<br/>${dateStr}`,
+      brandSettings, worksheetId
+    );
+    const footerHTML = `<div class="card-footer" style="bottom:${footerBot}%;left:${MX}%;right:${MX}%;align-items:flex-end">
+      <div class="card-footer-left">${footerLeftText}</div>
+      <div class="card-footer-right">${footerRightText}</div>
+    </div>`;
+    // Logo at y=150mm, right 10mm → within card: top=10mm, right=10mm, 12mm height
+    const logoTop1 = (10 / dims.cardH) * 100;
+    const LOGO_H_1 = (12 / dims.cardH) * 100;
+    const logoHTML = brandSettings.logo
+      ? `<img src="${logoDataUri}" class="logo" style="top:${logoTop1}%;right:${MX}%;height:${LOGO_H_1}%" />`
+      : "";
+    return `<div class="slot">${logoHTML}${textHTML}${footerHTML}</div>`;
+  }
+
+  // ─── Standard multi-card layouts ───────────────────────────
+
   // Brand logo — 7mm from top, 10mm from right, 6mm height
   const logoHTML = brandSettings.logo
     ? `<img src="${logoDataUri}" class="logo" style="top:${LOGO_TOP}%;right:${MX}%;height:${LOGO_H}%" />`
@@ -124,7 +177,8 @@ function renderCardSlot(
   const textSizeClass =
     card.textSize === "sm" ? "text-sm" :
     card.textSize === "lg" ? "text-lg" :
-    card.textSize === "xl" ? "text-xl" : "text-md";
+    card.textSize === "xl" ? "text-xl" :
+    card.textSize === "xxl" ? "text-xxl" : "text-md";
 
   const textPosition = card.textPosition || "top";
 
@@ -141,7 +195,7 @@ function renderCardSlot(
        </div>`;
     } else if (textPosition === "center") {
       const yOff = settings.centerTextYOffset ?? 0;
-      const centerW = dims.landscape ? "60%" : "80%";
+      const centerW = dims.perPage === 1 ? "95%" : dims.landscape ? "60%" : "80%";
       textHTML = `<div class="text-area-center ${textSizeClass}" style="top:${50 + yOff}%;left:50%;transform:translate(-50%,-50%);width:${centerW};z-index:20">
          ${textInner}
        </div>`;
@@ -179,8 +233,8 @@ function buildPageHtml(
     .join("");
 
   let cuttingLinesHTML = "";
-  if (settings.showCuttingLines) {
-    // Horizontal center line — always present
+  if (settings.showCuttingLines && dims.perPage > 1) {
+    // Horizontal center line — multi-card layouts only
     cuttingLinesHTML += `<div class="cut-h" style="border-top:1px ${settings.cuttingLineStyle} #ccc"></div>`;
     // Vertical center line — landscape-4 only
     if (dims.cols === 2) {
@@ -244,7 +298,10 @@ function buildFullHtml(
   }
   .grid {
     position: absolute;
-    inset: 0;
+    ${dims.gridTopMm ? `top: ${dims.gridTopMm}mm;` : 'top: 0;'}
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: grid;
     grid-template-columns: repeat(${dims.cols}, 1fr);
     grid-template-rows: repeat(${dims.rows}, 1fr);
@@ -291,22 +348,39 @@ function buildFullHtml(
     padding: 2mm 3mm;
     border-radius: 2px;
   }
-  .text-area span {
+  .text-area-full {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .text-area span, .text-area p, .text-area-full span, .text-area-full p {
     text-align: center;
     line-height: 1.3;
-    max-width: 95%;
+    max-width: 100%;
     word-break: break-word;
   }
-  .text-area-center span {
+  .text-area p,
+  .text-area span p,
+  .text-area-full p,
+  .text-area-full span p,
+  .text-area-center p,
+  .text-area-center span p {
+    text-align: center;
+  }
+  .text-area-center span, .text-area-center p {
     display: block;
     text-align: center;
     line-height: 1.3;
     word-break: break-word;
   }
-  .text-sm span { font-size: ${dims.landscape ? '8pt' : '16pt'}; }
-  .text-md span { font-size: ${dims.landscape ? '10pt' : '20pt'}; }
-  .text-lg span { font-size: ${dims.landscape ? '13pt' : '26pt'}; }
-  .text-xl span { font-size: ${dims.landscape ? '16pt' : '32pt'}; font-weight: 500; }
+  .text-sm span, .text-sm p { font-size: ${dims.landscape ? '8pt' : '16pt'}; }
+  .text-md span, .text-md p { font-size: ${dims.landscape ? '10pt' : '20pt'}; }
+  .text-lg span, .text-lg p { font-size: ${dims.landscape ? '13pt' : '26pt'}; }
+  .text-xl span, .text-xl p { font-size: ${dims.landscape ? '16pt' : '32pt'}; font-weight: 500; }
+  .text-xxl span, .text-xxl p { font-size: ${dims.perPage === 1 ? '56pt' : dims.landscape ? '48pt' : '48pt'}; font-weight: 600; }
   .image-container {
     position: absolute;
     overflow: hidden;
@@ -396,11 +470,31 @@ export async function GET(
     cards = cards.map(card => ({ ...card, text: "" }));
   }
 
-  // Build brand settings with defaults
+  // Build brand settings with defaults — resolve from DB, fall back to static
+  const brandSlug = settings.brand || "edoomio";
+  const dbBrand = await prisma.brandProfile.findUnique({ where: { slug: brandSlug }, include: { subProfiles: true } });
+  const brandProfile: BrandProfile = dbBrand
+    ? (dbBrand as unknown as BrandProfile)
+    : getStaticBrandProfile(brandSlug);
   const brandSettings: BrandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[settings.brand || "edoomio"],
+    ...DEFAULT_BRAND_SETTINGS[brandSlug],
     ...settings.brandSettings,
+    logo: brandProfile.logo ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.logo,
+    organization: brandProfile.organization ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.organization,
+    headerRight: brandProfile.headerRight ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.headerRight,
+    footerLeft: brandProfile.footerLeft ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.footerLeft,
+    footerCenter: brandProfile.footerCenter ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.footerCenter,
+    footerRight: brandProfile.footerRight ?? DEFAULT_BRAND_SETTINGS[brandSlug]?.footerRight,
   };
+
+  // Apply sub-profile header/footer overrides (landscape-1 uses variant 2 / single line)
+  const subProfileVariant = (settings.layout || "landscape-4") === "landscape-1" ? 2 : 1;
+  const subHeaders = resolveSubProfileHeaderFooter(brandProfile, settings.subProfileId, subProfileVariant as 1 | 2);
+  if (subHeaders) {
+    brandSettings.headerRight = subHeaders.headerRight;
+    brandSettings.footerLeft = subHeaders.footerLeft;
+    brandSettings.footerRight = subHeaders.footerRight;
+  }
 
   // Read logo as data URI so Puppeteer can render it without network
   let logoDataUri = "";
@@ -501,7 +595,7 @@ export async function GET(
     console.log(`[Card PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages`);
 
     const shortId = id.slice(0, 16);
-    const layoutSuffix = layout === "landscape-4" ? "2x2" : "1x2";
+    const layoutSuffix = layout === "landscape-4" ? "2x2" : layout === "landscape-1" ? "1x1" : "1x2";
     const textSuffix = noText ? "NT" : "WT";
     const localeSuffix = isCH ? "CH" : "DE";
     const filename = `${shortId}_${layoutSuffix}_${textSuffix}_${localeSuffix}.pdf`;

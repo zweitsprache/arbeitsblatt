@@ -49,16 +49,22 @@ import {
   AiPromptBlock,
   AiToolBlock,
   AudioBlock,
+  ScheduleBlock,
   TableBlock,
   BRAND_ICON_LOGOS,
   BRAND_FONTS,
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import s from "./viewer-blocks.module.css";
+
+/** Safe lookup for BRAND_FONTS — falls back to edoomio if brand slug not in static map */
+function getBrandFonts(brand: string) {
+  return BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
+}
 
 // ─── Tiptap HTML sanitiser ───────────────────────────────────
 /** Replace non-breaking spaces with regular spaces so the browser
@@ -240,28 +246,30 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
   );
 }
 
-function HeadingView({ block, originalBlock, brand, isNonLatin }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; isNonLatin?: boolean }) {
+function HeadingView({ block, originalBlock, brand, isNonLatin, translationScale, primaryColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
+  const brandFonts = getBrandFonts(brand || "edoomio");
   const style: React.CSSProperties = {
     ...(block.level === 1 ? { marginBottom: -4 } : {}),
-    ...(block.level === 3 ? { fontWeight: 800 } : {}),
+    ...(isNonLatin ? { fontFamily: brandFonts.headlineFont } : {}),
+    color: primaryColor,
   };
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   if (isBilingual) {
-    const brandFonts = BRAND_FONTS[brand || "edoomio"];
+    const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
       <Tag className={sizes[block.level]} style={style}>
         <span style={{ fontFamily: brandFonts.headlineFont }}>{originalBlock.content}</span>
-        {" | "}
-        <span style={isNonLatin ? { fontSize: "0.85em" } : undefined}>{block.content}</span>
+        <span style={{ fontWeight: 400 }}> | </span>
+        <span style={scale ? { fontSize: `${scale}em` } : undefined}>{block.content}</span>
       </Tag>
     );
   }
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBlock; originalBlock?: TextBlock; brand?: Brand; isNonLatin?: boolean }) {
+function TextView({ block, originalBlock, brand, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; brand?: Brand; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -272,18 +280,22 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
   const isHinweisAlarm = block.textStyle === "hinweis-alarm";
   const isLernziel = block.textStyle === "lernziel";
+  const isKompetenzziele = block.textStyle === "kompetenzziele";
+  const isHandlungsziele = block.textStyle === "handlungsziele";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows";
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
+  const rowsClass = isKompetenzziele ? "tiptap-rows tiptap-rows-goal" : isHandlungsziele ? "tiptap-rows tiptap-rows-arrow-right-to-line" : isRows ? "tiptap-rows" : "";
   const isMetadaten = block.textStyle === "metadaten";
 
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
-  const brandFonts = BRAND_FONTS[brand || "edoomio"];
+  const brandFonts = getBrandFonts(brand || "edoomio");
   // Font override for the original (German) column in bilingual mode — ensures brand font for Latin text
   const originalFontStyle: React.CSSProperties | undefined = isBilingual ? { fontFamily: brandFonts.bodyFont } : undefined;
   // Reduce font size for non-Latin translated text (e.g. Cyrillic renders visually larger at same pt size)
-  const translatedFontStyle: React.CSSProperties | undefined = isBilingual && isNonLatin ? { fontSize: "0.85em" } : undefined;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const translatedFontStyle: React.CSSProperties | undefined = isBilingual && effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined;
 
   const imageEl = block.imageSrc ? (
     <div
@@ -327,9 +339,13 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
       const originalParas = splitParagraphs(originalHtml);
       const translatedParas = splitParagraphs(translatedHtml);
       const maxLen = Math.max(originalParas.length, translatedParas.length);
-      const arrowBg = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E\") no-repeat center";
+      const arrowBg = isKompetenzziele
+        ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 13V2l8 4-8 4'/%3E%3Cpath d='M20.561 10.222a9 9 0 1 1-12.55-5.29'/%3E%3Cpath d='M8.002 9.997a5 5 0 1 0 8.9 2.02'/%3E%3C/svg%3E\") no-repeat center"
+        : isHandlungsziele
+        ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 12H3'/%3E%3Cpath d='m11 18 6-6-6-6'/%3E%3Cpath d='M21 5v14'/%3E%3C/svg%3E\") no-repeat center"
+        : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E\") no-repeat center";
       const cellBase: React.CSSProperties = {
-        padding: "0.375rem 0 0.375rem 1.25rem",
+        padding: "0.375rem 0 0.375rem 1.75rem",
         position: "relative",
         borderBottom: "1px solid #d1d5db",
       };
@@ -338,11 +354,11 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, background: arrowBg }} />
+                <div style={{ position: "absolute", left: 0, top: "0.375rem", width: 14, height: 14, background: arrowBg, marginTop: 8 }} />
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, background: arrowBg }} />
+                <div style={{ position: "absolute", left: 0, top: "0.375rem", width: 14, height: 14, background: arrowBg, marginTop: 8 }} />
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -364,14 +380,22 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
   };
 
   if (isLernziel) {
+    const showStacked = isBilingual && originalBlock;
     return (
-      <div className="flex gap-0 font-semibold border-2 rounded-sm overflow-hidden" style={{ borderColor: "#4A3D55", backgroundColor: "#4A3D5510", color: "#4A3D55" }}>
-        <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: "#4A3D55" }}>
-          <Goal className="h-5 w-5" style={{ color: "#ffffff" }} />
+      <div className="flex gap-0 font-semibold border-2 rounded-sm overflow-hidden" style={{ borderColor: primaryColor, backgroundColor: `${primaryColor}10`, color: primaryColor }}>
+        <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
+          <Flag className="h-5 w-5" style={{ color: "#ffffff" }} />
         </div>
         <div className="flex-1 min-w-0 px-3 py-2">
           {imageEl}
-          {wrapBilingual(block.content, originalBlock?.content)}
+          {showStacked ? (
+            <div>
+              <div style={originalFontStyle}>{renderContent(originalBlock.content)}</div>
+              <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle }}>{renderContent(block.content)}</div>
+            </div>
+          ) : (
+            renderContent(block.content)
+          )}
         </div>
       </div>
     );
@@ -379,7 +403,7 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ marginBottom: "-1.5rem", fontFamily: brandFonts.bodyFont }}>
+      <div className={s.textPlain} style={{ marginBottom: "-1.5rem", fontFamily: brandFonts.bodyFont, color: primaryColor }}>
         {renderContent(block.content)}
       </div>
     );
@@ -387,7 +411,7 @@ function TextView({ block, originalBlock, brand, isNonLatin }: { block: TextBloc
 
   if (!hasExampleBox && !hasHinweisBox) {
     return (
-      <div className={`${s.textPlain} ${isRows && !isBilingual ? "tiptap-rows" : ""}`}>
+      <div className={`${s.textPlain} ${!isBilingual ? rowsClass : ""}`}>
         {imageEl}
         {wrapBilingual(block.content, originalBlock?.content)}
       </div>
@@ -1685,10 +1709,20 @@ function TwoColumnFillView({
 
 function GlossaryView({
   block,
+  brand,
+  isNonLatin,
+  translationScale,
 }: {
   block: GlossaryBlock;
+  brand?: Brand;
+  isNonLatin?: boolean;
+  translationScale?: number;
 }) {
   const colWidth = `${block.leftColWidth ?? 25}%`;
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: brandFonts.bodyFont } : {};
+  const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const defStyle: React.CSSProperties = scale ? { fontSize: `${scale}em` } : {};
   return (
     <div className={`space-y-2 ${s.glossary}`}>
       {block.instruction && (
@@ -1700,10 +1734,10 @@ function GlossaryView({
             key={pair.id}
             className="glossary-row flex items-start gap-4 py-1 border-b"
           >
-            <span className={`font-semibold ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth }}>
+            <span className={`font-medium ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth, ...termStyle }}>
               {pair.term}
             </span>
-            <span className="flex-1">
+            <span className="flex-1" style={defStyle}>
               {pair.definition}
             </span>
           </div>
@@ -3810,6 +3844,43 @@ function AudioView({ block }: { block: AudioBlock }) {
   );
 }
 
+// ─── Schedule View ───────────────────────────────────────────
+function ScheduleView({
+  block,
+  brand,
+  isNonLatin,
+}: {
+  block: ScheduleBlock;
+  brand?: Brand;
+  isNonLatin?: boolean;
+}) {
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const bodyStyle: React.CSSProperties = isNonLatin ? { fontFamily: brandFonts.bodyFont } : {};
+  return (
+    <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
+      {block.instruction && (
+        <p className="text-muted-foreground">{block.instruction}</p>
+      )}
+      <div className="space-y-0 border-t">
+        {block.items.map((item) => (
+          <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
+            <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
+            <span className="flex-1">
+              <span className="font-medium">{item.title}</span>
+              {item.description && (
+                <>
+                  <br />
+                  <span className="text-muted-foreground">{item.description}</span>
+                </>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── AI Prompt View ──────────────────────────────────────────
 function AiPromptView({ block }: { block: AiPromptBlock }) {
   const t = useTranslations("viewer");
@@ -4207,6 +4278,7 @@ export function ViewerBlockRenderer({
   lessonLabel,
   originalBlock,
   isNonLatin = false,
+  translationScale,
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
@@ -4220,6 +4292,7 @@ export function ViewerBlockRenderer({
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
   isNonLatin?: boolean;
+  translationScale?: number;
 }) {
   const interactive = mode === "online";
   const noop = () => {};
@@ -4243,9 +4316,9 @@ export function ViewerBlockRenderer({
 
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} isNonLatin={isNonLatin} />;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} brand={brand} isNonLatin={isNonLatin} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -4323,6 +4396,9 @@ export function ViewerBlockRenderer({
       return (
         <GlossaryView
           block={block}
+          brand={brand}
+          isNonLatin={isNonLatin}
+          translationScale={translationScale}
         />
       );
     case "open-response":
@@ -4524,6 +4600,8 @@ export function ViewerBlockRenderer({
       return <TableView block={block as TableBlock} />;
     case "audio":
       return <AudioView block={block as AudioBlock} />;
+    case "schedule":
+      return <ScheduleView block={block as ScheduleBlock} brand={brand} isNonLatin={isNonLatin} />;
     default:
       return null;
   }

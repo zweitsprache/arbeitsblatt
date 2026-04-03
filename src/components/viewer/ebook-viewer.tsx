@@ -26,13 +26,13 @@ export function EBookViewer({
   settings,
   mode,
 }: EBookViewerProps) {
-  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"];
+  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"] || BRAND_FONTS["edoomio"];
   const fontFamily = brandFonts.bodyFont;
   const headlineFont = brandFonts.headlineFont;
   const fontUrl = brandFonts.googleFontsUrl;
 
   const brandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[settings.brand || "edoomio"],
+    ...(DEFAULT_BRAND_SETTINGS[settings.brand || "edoomio"] || DEFAULT_BRAND_SETTINGS["edoomio"]),
     ...settings.brandSettings,
   };
 

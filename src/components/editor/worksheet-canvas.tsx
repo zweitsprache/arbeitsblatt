@@ -63,8 +63,12 @@ export function WorksheetCanvas({
   const { state, dispatch } = useEditor();
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({ id: "canvas-drop-zone" });
 
-  // Page dimensions (A4 at 96 DPI = 794 x 1123)
-  const pageWidth = state.settings.pageSize === "a4" ? 794 : 816;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isPresentationMode = (state.settings as any)._presentationMode === true;
+
+  // Page dimensions (A4 at 96 DPI = 794 x 1123, 16:9 presentation = 1120 x 630)
+  const pageWidth = isPresentationMode ? 1120 : state.settings.pageSize === "a4" ? 794 : 816;
+  const minHeight = isPresentationMode ? 630 : 1123;
 
   return (
     <div 
@@ -78,8 +82,10 @@ export function WorksheetCanvas({
             ${isCanvasOver && state.blocks.length === 0 ? "border-primary ring-2 ring-primary/20" : ""}`}
           style={{
             width: pageWidth,
-            minHeight: 1123,
-            padding: `${state.settings.margins.top}px ${state.settings.margins.right}px ${state.settings.margins.bottom}px ${state.settings.margins.left}px`,
+            minHeight,
+            padding: isPresentationMode
+              ? "40px 60px"
+              : `${state.settings.margins.top}px ${state.settings.margins.right}px ${state.settings.margins.bottom}px ${state.settings.margins.left}px`,
             fontFamily: "'Asap Condensed', sans-serif",
           }}
           onClick={(e) => {

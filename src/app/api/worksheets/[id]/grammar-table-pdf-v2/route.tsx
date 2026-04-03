@@ -41,6 +41,9 @@ import {
   BrandSettings,
   BRAND_FONTS,
   Brand,
+  BrandProfile,
+  getStaticBrandProfile,
+  resolveSubProfileHeaderFooter,
 } from "@/types/worksheet";
 
 export const runtime = "nodejs";
@@ -1774,8 +1777,8 @@ export function GrammarTablePDF({
     month: "2-digit",
     year: "numeric",
   });
-  const brandFonts = BRAND_FONTS[brand];
-  const bodyFont = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  const brandFonts = BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
+  const bodyFont = brandFonts?.bodyFont || (brand === "lingostar" ? "Encode Sans" : "Asap Condensed");
 
   // Determine which tenses are active for simplified mode
   const activeTenses: VerbTense[] = simplified
@@ -2150,10 +2153,28 @@ export async function POST(
   const settings = (worksheet.settings ?? {}) as unknown as GrammarTableSettings;
 
   const brand = settings.brand || "edoomio";
+  const dbBrand = await prisma.brandProfile.findUnique({ where: { slug: brand }, include: { subProfiles: true } });
+  const brandProfile: BrandProfile = dbBrand
+    ? (dbBrand as unknown as BrandProfile)
+    : getStaticBrandProfile(brand);
   const brandSettings: BrandSettings = {
     ...DEFAULT_BRAND_SETTINGS[brand],
     ...settings.brandSettings,
+    logo: brandProfile.logo ?? DEFAULT_BRAND_SETTINGS[brand]?.logo,
+    organization: brandProfile.organization ?? DEFAULT_BRAND_SETTINGS[brand]?.organization,
+    headerRight: brandProfile.headerRight ?? DEFAULT_BRAND_SETTINGS[brand]?.headerRight,
+    footerLeft: brandProfile.footerLeft ?? DEFAULT_BRAND_SETTINGS[brand]?.footerLeft,
+    footerCenter: brandProfile.footerCenter ?? DEFAULT_BRAND_SETTINGS[brand]?.footerCenter,
+    footerRight: brandProfile.footerRight ?? DEFAULT_BRAND_SETTINGS[brand]?.footerRight,
   };
+
+  // Apply sub-profile header/footer overrides
+  const subHeaders = resolveSubProfileHeaderFooter(brandProfile, settings.subProfileId, 1);
+  if (subHeaders) {
+    brandSettings.headerRight = subHeaders.headerRight;
+    brandSettings.footerLeft = subHeaders.footerLeft;
+    brandSettings.footerRight = subHeaders.footerRight;
+  }
 
   // Read logos (convert SVG → PNG for react-pdf compatibility)
   const bigLogoDataUri = await readLogoAsPngDataUri("logo/lingostar_logo_and_brand_flat.svg", 800);

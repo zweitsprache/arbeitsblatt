@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import type { BrandSettings } from "@/types/project";
+import type { ClientBrandSettings } from "@/types/project";
 
 export default async function ProjectViewerLayout({
   children,
@@ -25,7 +25,7 @@ export default async function ProjectViewerLayout({
     notFound();
   }
 
-  const brand = (project.client.brandSettings || {}) as BrandSettings;
+  const brand = (project.client.brandSettings || {}) as ClientBrandSettings;
 
   return (
     <>

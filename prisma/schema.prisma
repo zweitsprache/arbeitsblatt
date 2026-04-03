@@ -86,6 +86,24 @@ model Course {
   @@index([userId])
 }
 
+model Presentation {
+  id        String   @id @default(cuid())
+  title     String   @default("Untitled Presentation")
+  slug      String   @unique
+  blocks    Json     @default("[]")     // WorksheetBlock[] with page-break as slide dividers
+  settings  Json     @default("{}")     // PresentationSettings
+  published Boolean  @default(false)
+  thumbnail String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  folderId  String?
+  userId    String?
+
+  @@index([slug])
+  @@index([folderId])
+  @@index([userId])
+}
+
 model AiTool {
   id              String   @id @default(cuid())
   title           String   @default("Untitled AI Tool")
@@ -116,18 +134,102 @@ model VerbCache {
   @@index([infinitive])
 }
 
+// ── Brand profiles ───────────────────────────────────────────────────
+
+model BrandProfile {
+  id                  String   @id @default(cuid())
+  name                String                        // display name (e.g. "edoomio")
+  slug                String   @unique              // machine key, replaces old Brand union
+
+  // Typography
+  bodyFont            String   @default("Asap Condensed, sans-serif")
+  headlineFont        String   @default("Asap Condensed, sans-serif")
+  headlineWeight      Int      @default(700)
+  subHeadlineFont     String   @default("Asap Condensed, sans-serif")
+  subHeadlineWeight   Int      @default(700)
+  headerFooterFont    String   @default("Asap Condensed, sans-serif")
+  googleFontsUrl      String   @default("")
+
+  // Font sizes & weights per heading level and text base (CSS values, e.g. "28px", "1.75rem")
+  h1Size              String?                       // e.g. "28px" or "1.75rem"
+  h1Weight            Int?                          // e.g. 700
+  h2Size              String?                       // e.g. "24px"
+  h2Weight            Int?                          // e.g. 700
+  h3Size              String?                       // e.g. "21px"
+  h3Weight            Int?                          // e.g. 800
+  textBaseSize        String?                       // e.g. "21px" or "1.3125rem"
+
+  // Colors
+  primaryColor        String   @default("#1a1a1a")
+  accentColor         String?
+
+  // Assets
+  logo                String   @default("")         // URL or base64 data URL
+  iconLogo            String?                       // small icon version
+  favicon             String?                       // URL or base64 data URL
+
+  // Layout defaults
+  organization        String   @default("")
+  teacher             String   @default("")
+  headerRight         String   @default("")
+  footerLeft          String   @default("")
+  footerCenter        String   @default("")
+  footerRight         String   @default("")
+
+  // PDF settings
+  pdfFontSize         Float?                        // font size override for PDF output
+  pdfTranslationScale Float?                        // scale factor for translated text (0-1)
+
+  // Meta
+  pageTitle           String?                       // custom browser tab title
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  clients             Client[]
+  subProfiles         BrandSubProfile[]
+
+  @@index([slug])
+}
+
+model BrandSubProfile {
+  id              String       @id @default(cuid())
+  name            String                           // display name shown in brand select
+  brandProfileId  String
+  brandProfile    BrandProfile @relation(fields: [brandProfileId], references: [id], onDelete: Cascade)
+
+  // Variant 1 — multiline (detailed header/footer)
+  headerLeftV1    String       @default("")
+  headerRightV1   String       @default("")
+  footerLeftV1    String       @default("")
+  footerRightV1   String       @default("")
+
+  // Variant 2 — single line (compact header/footer)
+  headerLeftV2    String       @default("")
+  headerRightV2   String       @default("")
+  footerLeftV2    String       @default("")
+  footerRightV2   String       @default("")
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([brandProfileId])
+}
+
 // ── Multi-tenant project system ──────────────────────────────────────
 
 model Client {
-  id            String    @id @default(cuid())
-  name          String
-  slug          String    @unique
-  brandSettings Json      @default("{}")  // BrandSettings: logo, favicon, colors, font, pageTitle
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  projects      Project[]
+  id             String        @id @default(cuid())
+  name           String
+  slug           String        @unique
+  brandSettings  Json          @default("{}")  // legacy — migrating to brandProfile
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  projects       Project[]
 
   @@index([slug])
+  @@index([brandProfileId])
 }
 
 model Project {
@@ -151,6 +253,7 @@ enum ContentType {
   EBOOK
   COURSE
   AI_TOOL
+  PRESENTATION
 }
 
 model ProjectContent {

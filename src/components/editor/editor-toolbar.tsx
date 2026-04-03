@@ -23,13 +23,16 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Brand, BrandSettings, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Brand, BrandOverrides, BrandSubProfile, DEFAULT_BRAND_SETTINGS, applyBrandOverrides } from "@/types/worksheet";
 import { countChOverrides } from "@/lib/locale-utils";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   Save,
@@ -90,17 +93,20 @@ export function EditorToolbar() {
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLang, setPdfLang] = useState<string>("de"); // "de" = base German, other codes = translation
 
-  // Get current brand settings with fallbacks
-  const currentBrandSettings: BrandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
-    ...state.settings.brandSettings,
-  };
+  // Get current brand settings with fallbacks — merge brand profile with per-worksheet overrides
+  const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
 
-  const updateBrandSettings = (updates: Partial<BrandSettings>) => {
+  const updateBrandOverrides = (updates: Partial<BrandOverrides>) => {
     dispatch({
       type: "UPDATE_SETTINGS",
       payload: {
-        brandSettings: { ...currentBrandSettings, ...updates },
+        brandOverrides: { ...state.settings.brandOverrides, ...updates },
+        // Keep legacy brandSettings in sync for backward compat
+        brandSettings: {
+          ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
+          ...state.settings.brandSettings,
+          ...updates,
+        },
       },
     });
   };
@@ -299,18 +305,57 @@ export function EditorToolbar() {
         {/* Brand selector */}
         <div className="flex items-center gap-1">
           <Select
-            value={state.settings.brand || "edoomio"}
-            onValueChange={(value: Brand) =>
-              dispatch({ type: "UPDATE_SETTINGS", payload: { brand: value, brandSettings: DEFAULT_BRAND_SETTINGS[value] } })
+            value={
+              state.settings.subProfileId
+                ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
+                : state.settings.brand || "edoomio"
             }
+            onValueChange={(value: string) => {
+              const [slug, subId] = value.split("::");
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                payload: {
+                  brand: slug as Brand,
+                  subProfileId: subId || undefined,
+                  brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
+                },
+              });
+            }}
           >
-            <SelectTrigger className="h-8 w-[130px]">
+            <SelectTrigger className="h-8 w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="edoomio">edoomio</SelectItem>
-              <SelectItem value="lingostar">lingostar</SelectItem>
-              <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+              {state.availableBrands.length > 0
+                ? state.availableBrands.map((bp) => {
+                    const subs = bp.subProfiles ?? [];
+                    if (subs.length === 0) {
+                      return (
+                        <SelectItem key={bp.slug} value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                      );
+                    }
+                    return (
+                      <SelectGroup key={bp.slug}>
+                        <SelectLabel className="text-xs text-muted-foreground">{bp.name}</SelectLabel>
+                        <SelectItem value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                        {subs.map((sp: BrandSubProfile) => (
+                          <SelectItem key={sp.id} value={`${bp.slug}::${sp.id}`}>
+                            {bp.name} / {sp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })
+                : <>
+                    <SelectItem value="edoomio">edoomio</SelectItem>
+                    <SelectItem value="lingostar">lingostar</SelectItem>
+                    <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+                  </>
+              }
             </SelectContent>
           </Select>
           <Tooltip>
@@ -647,6 +692,7 @@ export function EditorToolbar() {
               blocks={state.blocks}
               settings={state.settings}
               mode="online"
+              brandProfile={state.brandProfile}
             />
           </div>
         </DialogContent>
@@ -656,14 +702,14 @@ export function EditorToolbar() {
       <Dialog open={showBrandSettings} onOpenChange={setShowBrandSettings}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("brandSettings")} – {state.settings.brand || "edoomio"}</DialogTitle>
+            <DialogTitle>{t("brandSettings")} – {state.brandProfile.name || state.settings.brand || "edoomio"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <Label className="text-sm font-medium">{t("brandLogo")}</Label>
               <Input
-                value={currentBrandSettings.logo}
-                onChange={(e) => updateBrandSettings({ logo: e.target.value })}
+                value={resolvedBrand.logo}
+                onChange={(e) => updateBrandOverrides({ logo: e.target.value })}
                 placeholder="/logo/my-logo.svg"
                 className="mt-1"
               />
@@ -672,8 +718,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("organization")}</Label>
               <Input
-                value={currentBrandSettings.organization}
-                onChange={(e) => updateBrandSettings({ organization: e.target.value })}
+                value={resolvedBrand.organization}
+                onChange={(e) => updateBrandOverrides({ organization: e.target.value })}
                 placeholder={t("organizationPlaceholder")}
                 className="mt-1"
               />
@@ -681,8 +727,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("teacher")}</Label>
               <Input
-                value={currentBrandSettings.teacher}
-                onChange={(e) => updateBrandSettings({ teacher: e.target.value })}
+                value={resolvedBrand.teacher}
+                onChange={(e) => updateBrandOverrides({ teacher: e.target.value })}
                 placeholder={t("teacherPlaceholder")}
                 className="mt-1"
               />
@@ -690,8 +736,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("headerRight")}</Label>
               <textarea
-                value={currentBrandSettings.headerRight}
-                onChange={(e) => updateBrandSettings({ headerRight: e.target.value })}
+                value={resolvedBrand.headerRight}
+                onChange={(e) => updateBrandOverrides({ headerRight: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -705,8 +751,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("footerLeft")}</Label>
               <textarea
-                value={currentBrandSettings.footerLeft}
-                onChange={(e) => updateBrandSettings({ footerLeft: e.target.value })}
+                value={resolvedBrand.footerLeft}
+                onChange={(e) => updateBrandOverrides({ footerLeft: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -714,8 +760,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("footerCenter")}</Label>
               <textarea
-                value={currentBrandSettings.footerCenter}
-                onChange={(e) => updateBrandSettings({ footerCenter: e.target.value })}
+                value={resolvedBrand.footerCenter}
+                onChange={(e) => updateBrandOverrides({ footerCenter: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -723,8 +769,8 @@ export function EditorToolbar() {
             <div>
               <Label className="text-sm font-medium">{t("footerRight")}</Label>
               <textarea
-                value={currentBrandSettings.footerRight}
-                onChange={(e) => updateBrandSettings({ footerRight: e.target.value })}
+                value={resolvedBrand.footerRight}
+                onChange={(e) => updateBrandOverrides({ footerRight: e.target.value })}
                 placeholder="HTML..."
                 className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />

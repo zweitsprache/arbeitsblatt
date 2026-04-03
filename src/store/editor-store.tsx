@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { authFetch } from "@/lib/auth-fetch";
 import {
@@ -12,6 +12,8 @@ import {
   DEFAULT_SETTINGS,
   BlockVisibility,
   ChOverrides,
+  BrandProfile,
+  getStaticBrandProfile,
 } from "@/types/worksheet";
 
 export type LocaleMode = "DE" | "CH";
@@ -30,6 +32,8 @@ interface EditorState {
   isDirty: boolean;
   isSaving: boolean;
   published: boolean;
+  brandProfile: BrandProfile;
+  availableBrands: BrandProfile[];
 }
 
 const initialState: EditorState = {
@@ -45,6 +49,8 @@ const initialState: EditorState = {
   isDirty: false,
   isSaving: false,
   published: false,
+  brandProfile: getStaticBrandProfile("edoomio"),
+  availableBrands: [],
 };
 
 // ─── Actions ─────────────────────────────────────────────────
@@ -71,7 +77,9 @@ type EditorAction =
   | { type: "DUPLICATE_IN_COLUMN"; payload: { parentBlockId: string; colIndex: number; block: WorksheetBlock; afterIndex: number } }
   | { type: "MOVE_BLOCK_TO_COLUMN"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
   | { type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP"; payload: { blockId: string; insertAfterBlockId?: string } }
-  | { type: "MOVE_BLOCK_BETWEEN_COLUMNS"; payload: { blockId: string; targetParentId: string; targetColIndex: number } };
+  | { type: "MOVE_BLOCK_BETWEEN_COLUMNS"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
+  | { type: "SET_BRAND_PROFILE"; payload: BrandProfile }
+  | { type: "SET_AVAILABLE_BRANDS"; payload: BrandProfile[] };
 
 // ─── Reducer ─────────────────────────────────────────────────
 
@@ -464,6 +472,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       };
     }
 
+    case "SET_BRAND_PROFILE":
+      return { ...state, brandProfile: action.payload };
+
+    case "SET_AVAILABLE_BRANDS":
+      return { ...state, availableBrands: action.payload };
+
     default:
       return state;
   }
@@ -480,8 +494,43 @@ interface EditorContextValue {
 
 const EditorContext = createContext<EditorContextValue | null>(null);
 
-export function EditorProvider({ children }: { children: React.ReactNode }) {
+export function EditorProvider({ children, apiEndpoint = "/api/worksheets", editorBasePath = "/editor" }: { children: React.ReactNode; apiEndpoint?: string; editorBasePath?: string }) {
   const [state, dispatch] = useReducer(editorReducer, initialState);
+  const prevBrandSlug = useRef(state.settings.brand);
+
+  // Fetch all available brands on mount
+  useEffect(() => {
+    authFetch("/api/brands")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((brands: BrandProfile[]) => {
+        dispatch({ type: "SET_AVAILABLE_BRANDS", payload: brands });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch brand profile when brand slug changes
+  useEffect(() => {
+    const slug = state.settings.brand;
+    if (!slug) return;
+    // Only fetch if slug actually changed
+    if (slug === prevBrandSlug.current && state.brandProfile.slug === slug) return;
+    prevBrandSlug.current = slug;
+
+    authFetch(`/api/brands/by-slug/${encodeURIComponent(slug)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((profile: BrandProfile | null) => {
+        dispatch({
+          type: "SET_BRAND_PROFILE",
+          payload: profile ?? getStaticBrandProfile(slug),
+        });
+      })
+      .catch(() => {
+        dispatch({
+          type: "SET_BRAND_PROFILE",
+          payload: getStaticBrandProfile(slug),
+        });
+      });
+  }, [state.settings.brand, state.brandProfile.slug]);
 
   const addBlock = useCallback(
     (type: BlockType, index?: number) => {
@@ -529,8 +578,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     try {
       const method = state.worksheetId ? "PUT" : "POST";
       const url = state.worksheetId
-        ? `/api/worksheets/${state.worksheetId}`
-        : "/api/worksheets";
+        ? `${apiEndpoint}/${state.worksheetId}`
+        : apiEndpoint;
       const res = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -555,14 +604,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           },
         });
         // Update URL without reload
-        window.history.replaceState(null, "", `/editor/${data.id}`);
+        window.history.replaceState(null, "", `${editorBasePath}/${data.id}`);
       }
       dispatch({ type: "MARK_SAVED" });
     } catch (err) {
       console.error("Save failed:", err);
       dispatch({ type: "SET_SAVING", payload: false });
     }
-  }, [state.worksheetId, state.title, state.blocks, state.settings, state.published]);
+  }, [apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
 
   return (
     <EditorContext.Provider value={{ state, dispatch, addBlock, duplicateBlock, save }}>

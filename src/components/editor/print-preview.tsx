@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useMemo, useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { useEditor } from "@/store/editor-store";
-import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
-import { WorksheetBlock, DEFAULT_BRAND_SETTINGS, BRAND_FONTS } from "@/types/worksheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,25 +11,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ZoomIn, ZoomOut, Printer, RotateCcw } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ZoomIn, ZoomOut, Printer, RotateCcw, Loader2, RefreshCw } from "lucide-react";
 
-// DIN A4: 210mm × 297mm
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
-const LETTER_WIDTH_MM = 216;
-const LETTER_HEIGHT_MM = 279;
-
-// Convert mm to px at 96 DPI (1mm ≈ 3.7795px)
-const MM_TO_PX = 96 / 25.4;
-
-// Gap between blocks in px (matches space-y-6 = 1.5rem = 24px)
-const BLOCK_GAP = 24;
-
-// Header/footer reserved height in px (text + padding + border)
-const HEADER_HEIGHT = 40;
-const FOOTER_HEIGHT = 40;
-
-type PageDef = { blockIndices: number[] };
+const LANG_LABELS: Record<string, string> = {
+  de: "Deutsch",
+  en: "English",
+  uk: "Українська",
+  fr: "Français",
+  es: "Español",
+  it: "Italiano",
+  pt: "Português",
+  tr: "Türkçe",
+  pl: "Polski",
+  ar: "العربية",
+};
 
 export function PrintPreview({
   open,
@@ -39,244 +40,72 @@ export function PrintPreview({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { state } = useEditor();
+  const { state, save } = useEditor();
   const t = useTranslations("printPreview");
+  const locale = useLocale();
   const [zoom, setZoom] = useState(70);
-  const [pages, setPages] = useState<PageDef[]>([]);
-  const measureRef = React.useRef<HTMLDivElement>(null);
-  const [measureKey, setMeasureKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [iframeSrc, setIframeSrc] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [country, setCountry] = useState<"DE" | "CH">("DE");
+  const [lang, setLang] = useState("de");
+  const [showSolutions, setShowSolutions] = useState(false);
 
-  const isA4 = state.settings.pageSize === "a4";
-  const isPortrait = state.settings.orientation === "portrait";
+  const translationLangs = state.settings.translationLanguages ?? [];
 
-  const pageWidthMM = isA4 ? A4_WIDTH_MM : LETTER_WIDTH_MM;
-  const pageHeightMM = isA4 ? A4_HEIGHT_MM : LETTER_HEIGHT_MM;
+  // Build the print URL — same one Puppeteer navigates to
+  const buildPrintUrl = useCallback(() => {
+    if (!state.slug) return null;
+    const params = new URLSearchParams();
+    if (country === "CH") params.set("ch", "1");
+    if (lang && lang !== "de") params.set("lang", lang);
+    if (showSolutions) params.set("solutions", "1");
+    params.set("_t", String(Date.now()));
+    return `/${locale}/worksheet/${state.slug}/print?${params}`;
+  }, [locale, state.slug, country, lang, showSolutions]);
 
-  const effectiveWidthMM = isPortrait ? pageWidthMM : pageHeightMM;
-  const effectiveHeightMM = isPortrait ? pageHeightMM : pageWidthMM;
-
-  const pageWidthPx = effectiveWidthMM * MM_TO_PX;
-  const pageHeightPx = effectiveHeightMM * MM_TO_PX;
-
-  const { margins, fontSize } = state.settings;
-  const brandFonts = BRAND_FONTS[state.settings.brand || "edoomio"];
-  const effectiveFontFamily = brandFonts.bodyFont;
-
-  // Get brand settings with fallbacks
-  const brandSettings = {
-    ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
-    ...state.settings.brandSettings,
-  };
-
-  const paddingTopPx = margins.top * MM_TO_PX;
-  const paddingBottomPx = margins.bottom * MM_TO_PX;
-  const paddingLeftPx = margins.left * MM_TO_PX;
-  const paddingRightPx = margins.right * MM_TO_PX;
-
-  const hasHeader = state.settings.showHeader && (!!state.settings.headerText || !!brandSettings.headerRight);
-  const hasFooter = state.settings.showFooter && (!!state.settings.footerText || !!brandSettings.footerLeft || !!brandSettings.footerCenter || !!brandSettings.footerRight);
-
-  // Available content height per page (content starts at 25mm from top for header space)
-  const contentTopPx = 25 * MM_TO_PX;
-  const contentHeight =
-    pageHeightPx -
-    contentTopPx -
-    paddingBottomPx;
-
-  // Filter blocks by print visibility
-  const visibleBlocks = useMemo(
-    () =>
-      state.blocks.filter(
-        (b) => b.visibility === "both" || b.visibility === "print"
-      ),
-    [state.blocks]
-  );
-
-  // Re-trigger measurement when blocks/settings change
+  // Auto-save if dirty, then load the iframe
   useEffect(() => {
-    if (open) {
-      setMeasureKey((k) => k + 1);
-    }
-  }, [open, visibleBlocks, margins, fontSize, effectiveFontFamily, state.settings.pageSize, state.settings.orientation, state.settings.brand]);
-
-  // Measure block heights and paginate
-  const paginate = useCallback(() => {
-    const container = measureRef.current;
-    if (!container) return;
-
-    const blockEls = container.querySelectorAll<HTMLElement>("[data-block-measure]");
-    if (blockEls.length === 0) {
-      setPages([{ blockIndices: [] }]);
+    if (!open) {
+      setIframeSrc(null);
+      setLoading(true);
       return;
     }
 
-    const heights: number[] = [];
-    blockEls.forEach((el) => {
-      heights.push(el.offsetHeight);
-    });
+    if (!state.worksheetId) return;
 
-    // Greedy pagination: fit blocks onto pages
-    const result: PageDef[] = [];
-    let currentPage: number[] = [];
-    let usedHeight = 0;
+    let cancelled = false;
 
-    for (let i = 0; i < heights.length; i++) {
-      const blockH = heights[i];
-      const gapH = currentPage.length > 0 ? BLOCK_GAP : 0;
-
-      if (usedHeight + gapH + blockH <= contentHeight || currentPage.length === 0) {
-        // Fits on current page (or is first block — always place even if oversized)
-        currentPage.push(i);
-        usedHeight += gapH + blockH;
-      } else {
-        // Start new page
-        result.push({ blockIndices: currentPage });
-        currentPage = [i];
-        usedHeight = blockH;
+    const loadPreview = async () => {
+      if (state.isDirty) {
+        setSaving(true);
+        await save();
+        setSaving(false);
       }
+      if (cancelled) return;
+      setLoading(true);
+      setIframeSrc(buildPrintUrl());
+    };
+
+    loadPreview();
+    return () => { cancelled = true; };
+  }, [open, state.worksheetId, state.isDirty, save, buildPrintUrl]);
+
+  const handleReload = useCallback(async () => {
+    setLoading(true);
+    if (state.isDirty) {
+      setSaving(true);
+      await save();
+      setSaving(false);
     }
-    if (currentPage.length > 0) {
-      result.push({ blockIndices: currentPage });
-    }
-
-    setPages(result);
-  }, [contentHeight]);
-
-  // Run pagination after measure div renders
-  useEffect(() => {
-    if (!open || visibleBlocks.length === 0) {
-      setPages([{ blockIndices: [] }]);
-      return;
-    }
-    // Wait for React to paint the hidden measure container
-    const raf = requestAnimationFrame(() => {
-      // Double rAF to ensure layout
-      requestAnimationFrame(() => {
-        paginate();
-      });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [open, measureKey, paginate, visibleBlocks.length]);
-
-  // Prince XML-compliant @page CSS
-  const printStylesheet = useMemo(
-    () => `
-/* ─── Prince XML / DocRaptor compliant print styles ─── */
-
-@page {
-  size: ${isA4 ? "A4" : "letter"} ${isPortrait ? "portrait" : "landscape"};
-  margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
-
-  @top-center {
-    content: string(header-text);
-    font-size: 7pt;
-    color: #888;
-  }
-
-  @bottom-center {
-    content: string(footer-text);
-    font-size: 7pt;
-    color: #888;
-  }
-
-  @bottom-right {
-    content: counter(page) " / " counter(pages);
-    font-size: 8pt;
-    color: #aaa;
-  }
-}
-
-@page :first {
-  @top-center { content: normal; }
-}
-
-/* ─── Page-break rules per block type ─── */
-
-.worksheet-block {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.worksheet-block-text {
-  break-inside: auto;
-  page-break-inside: auto;
-}
-
-.worksheet-block-multiple-choice,
-.worksheet-block-matching,
-.worksheet-block-two-column-fill,
-.worksheet-block-true-false-matrix,
-.worksheet-block-article-training,
-.worksheet-block-order-items,
-.worksheet-block-sorting-categories,
-.worksheet-block-word-search,
-.worksheet-block-inline-choices,
-.worksheet-block-word-bank,
-.worksheet-block-fill-in-blank,
-.worksheet-block-fill-in-blank-items,
-.worksheet-block-unscramble-words,
-.worksheet-block-fix-sentences,
-.worksheet-block-complete-sentences {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.worksheet-block-glossary {
-  break-inside: auto;
-  page-break-inside: auto;
-}
-.glossary-row {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.glossary-row:nth-child(3n+1),
-.glossary-row:nth-child(3n+2) {
-  break-after: avoid;
-  page-break-after: avoid;
-}
-
-.worksheet-block-image {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.worksheet-block-columns {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.worksheet-block-heading {
-  break-after: avoid;
-  page-break-after: avoid;
-}
-
-.worksheet-block-page-break {
-  break-after: page;
-  page-break-after: always;
-  height: 0;
-  overflow: hidden;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-p { widows: 2; orphans: 2; }
-
-.print-running-header {
-  string-set: header-text content();
-  display: none;
-}
-.print-running-footer {
-  string-set: footer-text content();
-  display: none;
-}`,
-    [isA4, isPortrait, margins]
-  );
+    setIframeSrc(buildPrintUrl());
+  }, [state.isDirty, save, buildPrintUrl]);
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 30));
   const handleResetZoom = () => setZoom(70);
 
-  const totalPages = pages.length;
+  const noWorksheet = !state.worksheetId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -288,10 +117,58 @@ p { widows: 2; orphans: 2; }
               {t("title")}
             </DialogTitle>
             <div className="flex items-center gap-4">
-              {/* Page info */}
-              <div className="text-xs text-muted-foreground">
-                {isA4 ? "DIN A4" : "Letter"} · {isPortrait ? t("portrait") : t("landscape")} · {effectiveWidthMM}×{effectiveHeightMM}mm · {t("pageCount", { count: totalPages })}
+              {/* Country variant */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={country === "DE" ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setCountry("DE")}
+                >
+                  DE
+                </Button>
+                <Button
+                  variant={country === "CH" ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setCountry("CH")}
+                >
+                  CH
+                </Button>
               </div>
+
+              {/* Translation language */}
+              {translationLangs.length > 0 && (
+                <Select value={lang} onValueChange={setLang}>
+                  <SelectTrigger className="h-7 w-auto min-w-[120px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="de">{LANG_LABELS.de}</SelectItem>
+                    {translationLangs.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {LANG_LABELS[code] || code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Solutions toggle */}
+              <Button
+                variant={showSolutions ? "default" : "outline"}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setShowSolutions((s) => !s)}
+              >
+                {t("solutions")}
+              </Button>
+
+              {/* Reload button */}
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5" onClick={handleReload} disabled={noWorksheet}>
+                <RefreshCw className="h-3 w-3" />
+                {t("reload")}
+              </Button>
 
               {/* Zoom controls */}
               <div className="flex items-center gap-1">
@@ -310,227 +187,40 @@ p { widows: 2; orphans: 2; }
           </div>
         </DialogHeader>
 
-        {/* Headline font styles for preview */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          .preview-page h1, .preview-page h2, .preview-page h3,
-          .preview-page h4, .preview-page h5, .preview-page h6 {
-            font-family: var(--headline-font);
-            font-weight: var(--headline-weight);
-          }
-        ` }} />
-
-        {/* Hidden measurement container — render all blocks here to measure their heights */}
-        <div
-          ref={measureRef}
-          key={measureKey}
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: -9999,
-            left: -9999,
-            width: pageWidthPx - paddingLeftPx - paddingRightPx,
-            fontFamily: effectiveFontFamily,
-            fontSize: `${fontSize}px`,
-            lineHeight: 1.5,
-            visibility: "hidden",
-            pointerEvents: "none",
-          }}
-        >
-          {visibleBlocks.map((block, i) => (
-            <div key={block.id} data-block-measure={i}>
-              <div className={`worksheet-block worksheet-block-${block.type}`}>
-                <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} brand={state.settings.brand || "edoomio"} />
-              </div>
+        {/* Iframe preview area */}
+        <div className="flex-1 overflow-auto bg-muted/50 relative">
+          {noWorksheet ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <p className="text-sm">{t("saveFirst")}</p>
             </div>
-          ))}
-        </div>
-
-        {/* Paginated preview area */}
-        <div className="flex-1 overflow-auto bg-muted/50 py-8">
-          <div
-            className="flex flex-col items-center gap-8"
-            style={{
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: "top center",
-            }}
-          >
-            {pages.map((page, pageIndex) => (
-              <React.Fragment key={pageIndex}>
-                {/* Single A4 page */}
-                <div
-                  className="bg-white shadow-2xl border border-border/50 relative shrink-0 preview-page"
-                  style={{
-                    width: pageWidthPx,
-                    height: pageHeightPx,
-                    fontFamily: effectiveFontFamily,
-                    fontSize: `${fontSize}px`,
-                    lineHeight: 1.5,
-                    // CSS custom properties for headline font
-                    ["--headline-font" as string]: brandFonts.headlineFont,
-                    ["--headline-weight" as string]: brandFonts.headlineWeight,
-                  }}
-                >
-                  {/* Page number label */}
-                  <div className="absolute top-1.5 right-3 text-[9px] text-muted-foreground/40 font-mono">
-                    {t("pageLabel", { page: pageIndex + 1, total: totalPages })}
+          ) : (
+            <>
+              {(loading || saving) && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/80">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">{saving ? t("saving") : t("loading")}</span>
                   </div>
-
-                  {/* Page size label */}
-                  <div className="absolute top-1.5 left-3 text-[9px] text-muted-foreground/40 font-mono">
-                    {effectiveWidthMM}×{effectiveHeightMM}mm
-                  </div>
-
-                  {/* Margin guides */}
-                  <div
-                    className="absolute border border-dashed border-blue-200/30 pointer-events-none"
+                </div>
+              )}
+              {iframeSrc && (
+                <div className="mx-auto overflow-hidden" style={{ width: `${794 * zoom / 100}px`, maxWidth: "100%" }}>
+                  <iframe
+                    src={iframeSrc}
+                    className="border-0"
+                    scrolling="no"
+                    onLoad={() => setLoading(false)}
                     style={{
-                      top: paddingTopPx,
-                      left: paddingLeftPx,
-                      right: paddingRightPx,
-                      bottom: paddingBottomPx,
+                      transform: `scale(${zoom / 100})`,
+                      transformOrigin: "top left",
+                      width: 794,
+                      height: 5000,
                     }}
                   />
-
-                  {/* Logo - positioned at 10mm from page edges */}
-                  {brandSettings.logo && (
-                    <img
-                      src={brandSettings.logo}
-                      alt="Logo"
-                      style={{
-                        position: "absolute",
-                        top: `${10 * MM_TO_PX}px`,
-                        left: `${10 * MM_TO_PX}px`,
-                        height: `${8 * MM_TO_PX}px`,
-                        width: "auto",
-                      }}
-                    />
-                  )}
-
-                  {/* Header Right - positioned at 10mm from top/right */}
-                  {brandSettings.headerRight && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: `${10 * MM_TO_PX}px`,
-                        right: `${10 * MM_TO_PX}px`,
-                        textAlign: "right",
-                        fontFamily: brandFonts.headerFooterFont,
-                      }}
-                      className="text-[10px] text-gray-400"
-                      dangerouslySetInnerHTML={{ __html: brandSettings.headerRight }}
-                    />
-                  )}
-
-                  {/* Content area - starts at 25mm from top to leave room for header */}
-                  <div
-                    className="absolute flex flex-col overflow-hidden"
-                    style={{
-                      top: contentTopPx,
-                      left: paddingLeftPx,
-                      right: paddingRightPx,
-                      bottom: paddingBottomPx,
-                    }}
-                  >
-                    {/* Blocks for this page */}
-                    <div className="space-y-6 flex-1">
-                    {page.blockIndices.length === 0 && pageIndex === 0 ? (
-                      <div className="flex items-center justify-center py-20 text-muted-foreground/50">
-                        <p className="text-sm">{t("noBlocks")}</p>
-                      </div>
-                    ) : (
-                      page.blockIndices.map((blockIdx) => {
-                        const block = visibleBlocks[blockIdx];
-                        if (!block) return null;
-                        return (
-                          <div
-                            key={block.id}
-                            className={`worksheet-block worksheet-block-${block.type}`}
-                          >
-                            <ViewerBlockRenderer block={block} mode="print" allBlocks={visibleBlocks} brand={state.settings.brand || "edoomio"} />
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  </div>{/* End content area */}
-
-                  {/* Footer Left - 10mm from left/bottom */}
-                  {brandSettings.footerLeft && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: `${10 * MM_TO_PX}px`,
-                        left: `${10 * MM_TO_PX}px`,
-                        fontFamily: brandFonts.headerFooterFont,
-                      }}
-                      className="text-[10px] text-gray-400"
-                      dangerouslySetInnerHTML={{ __html: brandSettings.footerLeft }}
-                    />
-                  )}
-
-                  {/* Footer Center - centered, 10mm from bottom */}
-                  {(brandSettings.footerCenter || state.settings.footerText) && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: `${10 * MM_TO_PX}px`,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        textAlign: "center",
-                        fontFamily: brandFonts.headerFooterFont,
-                      }}
-                      className="text-[10px] text-gray-400"
-                    >
-                      {brandSettings.footerCenter ? (
-                        <span dangerouslySetInnerHTML={{ __html: brandSettings.footerCenter }} />
-                      ) : state.settings.footerText ? (
-                        <span>{state.settings.footerText}</span>
-                      ) : null}
-                    </div>
-                  )}
-
-                  {/* Footer Right - 10mm from right/bottom */}
-                  {brandSettings.footerRight && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: `${10 * MM_TO_PX}px`,
-                        right: `${10 * MM_TO_PX}px`,
-                        textAlign: "right",
-                        fontFamily: brandFonts.headerFooterFont,
-                      }}
-                      className="text-[10px] text-gray-400"
-                      dangerouslySetInnerHTML={{ __html: brandSettings.footerRight }}
-                    />
-                  )}
                 </div>
-
-                {/* Page break indicator between pages */}
-                {pageIndex < totalPages - 1 && (
-                  <div className="flex items-center gap-2 w-full px-8" style={{ maxWidth: pageWidthPx }}>
-                    <div className="flex-1 border-t-2 border-dashed border-red-300/40" />
-                    <span className="text-[10px] text-red-400/60 font-mono whitespace-nowrap">
-                      ✂ {t("pageBreak")}
-                    </span>
-                    <div className="flex-1 border-t-2 border-dashed border-red-300/40" />
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom bar with Prince CSS preview */}
-        <div className="px-6 py-3 border-t bg-muted/30 shrink-0">
-          <details className="text-xs">
-            <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors font-medium">
-              {t("showPrinceCSS")}
-            </summary>
-            <pre className="mt-2 p-3 bg-muted rounded-md overflow-auto max-h-48 text-[11px] font-mono leading-relaxed">
-              {printStylesheet}
-            </pre>
-          </details>
+              )}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

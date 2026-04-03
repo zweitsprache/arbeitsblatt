@@ -33,8 +33,9 @@ import {
   VERB_MODUS_LABELS,
   VerbModus,
 } from "@/types/grammar-table";
-import { Brand, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { Brand, BrandSubProfile, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
+import { useAvailableBrands } from "@/lib/use-available-brands";
 import { getVisiblePersonKeys } from "@/lib/regular-conjugation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -2291,6 +2294,7 @@ function EditorToolbar() {
     mode?: "pdf" | "cover";
   }>({ open: false });
   const [pdfIncludeTitlePage, setPdfIncludeTitlePage] = useState(true);
+  const availableBrands = useAvailableBrands();
 
   // Check if we can generate based on table type
   const canGenerate = state.tableType === "verb-conjugation"
@@ -2493,24 +2497,57 @@ function EditorToolbar() {
 
         {/* Brand selector */}
         <Select
-          value={state.settings.brand || "edoomio"}
-          onValueChange={(value: string) =>
+          value={
+            state.settings.subProfileId
+              ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
+              : state.settings.brand || "edoomio"
+          }
+          onValueChange={(value: string) => {
+            const [slug, subId] = value.split("::");
             dispatch({
               type: "UPDATE_SETTINGS",
               payload: {
-                brand: value as Brand,
-                brandSettings: DEFAULT_BRAND_SETTINGS[value as Brand],
+                brand: slug as Brand,
+                subProfileId: subId || undefined,
+                brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
               },
-            })
-          }
+            });
+          }}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="edoomio">edoomio</SelectItem>
-            <SelectItem value="lingostar">lingostar</SelectItem>
-            <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+            {availableBrands.length > 0
+              ? availableBrands.map((bp) => {
+                  const subs = bp.subProfiles ?? [];
+                  if (subs.length === 0) {
+                    return (
+                      <SelectItem key={bp.slug} value={bp.slug}>
+                        {bp.name}
+                      </SelectItem>
+                    );
+                  }
+                  return (
+                    <SelectGroup key={bp.slug}>
+                      <SelectLabel className="text-xs text-muted-foreground">{bp.name}</SelectLabel>
+                      <SelectItem value={bp.slug}>
+                        {bp.name}
+                      </SelectItem>
+                      {subs.map((sp: BrandSubProfile) => (
+                        <SelectItem key={sp.id} value={`${bp.slug}::${sp.id}`}>
+                          {bp.name} / {sp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  );
+                })
+              : <>
+                  <SelectItem value="edoomio">edoomio</SelectItem>
+                  <SelectItem value="lingostar">lingostar</SelectItem>
+                  <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+                </>
+            }
           </SelectContent>
         </Select>
       </div>

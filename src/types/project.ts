@@ -1,15 +1,22 @@
-// ── Brand settings stored as JSON on Client ────────────────────────────
+// ── Brand settings — re-exported from unified type ─────────────────────
 
-export interface BrandSettings {
-  logo?: string; // URL or base64 data URL
-  favicon?: string; // URL or base64 data URL
-  primaryColor?: string; // hex color
-  accentColor?: string; // hex color
-  fontFamily?: string; // CSS font-family value
-  pageTitle?: string; // custom page / tab title
+import type { BrandProfile } from "./worksheet";
+export type { BrandProfile };
+
+/**
+ * @deprecated Inline brand settings on Client — use BrandProfile instead.
+ * Kept for backward compat with existing Client.brandSettings JSON data.
+ */
+export interface ClientBrandSettings {
+  logo?: string;
+  favicon?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  pageTitle?: string;
 }
 
-export const DEFAULT_BRAND_SETTINGS: BrandSettings = {};
+export const DEFAULT_BRAND_SETTINGS: ClientBrandSettings = {};
 
 // ── Client ──────────────────────────────────────────────────────────────
 
@@ -17,7 +24,10 @@ export interface Client {
   id: string;
   name: string;
   slug: string;
-  brandSettings: BrandSettings;
+  /** @deprecated Use brandProfile instead */
+  brandSettings: ClientBrandSettings;
+  brandProfileId?: string | null;
+  brandProfile?: BrandProfile | null;
   createdAt: string;
   updatedAt: string;
   projects?: Project[];

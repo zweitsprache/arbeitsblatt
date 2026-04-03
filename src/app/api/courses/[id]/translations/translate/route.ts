@@ -131,6 +131,30 @@ export async function POST(
     });
   }
 
+  // ── Removal-only: no AI call needed, just clean up ────────
+  if (Object.keys(delta).length === 0 && removedKeys.length > 0) {
+    const merged: Record<string, Record<string, string>> = {};
+    for (const [lang, map] of Object.entries(existingTranslations)) {
+      if (!lang.startsWith("_")) merged[lang] = { ...map };
+    }
+    for (const removedKey of removedKeys) {
+      for (const lang of Object.keys(merged)) delete merged[lang][removedKey];
+    }
+    const updatedSource = { ...previousSource };
+    for (const removedKey of removedKeys) delete updatedSource[removedKey];
+    merged._source = updatedSource;
+    await prisma.course.update({
+      where: { id },
+      data: { translations: merged, translatedAt: new Date() } as Parameters<typeof prisma.course.update>[0]["data"],
+    });
+    return NextResponse.json({
+      success: true,
+      stringCount: 0,
+      languages: Object.keys(merged).filter((k) => !k.startsWith("_")),
+      message: `Removed ${removedKeys.length} obsolete translation key(s)`,
+    });
+  }
+
   const deltaEntries = Object.entries(delta);
 
   // Build AI instructions per key for the system prompt
@@ -195,8 +219,13 @@ Return ONLY valid JSON — no markdown fences, no commentary.`;
 
       try {
         let raw = textBlock.text.trim();
-        if (raw.startsWith("```")) {
-          raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        // Strip markdown fences (case-insensitive)
+        raw = raw.replace(/^```[a-z]*\s*\n?/i, "").replace(/\n?```\s*$/,  "");
+        // If there's still non-JSON text around the object, extract { … }
+        const firstBrace = raw.indexOf("{");
+        const lastBrace = raw.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          raw = raw.slice(firstBrace, lastBrace + 1);
         }
         const langTranslations = JSON.parse(raw);
         if (typeof langTranslations === "object" && Object.keys(langTranslations).length > 0) {

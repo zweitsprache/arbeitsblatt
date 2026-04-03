@@ -59,6 +59,7 @@ import {
   WorksheetBlock,
   WritingLinesBlock,
   WritingRowsBlock,
+  PageBreakBlock,
   EmailSkeletonBlock,
   EmailSkeletonStyle,
   EmailAttachment,
@@ -70,6 +71,8 @@ import {
   AiPromptBlock,
   AiToolBlock,
   AudioBlock,
+  ScheduleBlock,
+  ScheduleItem,
   TableBlock,
   TableStyle,
   BlockVisibility,
@@ -264,6 +267,18 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { bilingual: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("skipTranslation")}</Label>
+        <Switch
+          checked={block.skipTranslation ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { skipTranslation: checked } },
             })
           }
         />
@@ -1082,6 +1097,25 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           }
         />
       </div>
+    </div>
+  );
+}
+
+function PageBreakProps({ block }: { block: PageBreakBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  return (
+    <div className="flex items-center justify-between">
+      <Label className="text-sm">{t("restartPageNumbering")}</Label>
+      <Switch
+        checked={block.restartPageNumbering ?? false}
+        onCheckedChange={(checked) =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { restartPageNumbering: checked } },
+          })
+        }
+      />
     </div>
   );
 }
@@ -2408,6 +2442,8 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
           <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>
           <option value="lernziel">{t("textStyleLernziel")}</option>
+          <option value="kompetenzziele">{t("textStyleKompetenzziele")}</option>
+          <option value="handlungsziele">{t("textStyleHandlungsziele")}</option>
           <option value="metadaten">{t("textStyleMetadaten")}</option>
           <option value="rows">{t("textStyleRows")}</option>
         </select>
@@ -5726,6 +5762,147 @@ function AudioProps({ block }: { block: AudioBlock }) {
   );
 }
 
+// ─── Schedule Properties ─────────────────────────────────────
+function ScheduleProps({ block }: { block: ScheduleBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const updateItem = (index: number, updates: Partial<ScheduleItem>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const last = block.items[block.items.length - 1];
+    const newItems = [
+      ...block.items,
+      {
+        id: `s${Date.now()}`,
+        start: last?.end || "09:00",
+        end: "",
+        title: "",
+        description: "",
+      },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newItems = [...block.items];
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newItems.length) return;
+    [newItems[index], newItems[swapIndex]] = [newItems[swapIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("scheduleItems")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
+            <div className="flex items-center gap-1">
+              <Input
+                type="time"
+                value={item.start}
+                onChange={(e) => updateItem(i, { start: e.target.value })}
+                className="h-8 text-xs w-[90px]"
+              />
+              <span className="text-xs text-muted-foreground">–</span>
+              <Input
+                type="time"
+                value={item.end}
+                onChange={(e) => updateItem(i, { end: e.target.value })}
+                className="h-8 text-xs w-[90px]"
+              />
+              <div className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => moveItem(i, "up")}
+                disabled={i === 0}
+              >
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => moveItem(i, "down")}
+                disabled={i === block.items.length - 1}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeItem(i)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <ChInput
+              blockId={block.id}
+              fieldPath={`items.${i}.title`}
+              baseValue={item.title}
+              onBaseChange={(v) => updateItem(i, { title: v })}
+              className="h-8 text-xs"
+              placeholder={t("scheduleTitle")}
+            />
+            <ChInput
+              blockId={block.id}
+              fieldPath={`items.${i}.description`}
+              baseValue={item.description}
+              onBaseChange={(v) => updateItem(i, { description: v })}
+              className="h-8 text-xs"
+              placeholder={t("scheduleDescription")}
+            />
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Table Properties ────────────────────────────────────────
 
 /** Count columns from the first row of a table HTML string */
@@ -5986,7 +6163,7 @@ export function PropertiesPanel() {
       case "logo-divider":
         return null;
       case "page-break":
-        return null;
+        return <PageBreakProps block={selectedBlock} />;
       case "writing-lines":
         return <WritingLinesProps block={selectedBlock} />;
       case "writing-rows":
@@ -6053,6 +6230,8 @@ export function PropertiesPanel() {
         return <TableProps block={selectedBlock as TableBlock} />;
       case "audio":
         return <AudioProps block={selectedBlock as AudioBlock} />;
+      case "schedule":
+        return <ScheduleProps block={selectedBlock as ScheduleBlock} />;
       case "numbered-label":
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":

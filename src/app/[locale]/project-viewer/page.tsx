@@ -10,7 +10,7 @@ import {
   Bot,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { ContentType, BrandSettings } from "@/types/project";
+import type { ContentType, ClientBrandSettings } from "@/types/project";
 import { ProjectHeader } from "@/components/layout/project-header";
 
 const CONTENT_TYPE_ICONS: Record<
@@ -57,7 +57,7 @@ export default async function ProjectHomePage({
   });
   if (!project) notFound();
 
-  const brand = (project.client.brandSettings || {}) as BrandSettings;
+  const brand = (project.client.brandSettings || {}) as ClientBrandSettings;
 
   // Fetch details for all assigned content
   const items: ContentItem[] = [];
