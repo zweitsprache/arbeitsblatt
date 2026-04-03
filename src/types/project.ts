@@ -52,7 +52,7 @@ export interface Project {
 
 // ── Content assignment (join table) ─────────────────────────────────────
 
-export type ContentType = "WORKSHEET" | "EBOOK" | "COURSE" | "AI_TOOL";
+export type ContentType = "WORKSHEET" | "EBOOK" | "COURSE" | "AI_TOOL" | "PRESENTATION";
 
 export interface ProjectContent {
   id: string;
