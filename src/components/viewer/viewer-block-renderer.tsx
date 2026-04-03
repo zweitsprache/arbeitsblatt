@@ -139,7 +139,7 @@ function prepareTiptapHtml(html: string): string {
 
 /** Strip outer <p>…</p> wrapper so content can render inline */
 function stripOuterP(html: string): string {
-  return html.replace(/^<p[^>]*>(.*)<\/p>$/is, "$1");
+  return html.replace(/^<p[^>]*>([\s\S]*)<\/p>$/i, "$1");
 }
 
 // ─── German marker helper ────────────────────────────────────
