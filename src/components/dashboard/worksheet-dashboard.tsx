@@ -45,9 +45,11 @@ import {
   Copy,
   Printer,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
+import { ImportFromCourseDialog } from "./import-from-course-dialog";
 import { authFetch } from "@/lib/auth-fetch";
 
 interface FolderItem {
@@ -108,6 +110,7 @@ export function WorksheetDashboard() {
     worksheetId?: string;
     worksheetTitle?: string;
   }>({ open: false });
+  const [importCourseOpen, setImportCourseOpen] = useState(false);
 
   const fetchContents = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -325,6 +328,14 @@ export function WorksheetDashboard() {
             <FolderPlus className="h-4 w-4" />
             {t("newFolder")}
           </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setImportCourseOpen(true)}
+          >
+            <BookOpen className="h-4 w-4" />
+            {t("importFromCourse")}
+          </Button>
           <Link href="/editor">
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -476,12 +487,18 @@ export function WorksheetDashboard() {
                     : t("createFirstWorksheet")}
                 </p>
                 {!isSearching && (
-                  <Link href="/editor">
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t("createWorksheet")}
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setImportCourseOpen(true)}>
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      {t("importFromCourse")}
                     </Button>
-                  </Link>
+                    <Link href="/editor">
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t("createWorksheet")}
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -737,6 +754,11 @@ export function WorksheetDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ImportFromCourseDialog
+        open={importCourseOpen}
+        onOpenChange={setImportCourseOpen}
+      />
     </div>
   );
 }
