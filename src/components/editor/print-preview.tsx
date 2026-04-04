@@ -43,7 +43,7 @@ export function PrintPreview({
   const { state, save } = useEditor();
   const t = useTranslations("printPreview");
   const locale = useLocale();
-  const [zoom, setZoom] = useState(70);
+  const [zoom, setZoom] = useState(140);
   const [loading, setLoading] = useState(true);
   const [iframeSrc, setIframeSrc] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -103,7 +103,7 @@ export function PrintPreview({
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 30));
-  const handleResetZoom = () => setZoom(70);
+  const handleResetZoom = () => setZoom(140);
 
   const noWorksheet = !state.worksheetId;
 
