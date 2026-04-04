@@ -257,27 +257,6 @@ function forEachBlockTranslationField(
       break;
     }
 
-    case "true-false-matrix": {
-      add("instruction", () => block.instruction, (v) => {
-        block.instruction = v;
-      });
-      add("statementColumnHeader", () => block.statementColumnHeader, (v) => {
-        block.statementColumnHeader = v;
-      });
-      add("trueLabel", () => block.trueLabel, (v) => {
-        block.trueLabel = v;
-      });
-      add("falseLabel", () => block.falseLabel, (v) => {
-        block.falseLabel = v;
-      });
-      for (const stmt of block.statements) {
-        add(`statements.${stmt.id}.text`, () => stmt.text, (v) => {
-          stmt.text = v;
-        });
-      }
-      break;
-    }
-
     case "order-items": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;
@@ -311,18 +290,6 @@ function forEachBlockTranslationField(
       for (const item of block.items) {
         add(`items.${item.id}.text`, () => item.text, (v) => {
           item.text = v;
-        });
-      }
-      break;
-    }
-
-    case "unscramble-words": {
-      add("instruction", () => block.instruction, (v) => {
-        block.instruction = v;
-      });
-      for (const item of block.words) {
-        add(`words.${item.id}.word`, () => item.word, (v) => {
-          item.word = v;
         });
       }
       break;

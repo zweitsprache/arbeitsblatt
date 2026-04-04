@@ -549,11 +549,7 @@
     height: 25mm;
   }
 
-  .print-footer-fixed {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+  .print-footer-content {
     height: 25mm;
     padding: 0 15mm 8mm 20mm;
     box-sizing: border-box;
@@ -598,6 +594,7 @@
   .print-body-content ol > li {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+    padding-left: 1.5rem !important;
   }
 
   /* Ensure block spacing is preserved */

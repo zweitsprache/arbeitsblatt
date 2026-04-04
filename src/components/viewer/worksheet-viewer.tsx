@@ -258,23 +258,6 @@ export function WorksheetViewer({
               Lösung
             </div>
           )}
-          {showPrintFooter && (
-            <div className="print-footer-fixed">
-              <div>
-                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
-              </div>
-              <div style={{ textAlign: "center" }}>
-                {processedFooterCenter ? (
-                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
-                ) : settings.footerText ? (
-                  <span>{settings.footerText}</span>
-                ) : null}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
-              </div>
-            </div>
-          )}
           <table className="print-table">
             {showPrintHeader && (
               <thead>
@@ -301,7 +284,21 @@ export function WorksheetViewer({
               <tfoot>
                 <tr>
                   <td>
-                    <div className="print-footer-spacer" />
+                    <div className="print-footer-content">
+                      <div>
+                        {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        {processedFooterCenter ? (
+                          <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                        ) : settings.footerText ? (
+                          <span>{settings.footerText}</span>
+                        ) : null}
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </tfoot>
