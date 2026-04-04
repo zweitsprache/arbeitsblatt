@@ -2034,7 +2034,7 @@ function TrueFalseMatrixView({
             return (
               <tr key={stmt.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-2 align-middle">
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-h-7 items-center gap-3">
                     <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground text-cv-micro">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
@@ -2042,7 +2042,7 @@ function TrueFalseMatrixView({
                   </div>
                 </td>
                 <td className="py-2 px-2 align-middle">
-                  <div className="flex items-center justify-center">
+                  <div className="flex min-h-7 items-center justify-center">
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
                       <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
@@ -2060,7 +2060,7 @@ function TrueFalseMatrixView({
                   </div>
                 </td>
                 <td className="py-2 px-2 align-middle">
-                  <div className="flex items-center justify-center">
+                  <div className="flex min-h-7 items-center justify-center">
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
                       <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
