@@ -57,7 +57,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, Square } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -70,6 +70,8 @@ function getBrandFonts(brand: string) {
 
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
 const NUMBER_BADGE_CLASS = "inline-flex h-5 w-5 min-w-5 items-center justify-center rounded-[3px] bg-slate-100 text-slate-700 ring-1 ring-slate-300 font-bold leading-none text-cv-micro";
+const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
+const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 
 /** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
 function hashString(input: string): number {
@@ -289,7 +291,6 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
   const hasExampleBox = isExample || isExampleStandard || isExampleImproved;
-  const hasPill = isExampleStandard || isExampleImproved;
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
@@ -541,13 +542,13 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
 
     return (
       <div
-        className="flex gap-0 border-2 rounded-sm"
-        style={{ borderColor: hinweisConfig.border, backgroundColor: hinweisConfig.bg, color: hinweisConfig.color }}
+        className={s.hintBox}
+        style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
       >
-        <div className="shrink-0 w-10 flex items-center justify-center rounded-l-sm">
+        <div className={s.hintIcon}>
           {hinweisConfig.icon}
         </div>
-        <div className="flex-1 min-w-0 px-3 py-2">
+        <div className={s.hintBody}>
           {imageEl}
           {wrapBilingual(block.content, originalBlock?.content)}
         </div>
@@ -555,29 +556,40 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
     );
   }
 
-  const pillColor = isExampleStandard ? "#990033" : "#3A4F40";
   const borderTextColor = isExampleStandard ? "#990033" : isExampleImproved ? "#3A4F40" : "#475569";
+
+  if (isExample) {
+    return (
+      <div>
+        <div
+          className={s.exampleBox}
+          style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}
+        >
+          {imageEl}
+          {wrapBilingual(block.content, originalBlock?.content)}
+        </div>
+        {block.comment && (
+          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
+            {renderDeMarkers(block.comment)}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      {hasPill && (
-        <div className="flex">
-          <div
-            className={`py-1 text-xs font-semibold text-white rounded-t-sm text-center uppercase flex items-center justify-center ${s.pill}`}
-            style={{ "--block-color": pillColor } as React.CSSProperties}
-          >
-            {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
-          </div>
-        </div>
-      )}
       <div
-        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
-          hasPill ? "rounded-tl-none" : ""
-        }`}
-        style={{ "--block-color": borderTextColor } as React.CSSProperties}
+        className={`${s.exampleSplit} ${isExampleStandard ? s.exampleSplitStandard : s.exampleSplitImproved}`}
+        style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}
       >
-        {imageEl}
-        {wrapBilingual(block.content, originalBlock?.content)}
+        <div className={s.exampleSplitIcon} aria-hidden="true">
+          {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
+        </div>
+        <div className={s.exampleSplitBody}>
+          {imageEl}
+          {wrapBilingual(block.content, originalBlock?.content)}
+        </div>
       </div>
       {block.comment && (
         <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
@@ -611,40 +623,23 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
         </div>
       )}
       <div
-        className={`border border-dashed overflow-hidden bg-white ${s.blockShadow} ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
+        className={`border border-dashed overflow-hidden bg-white ${isStyled ? "rounded-sm rounded-tl-none" : "rounded-sm"}`}
         style={{ borderColor: isStyled ? color : "#475569" }}
       >
-        {/* Email toolbar */}
-        <div
-          className={`flex items-center gap-2 px-4 py-2 border-b ${isStyled ? "" : "bg-slate-50 border-slate-200"}`}
-          style={isStyled ? { backgroundColor: `${color}0D`, borderColor: `${color}4D` } : undefined}
-        >
-          <svg className={`h-4 w-4 ${isStyled ? s.emailIcon : ""}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-          </svg>
+        <div className={s.emailMeta}>
+          <div className={s.emailMetaRow}>
+            <div className={s.emailMetaLabel}>{t("emailTo")}</div>
+            <div className={s.emailMetaValue}>{block.to}</div>
+          </div>
+          <div className={s.emailMetaRow}>
+            <div className={s.emailMetaLabel}>{t("emailSubject")}</div>
+            <div className={s.emailMetaValue}>{block.subject}</div>
+          </div>
         </div>
 
-      {/* Email header fields */}
-      <div className="email-skeleton-fields px-4 pt-3 pb-2 space-y-1.5 border-b border-slate-100">
-        <div className="flex items-baseline gap-2">
-          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailFrom")}</span>
-          <span className="text-slate-700">{block.from}</span>
+        <div className={s.emailBody}>
+          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailTo")}</span>
-          <span className="text-slate-700">{block.to}</span>
-        </div>
-        <div className="flex items-baseline gap-2 pt-1 border-t border-slate-100">
-          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailSubject")}</span>
-          <span className={`font-semibold ${isStyled ? s.emailSubject : ""}`} style={isStyled ? { "--block-color": color } as React.CSSProperties : undefined}>{block.subject}</span>
-        </div>
-      </div>
-
-      {/* Email body */}
-      <div className="px-4 py-3">
-        <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
-      </div>
 
       {/* Attachments */}
       {attachments.length > 0 && (
@@ -779,14 +774,14 @@ function TextSnippetView({ block }: { block: TextSnippetBlock }) {
   if (block.translatedContent) {
     return (
       <div className="grid grid-cols-2 gap-4">
-        <div className="relative border border-slate-200 rounded-sm p-4 bg-slate-50/50">
+        <div className={`relative border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
           <div
             className={`tiptap max-w-none ${s.tiptapFlush}`}
             dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
           />
           {copyButton}
         </div>
-        <div className="border border-slate-200 rounded-sm p-4 bg-white">
+        <div className={`border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
           <div
             className={`tiptap max-w-none ${s.tiptapFlush}`}
             dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.translatedContent) }}
@@ -798,7 +793,7 @@ function TextSnippetView({ block }: { block: TextSnippetBlock }) {
 
   return (
     <div>
-      <div className="relative group border border-slate-200 rounded-sm p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+      <div className={`relative group border border-slate-200 rounded-sm p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors ${s.snippetCard}`}>
         <div
           className={`tiptap max-w-none ${s.tiptapFlush}`}
           dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
@@ -1111,11 +1106,9 @@ function MultipleChoiceView({
                   )}
                 </div>
               ) : showSolutions && isCorrect ? (
-                <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 shrink-0" />
-              ) : block.allowMultiple ? (
-                <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300" />
+                <div className={CONTROL_BOX_FILLED_CLASS} />
               ) : (
-                <input type="radio" name={`mc-${block.id}`} disabled className="h-4 w-4 border-gray-300" />
+                <div className={CONTROL_BOX_CLASS} />
               )}
               <span className={`flex-1${showSolutions && isCorrect ? ' text-green-800 font-semibold' : ''}`}>{opt.text}</span>
               {showResults && isCorrect && (
@@ -1175,9 +1168,7 @@ function FillInBlankView({
           const isCorrectAnswer =
             showResults && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
           const isWrong = showResults && userValue.trim() !== "" && !isCorrectAnswer;
-          const widthStyle = widthMultiplier === 0
-            ? { flex: 1 } as React.CSSProperties
-            : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+          const widthStyle = widthMultiplier === 0 ? { flex: 1 } as React.CSSProperties : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
 
           if (interactive) {
             return (
@@ -1904,10 +1895,7 @@ function WordBankView({ block }: { block: WordBankBlock }) {
       </p>
       <div className="flex flex-wrap gap-2">
         {block.words.map((word, i) => (
-          <span
-            key={i}
-            className="px-3 py-1.5 bg-muted rounded font-medium"
-          >
+          <span key={i} className={s.wordChip}>
             {word}
           </span>
         ))}
@@ -2027,16 +2015,16 @@ function TrueFalseMatrixView({
             const isCorrect = hasAnswered && selected === stmt.correctAnswer;
 
             const getOptionClass = (optionValue: boolean) => {
-              if (!hasAnswered) return "ring-2 ring-muted-foreground/30 hover:ring-primary/50";
+              if (!hasAnswered) return "border-muted-foreground/30 hover:border-primary/50";
               if (selected === optionValue) {
                 return isCorrect
-                  ? "ring-2 ring-green-600 bg-green-500 text-white"
-                  : "ring-2 ring-red-600 bg-red-500 text-white";
+                  ? `${s.controlBoxFilled}`
+                  : "border-red-500 bg-red-500 text-white";
               }
               if (stmt.correctAnswer === optionValue) {
-                return "ring-2 ring-blue-600 bg-blue-500 text-white";
+                return "border-blue-500 bg-blue-500 text-white";
               }
-              return "ring-2 ring-muted-foreground/30";
+              return "border-muted-foreground/30";
             };
 
             return (
@@ -2050,17 +2038,13 @@ function TrueFalseMatrixView({
                 <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
-                      <div
-                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] bg-green-500 ring-2 ring-green-600"
-                      />
+                      <div className={CONTROL_BOX_FILLED_CLASS} />
                     ) : (
-                      <div
-                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] ring-2 ring-muted-foreground/30"
-                      />
+                      <div className={CONTROL_BOX_CLASS} />
                     )
                   ) : (
                     <button
-                      className={`box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] transition-colors ${getOptionClass(true)}`}
+                      className={`${CONTROL_BOX_CLASS} transition-colors ${getOptionClass(true)}`}
                       onClick={() => handleSelect(stmt.id, true)}
                       disabled={hasAnswered}
                     />
@@ -2069,17 +2053,13 @@ function TrueFalseMatrixView({
                 <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
-                      <div
-                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] bg-green-500 ring-2 ring-green-600"
-                      />
+                      <div className={CONTROL_BOX_FILLED_CLASS} />
                     ) : (
-                      <div
-                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] ring-2 ring-muted-foreground/30"
-                      />
+                      <div className={CONTROL_BOX_CLASS} />
                     )
                   ) : (
                     <button
-                      className={`box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] transition-colors ${getOptionClass(false)}`}
+                      className={`${CONTROL_BOX_CLASS} transition-colors ${getOptionClass(false)}`}
                       onClick={() => handleSelect(stmt.id, false)}
                       disabled={hasAnswered}
                     />
@@ -2151,13 +2131,13 @@ function ArticleTrainingView({
                   <td key={a} className="p-2 text-center">
                     {interactive ? (
                       <button
-                        className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors
+                        className={`${CONTROL_BOX_CLASS} inline-flex transition-colors
                           ${selected === a
                             ? showResults
                               ? item.correctArticle === a
-                                ? "bg-green-500 border-green-500 text-white"
-                                : "bg-red-500 border-red-500 text-white"
-                              : "bg-primary border-primary text-white"
+                                ? s.controlBoxFilled
+                                : "border-red-500 bg-red-500 text-white"
+                              : "border-primary bg-primary text-white"
                             : "border-muted-foreground/30 hover:border-primary/50"
                           }`}
                         onClick={() => handleSelect(item.id, a)}
@@ -2165,9 +2145,9 @@ function ArticleTrainingView({
                         {selected === a && "✓"}
                       </button>
                     ) : showSolutions && item.correctArticle === a ? (
-                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600 mx-auto" />
+                      <div className={`${CONTROL_BOX_FILLED_CLASS} mx-auto`} />
                     ) : (
-                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 mx-auto" />
+                      <div className={`${CONTROL_BOX_CLASS} mx-auto`} />
                     )}
                   </td>
                 ))}
@@ -3665,51 +3645,23 @@ function ChartView({ block }: { block: ChartBlock }) {
 // ─── Dos and Don'ts ─────────────────────────────────────────
 
 function DosAndDontsView({ block }: { block: DosAndDontsBlock }) {
-  const renderList = (
-    items: DosAndDontsBlock["dos"],
-    title: string,
-    color: string,
-    bgColor: string,
-    icon: React.ReactNode
-  ) => (
-    <div className={block.layout === "vertical" ? "w-full" : "flex-1 min-w-[200px]"}>
+  const renderList = (items: DosAndDontsBlock["dos"], title: string) => (
+    <div className={s.dosDontsColumn}>
       {block.showTitles !== false && (
-        <div className="flex items-center gap-2 mb-3">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${bgColor}`}>
-            {icon}
-          </div>
-          <p className="font-semibold m-0">{title}</p>
-        </div>
+        <p className={s.dosDontsTitle}>{title}</p>
       )}
-      <div className="space-y-2">
+      <ul className={s.lineDotList}>
         {items.map((item) => (
-          <div key={item.id} className="flex items-start gap-2">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 shrink-0 ${bgColor}`}>
-              {icon}
-            </div>
-            <p className="m-0">{item.text}</p>
-          </div>
+          <li key={item.id} className={s.lineDotListItem}>{item.text}</li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 
   return (
-    <div className={block.layout === "vertical" ? "flex flex-col gap-6" : "flex gap-6 flex-wrap"}>
-      {renderList(
-        block.dos,
-        block.dosTitle,
-        "text-emerald-600",
-        "bg-emerald-100 text-emerald-600",
-        <Check className="h-3.5 w-3.5" />
-      )}
-      {renderList(
-        block.donts,
-        block.dontsTitle,
-        "text-red-500",
-        "bg-red-100 text-red-500",
-        <X className="h-3.5 w-3.5" />
-      )}
+    <div className={`${s.dosDontsWrap} ${block.layout === "vertical" ? s.dosDontsWrapVertical : ""}`}>
+      {renderList(block.dos, block.dosTitle)}
+      {renderList(block.donts, block.dontsTitle)}
     </div>
   );
 }
@@ -3736,7 +3688,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
         </div>
       </div>
       <div
-        className={`flex-1 border border-dashed rounded-sm py-3 pr-3 pl-6 rounded-tl-none ${s.blockShadow} ${s.styledBorder}`}
+        className={`flex-1 border border-dashed rounded-sm py-3 pr-3 pl-6 rounded-tl-none ${s.styledBorder} ${s.textComparisonBox}`}
         style={{ "--block-color": color } as React.CSSProperties}
       >
         <div
@@ -3749,7 +3701,7 @@ function TextComparisonView({ block }: { block: TextComparisonBlock }) {
 
   return (
     <div>
-      <div className="flex gap-4">
+      <div className={s.textComparisonWrap}>
         {renderSide(block.leftContent, chColor, "/flags/ch.svg")}
         {renderSide(block.rightContent, deColor, "/flags/de.svg")}
       </div>
@@ -3780,6 +3732,36 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
   const radius = block.borderRadius ?? 6;
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+
+  if (!hasBg) {
+    return (
+      <div className={s.numberedItemsRows}>
+        {block.items.map((item, i) => {
+          const originalItem = originalBlock?.items[i];
+          const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+          return (
+            <div key={item.id} className={s.numberedItemRow}>
+              <span className={s.accentBadge}>{String(block.startNumber + i).padStart(2, "0")}</span>
+              <div className={`${s.numberedItemContent} tiptap-compact`}>
+                {showBilingual ? (
+                  <div className="flex-1 min-w-0">
+                    <span dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
+                    <span style={{ fontWeight: 400 }}> | </span>
+                    <span style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(item.content)) }} />
+                  </div>
+                ) : (
+                  <div
+                    className="tiptap max-w-none"
+                    dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -3830,11 +3812,12 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
 // ─── Checklist View ────────────────────────────────────────────
 function ChecklistView({ block }: { block: ChecklistBlock }) {
   return (
-    <div className="divide-y divide-border/40">
-      {block.items.map((item) => (
-        <div key={item.id} className="flex items-start gap-2 py-2.5">
-          <Square className="h-4 w-4 shrink-0 text-foreground/60" style={{ marginTop: "0.2em" }} />
-          <div className="flex-1 min-w-0 tiptap-compact">
+    <div className={s.checklistRows}>
+      {block.items.map((item, index) => (
+        <div key={item.id} className={s.checklistRow}>
+          <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
+          <div className={CONTROL_BOX_CLASS} />
+          <div className={`${s.checklistText} tiptap-compact`}>
             <div
               className="tiptap max-w-none"
               dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
@@ -3891,11 +3874,13 @@ function AccordionView({
               <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
             )}
             <span className="flex-1 font-medium">{item.title || "\u2026"}</span>
-            {openIndex === i ? (
-              <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
-            ) : (
-              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-            )}
+            <span className={s.accordionToggle}>
+              {openIndex === i ? (
+                <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
+            </span>
           </button>
           {openIndex === i && (
             <div className="px-5 py-4 space-y-4">
@@ -4036,9 +4021,9 @@ function ScheduleView({
       {block.instruction && (
         <p className="text-muted-foreground">{block.instruction}</p>
       )}
-      <div className="space-y-0 border-t">
+      <div className={s.scheduleCard}>
         {block.items.map((item) => (
-          <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
+          <div key={item.id} className={s.scheduleRow}>
             <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
             <span className="flex-1">
               <span className="font-medium">{item.title}</span>

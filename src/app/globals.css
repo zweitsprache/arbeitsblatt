@@ -490,6 +490,11 @@
   font-family: var(--print-body-font);
 }
 
+.print-worksheet-root.print-skin-final .print-body-content {
+  font-family: var(--print-body-font);
+  font-size: var(--print-body-size, var(--text-cv-base));
+}
+
 .print-worksheet-root.print-skin-final h1,
 .print-worksheet-root.print-skin-final h2,
 .print-worksheet-root.print-skin-final h3,
@@ -694,8 +699,9 @@
   /* Print-only: keep list spacing compact.
      In bilingual/translated output, list content can carry larger line-height defaults. */
   .print-body-content .tiptap ul {
+    padding-left: 1.75rem !important;
     margin-top: 0 !important;
-    margin-bottom: 0.35rem !important;
+    margin-bottom: 0 !important;
   }
 
   .print-body-content .tiptap li,
@@ -704,7 +710,7 @@
   .print-body-content .course-content li p,
   .print-body-content li,
   .print-body-content li p {
-    line-height: 1.15em !important;
+    line-height: 1.35em !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     padding-top: 0 !important;
@@ -720,9 +726,21 @@
   .print-body-content .tiptap ol > li,
   .print-body-content ul > li,
   .print-body-content ol > li {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    padding-left: 1.5rem !important;
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    padding-left: 0.25rem !important;
+  }
+
+  .print-body-content .tiptap ul > li:not(:last-child),
+  .print-body-content ul > li:not(:last-child) {
+    position: relative;
+  }
+
+  .print-body-content .tiptap ul > li:not(:last-child)::after,
+  .print-body-content ul > li:not(:last-child)::after {
+    margin-top: 0.4rem !important;
+    margin-left: -1.5rem !important;
+    width: calc(100% + 1.5rem) !important;
   }
 
   /* Ensure block spacing is preserved */
@@ -742,19 +760,19 @@
     padding-left: 1.75rem !important;
   }
 
-  /* Fallback bullet for li::before in PDF — background-image/mask not rendered by Chromium PDF engine.
-     Replace with a plain filled circle using background-color (always printed with print-color-adjust: exact). */
+  /* Print-safe line-dot list marker using CSS gradients instead of SVG background assets. */
   .tiptap ul > li::before {
-    background-image: none !important;
-    -webkit-mask-image: none !important;
-    mask-image: none !important;
-    background-color: currentColor !important;
-    border-radius: 50% !important;
-    width: 6px !important;
-    height: 6px !important;
-    top: calc(50% - 3px) !important;
-    left: -1rem !important;
-    transform: none !important;
+    width: 16px !important;
+    height: 10px !important;
+    top: 50% !important;
+    left: -1.3rem !important;
+    transform: translateY(-50%) rotate(180deg) !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    background-image: radial-gradient(circle at 3px 5px, currentColor 0 3px, transparent 3.2px), linear-gradient(currentColor, currentColor) !important;
+    background-repeat: no-repeat !important;
+    background-position: 0 0, 6px 4px !important;
+    background-size: 6px 10px, 10px 2px !important;
   }
 }
 /* Hide scrollbar but keep scrolling */
@@ -789,25 +807,53 @@
 
 /* ── Base table styles (editor & viewer) ───────────────────── */
 .table-block table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100% !important;
   table-layout: fixed;
   overflow: hidden;
+  border-radius: 4px;
 }
 
 .table-block td,
 .table-block th {
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
+  border-right: 0;
+  border-bottom: 0;
   padding: 6px 10px;
   vertical-align: top;
   position: relative;
   min-width: 60px;
 }
 
+.table-block tr > *:last-child {
+  border-right: 1px solid #e5e7eb;
+}
+
+.table-block tbody tr:last-child td {
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .table-block th {
   background-color: #f1f5f9;
   font-weight: 600;
   text-align: left;
+}
+
+.table-block thead tr:first-child th:first-child {
+  border-top-left-radius: 4px;
+}
+
+.table-block thead tr:first-child th:last-child {
+  border-top-right-radius: 4px;
+}
+
+.table-block tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 4px;
+}
+
+.table-block tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 4px;
 }
 
 .table-block td p,
@@ -863,20 +909,42 @@
 
 /* ── Viewer: make sure tables look good without editor ───── */
 .tiptap-table-view table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100% !important;
   table-layout: fixed;
+  border-radius: 4px;
 }
 .tiptap-table-view td,
 .tiptap-table-view th {
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
+  border-right: 0;
+  border-bottom: 0;
   padding: 6px 10px;
   vertical-align: top;
+}
+.tiptap-table-view tr > *:last-child {
+  border-right: 1px solid #e5e7eb;
+}
+.tiptap-table-view tbody tr:last-child td {
+  border-bottom: 1px solid #e5e7eb;
 }
 .tiptap-table-view th {
   background-color: #f1f5f9;
   font-weight: 600;
   text-align: left;
+}
+.tiptap-table-view thead tr:first-child th:first-child {
+  border-top-left-radius: 4px;
+}
+.tiptap-table-view thead tr:first-child th:last-child {
+  border-top-right-radius: 4px;
+}
+.tiptap-table-view tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 4px;
+}
+.tiptap-table-view tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 4px;
 }
 .tiptap-table-view td p,
 .tiptap-table-view th p {

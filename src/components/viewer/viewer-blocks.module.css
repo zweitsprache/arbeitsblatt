@@ -24,7 +24,40 @@
   padding: 0.5rem 1.25rem;
   border-radius: 0.375rem;
   color: var(--block-color);
-  font-size: 1.125rem;
+  font-size: inherit;
+}
+
+.controlBox {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 3px;
+  border: 2px solid #9ca3af;
+  background: transparent;
+}
+
+.controlBoxFilled {
+  border-color: #22c55e;
+  background: #22c55e;
+}
+
+.accentBadge {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  font-size: 0.65rem;
 }
 
 /* ─── Handwriting ────────────────────────────────────────── */
@@ -53,10 +86,132 @@
   color: var(--block-color);
 }
 
+.hintBox {
+  display: flex;
+  gap: 0;
+  border: 2px solid var(--block-color);
+  border-radius: 4px;
+  background: var(--block-bg, transparent);
+  color: var(--block-color);
+}
+
+.hintIcon {
+  flex-shrink: 0;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 1.5rem;
+}
+
+.hintBody {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem 0.5rem 0.7rem;
+}
+
+.exampleBox {
+  border: 1px dashed var(--block-color);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--block-color);
+  padding: 0.75rem 1rem;
+}
+
+.exampleSplit {
+  display: flex;
+  align-items: stretch;
+  color: var(--block-color);
+}
+
+.exampleSplitIcon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border-radius: 4px 0 0 4px;
+}
+
+.exampleSplitBody {
+  flex: 1;
+  min-width: 0;
+  border: 1px dashed currentColor;
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+  padding: 0.5rem 0.75rem 0.5rem 1.5rem;
+  background: #fff;
+}
+
+.exampleSplitStandard .exampleSplitIcon {
+  background: #990033;
+}
+
+.exampleSplitImproved .exampleSplitIcon {
+  background: #3a4f40;
+}
+
 /* ─── Email skeleton ─────────────────────────────────────── */
 
 .emailCard {
   border-color: var(--block-color, #e2e8f0);
+}
+
+.emailMeta {
+  background: #fcfcfd;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.7rem 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.emailMetaRow {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.emailMetaLabel {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 400;
+  background: #e2e8f0;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+}
+
+.emailMetaValue {
+  color: #0f172a;
+  background: #fff;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+}
+
+.emailBody {
+  padding: 0.9rem 1rem;
+  line-height: 1.45;
+}
+
+.emailBody :global(p) {
+  margin-bottom: 0.75rem;
+}
+
+.emailBody :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.snippetCard {
+  line-height: 1.35em;
+}
+
+.wordChip {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f8fafc;
+  font-weight: 500;
 }
 
 .emailToolbar {
@@ -87,6 +242,134 @@
   flex-shrink: 0;
 }
 
+.textComparisonWrap {
+  display: flex;
+  gap: 1rem;
+}
+
+.textComparisonBox {
+  line-height: 1.35em;
+}
+
+.dosDontsWrap {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dosDontsWrapVertical {
+  flex-direction: column;
+}
+
+.dosDontsColumn {
+  flex: 1 1 200px;
+}
+
+.dosDontsTitle {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.lineDotList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lineDotListItem {
+  position: relative;
+  margin: 0;
+  padding: 0.3rem 0 0.3rem 2rem;
+  line-height: 1.35em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.lineDotListItem:first-child {
+  border-top: 1px solid #e5e7eb;
+}
+
+.lineDotListItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  width: 16px;
+  height: 10px;
+  background-color: transparent;
+  background-image: radial-gradient(circle at 3px 5px, currentColor 0 3px, transparent 3.2px), linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 4px;
+  background-size: 6px 10px, 10px 2px;
+}
+
+.numberedItemsRows {
+  display: grid;
+  gap: 0;
+}
+
+.numberedItemRow {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.numberedItemRow:first-child {
+  border-top: 1px solid #e5e7eb;
+}
+
+.numberedItemContent {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  line-height: 1.35;
+}
+
+.checklistRows {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.checklistRow {
+  display: grid;
+  grid-template-columns: 2rem 20px 1fr;
+  align-items: center;
+  column-gap: 1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.checklistText {
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.scheduleCard {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scheduleRow:last-child {
+  border-bottom: 0;
+}
+
+.accordionToggle {
+  display: inline-flex;
+}
+
 /* Strip top margin from first <p> in tiptap content inside flex layouts */
 .tiptapFlush p:first-child {
   margin-top: 0;
@@ -97,5 +380,9 @@
 @media print {
   .blockShadow {
     box-shadow: none;
+  }
+
+  .accordionToggle {
+    display: none;
   }
 }
