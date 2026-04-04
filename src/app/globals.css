@@ -512,7 +512,7 @@
 
 .print-worksheet-root .print-footer-content {
   height: 25mm;
-  padding: 0 15mm 12mm 20mm;
+  padding: 0 15mm 10mm 20mm;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
@@ -745,7 +745,7 @@
 
   .print-footer-content {
     height: 25mm;
-    padding: 0 15mm 12mm 20mm;
+    padding: 0 15mm 10mm 20mm;
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;

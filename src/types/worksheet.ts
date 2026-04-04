@@ -1119,7 +1119,7 @@ export interface WorksheetDocument {
 export const DEFAULT_SETTINGS: WorksheetSettings = {
   pageSize: "a4",
   orientation: "portrait",
-  margins: { top: 20, right: 20, bottom: 20, left: 20 },
+  margins: { top: 20, right: 20, bottom: 113, left: 20 },
   showHeader: true,
   showFooter: true,
   headerText: "",
