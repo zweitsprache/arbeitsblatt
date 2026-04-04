@@ -114,8 +114,10 @@ export function WorksheetViewer({
   }
 
   const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
-  const fontFamily = isNonLatin ? NOTO_SANS_BODY : brandFonts.bodyFont;
-  const headlineFont = isNonLatin ? NOTO_SANS_BODY : brandFonts.headlineFont;
+  // Keep brand typography as the base in all locales (including bilingual/translated print).
+  // Non-Latin-specific tweaks are handled in individual block renderers where needed.
+  const fontFamily = brandFonts.bodyFont;
+  const headlineFont = brandFonts.headlineFont;
   const fontUrl = brandFonts.googleFontsUrl;
 
   // Get brand settings — prefer per-worksheet brandSettings (which includes
@@ -202,6 +204,7 @@ export function WorksheetViewer({
   const hasFooterLeft = !!processedFooterLeft;
   const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
   const hasFooterRight = !!processedFooterRight;
+  const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
 
@@ -386,7 +389,7 @@ export function WorksheetViewer({
               <tr>
                 <td>
                   <div className="print-body-content"
-                    style={{ fontSize: resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`, fontFamily: fontFamily }}
+                    style={{ fontSize: resolvedBodyFontSize, fontFamily: fontFamily }}
                   >
                     <div className="space-y-6">
                       {visibleBlocks.map((block) => (
@@ -397,7 +400,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={fontFamily} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -453,6 +456,8 @@ export function WorksheetViewer({
                     primaryColor={brandFonts.primaryColor}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
+                    bodyFont={fontFamily}
+                    bodyFontSize={resolvedBodyFontSize}
                     originalBlock={originalBlockMap?.[block.id]}
                     isNonLatin={isNonLatin}
                     translationScale={resolvedProfile.pdfTranslationScale ?? undefined}

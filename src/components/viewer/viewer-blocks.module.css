@@ -91,3 +91,11 @@
 .tiptapFlush p:first-child {
   margin-top: 0;
 }
+
+/* Remove box-shadow from example blocks in PDF — box-shadow is not rendered
+   correctly by Chromium's PDF engine and creates a grey artefact. */
+@media print {
+  .blockShadow {
+    box-shadow: none;
+  }
+}

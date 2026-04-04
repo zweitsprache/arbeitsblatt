@@ -110,7 +110,11 @@ export function WorksheetTranslationDialog() {
       if (state.isDirty) await save();
       const res = await authFetch(
         `/api/worksheets/${state.worksheetId}/translations/translate`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ force: true }),
+        }
       );
       const data = await res.json();
       if (res.ok) {

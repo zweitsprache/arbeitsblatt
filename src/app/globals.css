@@ -215,6 +215,35 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 12H3'/%3E%3Cpath d='m11 18 6-6-6-6'/%3E%3Cpath d='M21 5v14'/%3E%3C/svg%3E");
 }
 
+/* In rows style: make <ul>/<li> integrate seamlessly with <p> row layout */
+.tiptap-rows .tiptap ul,
+.tiptap-rows.tiptap ul,
+.tiptap-rows .ProseMirror ul {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-left: 0 !important;
+}
+
+.tiptap-rows .tiptap ul > li,
+.tiptap-rows.tiptap ul > li,
+.tiptap-rows .ProseMirror ul > li {
+  padding-left: 0 !important;
+}
+
+/* Suppress li::before in rows context — p::before inside the <li> already shows the icon */
+.tiptap-rows .tiptap ul > li::before,
+.tiptap-rows.tiptap ul > li::before,
+.tiptap-rows .ProseMirror ul > li::before {
+  display: none !important;
+}
+
+/* Suppress li::after separator in rows context — <p> border-bottom already handles it */
+.tiptap-rows .tiptap ul > li:not(:last-child)::after,
+.tiptap-rows.tiptap ul > li:not(:last-child)::after,
+.tiptap-rows .ProseMirror ul > li:not(:last-child)::after {
+  display: none !important;
+}
+
 .tiptap p:last-child,
 .course-content p:last-child {
   margin-bottom: 0;
@@ -251,11 +280,9 @@
   transform: translateY(-50%) rotate(180deg);
   width: 16px;
   height: 10px;
-  background: currentColor;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='black'/%3E%3Crect x='6' y='4' width='10' height='2' fill='black'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='black'/%3E%3Crect x='6' y='4' width='10' height='2' fill='black'/%3E%3C/svg%3E");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='%231a1a1a'/%3E%3Crect x='6' y='4' width='10' height='2' fill='%231a1a1a'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
 .tiptap ol {
@@ -386,6 +413,22 @@
     print-color-adjust: exact;
   }
 
+  /* Print-only: keep list spacing compact.
+     In bilingual/translated output, list content can carry larger line-height defaults. */
+  .print-body-content .tiptap ul {
+    margin-top: 0 !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .print-body-content .tiptap li,
+  .print-body-content .tiptap li p {
+    line-height: 1.15em !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
   /* Ensure block spacing is preserved */
   .worksheet-block + .worksheet-block {
     margin-top: 1.5rem;
@@ -401,6 +444,21 @@
   .tiptap-rows .tiptap p,
   .tiptap-rows.tiptap p {
     padding-left: 1.75rem !important;
+  }
+
+  /* Fallback bullet for li::before in PDF — background-image/mask not rendered by Chromium PDF engine.
+     Replace with a plain filled circle using background-color (always printed with print-color-adjust: exact). */
+  .tiptap ul > li::before {
+    background-image: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    background-color: currentColor !important;
+    border-radius: 50% !important;
+    width: 6px !important;
+    height: 6px !important;
+    top: calc(50% - 3px) !important;
+    left: -1rem !important;
+    transform: none !important;
   }
 }
 /* Hide scrollbar but keep scrolling */

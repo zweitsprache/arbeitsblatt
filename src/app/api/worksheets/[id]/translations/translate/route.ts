@@ -50,6 +50,7 @@ export async function POST(
   }
 
   const body = await req.json().catch(() => null);
+    const force = body?.force === true;
 
   const blocks = (worksheet.blocks as unknown as WorksheetBlock[]) ?? [];
   const settings = (worksheet.settings as unknown as WorksheetSettings) ?? {};
@@ -92,14 +93,14 @@ export async function POST(
 
   const delta: Record<string, string> = {};
   for (const [key, value] of Object.entries(strings)) {
-    if (previousSource[key] !== value) {
+    if (force || previousSource[key] !== value) {
       delta[key] = value;
     }
   }
 
   const removedKeys = Object.keys(previousSource).filter((k) => !(k in strings));
 
-  if (Object.keys(delta).length === 0 && removedKeys.length === 0) {
+  if (!force && Object.keys(delta).length === 0 && removedKeys.length === 0) {
     return NextResponse.json({
       success: true,
       stringCount: 0,
@@ -109,7 +110,7 @@ export async function POST(
   }
 
   // ── Removal-only: no AI call needed, just clean up ────────
-  if (Object.keys(delta).length === 0 && removedKeys.length > 0) {
+  if (!force && Object.keys(delta).length === 0 && removedKeys.length > 0) {
     const merged: Record<string, Record<string, string>> = {};
     for (const [lang, map] of Object.entries(existingTranslations)) {
       if (!lang.startsWith("_")) merged[lang] = { ...map };
@@ -134,7 +135,7 @@ export async function POST(
 
   const deltaEntries = Object.entries(delta);
 
-  console.log(`[translate] Delta: ${deltaEntries.length} changed, ${removedKeys.length} removed. Keys: ${deltaEntries.map(([k]) => k).join(", ")}`);
+  console.log(`[translate] Delta: ${deltaEntries.length} changed, ${removedKeys.length} removed, force=${force}. Keys: ${deltaEntries.map(([k]) => k).join(", ")}`);
   console.log(`[translate] Delta values sample:`, JSON.stringify(delta).slice(0, 500));
 
   // Build per-key AI instructions

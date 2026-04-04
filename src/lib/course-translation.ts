@@ -215,6 +215,11 @@ function extractSingleBlockStrings(
     case "true-false-matrix":
       addStr(strings, `${p}.instruction`, block.instruction);
       addStr(strings, `${p}.statementColumnHeader`, block.statementColumnHeader);
+      addStr(strings, `${p}.trueLabel`, block.trueLabel);
+      addStr(strings, `${p}.falseLabel`, block.falseLabel);
+      for (const stmt of block.statements) {
+        addStr(strings, `${p}.statements.${stmt.id}.text`, stmt.text);
+      }
       break;
 
     // ── Order items
@@ -246,6 +251,9 @@ function extractSingleBlockStrings(
     // ── Unscramble words
     case "unscramble-words":
       addStr(strings, `${p}.instruction`, block.instruction);
+      for (const item of block.words) {
+        addStr(strings, `${p}.words.${item.id}.word`, item.word);
+      }
       break;
 
     // ── Fix sentences
@@ -453,8 +461,9 @@ export function getAiInstructions(
   key: string,
   value: string
 ): string | undefined {
-  // HTML content (text blocks, email body)
-  if (value.includes("<p>") || value.includes("<br") || value.includes("<strong>")) {
+  // HTML content (text blocks, tables, lists, etc.)
+  // Use a generic tag detector so <ul>/<li> and other markup also get strict preserve-tags instructions.
+  if (/<\/?[a-z][^>]*>/i.test(value)) {
     return HTML_AI_INSTRUCTIONS;
   }
   // Fill-in-blank markers
@@ -618,6 +627,10 @@ function applySingleBlockTranslations(
     case "true-false-matrix":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
       apply(`${p}.statementColumnHeader`, (v) => (block.statementColumnHeader = v));
+      apply(`${p}.trueLabel`, (v) => (block.trueLabel = v));
+      apply(`${p}.falseLabel`, (v) => (block.falseLabel = v));
+      for (const stmt of block.statements)
+        apply(`${p}.statements.${stmt.id}.text`, (v) => (stmt.text = v));
       break;
     case "order-items":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
@@ -637,6 +650,8 @@ function applySingleBlockTranslations(
       break;
     case "unscramble-words":
       apply(`${p}.instruction`, (v) => (block.instruction = v));
+      for (const item of block.words)
+        apply(`${p}.words.${item.id}.word`, (v) => (item.word = v));
       break;
     case "fix-sentences":
       apply(`${p}.instruction`, (v) => (block.instruction = v));

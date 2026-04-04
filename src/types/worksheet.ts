@@ -164,6 +164,7 @@ export interface TableBlock extends BlockBase {
   tableStyle?: TableStyle;
   caption?: string;
   columnWidths?: number[];
+  bilingual?: boolean;
 }
 
 export const BRAND_ICON_LOGOS: Record<string, string> = {

@@ -132,9 +132,26 @@ function resolveDeMarkers(html: string): string {
   );
 }
 
+/** Remove inline typography overrides so brand profile font settings can apply uniformly.
+ *  Keeps other inline styles (e.g. color, weight) intact. */
+function stripInlineTypographyStyles(html: string): string {
+  return html
+    .replace(/style="([^"]*)"/gi, (_m, styleContent: string) => {
+      const kept = styleContent
+        .split(";")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((decl) => !/^font-family\s*:/i.test(decl) && !/^font-size\s*:/i.test(decl) && !/^line-height\s*:/i.test(decl));
+      return kept.length ? `style="${kept.join("; ")}"` : "";
+    })
+    .replace(/\s{2,}/g, " ");
+}
+
 /** Pipeline: sanitise nbsp + resolve date shortcodes + resolve {{de:…}} markers. */
 function prepareTiptapHtml(html: string): string {
-  return resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)));
+  return stripInlineTypographyStyles(
+    resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)))
+  );
 }
 
 /** Strip outer <p>…</p> wrapper so content can render inline */
@@ -275,7 +292,7 @@ function HeadingView({ block, originalBlock, brand, isNonLatin, translationScale
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, brand, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; brand?: Brand; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
+function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", mode }: { block: TextBlock; originalBlock?: TextBlock; brand?: Brand; bodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; mode?: ViewMode }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -290,19 +307,36 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
-  const rowsClass = isKompetenzziele ? "tiptap-rows tiptap-rows-goal" : isHandlungsziele ? "tiptap-rows tiptap-rows-arrow-right-to-line" : isRows ? "tiptap-rows" : "";
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
+  const isPrint = mode === "print";
+
+  // Inline SVG icon for the "rows" style — replaces CSS background-image/::before entirely.
+  // background-image (even on real elements, not just ::before) is NOT rendered by Chromium's PDF engine.
+  // Inline <svg> elements ARE rendered correctly.
+  const RowsIconSvg = () => {
+    const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "#6b7280", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+    if (isKompetenzziele) return <svg {...p}><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg>;
+    if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
+    return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
+  };
 
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedBodyFont = bodyFont || "inherit";
+  const baseTextStyle: React.CSSProperties = {
+    ...(resolvedBodyFont !== "inherit" ? { fontFamily: resolvedBodyFont } : {}),
+    ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+  };
   // Font override for the original (German) column in bilingual mode — ensures brand font for Latin text
-  const originalFontStyle: React.CSSProperties | undefined = isBilingual ? { fontFamily: brandFonts.bodyFont } : undefined;
+  const originalFontStyle: React.CSSProperties | undefined = isBilingual ? { ...baseTextStyle } : undefined;
   // Reduce font size for non-Latin translated text (e.g. Cyrillic renders visually larger at same pt size)
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
-  const translatedFontStyle: React.CSSProperties | undefined = isBilingual && effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined;
+  const translatedFontStyle: React.CSSProperties | undefined = isBilingual
+    ? { ...baseTextStyle, ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}) }
+    : undefined;
 
   const imageEl = block.imageSrc ? (
     <div
@@ -323,12 +357,15 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
   ) : null;
 
   /** Render a single column of tiptap content (used for both original and translated) */
-  const renderContent = (html: string) => (
-    <div
-      className={`tiptap max-w-none ${hasExampleBox || hasHinweisBox ? s.tiptapFlush : ""}`}
-      dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(html) }}
-    />
-  );
+  const renderContent = (html: string) => {
+    const processed = prepareTiptapHtml(html);
+    return (
+      <div
+        className={`tiptap max-w-none ${hasExampleBox || hasHinweisBox ? s.tiptapFlush : ""}`}
+        dangerouslySetInnerHTML={{ __html: processed }}
+      />
+    );
+  };
 
   /** Split HTML into individual paragraph strings */
   const splitParagraphs = (html: string): string[] => {
@@ -337,35 +374,45 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
     return matches || [prepared];
   };
 
+  /** Split rows content into row fragments, treating both <p> and <li> as rows.
+   *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
+  const splitRowItems = (html: string): string[] => {
+    const prepared = prepareTiptapHtml(html);
+    const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
+    if (rows.length === 0) return [prepared];
+
+    return rows.map((row) => {
+      if (!/^<li\b/i.test(row)) return row;
+      const liInner = row.replace(/^<li\b[^>]*>/i, "").replace(/<\/li>$/i, "").trim();
+      if (/^<p\b/i.test(liInner)) return liInner;
+      return `<p>${liInner}</p>`;
+    });
+  };
+
   /** Wrap content in bilingual 2-column grid if active */
   const wrapBilingual = (translatedHtml: string, originalHtml?: string) => {
     if (!isBilingual || !originalHtml) return renderContent(translatedHtml);
 
     // For rows style: render paragraph-by-paragraph aligned rows
     if (isRows) {
-      const originalParas = splitParagraphs(originalHtml);
-      const translatedParas = splitParagraphs(translatedHtml);
+      const originalParas = splitRowItems(originalHtml);
+      const translatedParas = splitRowItems(translatedHtml);
       const maxLen = Math.max(originalParas.length, translatedParas.length);
-      const arrowBg = isKompetenzziele
-        ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 13V2l8 4-8 4'/%3E%3Cpath d='M20.561 10.222a9 9 0 1 1-12.55-5.29'/%3E%3Cpath d='M8.002 9.997a5 5 0 1 0 8.9 2.02'/%3E%3C/svg%3E\") no-repeat center"
-        : isHandlungsziele
-        ? "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 12H3'/%3E%3Cpath d='m11 18 6-6-6-6'/%3E%3Cpath d='M21 5v14'/%3E%3C/svg%3E\") no-repeat center"
-        : "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E\") no-repeat center";
       const cellBase: React.CSSProperties = {
-        padding: "0.375rem 0 0.375rem 1.75rem",
+        padding: "0.375rem 0.75rem 0.375rem 1.75rem",
         position: "relative",
         borderBottom: "1px solid #d1d5db",
       };
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1.5em" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "0.375rem", width: 14, height: 14, background: arrowBg, marginTop: 8 }} />
+                <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "0.375rem", width: 14, height: 14, background: arrowBg, marginTop: 8 }} />
+                <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -376,18 +423,35 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
 
     // For standard style bilingual: paragraph-by-paragraph aligned rows without cell padding
     if (isStandard) {
+      // Keep full list structure in both columns when <li> is present.
+      // Splitting into standalone <p> rows strips <ul>/<li> context and drops list icons.
+      const hasListRows = /<li\b/i.test(originalHtml) || /<li\b/i.test(translatedHtml);
+      if (hasListRows) {
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
+            <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
+              {renderContent(originalHtml)}
+            </div>
+            <div style={translatedFontStyle}>
+              {renderContent(translatedHtml)}
+            </div>
+          </div>
+        );
+      }
+
       const originalParas = splitParagraphs(originalHtml);
       const translatedParas = splitParagraphs(translatedHtml);
       const maxLen = Math.max(originalParas.length, translatedParas.length);
       const hasMultipleRows = maxLen > 1;
+      const rowPadding = hasMultipleRows ? "0.25em" : "0";
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: hasMultipleRows ? "0.5em 1em" : "0 1em" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
+              <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div className="tiptap-compact" style={translatedFontStyle}>
+              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
                 <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -397,7 +461,7 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
     }
 
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1em" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1em", ...baseTextStyle }}>
         <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
           {renderContent(originalHtml)}
         </div>
@@ -432,15 +496,44 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ marginBottom: "-1.5rem", fontFamily: brandFonts.bodyFont, color: primaryColor }}>
+      <div className={s.textPlain} style={{ marginBottom: "-1.5rem", ...baseTextStyle, color: primaryColor }}>
         {renderContent(block.content)}
       </div>
     );
   }
 
   if (!hasExampleBox && !hasHinweisBox) {
+    // For rows style (non-bilingual): render paragraph-by-paragraph with real DOM icon divs.
+    // CSS ::before background-image is not rendered by Chromium's PDF engine.
+    if (isRows && !isBilingual) {
+      const paras = splitRowItems(block.content);
+      return (
+        <div className={s.textPlain} style={baseTextStyle}>
+          {imageEl}
+          {paras.map((para, i) => (
+            <div
+              key={i}
+              style={{
+                padding: "0.375rem 0 0.375rem 1.75rem",
+                position: "relative",
+                borderBottom: "1px solid #d1d5db",
+                ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
+                breakInside: "avoid" as const,
+                pageBreakInside: "avoid" as const,
+              }}
+            >
+              <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 14, height: 14 }}>
+                <RowsIconSvg />
+              </div>
+              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: para }} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
-      <div className={`${s.textPlain} ${!isBilingual ? rowsClass : ""}`}>
+      <div className={s.textPlain} style={baseTextStyle}>
         {imageEl}
         {wrapBilingual(block.content, originalBlock?.content)}
       </div>
@@ -488,7 +581,7 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
         </div>
       )}
       <div
-        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
+        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${isPrint ? "" : s.blockShadow} ${s.styledBorder} ${
           hasPill ? "rounded-tl-none" : ""
         }`}
         style={{ "--block-color": borderTextColor } as React.CSSProperties}
@@ -497,7 +590,7 @@ function TextView({ block, originalBlock, brand, isNonLatin, translationScale, p
         {wrapBilingual(block.content, originalBlock?.content)}
       </div>
       {block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": borderTextColor } as React.CSSProperties}>
+        <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
           {renderDeMarkers(block.comment)}
         </div>
       )}
@@ -1883,6 +1976,10 @@ function TrueFalseMatrixView({
   showPill = true,
   taskNumber,
   lessonLabel,
+  brand,
+  bodyFont,
+  bodyFontSize,
+  isNonLatin = false,
 }: {
   block: TrueFalseMatrixBlock;
   interactive: boolean;
@@ -1893,9 +1990,14 @@ function TrueFalseMatrixView({
   showPill?: boolean;
   taskNumber?: number;
   lessonLabel?: string;
+  brand?: Brand;
+  bodyFont?: string;
+  bodyFontSize?: string;
+  isNonLatin?: boolean;
 }) {
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const fontFamily = bodyFont || "inherit";
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -1904,7 +2006,7 @@ function TrueFalseMatrixView({
 
   return (
     <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
-      <div className="space-y-2 text-cv-sm">
+      <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -2855,6 +2957,10 @@ function UnscrambleWordsView({
   showPill = true,
   taskNumber,
   lessonLabel,
+  brand,
+  bodyFont,
+  bodyFontSize,
+  isNonLatin = false,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -2866,10 +2972,15 @@ function UnscrambleWordsView({
   showPill?: boolean;
   taskNumber?: number;
   lessonLabel?: string;
+  brand?: Brand;
+  bodyFont?: string;
+  bodyFontSize?: string;
+  isNonLatin?: boolean;
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
   const isPrint = mode === "print";
+  const fontFamily = bodyFont || "inherit";
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
@@ -2904,7 +3015,7 @@ function UnscrambleWordsView({
 
   return (
     <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
-      <div className="space-y-2 text-cv-sm">
+      <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       {block.instruction && (
         <p className="font-medium flex items-center gap-1.5"><SquareMousePointer className="h-4 w-4 text-muted-foreground shrink-0" />{block.instruction}</p>
       )}
@@ -4044,7 +4155,28 @@ function AiPromptView({ block }: { block: AiPromptBlock }) {
 }
 
 // ─── Table View ─────────────────────────────────────────────
-function TableView({ block }: { block: TableBlock }) {
+/** Merge two TipTap table HTMLs so each cell shows original + translated content.
+ *  Works via lightweight regex (no DOM) — safe for both SSR and client. */
+function mergeBilingualTableHtml(originalHtml: string, translatedHtml: string): string {
+  // Collect translated cell contents in document order
+  const transCells: string[] = [];
+  const cellPat = /(<t[dh]\b[^>]*>)([\s\S]*?)(<\/t[dh]>)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = cellPat.exec(translatedHtml)) !== null) transCells.push(m[2]);
+  if (transCells.length === 0) return originalHtml;
+
+  let idx = 0;
+  return originalHtml.replace(
+    /(<t[dh]\b[^>]*>)([\s\S]*?)(<\/t[dh]>)/gi,
+    (full, openTag, content, closeTag) => {
+      const trans = transCells[idx++];
+      if (!trans || content.trim() === trans.trim()) return full;
+      return `${openTag}${content}<div style="border-top:1px dashed #d1d5db;margin-top:3px;padding-top:3px;color:#6b7280;font-style:italic">${trans}</div>${closeTag}`;
+    },
+  );
+}
+
+function TableView({ block, originalBlock }: { block: TableBlock; originalBlock?: TableBlock }) {
   // Strip TipTap's pixel-based widths from saved HTML
   let html = prepareTiptapHtml(block.content)
     .replace(/<table([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<table$1")
@@ -4058,6 +4190,14 @@ function TableView({ block }: { block: TableBlock }) {
     } else {
       html = html.replace(/<table([^>]*)>/i, `<table$1>${colgroup}`);
     }
+  }
+
+  // Bilingual: merge translated content into each cell when enabled + translation is present
+  if (block.bilingual && originalBlock && originalBlock.content !== block.content) {
+    const origHtml = prepareTiptapHtml(originalBlock.content)
+      .replace(/<table([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<table$1")
+      .replace(/<col([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<col$1");
+    html = mergeBilingualTableHtml(origHtml, html);
   }
 
   return (
@@ -4354,6 +4494,8 @@ export function ViewerBlockRenderer({
   primaryColor = "#1a1a1a",
   allBlocks,
   brand = "edoomio",
+  bodyFont,
+  bodyFontSize,
   lessonLabel,
   originalBlock,
   isNonLatin = false,
@@ -4368,6 +4510,8 @@ export function ViewerBlockRenderer({
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  bodyFont?: string;
+  bodyFontSize?: string;
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
   isNonLatin?: boolean;
@@ -4397,7 +4541,7 @@ export function ViewerBlockRenderer({
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} brand={brand} bodyFont={bodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} mode={mode} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -4505,6 +4649,10 @@ export function ViewerBlockRenderer({
           showPill={block.showPill !== false}
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
+          brand={brand}
+          bodyFont={bodyFont}
+          bodyFontSize={bodyFontSize}
+          isNonLatin={isNonLatin}
         />
       );
     case "article-training":
@@ -4579,6 +4727,10 @@ export function ViewerBlockRenderer({
           showPill={block.showPill !== false}
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
+          brand={brand}
+          bodyFont={bodyFont}
+          bodyFontSize={bodyFontSize}
+          isNonLatin={isNonLatin}
         />
       );
     case "fix-sentences":
@@ -4678,7 +4830,7 @@ export function ViewerBlockRenderer({
     case "ai-tool":
       return <AiToolView block={block as AiToolBlock} />;
     case "table":
-      return <TableView block={block as TableBlock} />;
+      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} />;
     case "audio":
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
