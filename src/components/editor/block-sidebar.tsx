@@ -37,7 +37,14 @@ import {
   Mail,
   ClipboardList,
   Sparkles,
+  Sparkle,
   Bot,
+  ClipboardCopy,
+  ListChecks,
+  ChevronDown,
+  Table,
+  Volume2,
+  Clock,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -71,7 +78,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Mail,
   ClipboardList,
   Sparkles,
+  Sparkle,
   Bot,
+  ClipboardCopy,
+  ListChecks,
+  ChevronDown,
+  Table,
+  Volume2,
+  Clock,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

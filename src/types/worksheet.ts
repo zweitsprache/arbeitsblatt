@@ -1286,7 +1286,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     description: "Centered brand logo as section divider",
     labelKey: "logoDivider",
     descriptionKey: "logoDividerDesc",
-    icon: "Sparkle",
+    icon: "Sparkles",
     category: "layout",
     translations: { de: { label: "Logo-Trenner", description: "Zentriertes Markenlogo als Abschnittsteiler" } },
     defaultData: {

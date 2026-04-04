@@ -253,18 +253,48 @@ function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1
   } else {
     displayNumber = String(block.startNumber).padStart(2, "0");
   }
-  const currentLabel = `${block.prefix}${displayNumber}${block.suffix ? `\u2003${block.suffix}` : ""}`;
+
+  const buildLabel = ({
+    prefix,
+    suffix,
+    withNumber,
+    withSuffixGap,
+  }: {
+    prefix: string;
+    suffix: string;
+    withNumber: boolean;
+    withSuffixGap: boolean;
+  }) => `${prefix}${withNumber ? displayNumber : ""}${suffix ? `${withSuffixGap ? "\u2003" : ""}${suffix}` : ""}`;
+
+  const currentLabel = buildLabel({
+    prefix: block.prefix,
+    suffix: block.suffix,
+    withNumber: true,
+    withSuffixGap: true,
+  });
+  const translatedLabelNoNumber = buildLabel({
+    prefix: block.prefix,
+    suffix: block.suffix,
+    withNumber: false,
+    withSuffixGap: false,
+  });
   const originalLabel = originalBlock
-    ? `${originalBlock.prefix}${displayNumber}${originalBlock.suffix ? `\u2003${originalBlock.suffix}` : ""}`
+    ? buildLabel({
+        prefix: originalBlock.prefix,
+        suffix: originalBlock.suffix,
+        withNumber: true,
+        withSuffixGap: true,
+      })
     : undefined;
   const isBilingual = !!block.bilingual && !!originalLabel && originalLabel !== currentLabel;
+
   return (
     <div className="rounded px-2 py-1" style={{ backgroundColor: `${primaryColor}14` }}>
       {isBilingual ? (
-        <span className={s.numberedLabel} style={{ color: primaryColor }}>
-          <span style={{ fontWeight: 700 }}>{originalLabel}</span>
+        <span style={{ color: primaryColor }}>
+          <span className={s.numberedLabel} style={{ fontWeight: 700 }}>{originalLabel}</span>
           <span style={{ fontWeight: 400 }}> | </span>
-          <span style={{ fontWeight: 400 }}>{currentLabel}</span>
+          <span style={{ fontWeight: 400 }}>{translatedLabelNoNumber}</span>
         </span>
       ) : (
         <span className={`font-semibold ${s.numberedLabel}`} style={{ color: primaryColor }}>
