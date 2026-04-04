@@ -830,7 +830,7 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
           const deHtml = deItems[i] ?? "";
           const trHtml = trItems[i] ?? "";
           return (
-            <div key={i} className="grid grid-cols-2 gap-4 items-stretch">
+            <div key={i} className="snippet-item-row grid grid-cols-2 gap-4 items-stretch">
               <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
                 <div
                   className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}

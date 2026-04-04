@@ -419,15 +419,16 @@
   page-break-inside: auto;
 }
 
-/* Text snippets can be long — allow splitting within the block and item cards */
+/* Text snippets can be long, but each item should stay intact. */
 .worksheet-block-text-snippet {
   break-inside: auto;
   page-break-inside: auto;
 }
 
+.worksheet-block-text-snippet .snippet-item-row,
 .worksheet-block-text-snippet .snippet-item-card {
-  break-inside: auto;
-  page-break-inside: auto;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 /* Headings should never be orphaned at bottom of page */
@@ -694,10 +695,11 @@
     page-break-inside: auto;
   }
 
+  .worksheet-block-text-snippet .snippet-item-row,
   .worksheet-block-text-snippet .snippet-item-card {
     display: block;
-    break-inside: auto;
-    page-break-inside: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .print-table {
