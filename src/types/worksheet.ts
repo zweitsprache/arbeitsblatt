@@ -921,14 +921,14 @@ export const BRAND_FONTS: Record<string, BrandFonts> = {
     primaryColor: "#3a4f40",
   },
   "agi-frauenfeld": {
-    bodyFont: "Asap Condensed, sans-serif",
-    headlineFont: "Asap Condensed, sans-serif",
+    bodyFont: "Encode Sans Semi Condensed, sans-serif",
+    headlineFont: "Encode Sans Semi Condensed, sans-serif",
     headlineWeight: 700,
-    subHeadlineFont: "Asap Condensed, sans-serif",
+    subHeadlineFont: "Encode Sans Semi Condensed, sans-serif",
     subHeadlineWeight: 700,
-    headerFooterFont: "Asap Condensed, sans-serif",
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
-    primaryColor: "#1a1a1a",
+    headerFooterFont: "Encode Sans Semi Condensed, sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed:wght@100;200;300;400;500;600;700;800;900&display=swap",
+    primaryColor: "#e75325",
   },
 };
 

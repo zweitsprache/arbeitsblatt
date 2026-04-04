@@ -14,6 +14,29 @@ pnpm dev
 bun dev
 ```
 
+### Recommended Local Dev Workflow
+
+Use these scripts to keep hot reload behavior predictable:
+
+```bash
+# Default and recommended (Webpack)
+npm run dev
+
+# Force-clean Next cache and start fresh
+npm run dev:clean
+
+# Use Turbopack only when explicitly testing it
+npm run dev:turbo
+
+# Fallback for file-watch issues on some machines/filesystems
+npm run dev:polling
+```
+
+Rule of thumb:
+- Use `npm run dev` for daily work.
+- If changes stop appearing, use `npm run dev:clean` once.
+- Avoid switching bundlers repeatedly during the same debugging session.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

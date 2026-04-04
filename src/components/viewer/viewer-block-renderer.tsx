@@ -2051,19 +2051,16 @@ function TrueFalseMatrixView({
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
                       <div
-                        className="box-border rounded-[3px] bg-green-500 ring-2 ring-green-600"
-                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] bg-green-500 ring-2 ring-green-600"
                       />
                     ) : (
                       <div
-                        className="box-border rounded-[3px] ring-2 ring-muted-foreground/30"
-                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] ring-2 ring-muted-foreground/30"
                       />
                     )
                   ) : (
                     <button
-                      className={`box-border rounded-[3px] transition-colors ${getOptionClass(true)}`}
-                      style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      className={`box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] transition-colors ${getOptionClass(true)}`}
                       onClick={() => handleSelect(stmt.id, true)}
                       disabled={hasAnswered}
                     />
@@ -2073,19 +2070,16 @@ function TrueFalseMatrixView({
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
                       <div
-                        className="box-border rounded-[3px] bg-green-500 ring-2 ring-green-600"
-                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] bg-green-500 ring-2 ring-green-600"
                       />
                     ) : (
                       <div
-                        className="box-border rounded-[3px] ring-2 ring-muted-foreground/30"
-                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                        className="box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] ring-2 ring-muted-foreground/30"
                       />
                     )
                   ) : (
                     <button
-                      className={`box-border rounded-[3px] transition-colors ${getOptionClass(false)}`}
-                      style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      className={`box-border h-5 w-5 min-h-5 min-w-5 rounded-[3px] transition-colors ${getOptionClass(false)}`}
                       onClick={() => handleSelect(stmt.id, false)}
                       disabled={hasAnswered}
                     />

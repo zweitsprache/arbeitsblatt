@@ -303,7 +303,13 @@
   margin-bottom: 1rem;
 }
 
-.tiptap li, .tiptap li p {
+.tiptap li {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 1.25em;
+}
+
+.tiptap li p {
   margin-top: 0;
   margin-bottom: 0;
   line-height: 1.25em;
@@ -476,6 +482,50 @@
 
 .print-worksheet-root .print-body-content {
   padding: 0 20mm 0 25mm;
+}
+
+/* Keep preview typography aligned with PDF output.
+   Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
+.print-worksheet-root.print-skin-final {
+  font-family: var(--print-body-font);
+}
+
+.print-worksheet-root.print-skin-final h1,
+.print-worksheet-root.print-skin-final h2,
+.print-worksheet-root.print-skin-final h3,
+.print-worksheet-root.print-skin-final h4,
+.print-worksheet-root.print-skin-final h5,
+.print-worksheet-root.print-skin-final h6 {
+  font-family: var(--print-headline-font);
+  font-weight: var(--print-headline-weight);
+}
+
+.print-worksheet-root.print-skin-final h1 {
+  font-weight: var(--print-h1-weight, var(--print-headline-weight));
+}
+
+.print-worksheet-root.print-skin-final h2 {
+  font-weight: var(--print-h2-weight, var(--print-headline-weight));
+}
+
+.print-worksheet-root.print-skin-final h3 {
+  font-weight: var(--print-h3-weight, 800);
+}
+
+.print-worksheet-root.print-skin-final .text-cv-base {
+  font-size: var(--print-body-size, var(--text-cv-base));
+}
+
+.print-worksheet-root.print-skin-final .text-cv-3xl {
+  font-size: var(--print-h1-size, var(--text-cv-3xl));
+}
+
+.print-worksheet-root.print-skin-final .text-cv-2xl {
+  font-size: var(--print-h2-size, var(--text-cv-2xl));
+}
+
+.print-worksheet-root.print-skin-final .text-cv-xl {
+  font-size: var(--print-h3-size, var(--text-cv-xl));
 }
 
 @media print {

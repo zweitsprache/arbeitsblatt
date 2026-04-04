@@ -89,35 +89,42 @@ export function WorksheetViewer({
     settings.brandOverrides,
   );
 
-  const brandFonts = BRAND_FONTS[settings.brand || "edoomio"] ?? {
-    bodyFont: resolvedProfile.bodyFont,
-    headlineFont: resolvedProfile.headlineFont,
+  const brandKey = settings.brand || "edoomio";
+  const staticBrandFonts = BRAND_FONTS[brandKey] ?? BRAND_FONTS["edoomio"];
+  const nonEmpty = (value?: string | null, fallback?: string) => {
+    const v = value?.trim();
+    return v ? v : (fallback ?? "");
+  };
+
+  const brandFonts = staticBrandFonts ?? {
+    bodyFont: nonEmpty(resolvedProfile.bodyFont, "Asap Condensed, sans-serif"),
+    headlineFont: nonEmpty(resolvedProfile.headlineFont, "Asap Condensed, sans-serif"),
     headlineWeight: resolvedProfile.headlineWeight,
-    subHeadlineFont: resolvedProfile.subHeadlineFont,
+    subHeadlineFont: nonEmpty(resolvedProfile.subHeadlineFont, "Asap Condensed, sans-serif"),
     subHeadlineWeight: resolvedProfile.subHeadlineWeight,
-    headerFooterFont: resolvedProfile.headerFooterFont,
-    googleFontsUrl: resolvedProfile.googleFontsUrl,
+    headerFooterFont: nonEmpty(resolvedProfile.headerFooterFont, "Asap Condensed, sans-serif"),
+    googleFontsUrl: nonEmpty(resolvedProfile.googleFontsUrl, staticBrandFonts?.googleFontsUrl),
     primaryColor: resolvedProfile.primaryColor,
   };
 
   // If a brand profile was provided, prefer its values over the static map
   if (brandProfile) {
-    brandFonts.bodyFont = resolvedProfile.bodyFont;
-    brandFonts.headlineFont = resolvedProfile.headlineFont;
+    brandFonts.bodyFont = nonEmpty(resolvedProfile.bodyFont, staticBrandFonts.bodyFont);
+    brandFonts.headlineFont = nonEmpty(resolvedProfile.headlineFont, staticBrandFonts.headlineFont);
     brandFonts.headlineWeight = resolvedProfile.headlineWeight;
-    brandFonts.subHeadlineFont = resolvedProfile.subHeadlineFont;
+    brandFonts.subHeadlineFont = nonEmpty(resolvedProfile.subHeadlineFont, staticBrandFonts.subHeadlineFont);
     brandFonts.subHeadlineWeight = resolvedProfile.subHeadlineWeight;
-    brandFonts.headerFooterFont = resolvedProfile.headerFooterFont;
-    brandFonts.googleFontsUrl = resolvedProfile.googleFontsUrl;
+    brandFonts.headerFooterFont = nonEmpty(resolvedProfile.headerFooterFont, staticBrandFonts.headerFooterFont);
+    brandFonts.googleFontsUrl = nonEmpty(resolvedProfile.googleFontsUrl, staticBrandFonts.googleFontsUrl);
     brandFonts.primaryColor = resolvedProfile.primaryColor;
   }
 
   const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
   // Keep brand typography as the base in all locales (including bilingual/translated print).
   // Non-Latin-specific tweaks are handled in individual block renderers where needed.
-  const fontFamily = brandFonts.bodyFont;
-  const headlineFont = brandFonts.headlineFont;
-  const fontUrl = brandFonts.googleFontsUrl;
+  const fontFamily = nonEmpty(brandFonts.bodyFont, "Asap Condensed, sans-serif");
+  const headlineFont = nonEmpty(brandFonts.headlineFont, fontFamily);
+  const fontUrl = nonEmpty(brandFonts.googleFontsUrl, staticBrandFonts.googleFontsUrl);
 
   // Get brand settings — prefer per-worksheet brandSettings (which includes
   // print-page defaults like pagination placeholders), then resolved profile, then empty
@@ -222,7 +229,7 @@ export function WorksheetViewer({
   } as React.CSSProperties) : undefined;
 
   return (
-    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root" : "bg-muted/30"}`} style={printCssVars}>
+    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root print-skin-final" : "bg-muted/30"}`} style={printCssVars}>
       {/* Print/PDF styles + Google Fonts link for reliable font loading */}
       {mode === "print" && (
         <>

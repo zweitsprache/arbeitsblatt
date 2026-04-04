@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<!--
+  PRINT STYLES DEBUG FILE
+  ========================
+  This file mirrors the exact DOM structure that WorksheetViewer + TextView produce
+  for Puppeteer / the print preview page.
+
+  HOW TO USE
+  ----------
+  1. Open this file directly in Chrome (File → Open, or drag-drop).
+     No server needed — it hot-reloads on Cmd+R after every CSS save.
+  2. All styles live in the <style> block below (no @media print wrapper).
+     What you see in the browser = what Puppeteer sees.
+  3. When a style looks right here, copy the rule back into globals.css,
+     wrapping print-only rules inside `@media print { ... }` again.
+
+  STRUCTURE KEY
+  -------------
+  .print-worksheet-root
+    .print-body-content           ← 25mm left / 20mm right padding
+      .space-y-6                  ← gap between worksheet-blocks
+        .worksheet-block.worksheet-block-text   ← one block wrapper
+          [TextView output]       ← varies by textStyle
+
+  BLOCK VARIANTS COVERED
+  ----------------------
+  1. Standard text (plain paragraphs)
+  2. Standard text with <ul> list
+  3. Standard text with <ol> list
+  4. Example box (dashed border)
+  5. Hinweis box
+  6. Hinweis-wichtig box
+  7. Hinweis-alarm box
+  8. Lernziel box
+  9. Rows style (standard)
+  10. Kompetenzziele (goal icon)
+  11. Handlungsziele (arrow-right-to-line icon)
+  12. Bilingual standard (2-column grid)
+  13. Bilingual rows (2-column grid)
+-->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Print Styles Debug - AGI Frauenfeld</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- AGI Frauenfeld profile (from DB): Encode Sans Semi Condensed -->
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #e5e7eb;
+      font-family: 'Encode Sans Semi Condensed', sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ─── Page shell — matches .print-worksheet-root ─────────── */
+    .print-worksheet-root {
+      width: 210mm;
+      margin: 20px auto;
+      background: white;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      --brand-name: "AGI Frauenfeld";
+      --brand-primary: #e75325;
+      --brand-accent: #03396c;
+      --print-body-font: 'Encode Sans Semi Condensed', sans-serif;
+      --print-headline-font: 'Encode Sans Semi Condensed', sans-serif;
+      --print-body-size: 13px;
+      --border: #e5e7eb;
+      --row-divider: #e5e7eb;
+      /* heading size vars (mirrors globals.css @theme) */
+      --text-cv-3xl: clamp(1.75rem, 1.5893rem + 0.536vw, 2.125rem);
+      --text-cv-2xl: clamp(1.5rem, 1.3929rem + 0.357vw, 1.75rem);
+      --text-cv-xl:  clamp(1.3125rem, 1.2054rem + 0.357vw, 1.5625rem);
+      --text-cv-sm:  clamp(1rem, 0.9464rem + 0.179vw, 1.125rem);
+    }
+
+    /* ─── Header stub ────────────────────────────────────────── */
+    .print-header-stub {
+      height: 30mm;
+      padding: 15mm 15mm 0 20mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 7pt;
+      color: #666;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .print-header-stub .logo {
+      display: block;
+      height: 8mm;
+      max-height: 8mm;
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    /* ─── Body content ───────────────────────────────────────── */
+    /* NOTE: In the real app this is `.print-body-content` inside @media print.
+       Here we apply it directly so it's always visible. */
+    .print-body-content {
+      padding: 0 20mm 8mm 25mm;
+      font-size: var(--print-body-size, 10pt);
+      font-family: var(--print-body-font, 'Asap Condensed', sans-serif);
+    }
+
+    /* ─── Block spacing ──────────────────────────────────────── */
+    .space-y-6 > * + * {
+      margin-top: 1.5rem;
+    }
+
+    /* ─── Section labels (debug-only) ───────────────────────── */
+    .debug-label {
+      font-size: 7pt;
+      font-family: monospace;
+      color: #94a3b8;
+      margin-bottom: 2px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       COPY-PASTE ZONE — paste your styles here and iterate.
+       These mirror globals.css tiptap + print rules WITHOUT
+       the @media print wrapper.
+       ═════════════════════════════════════════════════════════ */
+
+    /* ── Tiptap base ─────────────────────────────────────────── */
+    .tiptap { outline: none; }
+    /* ── Headings ────────────────────────────────────────────── */
+    h1, h2, h3 {
+      font-family: 'Encode Sans Semi Condensed', sans-serif;
+      color: var(--brand-primary);
+    }
+    .text-cv-3xl { font-size: var(--text-cv-3xl); font-weight: 700; }
+    .text-cv-2xl { font-size: var(--text-cv-2xl); font-weight: 700; }
+    .text-cv-xl  { font-size: var(--text-cv-xl);  font-weight: 700; }
+
+    /* ── Task container (TaskContainer component) ────────────── */
+    .task-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      border-radius: 4px 4px 0 0;
+      background-color: var(--brand-accent);
+      color: #ffffff;
+    }
+    .task-instruction {
+      font-weight: 400;
+      padding-bottom: 0.25rem;
+      color: var(--brand-primary);
+      font-size: var(--text-cv-sm);
+    }
+    .task-panel {
+      padding: 1rem;
+      border: 2px solid var(--brand-accent);
+      border-radius: 0 4px 4px 4px;
+      background: #fff;
+    }
+    .task-header { display: flex; align-items: flex-end; gap: 0.75rem; }
+
+    /* 22/23 only: instruction text should use default/inherited typography */
+    .debug-tf-instruction-default .task-instruction {
+      color: inherit;
+      font-size: 0.75rem;
+      font-weight: 400;
+      line-height: 1;
+      padding-bottom: 0;
+    }
+
+    .debug-tf-instruction-default .task-header {
+      align-items: center;
+    }
+
+    /* 24/25: match instruction alignment/style treatment as tuned task headers */
+    .debug-uw-instruction-default .task-instruction {
+      color: inherit;
+      font-size: 0.75rem;
+      font-weight: 400;
+      line-height: 1;
+      padding-bottom: 0;
+    }
+
+    .debug-uw-instruction-default .task-header {
+      align-items: center;
+    }
+
+    /* 31-33 / 35: use the same compact default instruction treatment */
+    .debug-task-instruction-default .task-instruction {
+      color: inherit;
+      font-size: 0.75rem;
+      font-weight: 400;
+      line-height: 1;
+      padding-bottom: 0;
+    }
+
+    .debug-task-instruction-default .task-header {
+      align-items: center;
+    }
+
+    .debug-task-panel-bottom-room .task-panel {
+      padding-top: 1.35rem;
+      padding-bottom: 1.35rem;
+    }
+
+    .debug-tf-22-flat .task-panel {
+      padding-top: 0;
+      padding-bottom: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .debug-tf-22-flat .tf-row:last-child {
+      border-bottom: none;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      padding-bottom: calc(0.5rem + 1px) !important;
+    }
+
+    .debug-tf-22-flat .tf-title {
+      font-weight: 600;
+    }
+
+    .debug-tf-22-flat .tf-header-row,
+    .debug-tf-22-flat .tf-row {
+      padding-left: 1.5rem !important;
+      padding-right: 1rem !important;
+    }
+
+    .debug-task-22-style .task-panel {
+      padding: 0;
+    }
+
+    .debug-task-22-style .tf-header-row,
+    .debug-task-22-style .tf-row,
+    .debug-task-22-style .uw-row,
+    .debug-task-22-style .debug-mc-option {
+      padding-left: 1.5rem !important;
+      padding-right: 1rem !important;
+    }
+
+    .debug-task-22-style .tf-header-row {
+      border-top: none !important;
+      padding-top: 1rem !important;
+    }
+
+    .debug-task-22-style .tf-title {
+      font-weight: 600;
+    }
+
+    .debug-task-22-style .tf-row:last-child,
+    .debug-task-22-style .uw-row:last-child,
+    .debug-task-22-style .debug-mc-option:last-child {
+      border-bottom: none;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      padding-bottom: calc(1rem + 1px) !important;
+    }
+
+    .debug-task-22-style .tf-row:first-child,
+    .debug-task-22-style .uw-row:first-child,
+    .debug-task-22-style .debug-mc-option:first-child {
+      padding-top: 1rem !important;
+    }
+
+    .debug-task-22-style .debug-fill-sentence {
+      padding-left: 1.5rem;
+      padding-right: 1rem;
+    }
+
+    .worksheet-block-fill-in-blank.debug-task-22-style .task-panel {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    .debug-task-22-style .debug-open-response {
+      margin: 0.5rem 1rem calc(0.5rem + 1px) 1.5rem;
+    }
+
+    .debug-task-22-style .debug-matching-col .debug-match-item {
+      padding-left: 1.5rem;
+      padding-right: 1rem;
+    }
+
+    .debug-task-22-style .debug-matching-grid > .debug-matching-col:nth-child(2) .debug-match-item {
+      padding-left: 0 !important;
+    }
+
+    .debug-task-22-style .debug-matching-col .debug-match-item:first-child {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 1rem;
+    }
+
+    .debug-task-22-style .debug-matching-col .debug-match-item:last-child {
+      border-bottom: none;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      padding-bottom: calc(1rem + 1px);
+    }
+
+    /* 24/25: scrambled word labels regular weight */
+    .debug-uw-24-regular .uw-scrambled,
+    .debug-uw-25-regular .uw-scrambled {
+      font-weight: 400;
+    }
+
+    /* 22-25: keep divider visible on last row as well */
+    .debug-tf-instruction-default .tf-row:last-child,
+    .debug-uw-instruction-default .uw-row:last-child {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .debug-uw-instruction-default .uw-row:first-child {
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .debug-uw-24-regular .uw-row:first-child {
+      padding-top: 1rem !important;
+    }
+
+    .debug-uw-24-regular .uw-row:last-child {
+      padding-bottom: calc(1rem + 1px) !important;
+    }
+
+    /* ── Number badge ────────────────────────────────────────── */
+    .number-badge {
+      display: inline-flex;
+      height: 1.35rem;
+      width: 1.35rem;
+      min-width: 1.35rem;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      border-radius: 3px;
+      background-color: transparent;
+      color: #334155;
+      border: 1px solid var(--brand-accent);
+      font-weight: 700;
+      line-height: 1;
+      font-size: 0.65rem;
+      flex-shrink: 0;
+    }
+
+    /* ── T/F Matrix rows ────────────────────────────────────── */
+    .tf-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tf-row:last-child { border-bottom: none; }
+    .tf-row-text { display: flex; flex: 1; align-items: center; gap: 1.25rem; }
+    .tf-cell {
+      width: 5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .tf-header-cell {
+      width: 5rem;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+    .tf-checkbox {
+      box-sizing: border-box;
+      height: 1.25rem;
+      width: 1.25rem;
+      min-height: 1.25rem;
+      min-width: 1.25rem;
+      border-radius: 3px;
+      border: 2px solid #9ca3af;
+    }
+    .tf-checkbox-checked-true  { background: #22c55e; border-color: #16a34a; }
+    .tf-checkbox-checked-false { border-color: #9ca3af; /* empty = false answer */ }
+    .tf-checkbox-solution-true  { background: #22c55e; border-color: #16a34a; }
+    .tf-checkbox-solution-false { border-color: #16a34a; }
+
+    /* ── Unscramble words rows ──────────────────────────────── */
+    .uw-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .uw-row:last-child { border-bottom: none; }
+    .uw-scrambled {
+      display: inline-block;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+    .uw-answer-line {
+      flex: 1;
+      border-bottom: 1px dashed #94a3b8;
+      min-width: 80px;
+    }
+    .uw-arrow {
+      width: 1rem; height: 1rem;
+      flex-shrink: 0;
+      color: #94a3b8;
+    }
+
+    /* ── Additional editor block samples ───────────────────── */
+    .debug-divider-line {
+      border-top: 2px solid #d1d5db;
+      width: 100%;
+    }
+
+    .debug-logo-divider {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .debug-logo-divider::before,
+    .debug-logo-divider::after {
+      content: "";
+      border-top: 1px solid #d1d5db;
+    }
+
+    .debug-logo-divider img {
+      height: 18px;
+      width: auto;
+      display: block;
+    }
+
+    .debug-image-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    }
+
+    .debug-image-box img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .debug-caption {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      color: #475569;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .debug-writing-lines {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .debug-writing-line {
+      height: 1.4rem;
+      border-bottom: 1px solid var(--row-divider);
+    }
+
+    .debug-writing-rows {
+      border-top: 1px solid var(--row-divider);
+    }
+
+    .debug-writing-row {
+      min-height: 2.2rem;
+      border-bottom: 1px solid var(--row-divider);
+    }
+
+    .debug-mc-list {
+      border-top: 1px solid var(--row-divider);
+    }
+
+    .debug-mc-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--row-divider);
+    }
+
+    .debug-mc-dot {
+      width: 1rem;
+      height: 1rem;
+      min-width: 1rem;
+      border: 1.5px solid #94a3b8;
+      border-radius: 999px;
+    }
+
+    .debug-fill-sentence {
+      line-height: 1.5;
+    }
+
+    .debug-blank-line {
+      display: inline-block;
+      min-width: 7rem;
+      border-bottom: 1px dashed #64748b;
+      transform: translateY(-1px);
+    }
+
+    .debug-matching-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1.25rem;
+    }
+
+    .debug-match-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .debug-match-tag {
+      min-width: 1.35rem;
+    }
+
+    .debug-glossary {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .debug-glossary th,
+    .debug-glossary td {
+      text-align: left;
+      padding: 0.55rem 0.65rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .debug-glossary th {
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+    }
+
+    .debug-word-bank {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .debug-word-chip {
+      padding: 0.35rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: #f8fafc;
+    }
+
+    .debug-open-response {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 0.75rem;
+      min-height: 5.5rem;
+      background:
+        linear-gradient(to bottom, transparent calc(1.7rem - 1px), #e2e8f0 calc(1.7rem - 1px), #e2e8f0 1.7rem, transparent 1.7rem);
+      background-size: 100% 1.7rem;
+      background-position-y: 0.3rem;
+    }
+
+    .worksheet-block-glossary .debug-glossary th,
+    .worksheet-block-glossary .debug-glossary td {
+      padding-left: 0 !important;
+    }
+
+    .debug-numbered-items {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .debug-numbered-item {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 0.75rem;
+      align-items: start;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+    }
+
+    .debug-numbered-item .debug-index {
+      display: inline-flex;
+      width: 2rem;
+      height: 2rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--brand-primary);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .debug-checklist {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .debug-check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .debug-check-box {
+      width: 1rem;
+      height: 1rem;
+      min-width: 1rem;
+      border: 1.5px solid #94a3b8;
+      border-radius: 3px;
+      margin-top: 0.15rem;
+    }
+
+    .debug-dialogue {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .debug-dialogue-row {
+      display: grid;
+      grid-template-columns: 4.5rem 1fr;
+      gap: 0.75rem;
+      align-items: start;
+    }
+
+    .debug-dialogue-speaker {
+      font-weight: 700;
+      color: var(--brand-primary);
+    }
+
+    .debug-dialogue-bubble {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 0.65rem 0.75rem;
+      background: #fff;
+    }
+
+    .debug-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .debug-table th,
+    .debug-table td {
+      border: 1px solid #d1d5db;
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .debug-table th {
+      background: #f8fafc;
+      font-weight: 600;
+    }
+
+    .debug-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .debug-column {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 0.8rem;
+      min-height: 7rem;
+    }
+
+    .debug-image-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.9rem;
+    }
+
+    .debug-image-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .debug-image-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #f1f5f9;
+    }
+
+    .debug-image-card-caption {
+      padding: 0.55rem 0.65rem;
+    }
+
+    .debug-text-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.9rem;
+    }
+
+    .debug-text-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      background: #fff;
+      padding: 0.8rem;
+      min-height: 8rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .debug-card-lines {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .debug-card-line {
+      border-bottom: 1px solid #cbd5e1;
+      height: 1.1rem;
+    }
+
+    .debug-text-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .debug-compare-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 0.8rem;
+      background: #fff;
+    }
+
+    .debug-compare-box h4 {
+      margin-bottom: 0.5rem;
+      color: var(--brand-primary);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .debug-dos-donts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .debug-dos-box,
+    .debug-donts-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 0.8rem;
+      background: #fff;
+    }
+
+    .debug-dos-box h4,
+    .debug-donts-box h4 {
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .debug-dos-box h4 { color: #166534; }
+    .debug-donts-box h4 { color: #990033; }
+
+    .debug-dos-box ul,
+    .debug-donts-box ul {
+      padding-left: 1.15rem;
+      margin: 0;
+    }
+
+    .debug-dos-box li,
+    .debug-donts-box li {
+      margin-bottom: 0.35rem;
+    }
+
+    .debug-snippet {
+      border: 1px dashed #cbd5e1;
+      border-radius: 4px;
+      background: #fff;
+      padding: 0.85rem 1rem;
+      position: relative;
+    }
+
+    .debug-snippet::before {
+      content: "Textbaustein";
+      position: absolute;
+      top: -0.65rem;
+      left: 0.75rem;
+      background: #fff;
+      padding: 0 0.35rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .debug-email {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .debug-email-header {
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0.65rem 0.8rem;
+      display: grid;
+      gap: 0.35rem;
+      font-size: 0.92rem;
+    }
+
+    .debug-email-body {
+      padding: 0.9rem 1rem;
+      line-height: 1.45;
+    }
+
+    .debug-job-app {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #fff;
+      padding: 1rem;
+    }
+
+    .debug-job-app-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.92rem;
+    }
+
+    .debug-job-app-section + .debug-job-app-section {
+      margin-top: 1rem;
+    }
+
+    .debug-job-app-section h4 {
+      margin-bottom: 0.35rem;
+      color: var(--brand-primary);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .debug-schedule {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .debug-schedule th,
+    .debug-schedule td {
+      border: 1px solid #d1d5db;
+      padding: 0.55rem 0.7rem;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .debug-schedule th {
+      background: #f8fafc;
+      font-weight: 600;
+    }
+
+    .debug-accordion {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .debug-accordion-item {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .debug-accordion-head {
+      padding: 0.7rem 0.85rem;
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-weight: 600;
+    }
+
+    .debug-accordion-body {
+      padding: 0.8rem 0.85rem;
+      line-height: 1.45;
+    }
+
+    .debug-number-line {
+      padding: 1rem 0.5rem 0.25rem;
+    }
+
+    .debug-number-line-track {
+      position: relative;
+      height: 2.25rem;
+      border-top: 2px solid #475569;
+      margin: 0 0.5rem;
+    }
+
+    .debug-number-line-tick {
+      position: absolute;
+      top: -0.5rem;
+      width: 1px;
+      height: 1rem;
+      background: #475569;
+    }
+
+    .debug-number-line-label {
+      position: absolute;
+      top: 0.65rem;
+      transform: translateX(-50%);
+      font-size: 0.82rem;
+      color: #475569;
+    }
+
+    .debug-chart {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .debug-chart-row {
+      display: grid;
+      grid-template-columns: 5rem 1fr 2.5rem;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .debug-chart-bar {
+      height: 0.8rem;
+      background: linear-gradient(90deg, var(--brand-primary), #f59e0b);
+      border-radius: 999px;
+    }
+
+    .tiptap p,
+    .course-content p {
+      margin-top: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .tiptap p:last-child,
+    .course-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── Lists ───────────────────────────────────────────────── */
+    .tiptap ul {
+      list-style-type: none;
+      padding-left: 1.5rem;
+      margin-top: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .tiptap ul > li {
+      position: relative;
+      padding-left: 0.25rem;
+    }
+    /* Divider between list items */
+    .tiptap ul > li:not(:last-child)::after {
+      content: "";
+      display: block;
+      margin-left: -1.5rem;
+      width: calc(100% + 1.5rem);
+      border-bottom: 1px solid var(--border, #e5e7eb);
+    }
+    /* Bullet — PDF fallback: solid circle via background-color */
+    .tiptap ul > li::before {
+      content: "";
+      position: absolute;
+      left: -1rem;
+      top: calc(50% - 3px);
+      width: 6px;
+      height: 6px;
+      background-color: currentColor;
+      border-radius: 50%;
+    }
+
+    .tiptap ol {
+      list-style: none;
+      counter-reset: debug-ol;
+      padding-left: 0;
+      margin-top: 0.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .tiptap ol > li {
+      counter-increment: debug-ol;
+      position: relative;
+      padding-left: 2rem !important;
+    }
+
+    .tiptap ol > li::before {
+      content: counter(debug-ol, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* li spacing — padding on p only to keep separator centered */
+    .tiptap li {
+      margin-top: 0;
+      margin-bottom: 0;
+      line-height: 1.25em;
+    }
+    .tiptap li p {
+      margin-top: 0;
+      margin-bottom: 0;
+      line-height: 1.25em;
+      padding-top: 0.125rem;
+      padding-bottom: 0.125rem;
+    }
+
+    /* ── Print-specific list overrides ──────────────────────── */
+    /* (In globals.css these live inside @media print) */
+    .print-body-content .tiptap ul,
+    .print-body-content .tiptap ol {
+      margin-top: 0 !important;
+      margin-bottom: 0.75rem !important;
+    }
+    .print-body-content .tiptap li,
+    .print-body-content .tiptap li p,
+    .print-body-content .tiptap p,
+    .print-body-content li,
+    .print-body-content li p {
+      line-height: 1.35em !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    .print-body-content .tiptap li *,
+    .print-body-content li * {
+      line-height: inherit !important;
+    }
+
+    /* Standard text paragraphs should keep bottom rhythm */
+    .print-body-content .worksheet-block-text .tiptap > p {
+      margin-bottom: 0.75rem !important;
+    }
+
+    .print-body-content .worksheet-block-text .tiptap > p:last-child {
+      margin-bottom: 0 !important;
+    }
+    .print-body-content .tiptap ul > li,
+    .print-body-content .tiptap ol > li,
+    .print-body-content ul > li,
+    .print-body-content ol > li {
+      padding-top: 0.3rem !important;
+      padding-bottom: 0.3rem !important;
+      padding-left: 2rem !important;
+    }
+
+    /* Full-width row dividers (including marker/icon area):
+       top divider on first item, bottom divider on every item. */
+    .print-body-content .tiptap ul > li,
+    .print-body-content .tiptap ol > li {
+      width: calc(100% + 2rem) !important;
+      margin-left: -2rem !important;
+      border-bottom: 1px solid var(--border, #e5e7eb) !important;
+    }
+
+    .print-body-content .tiptap ul > li:first-child,
+    .print-body-content .tiptap ol > li:first-child {
+      border-top: 1px solid var(--border, #e5e7eb) !important;
+    }
+
+    /* Disable the old middle-only divider in print scope */
+    .print-body-content .tiptap ul > li:not(:last-child)::after {
+      content: none !important;
+    }
+
+    /* Sample 2 only: Lucide-like line-dot-right-horizontal bullet, rotated 180deg,
+       and no left indent on the ul itself. */
+    .debug-ul-list-2 ul {
+      padding-left: 0 !important;
+    }
+    .debug-ul-list-2 ul > li {
+      padding-left: 2rem !important;
+    }
+    .debug-ul-list-2 ul > li::before {
+      left: 0 !important;
+      top: 50% !important;
+      transform: translateY(-50%) rotate(180deg) !important;
+      width: 16px !important;
+      height: 10px !important;
+      border-radius: 0 !important;
+      background-color: transparent !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='%231a1a1a'/%3E%3Crect x='6' y='4' width='10' height='2' fill='%231a1a1a'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-size: contain !important;
+    }
+    .debug-ul-list-2 ul > li:not(:last-child)::after {
+      content: none !important;
+    }
+
+    /* Keep zero-indent UL variant truly flush-left even with print divider rules */
+    .print-body-content .debug-ul-list-2 ul > li {
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+
+    /* Apply the same row layout treatment to OL sample while keeping 01/02 counters */
+    .print-body-content .debug-ol-list-3 ol > li {
+      width: 100% !important;
+      margin-left: 0 !important;
+      padding-left: 2rem !important;
+    }
+
+    /* ── Hinweis / Example boxes ─────────────────────────────── */
+    .box-hinweis {
+      display: flex;
+      gap: 0;
+      border: 2px solid;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .box-hinweis .box-icon {
+      flex-shrink: 0;
+      width: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-left: 0;
+      box-sizing: border-box;
+      border-radius: 0;
+      color: var(--brand-primary);
+    }
+
+    .box-hinweis .box-icon svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      stroke: currentColor !important;
+    }
+    .box-hinweis .box-body {
+      flex: 1;
+      min-width: 0;
+      padding: 0.75rem 0.75rem;
+    }
+    /* Lernziel variant — coloured icon column */
+    .box-lernziel {
+      border-color: var(--brand-primary);
+      background-color: #e7532514;
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+    .box-lernziel .box-icon {
+      background-color: var(--brand-primary);
+      width: 2.5rem;
+      border-radius: 0;
+      color: #ffffff;
+    }
+    /* Hinweis default */
+    .box-hinweis-default { border-color: #475569; background-color: #47556908; color: #475569; }
+    .box-hinweis-default .box-icon { color: #475569; }
+    /* Hinweis wichtig */
+    .box-hinweis-wichtig { border-color: #0369a1; background-color: #0369a108; color: #0369a1; }
+    .box-hinweis-wichtig .box-icon { color: #0369a1; }
+    /* Hinweis alarm */
+    .box-hinweis-alarm { border-color: #990033; background-color: #99003308; color: #990033; }
+    .box-hinweis-alarm .box-icon { color: #990033; }
+
+    /* Example box (dashed) */
+    .box-example {
+      border: 1px dashed #475569;
+      border-radius: 4px;
+      padding: 0.75rem 0.75rem 0.75rem 1.5rem;
+      position: relative;
+    }
+
+    /* Keep box content vertically balanced and line-height-consistent (styles 5-9) */
+    .box-example .tiptap p,
+    .box-example .tiptap li,
+    .box-example .tiptap li p,
+    .box-hinweis .box-body .tiptap p,
+    .box-hinweis .box-body .tiptap li,
+    .box-hinweis .box-body .tiptap li p {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      line-height: 1.35em !important;
+    }
+
+    /* ── Rows style ──────────────────────────────────────────── */
+    .rows-item {
+      padding: 0.375rem 0 0.375rem 2rem;
+      position: relative;
+      border-bottom: 1px solid var(--row-divider);
+    }
+    .rows-item:first-child { border-top: 1px solid var(--row-divider); }
+    .rows-item .rows-icon {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ── Bilingual grid ──────────────────────────────────────── */
+    .bilingual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1em;
+    }
+    .bilingual-grid .col-de {
+      border-right: 1px solid #e2e8f0;
+      padding-right: 1em;
+    }
+    .bilingual-grid-rows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .bilingual-grid-rows .rows-item { padding-left: 2rem; }
+
+
+    /* ═══════════════════════════════════════════════════════════
+       END COPY-PASTE ZONE
+       ═════════════════════════════════════════════════════════ */
+
+  </style>
+</head>
+<body>
+
+<div class="print-worksheet-root print-skin-final">
+
+  <!-- Header stub -->
+  <div class="print-header-stub">
+    <div>
+      <img class="logo" src="./public/logo/logo-stadt-frauenfeld.svg" alt="AGI Frauenfeld">
+      <div>AGI Frauenfeld - Arbeitsblatt: Deutsch A2</div>
+    </div>
+    <div style="text-align:right; color:#94a3b8;">
+      debug-print-styles.html<br>Klasse / Datum: ___________
+    </div>
+  </div>
+
+  <div class="print-body-content">
+    <div class="space-y-6" style="padding-top: 8mm;">
+
+      <!-- ══════════════════════════════════════════════════════
+           1. Standard text — plain paragraphs
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">1 · standard text (paragraphs)</div>
+        <div class="tiptap max-w-none">
+          <p>Ein Bewerbungsbrief ist ein formelles Schreiben, das du an einen potenziellen Arbeitgeber sendest, um dich für eine Stelle zu bewerben.</p>
+          <p>Das Motivationsschreiben erklärt, warum du dich für die Stelle interessierst und was dich dafür qualifiziert.</p>
+          <p>Beide Dokumente sind wichtig für eine erfolgreiche Bewerbung.</p>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           2. Standard text — unordered list (ul)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text debug-ul-list-2">
+        <div class="debug-label">2 · standard text (ul list)</div>
+        <div class="tiptap max-w-none">
+          <ul>
+            <li><p>Ein Bewerbungsbrief ist etwas anderes als ein Motivationsschreiben.</p></li>
+            <li><p>Der Lebenslauf enthält alle relevanten beruflichen Stationen und sollte klar strukturiert sein, damit Personalverantwortliche die wichtigsten Informationen schnell erfassen können.</p></li>
+            <li><p>Das Anschreiben sollte nicht länger als eine Seite sein.</p></li>
+            <li><p>Referenzen können auf Anfrage vorgelegt werden.</p></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           3. Standard text — ordered list (ol)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text debug-ol-list-3">
+        <div class="debug-label">3 · standard text (ol list)</div>
+        <div class="tiptap max-w-none">
+          <ol>
+            <li><p>Zuerst schreibst du die persönlichen Daten oben links.</p></li>
+            <li><p>Dann folgt das Datum und die Adresse des Unternehmens.</p></li>
+            <li><p>Danach kommt der Betreff in Fettschrift.</p></li>
+            <li><p>Anschließend beginnt der eigentliche Brief.</p></li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           4. Mixed: paragraph + list
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text debug-ul-list-2">
+        <div class="debug-label">4 · mixed paragraph + ul</div>
+        <div class="tiptap max-w-none">
+          <p>Eine vollständige Bewerbungsmappe enthält folgende Dokumente:</p>
+          <ul>
+            <li><p>Motivationsschreiben (max. 1 Seite)</p></li>
+            <li><p>Lebenslauf mit Foto</p></li>
+            <li><p>Kopien der Zeugnisse und Zertifikate</p></li>
+          </ul>
+          <p>Überprüfe alle Dokumente sorgfältig auf Rechtschreibfehler, bevor du sie abschickst.</p>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           5. Example box (dashed)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">5 · example box</div>
+        <div class="box-example">
+          <div class="tiptap max-w-none">
+            <p>«Sehr geehrte Damen und Herren, mit grossem Interesse habe ich Ihre Stellenanzeige gelesen und bewerbe mich hiermit um die ausgeschriebene Position.»</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           6. Hinweis box (default)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">6 · hinweis (default)</div>
+        <div class="box-hinweis box-hinweis-default">
+          <div class="box-icon">
+            <!-- ArrowRight icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </div>
+          <div class="box-body">
+            <div class="tiptap max-w-none">
+              <p>Achte darauf, dass du die richtige Anrede verwendest: «Sehr geehrte Damen und Herren» ist immer sicher, wenn du den Namen nicht kennst.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           7. Hinweis-wichtig box
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">7 · hinweis-wichtig</div>
+        <div class="box-hinweis box-hinweis-wichtig">
+          <div class="box-icon">
+            <!-- BadgeAlert icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          </div>
+          <div class="box-body">
+            <div class="tiptap max-w-none">
+              <p>Wichtig: Bewerbungsunterlagen müssen vollständig und fehlerfrei sein. Unvollständige Bewerbungen werden oft direkt aussortiert.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           8. Hinweis-alarm box
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">8 · hinweis-alarm</div>
+        <div class="box-hinweis box-hinweis-alarm">
+          <div class="box-icon">
+            <!-- Siren icon approximation -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#990033" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v1Z"/><path d="M21 12h1"/><path d="M18.5 4.5l.5.5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="M4.929 4.929l.707.707"/></svg>
+          </div>
+          <div class="box-body">
+            <div class="tiptap max-w-none">
+              <p>Achtung: Falsche Angaben in der Bewerbung können zur sofortigen Kündigung führen, auch nach der Einstellung.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           9. Lernziel box
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">9 · lernziel</div>
+        <div class="box-hinweis box-lernziel" style="font-weight:600;">
+          <div class="box-icon">
+            <!-- Flag/Goal icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+          </div>
+          <div class="box-body">
+            <div class="tiptap max-w-none">
+              <p>Ich kann einen formellen Bewerbungsbrief auf Deutsch verfassen und die wichtigsten Bestandteile benennen.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           10. Rows style (standard arrow icon — inline SVG)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">10 · rows (standard)</div>
+        <div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ein Bewerbungsbrief ist etwas anderes als ein Motivationsschreiben.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Der Lebenslauf enthält alle relevanten Informationen zu deiner Ausbildung und Berufserfahrung und sollte deshalb klar gegliedert sein, damit wichtige Punkte beim ersten Lesen sofort sichtbar sind.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Das Anschreiben sollte deine Motivation und deine Stärken hervorheben.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           11. Kompetenzziele (goal icon)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">11 · kompetenzziele (goal icon)</div>
+        <div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ich kann die Unterschiede zwischen formal und informell erklären.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ich kann einen strukturierten Bewerbungsbrief selbstständig verfassen und meine Argumente so formulieren, dass meine Motivation und meine Qualifikationen nachvollziehbar und überzeugend dargestellt werden.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           12. Handlungsziele (arrow-right-to-line icon)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">12 · handlungsziele (arrow-right-to-line)</div>
+        <div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ich lese eine Stellenanzeige und identifiziere die wichtigsten Anforderungen, damit ich mein Anschreiben gezielt auf die geforderten Kompetenzen und Aufgaben abstimmen kann.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>
+            </div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ich schreibe einen Entwurf und überarbeite ihn nach dem Peer-Feedback.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           13. Bilingual standard (2-column grid)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">13 · bilingual standard</div>
+        <div class="bilingual-grid">
+          <div class="col-de">
+            <div class="tiptap max-w-none">
+              <p>Ein Bewerbungsbrief ist ein formelles Schreiben, das du an einen potenziellen Arbeitgeber sendest.</p>
+            </div>
+          </div>
+          <div class="col-tr">
+            <div class="tiptap max-w-none">
+              <p>A cover letter is a formal letter that you send to a potential employer to apply for a position.</p>
+            </div>
+          </div>
+          <div class="col-de">
+            <div class="tiptap max-w-none">
+              <p>Das Motivationsschreiben erklärt, warum du dich für die Stelle interessierst.</p>
+            </div>
+          </div>
+          <div class="col-tr">
+            <div class="tiptap max-w-none">
+              <p>The motivation letter explains why you are interested in the position.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           14. Bilingual standard with ul list
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text debug-ul-list-2">
+        <div class="debug-label">14 · bilingual standard (ul list)</div>
+        <div class="bilingual-grid" style="gap: 0 1em;">
+          <div class="col-de">
+            <div class="tiptap max-w-none">
+              <ul>
+                <li><p>Motivationsschreiben (max. 1 Seite)</p></li>
+                <li><p>Lebenslauf mit Foto</p></li>
+                <li><p>Kopien der Zeugnisse</p></li>
+              </ul>
+            </div>
+          </div>
+          <div class="col-tr">
+            <div class="tiptap max-w-none">
+              <ul>
+                <li><p>Motivation letter (max. 1 page)</p></li>
+                <li><p>CV with photo</p></li>
+                <li><p>Copies of certificates</p></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           15. Bilingual rows
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">15 · bilingual rows</div>
+        <div class="bilingual-grid-rows">
+          <!-- Row 1 -->
+          <div class="rows-item" style="border-top:1px solid #e5e7eb;">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Ein Bewerbungsbrief ist formell.</p></div>
+          </div>
+          <div class="rows-item" style="border-top:1px solid #e5e7eb;">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>A cover letter is formal.</p></div>
+          </div>
+          <!-- Row 2 -->
+          <div class="rows-item">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Das Datum steht oben rechts.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>The date goes at the top right.</p></div>
+          </div>
+          <!-- Row 3 -->
+          <div class="rows-item">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>Die Grussformel am Ende ist wichtig.</p></div>
+          </div>
+          <div class="rows-item">
+            <div class="rows-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <div class="tiptap max-w-none tiptap-compact"><p>The closing formula at the end is important.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- spacer -->
+      <div style="height: 8mm;"></div>
+
+      <!-- ══════════════════════════════════════════════════════
+           16. Headings — H1, H2, H3 (single language)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">16 · heading h1</div>
+        <h1 class="text-cv-3xl">Bewerbung auf Deutsch</h1>
+      </div>
+
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">17 · heading h2</div>
+        <h2 class="text-cv-2xl">Der Bewerbungsbrief</h2>
+      </div>
+
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">18 · heading h3</div>
+        <h3 class="text-cv-xl">Aufbau und Struktur</h3>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           19 – 21. Headings — bilingual variants
+           Format: <h1><span bold>DE</span> | <span normal>EN</span></h1>
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">19 · heading h1 bilingual</div>
+        <h1 class="text-cv-3xl">
+          <span style="font-weight:700;">Bewerbung auf Deutsch</span>
+          <span style="font-weight:400;"> | </span>
+          <span style="font-weight:400;">Applying in German</span>
+        </h1>
+      </div>
+
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">20 · heading h2 bilingual</div>
+        <h2 class="text-cv-2xl">
+          <span style="font-weight:700;">Der Bewerbungsbrief</span>
+          <span style="font-weight:400;"> | </span>
+          <span style="font-weight:400;">The Cover Letter</span>
+        </h2>
+      </div>
+
+      <div class="worksheet-block worksheet-block-heading">
+        <div class="debug-label">21 · heading h3 bilingual</div>
+        <h3 class="text-cv-xl">
+          <span style="font-weight:700;">Aufbau und Struktur</span>
+          <span style="font-weight:400;"> | </span>
+          <span style="font-weight:400;">Structure and Layout</span>
+        </h3>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           22. True / False Matrix — empty (print, no solutions)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-true-false-matrix debug-tf-instruction-default debug-task-panel-bottom-room debug-tf-22-flat debug-task-22-style">
+        <div class="debug-label">22 · true-false-matrix (print, no solutions)</div>
+        <div>
+          <div class="task-header">
+            <div class="task-pill">AUFGABE 01</div>
+            <p class="task-instruction">Kreuzen Sie die richtige Antwort an.</p>
+          </div>
+          <div class="task-panel">
+            <!-- column headers -->
+            <div class="tf-header-row" style="display:flex; align-items:center; gap:0.75rem; padding:0.5rem 0; border-bottom:1px solid #e5e7eb;">
+              <div class="tf-title" style="flex:1;">Aussage</div>
+              <div class="tf-header-cell">Richtig</div>
+              <div class="tf-header-cell">Falsch</div>
+            </div>
+            <!-- rows -->
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">01</span>
+                <span>Ein Bewerbungsbrief ist etwas anderes als ein Motivationsschreiben.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">02</span>
+                <span>Der Lebenslauf enthält alle beruflichen Stationen und Ausbildungen.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">03</span>
+                <span>Das Anschreiben darf keine persönlichen Informationen enthalten.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">04</span>
+                <span>Referenzen können auf Anfrage vorgelegt werden.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           23. True / False Matrix — with solutions shown
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-true-false-matrix debug-tf-instruction-default debug-task-panel-bottom-room debug-task-22-style">
+        <div class="debug-label">23 · true-false-matrix (print, with solutions)</div>
+        <div>
+          <div class="task-header">
+            <div class="task-pill">AUFGABE 02</div>
+            <p class="task-instruction">Kreuzen Sie die richtige Antwort an.</p>
+          </div>
+          <div class="task-panel">
+            <div class="tf-header-row" style="display:flex; align-items:center; gap:0.75rem; padding:0.5rem 0; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+              <div class="tf-title" style="flex:1;">Aussage</div>
+              <div class="tf-header-cell">Richtig</div>
+              <div class="tf-header-cell">Falsch</div>
+            </div>
+            <!-- row 1: correct=true → green in "Richtig" col -->
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">01</span>
+                <span>Ein Bewerbungsbrief ist etwas anderes als ein Motivationsschreiben.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+            <!-- row 2: correct=true -->
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">02</span>
+                <span>Der Lebenslauf enthält alle beruflichen Stationen und Ausbildungen.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+            <!-- row 3: correct=false → green in "Falsch" col -->
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">03</span>
+                <span>Das Anschreiben darf keine persönlichen Informationen enthalten.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-false"></div></div>
+            </div>
+            <!-- row 4: correct=true -->
+            <div class="tf-row">
+              <div class="tf-row-text">
+                <span class="number-badge">04</span>
+                <span>Referenzen können auf Anfrage vorgelegt werden.</span>
+              </div>
+              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           24. Unscramble Words — print, no solutions (dashed line)
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-unscramble-words debug-uw-instruction-default debug-uw-24-regular debug-task-panel-bottom-room debug-task-22-style">
+        <div class="debug-label">24 · unscramble-words (print, no solutions)</div>
+        <div>
+          <div class="task-header">
+            <div class="task-pill">AUFGABE 03</div>
+            <p class="task-instruction">Ordnen Sie die Buchstaben und schreiben Sie das richtige Wort.</p>
+          </div>
+          <div class="task-panel">
+            <div class="uw-row">
+              <span class="number-badge">01</span>
+              <span class="uw-scrambled" style="width:8em;">wBberuegn</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <div class="uw-answer-line">&nbsp;</div>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">02</span>
+              <span class="uw-scrambled" style="width:8em;">iMoontaivt</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <div class="uw-answer-line">&nbsp;</div>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">03</span>
+              <span class="uw-scrambled" style="width:8em;">bAlsuiudng</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <div class="uw-answer-line">&nbsp;</div>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">04</span>
+              <span class="uw-scrambled" style="width:8em;">rfhrauEgn</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <div class="uw-answer-line">&nbsp;</div>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">05</span>
+              <span class="uw-scrambled" style="width:8em;">Zkisutfuenp</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <div class="uw-answer-line">&nbsp;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           25. Unscramble Words — print, with solutions
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-unscramble-words debug-uw-instruction-default debug-uw-25-regular debug-task-panel-bottom-room debug-task-22-style">
+        <div class="debug-label">25 · unscramble-words (print, with solutions)</div>
+        <div>
+          <div class="task-header">
+            <div class="task-pill">AUFGABE 04</div>
+            <p class="task-instruction">Ordnen Sie die Buchstaben und schreiben Sie das richtige Wort.</p>
+          </div>
+          <div class="task-panel">
+            <div class="uw-row">
+              <span class="number-badge">01</span>
+              <span class="uw-scrambled" style="width:8em;">wBberuegn</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span style="flex:1; color:#166534; font-weight:600;">Bewerbung</span>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">02</span>
+              <span class="uw-scrambled" style="width:8em;">iMoontaivt</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span style="flex:1; color:#166534; font-weight:600;">Motivation</span>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">03</span>
+              <span class="uw-scrambled" style="width:8em;">bAlsuiudng</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span style="flex:1; color:#166534; font-weight:600;">Ausbildung</span>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">04</span>
+              <span class="uw-scrambled" style="width:8em;">rfhrauEgn</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span style="flex:1; color:#166534; font-weight:600;">Erfahrung</span>
+            </div>
+            <div class="uw-row">
+              <span class="number-badge">05</span>
+              <span class="uw-scrambled" style="width:8em;">Zkisutfuenp</span>
+              <svg class="uw-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <span style="flex:1; color:#166534; font-weight:600;">Zukunftspiek</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           26. Divider
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-divider">
+        <div class="debug-label">26 · divider</div>
+        <div class="debug-divider-line"></div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           27. Logo Divider
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-logo-divider">
+        <div class="debug-label">27 · logo-divider</div>
+        <div class="debug-logo-divider">
+          <img src="./public/logo/logo-stadt-frauenfeld.svg" alt="AGI Frauenfeld logo">
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           28. Image
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-image">
+        <div class="debug-label">28 · image</div>
+        <div class="debug-image-box">
+          <img src="https://picsum.photos/1200/480?grayscale" alt="Debug image sample">
+          <div class="debug-caption">Bewerbungsgespräch im Büro - Beispielbild mit kurzer Bildlegende zur Prüfung von Abstand, Radius und Rahmen.</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           29. Writing Lines
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-writing-lines">
+        <div class="debug-label">29 · writing-lines</div>
+        <div class="debug-writing-lines">
+          <div class="debug-writing-line"></div>
+          <div class="debug-writing-line"></div>
+          <div class="debug-writing-line"></div>
+          <div class="debug-writing-line"></div>
+          <div class="debug-writing-line"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           30. Writing Rows
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-writing-rows">
+        <div class="debug-label">30 · writing-rows</div>
+        <div class="debug-writing-rows">
+          <div class="debug-writing-row"></div>
+          <div class="debug-writing-row"></div>
+          <div class="debug-writing-row"></div>
+          <div class="debug-writing-row"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           31. Multiple Choice
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-multiple-choice debug-task-instruction-default debug-task-panel-bottom-room debug-task-22-style">
+        <div class="debug-label">31 · multiple-choice</div>
+        <div class="task-header">
+          <div class="task-pill">AUFGABE 05</div>
+          <p class="task-instruction">Wählen Sie die richtige Antwort aus.</p>
+        </div>
+        <div class="task-panel">
+          <div class="debug-mc-list">
+            <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Ein Motivationsschreiben beschreibt, warum du dich für eine Stelle interessierst.</div></div>
+            <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Der Lebenslauf wird ausschliesslich handschriftlich verfasst.</div></div>
+            <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Das Anschreiben sollte immer länger als zwei Seiten sein.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           32. Fill in Blank
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-fill-in-blank debug-task-instruction-default debug-task-22-style">
+        <div class="debug-label">32 · fill-in-blank</div>
+        <div class="task-header">
+          <div class="task-pill">AUFGABE 06</div>
+          <p class="task-instruction">Ergänzen Sie die fehlenden Wörter.</p>
+        </div>
+        <div class="task-panel">
+          <div class="debug-fill-sentence">Ein <span class="debug-blank-line"></span> enthält persönliche Daten, Ausbildung und Berufserfahrung.</div>
+          <div class="debug-fill-sentence" style="margin-top:0.85rem;">Im <span class="debug-blank-line" style="min-width:9rem;"></span> erklärst du deine Motivation für die Stelle.</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           33. Matching
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-matching debug-task-instruction-default debug-task-22-style">
+        <div class="debug-label">33 · matching</div>
+        <div class="task-header">
+          <div class="task-pill">AUFGABE 07</div>
+          <p class="task-instruction">Ordnen Sie die Begriffe zu.</p>
+        </div>
+        <div class="task-panel">
+          <div class="debug-matching-grid">
+            <div class="debug-matching-col">
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">A</span><span>Lebenslauf</span></div>
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">B</span><span>Anschreiben</span></div>
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">C</span><span>Referenzen</span></div>
+            </div>
+            <div class="debug-matching-col">
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">01</span><span>Beruflicher Werdegang und Ausbildung</span></div>
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">02</span><span>Beurteilungen durch frühere Arbeitgeber</span></div>
+              <div class="debug-match-item"><span class="number-badge debug-match-tag">03</span><span>Persönliche Motivation und Bezug zur Stelle</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           34. Glossary
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-glossary">
+        <div class="debug-label">34 · glossary</div>
+        <table class="debug-glossary">
+          <thead>
+            <tr><th>Begriff</th><th>Erklärung</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Lebenslauf</td><td>Dokument mit Ausbildung, Berufserfahrung und weiteren Qualifikationen.</td></tr>
+            <tr><td>Anschreiben</td><td>Brief, in dem du dich vorstellst und deine Motivation erklärst.</td></tr>
+            <tr><td>Referenz</td><td>Rückmeldung oder Empfehlung einer früheren Arbeitgeberin oder Lehrperson.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           35. Open Response
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-open-response debug-task-instruction-default debug-task-panel-bottom-room debug-task-22-style">
+        <div class="debug-label">35 · open-response</div>
+        <div class="task-header">
+          <div class="task-pill">AUFGABE 08</div>
+          <p class="task-instruction">Formulieren Sie einen kurzen Einleitungssatz für ein Anschreiben.</p>
+        </div>
+        <div class="task-panel">
+          <div class="debug-open-response"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           36. Word Bank
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-word-bank">
+        <div class="debug-label">36 · word-bank</div>
+        <div class="debug-word-bank">
+          <span class="debug-word-chip">Bewerbung</span>
+          <span class="debug-word-chip">Lebenslauf</span>
+          <span class="debug-word-chip">Motivation</span>
+          <span class="debug-word-chip">Qualifikation</span>
+          <span class="debug-word-chip">Erfahrung</span>
+          <span class="debug-word-chip">Referenz</span>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           37. Numbered Items
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-numbered-items">
+        <div class="debug-label">37 · numbered-items</div>
+        <div class="debug-numbered-items">
+          <div class="debug-numbered-item"><div class="debug-index">1</div><div>Lesen Sie die Stellenanzeige aufmerksam und markieren Sie wichtige Anforderungen.</div></div>
+          <div class="debug-numbered-item"><div class="debug-index">2</div><div>Ordnen Sie Ihre Unterlagen logisch und überprüfen Sie die Vollständigkeit.</div></div>
+          <div class="debug-numbered-item"><div class="debug-index">3</div><div>Passen Sie Anschreiben und Lebenslauf an die konkrete Stelle an.</div></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           38. Checklist
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-checklist">
+        <div class="debug-label">38 · checklist</div>
+        <div class="debug-checklist">
+          <div class="debug-check-item"><div class="debug-check-box"></div><div>Ich habe die Anrede korrekt formuliert.</div></div>
+          <div class="debug-check-item"><div class="debug-check-box"></div><div>Mein Lebenslauf ist aktuell und vollständig.</div></div>
+          <div class="debug-check-item"><div class="debug-check-box"></div><div>Ich habe Rechtschreibung und Datum kontrolliert.</div></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           39. Dialogue
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-dialogue">
+        <div class="debug-label">39 · dialogue</div>
+        <div class="debug-dialogue">
+          <div class="debug-dialogue-row"><div class="debug-dialogue-speaker">Frau Keller</div><div class="debug-dialogue-bubble">Guten Tag, erzählen Sie uns bitte kurz etwas über sich.</div></div>
+          <div class="debug-dialogue-row"><div class="debug-dialogue-speaker">Lina</div><div class="debug-dialogue-bubble">Gerne. Ich habe meine Lehre als Kauffrau abgeschlossen und interessiere mich besonders für den Kundenkontakt und die Organisation.</div></div>
+          <div class="debug-dialogue-row"><div class="debug-dialogue-speaker">Frau Keller</div><div class="debug-dialogue-bubble">Warum möchten Sie gerade in unserem Unternehmen arbeiten?</div></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           40. Table
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-table">
+        <div class="debug-label">40 · table</div>
+        <table class="debug-table">
+          <thead>
+            <tr><th>Dokument</th><th>Inhalt</th><th>Zweck</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Lebenslauf</td><td>Ausbildung, Erfahrung, Fähigkeiten</td><td>Übersicht über den Werdegang</td></tr>
+            <tr><td>Anschreiben</td><td>Motivation, Bezug zur Stelle</td><td>Persönliche Bewerbung</td></tr>
+            <tr><td>Referenzen</td><td>Empfehlungen, Zeugnisse</td><td>Zusätzliche Bestätigung</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           41. Columns
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-columns">
+        <div class="debug-label">41 · columns</div>
+        <div class="debug-columns">
+          <div class="debug-column">
+            <h3 class="text-cv-xl" style="font-size:1.1rem; margin-bottom:0.5rem;">Formell</h3>
+            <div class="tiptap max-w-none">
+              <p>Sehr geehrte Damen und Herren</p>
+              <p>Mit freundlichen Grüssen</p>
+            </div>
+          </div>
+          <div class="debug-column">
+            <h3 class="text-cv-xl" style="font-size:1.1rem; margin-bottom:0.5rem;">Informell</h3>
+            <div class="tiptap max-w-none">
+              <p>Hallo Frau Meier</p>
+              <p>Freundliche Grüsse</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           42. Image Cards
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-image-cards">
+        <div class="debug-label">42 · image-cards</div>
+        <div class="debug-image-cards">
+          <div class="debug-image-card"><img src="https://picsum.photos/400/300?1" alt=""><div class="debug-image-card-caption">Vorstellungsgespräch</div></div>
+          <div class="debug-image-card"><img src="https://picsum.photos/400/300?2" alt=""><div class="debug-image-card-caption">Bewerbungsunterlagen</div></div>
+          <div class="debug-image-card"><img src="https://picsum.photos/400/300?3" alt=""><div class="debug-image-card-caption">Arbeitsplatz</div></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           43. Text Cards
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text-cards">
+        <div class="debug-label">43 · text-cards</div>
+        <div class="debug-text-cards">
+          <div class="debug-text-card"><div>Was gehört in einen Lebenslauf?</div><div class="debug-card-lines"><div class="debug-card-line"></div><div class="debug-card-line"></div></div></div>
+          <div class="debug-text-card"><div>Welche Formulierungen wirken professionell?</div><div class="debug-card-lines"><div class="debug-card-line"></div><div class="debug-card-line"></div></div></div>
+          <div class="debug-text-card"><div>Welche Unterlagen fehlen noch?</div><div class="debug-card-lines"><div class="debug-card-line"></div><div class="debug-card-line"></div></div></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           44. Text Comparison
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text-comparison">
+        <div class="debug-label">44 · text-comparison</div>
+        <div class="debug-text-comparison">
+          <div class="debug-compare-box">
+            <h4>Weniger passend</h4>
+            <div class="tiptap max-w-none"><p>Ich möchte diesen Job, weil ich eine neue Herausforderung suche und hoffe, dass ich dabei etwas lernen kann.</p></div>
+          </div>
+          <div class="debug-compare-box">
+            <h4>Passender</h4>
+            <div class="tiptap max-w-none"><p>Die ausgeschriebene Stelle spricht mich besonders an, weil ich meine organisatorischen Fähigkeiten und meine Erfahrung im Kundenkontakt gezielt einbringen kann.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           45. Dos and Donts
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-dos-and-donts">
+        <div class="debug-label">45 · dos-and-donts</div>
+        <div class="debug-dos-donts">
+          <div class="debug-dos-box">
+            <h4>Do</h4>
+            <ul>
+              <li>Bezug zur Stelle herstellen</li>
+              <li>Klare Struktur verwenden</li>
+              <li>Rechtschreibung kontrollieren</li>
+            </ul>
+          </div>
+          <div class="debug-donts-box">
+            <h4>Don't</h4>
+            <ul>
+              <li>Standardtexte ohne Anpassung senden</li>
+              <li>Zu viele irrelevante Details erwähnen</li>
+              <li>Umgangssprachliche Formulierungen nutzen</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           46. Text Snippet
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-text-snippet">
+        <div class="debug-label">46 · text-snippet</div>
+        <div class="debug-snippet">
+          Mit grossem Interesse habe ich Ihre Ausschreibung gelesen und bewerbe mich hiermit um die Stelle als Sachbearbeiterin Administration.
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           47. Email Skeleton
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-email-skeleton">
+        <div class="debug-label">47 · email-skeleton</div>
+        <div class="debug-email">
+          <div class="debug-email-header">
+            <div><strong>An:</strong> personal@example.ch</div>
+            <div><strong>Betreff:</strong> Bewerbung als Kaufmännische Mitarbeitende</div>
+          </div>
+          <div class="debug-email-body">
+            <p>Sehr geehrte Damen und Herren</p>
+            <p>Im Anhang sende ich Ihnen meine Bewerbungsunterlagen für die ausgeschriebene Stelle.</p>
+            <p>Freundliche Grüsse<br>Lina Muster</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           48. Job Application
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-job-application">
+        <div class="debug-label">48 · job-application</div>
+        <div class="debug-job-app">
+          <div class="debug-job-app-meta">
+            <div><strong>Name:</strong> Lina Muster</div>
+            <div><strong>Ort:</strong> Frauenfeld</div>
+            <div><strong>E-Mail:</strong> lina@example.ch</div>
+            <div><strong>Telefon:</strong> 079 123 45 67</div>
+          </div>
+          <div class="debug-job-app-section"><h4>Motivation</h4><p>Ich interessiere mich für die Stelle, weil ich meine organisatorischen Fähigkeiten und meine Freude am Kundenkontakt einbringen möchte.</p></div>
+          <div class="debug-job-app-section"><h4>Erfahrung</h4><p>Während meiner Ausbildung habe ich administrative Aufgaben übernommen und gelernt, strukturiert und zuverlässig zu arbeiten.</p></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           49. Schedule
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-schedule">
+        <div class="debug-label">49 · schedule</div>
+        <table class="debug-schedule">
+          <thead>
+            <tr><th>Zeit</th><th>Inhalt</th><th>Sozialform</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>08:30-08:45</td><td>Einstieg: Bestandteile einer Bewerbung sammeln</td><td>Plenum</td></tr>
+            <tr><td>08:45-09:10</td><td>Textvergleich und Analyse guter Formulierungen</td><td>Partnerarbeit</td></tr>
+            <tr><td>09:10-09:30</td><td>Eigenes Anschreiben formulieren</td><td>Einzelarbeit</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           50. Accordion
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-accordion">
+        <div class="debug-label">50 · accordion</div>
+        <div class="debug-accordion">
+          <div class="debug-accordion-item">
+            <div class="debug-accordion-head"><span>Was gehört in den Betreff?</span><span>+</span></div>
+            <div class="debug-accordion-body">Im Betreff steht klar und knapp, worauf sich die Bewerbung bezieht, zum Beispiel die genaue Stellenbezeichnung.</div>
+          </div>
+          <div class="debug-accordion-item">
+            <div class="debug-accordion-head"><span>Wie lang darf das Anschreiben sein?</span><span>+</span></div>
+            <div class="debug-accordion-body">In der Regel sollte das Anschreiben nicht länger als eine Seite sein.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           51. Number Line
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-number-line">
+        <div class="debug-label">51 · number-line</div>
+        <div class="debug-number-line">
+          <div class="debug-number-line-track">
+            <div class="debug-number-line-tick" style="left:0%;"></div><div class="debug-number-line-label" style="left:0%;">0</div>
+            <div class="debug-number-line-tick" style="left:25%;"></div><div class="debug-number-line-label" style="left:25%;">25</div>
+            <div class="debug-number-line-tick" style="left:50%;"></div><div class="debug-number-line-label" style="left:50%;">50</div>
+            <div class="debug-number-line-tick" style="left:75%;"></div><div class="debug-number-line-label" style="left:75%;">75</div>
+            <div class="debug-number-line-tick" style="left:100%;"></div><div class="debug-number-line-label" style="left:100%;">100</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           52. Chart
+           ══════════════════════════════════════════════════════ -->
+      <div class="worksheet-block worksheet-block-chart">
+        <div class="debug-label">52 · chart</div>
+        <div class="debug-chart">
+          <div class="debug-chart-row"><div>Motivation</div><div class="debug-chart-bar" style="width:82%;"></div><div>82%</div></div>
+          <div class="debug-chart-row"><div>Struktur</div><div class="debug-chart-bar" style="width:68%;"></div><div>68%</div></div>
+          <div class="debug-chart-row"><div>Sprache</div><div class="debug-chart-bar" style="width:74%;"></div><div>74%</div></div>
+        </div>
+      </div>
+
+    </div><!-- /space-y-6 -->
+  </div><!-- /print-body-content -->
+
+</div><!-- /print-worksheet-root -->
+
+<!-- ── Usage note ────────────────────────────────────────────── -->
+<div style="width: 210mm; margin: 16px auto; font-family: monospace; font-size: 10px; color: #94a3b8; padding: 0 0 32px;">
+  Edit styles in the &lt;style&gt; block above → Cmd+R to refresh.
+  When satisfied, copy rules back to <strong>globals.css</strong>
+  (wrap print-only rules in <code>@media print { }</code>).
+</div>
+
+</body>
+</html>
