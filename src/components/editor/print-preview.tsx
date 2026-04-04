@@ -43,6 +43,7 @@ export function PrintPreview({
   const { state, save } = useEditor();
   const t = useTranslations("printPreview");
   const locale = useLocale();
+  const isDevelopment = process.env.NODE_ENV === "development";
   const [zoom, setZoom] = useState(140);
   const [loading, setLoading] = useState(true);
   const [iframeSrc, setIframeSrc] = useState<string | null>(null);
@@ -54,15 +55,27 @@ export function PrintPreview({
   const translationLangs = state.settings.translationLanguages ?? [];
 
   // Build the print URL — same one Puppeteer navigates to
-  const buildPrintUrl = useCallback(() => {
+  const buildPrintUrl = useCallback((forceRefresh = false) => {
     if (!state.slug) return null;
     const params = new URLSearchParams();
     if (country === "CH") params.set("ch", "1");
     if (lang && lang !== "de") params.set("lang", lang);
     if (showSolutions) params.set("solutions", "1");
-    params.set("_t", String(Date.now()));
+    if (forceRefresh) params.set("_t", String(Date.now()));
     return `/${locale}/worksheet/${state.slug}/print?${params}`;
   }, [locale, state.slug, country, lang, showSolutions]);
+
+  const reloadPreview = useCallback(async (saveIfDirty: boolean, forceRefresh = false) => {
+    if (!state.worksheetId) return;
+
+    if (saveIfDirty && state.isDirty) {
+      setSaving(true);
+      await save();
+      setSaving(false);
+    }
+
+    setIframeSrc(buildPrintUrl(forceRefresh));
+  }, [state.worksheetId, state.isDirty, save, buildPrintUrl]);
 
   // Auto-save if dirty, then load the iframe
   useEffect(() => {
@@ -84,7 +97,7 @@ export function PrintPreview({
       }
       if (cancelled) return;
       setLoading(true);
-      setIframeSrc(buildPrintUrl());
+      setIframeSrc(buildPrintUrl(false));
     };
 
     loadPreview();
@@ -93,13 +106,28 @@ export function PrintPreview({
 
   const handleReload = useCallback(async () => {
     setLoading(true);
-    if (state.isDirty) {
-      setSaving(true);
-      await save();
-      setSaving(false);
-    }
-    setIframeSrc(buildPrintUrl());
-  }, [state.isDirty, save, buildPrintUrl]);
+    await reloadPreview(true, true);
+  }, [reloadPreview]);
+
+  // Dev-only: refresh once when returning to the tab/window so code/style edits show up
+  // without continuous iframe churn.
+  useEffect(() => {
+    if (!open || !isDevelopment || !state.worksheetId) return;
+
+    const handleRefresh = () => {
+      if (document.visibilityState !== "visible") return;
+      setLoading(true);
+      void reloadPreview(false, true);
+    };
+
+    window.addEventListener("focus", handleRefresh);
+    document.addEventListener("visibilitychange", handleRefresh);
+
+    return () => {
+      window.removeEventListener("focus", handleRefresh);
+      document.removeEventListener("visibilitychange", handleRefresh);
+    };
+  }, [open, isDevelopment, state.worksheetId, reloadPreview]);
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 30));

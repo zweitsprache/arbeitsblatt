@@ -1660,31 +1660,29 @@ function TrueFalseMatrixRenderer({
 
   return (
     <div className="space-y-2">
-      {/* Table */}
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="text-left py-2 pr-2 border-b font-bold text-foreground">
-              <span
-                className="outline-none block"
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) => {
-                  const value = e.currentTarget.textContent || "";
-                  localeUpdate(block.id, "statementColumnHeader", value, () =>
-                    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { statementColumnHeader: value } } })
-                  );
-                }}
-              >
-                {block.statementColumnHeader || ""}
-              </span>
-            </th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</th>
-            <th className="w-16 p-2 border-b text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</th>
-            <th className="w-8 p-2 border-b"></th>
-          </tr>
-        </thead>
-        <tbody>
+      {/* Header + Items */}
+      <div>
+        <div className="flex items-center gap-3 py-2 border-b">
+          <div className="flex-1 font-bold text-foreground">
+            <span
+              className="outline-none block"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, "statementColumnHeader", value, () =>
+                  dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { statementColumnHeader: value } } })
+                );
+              }}
+            >
+              {block.statementColumnHeader || ""}
+            </span>
+          </div>
+          <div className="w-16 text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</div>
+          <div className="w-16 text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</div>
+          <div className="w-8"></div>
+        </div>
+        <div>
           {(() => {
             const orderedStatements = block.statementOrder
               ? block.statementOrder
@@ -1693,9 +1691,8 @@ function TrueFalseMatrixRenderer({
                   .concat(block.statements.filter((s) => !block.statementOrder!.includes(s.id)))
               : block.statements;
             return orderedStatements.map((stmt, stmtIndex) => (
-            <tr key={stmt.id} className="group/row border-b last:border-b-0">
-              <td className="py-2 pr-2">
-                <div className="flex items-center gap-3">
+            <div key={stmt.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
+              <div className="flex flex-1 items-center gap-3">
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(stmtIndex + 1).padStart(2, "0")}
                 </span>
@@ -1713,9 +1710,8 @@ function TrueFalseMatrixRenderer({
                 >
                   {stmt.text}
                 </span>
-                </div>
-              </td>
-              <td className="p-2 text-center align-middle">
+              </div>
+              <div className="w-16 flex items-center justify-center">
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${stmt.correctAnswer ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/30 hover:border-green-400"}`}
@@ -1726,8 +1722,8 @@ function TrueFalseMatrixRenderer({
                 >
                   {stmt.correctAnswer && <Check className="h-3 w-3" />}
                 </button>
-              </td>
-              <td className="p-2 text-center align-middle">
+              </div>
+              <div className="w-16 flex items-center justify-center">
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${!stmt.correctAnswer ? "bg-red-500 border-red-500 text-white" : "border-muted-foreground/30 hover:border-red-400"}`}
@@ -1738,8 +1734,8 @@ function TrueFalseMatrixRenderer({
                 >
                   {!stmt.correctAnswer && <X className="h-3 w-3" />}
                 </button>
-              </td>
-              <td className="p-2 text-center align-middle">
+              </div>
+              <div className="w-8 flex items-center justify-center">
                 <button
                   className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
                   onClick={(e) => {
@@ -1749,12 +1745,12 @@ function TrueFalseMatrixRenderer({
                 >
                   <X className="h-3 w-3 text-destructive" />
                 </button>
-              </td>
-            </tr>
+              </div>
+            </div>
           ));
           })()}
-        </tbody>
-      </table>
+        </div>
+      </div>
 
       <div className="flex items-center gap-3">
         <button

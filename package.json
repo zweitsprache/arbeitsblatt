@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:next": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "prisma generate && node scripts/validate-translations.mjs && next build",
     "start": "next start",
     "lint": "eslint",

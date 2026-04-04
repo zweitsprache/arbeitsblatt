@@ -57,7 +57,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer, Square } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -69,6 +69,7 @@ function getBrandFonts(brand: string) {
 }
 
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
+const NUMBER_BADGE_CLASS = "inline-flex h-5 w-5 min-w-5 items-center justify-center rounded-[3px] bg-slate-100 text-slate-700 ring-1 ring-slate-300 font-bold leading-none text-cv-micro";
 
 /** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
 function hashString(input: string): number {
@@ -135,21 +136,50 @@ function colorWithAlpha(color: string, alpha: number): string {
   return color;
 }
 
-function TaskContainer({ showPill, taskNumber, lessonLabel, children, accentColor }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode; accentColor?: string | null }) {
+function TaskContainer({
+  showPill,
+  taskNumber,
+  lessonLabel,
+  instruction,
+  instructionStyle,
+  children,
+  accentColor,
+}: {
+  showPill: boolean;
+  taskNumber?: number;
+  lessonLabel?: string;
+  instruction?: string;
+  instructionStyle?: React.CSSProperties;
+  children: React.ReactNode;
+  accentColor?: string | null;
+}) {
   const headerBg = accentColor || "#F9F6ED";
   const headerText = accentColor ? "#ffffff" : "inherit";
   const panelBg = "#ffffff";
   const panelBorder = accentColor || "#F9F6ED";
   return (
     <div>
-      {showPill && (
-        <div className="flex">
+      {(showPill || instruction) && (
+        <div className="flex items-end gap-3">
+          {showPill && (
           <div
             className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
             style={{ backgroundColor: headerBg, color: headerText }}
           >
             AUFGABE{taskNumber != null ? ` ${lessonLabel ? `${lessonLabel}.` : ""}${String(taskNumber).padStart(2, "0")}` : ""}
           </div>
+          )}
+          {instruction && (
+            <p
+              className="font-normal pb-1"
+              style={{
+                color: accentColor || "var(--color-primary)",
+                ...(instructionStyle || {}),
+              }}
+            >
+              {instruction}
+            </p>
+          )}
         </div>
       )}
       <div
@@ -245,9 +275,9 @@ function HeadingView({ block, originalBlock, brand, headlineFont, isNonLatin, tr
     const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
       <Tag className={sizes[block.level]} style={style}>
-        <span style={resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : undefined}>{originalBlock.content}</span>
+        <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: 700 }}>{originalBlock.content}</span>
         <span style={{ fontWeight: 400 }}> | </span>
-        <span style={scale ? { fontSize: `${scale}em` } : undefined}>{block.content}</span>
+        <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{block.content}</span>
       </Tag>
     );
   }
@@ -985,10 +1015,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           className="flex items-center border-b last:border-b-0"
           style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
         >
-          <span
-            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
-            style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
-          >
+          <span className={NUMBER_BADGE_CLASS}>
             {String(i + 1).padStart(2, "0")}
           </span>
           <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
@@ -1274,10 +1301,7 @@ function FillInBlankItemsView({
             className="flex items-center border-b last:border-b-0"
             style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
           >
-            <span
-              className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
-              style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
-            >
+            <span className={NUMBER_BADGE_CLASS}>
               {String(idx + 1).padStart(2, "0")}
             </span>
             <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
@@ -1967,9 +1991,6 @@ function TrueFalseMatrixView({
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
-  const itemBg = undefined;
-  const itemBorder = accentColor || undefined;
-  const itemText = accentColor || undefined;
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -1977,17 +1998,22 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel} accentColor={accentColor}>
+    <TaskContainer
+      showPill={showPill}
+      taskNumber={taskNumber}
+      lessonLabel={lessonLabel}
+      instruction={block.instruction || "Kreuzen Sie die richtige Antwort an."}
+      instructionStyle={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+      accentColor={accentColor}
+    >
       <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="text-left py-2 pr-2 border-b font-bold text-foreground">{block.statementColumnHeader || ""}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground text-xs uppercase">{block.trueLabel || tc("true")}</th>
-            <th className="w-20 p-2 border-b text-center font-medium text-muted-foreground text-xs uppercase">{block.falseLabel || tc("false")}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div>
+        <div className="flex items-center gap-3 py-2 border-b">
+          <div className="flex-1 font-bold text-foreground">{block.statementColumnHeader || ""}</div>
+          <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.trueLabel || tc("true")}</div>
+          <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.falseLabel || tc("false")}</div>
+        </div>
+        <div>
           {(() => {
             const orderedStatements = block.statementOrder
               ? block.statementOrder
@@ -2000,89 +2026,77 @@ function TrueFalseMatrixView({
             const selected = hasAnswered ? answers[stmt.id] : undefined;
             const isCorrect = hasAnswered && selected === stmt.correctAnswer;
 
-            // Determine radio style for the "true" column
-            const getTrueRadioStyle = () => {
-              if (!hasAnswered) return {};
-              if (selected === true) {
-                // User picked true
+            const getOptionClass = (optionValue: boolean) => {
+              if (!hasAnswered) return "ring-2 ring-muted-foreground/30 hover:ring-primary/50";
+              if (selected === optionValue) {
                 return isCorrect
-                  ? { backgroundColor: "#22c55e", borderColor: "#22c55e", color: "white" }   // green-500
-                  : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
+                  ? "ring-2 ring-green-600 bg-green-500 text-white"
+                  : "ring-2 ring-red-600 bg-red-500 text-white";
               }
-              // User picked false — highlight correct answer if it's true
-              if (stmt.correctAnswer === true) return { backgroundColor: "#3b82f6", borderColor: "#3b82f6", color: "white" };
-              return {};
-            };
-
-            // Determine radio style for the "false" column
-            const getFalseRadioStyle = () => {
-              if (!hasAnswered) return {};
-              if (selected === false) {
-                // User picked false
-                return isCorrect
-                  ? { backgroundColor: "#22c55e", borderColor: "#22c55e", color: "white" }   // green-500
-                  : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
+              if (stmt.correctAnswer === optionValue) {
+                return "ring-2 ring-blue-600 bg-blue-500 text-white";
               }
-              // User picked true — highlight correct answer if it's false
-              if (stmt.correctAnswer === false) return { backgroundColor: "#3b82f6", borderColor: "#3b82f6", color: "white" };
-              return {};
+              return "ring-2 ring-muted-foreground/30";
             };
-
-            const trueRadioClass = !hasAnswered ? "border-muted-foreground/30 hover:border-primary/50" : "";
-            const falseRadioClass = !hasAnswered ? "border-muted-foreground/30 hover:border-primary/50" : "";
 
             return (
-              <tr key={stmt.id} className="border-b last:border-b-0">
-                <td className="py-2 pr-2 align-middle">
-                  <div className="flex min-h-7 items-center gap-3">
-                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground text-cv-micro">
-                      {String(stmtIndex + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
-                  </div>
-                </td>
-                <td className="py-2 px-2 align-middle">
-                  <div className="flex min-h-7 items-center justify-center">
+              <div key={stmt.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+                <div className="flex flex-1 items-center gap-3">
+                    <span className={NUMBER_BADGE_CLASS}>
+                    {String(stmtIndex + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
+                </div>
+                <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
-                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
+                      <div
+                        className="box-border rounded-[3px] bg-green-500 ring-2 ring-green-600"
+                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      />
                     ) : (
-                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30" />
+                      <div
+                        className="box-border rounded-[3px] ring-2 ring-muted-foreground/30"
+                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      />
                     )
                   ) : (
                     <button
-                      style={{ ...getTrueRadioStyle(), width: 16, height: 14, minWidth: 16, minHeight: 14, borderRadius: 4, border: '2px solid', transition: 'colors' }}
-                      className={`transition-colors ${trueRadioClass}`}
+                      className={`box-border rounded-[3px] transition-colors ${getOptionClass(true)}`}
+                      style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
                       onClick={() => handleSelect(stmt.id, true)}
                       disabled={hasAnswered}
                     />
                   )}
-                  </div>
-                </td>
-                <td className="py-2 px-2 align-middle">
-                  <div className="flex min-h-7 items-center justify-center">
+                </div>
+                <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
-                      <div className="w-5 h-5 rounded-sm bg-green-500 border border-green-600" />
+                      <div
+                        className="box-border rounded-[3px] bg-green-500 ring-2 ring-green-600"
+                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      />
                     ) : (
-                      <div className="w-5 h-5 rounded border-2 border-muted-foreground/30" />
+                      <div
+                        className="box-border rounded-[3px] ring-2 ring-muted-foreground/30"
+                        style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
+                      />
                     )
                   ) : (
                     <button
-                      style={{ ...getFalseRadioStyle(), width: 16, height: 14, minWidth: 16, minHeight: 14, borderRadius: 4, border: '2px solid', transition: 'colors' }}
-                      className={`transition-colors ${falseRadioClass}`}
+                      className={`box-border rounded-[3px] transition-colors ${getOptionClass(false)}`}
+                      style={{ width: 18, height: 18, minWidth: 18, minHeight: 18 }}
                       onClick={() => handleSelect(stmt.id, false)}
                       disabled={hasAnswered}
                     />
                   )}
-                  </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             );
           });
           })()}
-        </tbody>
-      </table>
+        </div>
+      </div>
     </div>
     </TaskContainer>
   );
@@ -2135,7 +2149,7 @@ function ArticleTrainingView({
             return (
               <tr key={item.id} className="border-b last:border-b-0">
                 <td className="p-2 text-center">
-                  <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
+                  <span className={NUMBER_BADGE_CLASS}>
                     {String(idx + 1).padStart(2, "0")}
                   </span>
                 </td>
@@ -2334,7 +2348,7 @@ function OrderItemsView({
               key={item.id}
               className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
-              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className={`flex-1 ${isCorrect ? "text-green-700" : ""}`}>{item.text}</span>
@@ -2554,10 +2568,7 @@ function InlineChoicesView({
           className="flex items-center border-b last:border-b-0"
           style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
         >
-          <span
-            className="font-bold text-muted-foreground bg-muted inline-flex items-center justify-center text-cv-micro"
-            style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0 }}
-          >
+          <span className={NUMBER_BADGE_CLASS}>
             {String(idx + 1).padStart(2, "0")}
           </span>
           <span className="flex-1">
@@ -2956,16 +2967,11 @@ function UnscrambleWordsView({
   isNonLatin?: boolean;
   accentColor?: string | null;
 }) {
-  const t = useTranslations("viewer");
-  const tb = useTranslations("blockRenderer");
   const isPrint = mode === "print";
   const fontFamily = bodyFont || "inherit";
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
-  const itemBg = undefined;
-  const itemBorder = accentColor || undefined;
-  const itemText = accentColor || undefined;
   const handleAnswer = (val: unknown) => {
     if (answer !== undefined) {
       onAnswer(val);
@@ -2996,11 +3002,15 @@ function UnscrambleWordsView({
     : block.words;
 
   return (
-    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel} accentColor={accentColor}>
+    <TaskContainer
+      showPill={showPill}
+      taskNumber={taskNumber}
+      lessonLabel={lessonLabel}
+      instruction={block.instruction}
+      instructionStyle={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+      accentColor={accentColor}
+    >
       <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
-      {block.instruction && (
-        <p className="font-medium flex items-center gap-1.5"><SquareMousePointer className="h-4 w-4 text-muted-foreground shrink-0" />{block.instruction}</p>
-      )}
       <div>
         {orderedWords.map((item, i) => {
           const scrambled = scrambleWordDeterministic(
@@ -3021,7 +3031,7 @@ function UnscrambleWordsView({
               key={item.id}
               className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
-              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground shrink-0 text-cv-micro">
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
@@ -3162,7 +3172,7 @@ function FixSentencesView({
               }`}
             >
               <div className="flex items-start gap-3">
-                <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0 mt-1`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
@@ -3281,7 +3291,7 @@ function CompleteSentencesView({
             key={item.id}
             className="flex items-center gap-3 py-2 border-b last:border-b-0"
           >
-            <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
               {String(i + 1).padStart(2, "0")}
             </span>
             <span className="shrink-0">{item.beginning}</span>
