@@ -237,7 +237,7 @@ export function WorksheetViewer({
     ["--print-h2-weight" as string]: resolvedProfile.h2Weight ? String(resolvedProfile.h2Weight) : undefined,
     ["--print-h3-weight" as string]: String(resolvedProfile.h3Weight ?? 800),
     ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
-    ["--print-margin-bottom" as string]: `${settings.margins.bottom}px`,
+    ["--print-tfoot-height" as string]: `${settings.margins.bottom}px`,
   } as React.CSSProperties) : undefined;
 
   return (

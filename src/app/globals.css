@@ -511,8 +511,8 @@
 }
 
 .print-worksheet-root .print-footer-content {
-  height: 25mm;
-  padding: 0 15mm 10mm 20mm;
+  height: var(--print-tfoot-height, 25mm);
+  padding: 0 15mm 8mm 20mm;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
@@ -536,7 +536,7 @@
 }
 
 .print-worksheet-root .print-body-content {
-  padding: 0 20mm var(--print-margin-bottom, 30mm) 25mm;
+  padding: 0 20mm 0 25mm;
 }
 
 /* Keep preview typography aligned with PDF output.
@@ -744,8 +744,8 @@
   }
 
   .print-footer-content {
-    height: 25mm;
-    padding: 0 15mm 10mm 20mm;
+    height: var(--print-tfoot-height, 25mm);
+    padding: 0 15mm 8mm 20mm;
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;
@@ -764,7 +764,7 @@
   }
 
   .print-body-content {
-    padding: 0 20mm var(--print-margin-bottom, 30mm) 25mm;
+    padding: 0 20mm 0 25mm;
     font-size: var(--print-body-size);
     font-family: var(--print-body-font);
   }
