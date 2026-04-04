@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -96,15 +96,15 @@ export function WorksheetViewer({
     return v ? v : (fallback ?? "");
   };
 
-  const brandFonts = staticBrandFonts ?? {
-    bodyFont: nonEmpty(resolvedProfile.bodyFont, "Asap Condensed, sans-serif"),
-    headlineFont: nonEmpty(resolvedProfile.headlineFont, "Asap Condensed, sans-serif"),
-    headlineWeight: resolvedProfile.headlineWeight,
-    subHeadlineFont: nonEmpty(resolvedProfile.subHeadlineFont, "Asap Condensed, sans-serif"),
-    subHeadlineWeight: resolvedProfile.subHeadlineWeight,
-    headerFooterFont: nonEmpty(resolvedProfile.headerFooterFont, "Asap Condensed, sans-serif"),
-    googleFontsUrl: nonEmpty(resolvedProfile.googleFontsUrl, staticBrandFonts?.googleFontsUrl),
-    primaryColor: resolvedProfile.primaryColor,
+  const brandFonts: BrandFonts = {
+    bodyFont: nonEmpty(staticBrandFonts.bodyFont, "Asap Condensed, sans-serif"),
+    headlineFont: nonEmpty(staticBrandFonts.headlineFont, "Asap Condensed, sans-serif"),
+    headlineWeight: staticBrandFonts.headlineWeight,
+    subHeadlineFont: nonEmpty(staticBrandFonts.subHeadlineFont, "Asap Condensed, sans-serif"),
+    subHeadlineWeight: staticBrandFonts.subHeadlineWeight,
+    headerFooterFont: nonEmpty(staticBrandFonts.headerFooterFont, "Asap Condensed, sans-serif"),
+    googleFontsUrl: nonEmpty(staticBrandFonts.googleFontsUrl),
+    primaryColor: staticBrandFonts.primaryColor,
   };
 
   // If a brand profile was provided, prefer its values over the static map
