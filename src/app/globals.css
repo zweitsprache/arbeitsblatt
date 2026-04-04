@@ -695,7 +695,15 @@
     page-break-inside: auto;
   }
 
-  .worksheet-block-text-snippet .snippet-item-row,
+  .worksheet-block-text-snippet .snippet-item-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .worksheet-block-text-snippet .snippet-item-card {
     display: block;
     break-inside: avoid;
