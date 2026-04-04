@@ -12,6 +12,8 @@ export default function middleware(req: NextRequest) {
   // Strip port for comparison
   const hostWithoutPort = hostname.split(":")[0];
   const baseWithoutPort = BASE_DOMAIN.split(":")[0];
+  const isLocalBaseDomain =
+    baseWithoutPort === "localhost" || baseWithoutPort === "127.0.0.1";
 
   // Detect subdomain: everything before the base domain
   let subdomain: string | null = null;
@@ -25,7 +27,9 @@ export default function middleware(req: NextRequest) {
   // If subdomain detected (and not www), inject project slug header
   // and rewrite to the project viewer routes
   const RESERVED_SUBDOMAINS = ["www"];
-  if (subdomain && !RESERVED_SUBDOMAINS.includes(subdomain)) {
+  // Local development should not rewrite based on subdomain heuristics.
+  // This avoids local-only 404s when opening non-standard localhost hosts.
+  if (!isLocalBaseDomain && subdomain && !RESERVED_SUBDOMAINS.includes(subdomain)) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-project-slug", subdomain);
 
