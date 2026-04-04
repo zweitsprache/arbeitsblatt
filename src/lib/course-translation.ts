@@ -544,6 +544,8 @@ function extractSingleBlockStrings(
   block: WorksheetBlock,
   strings: Record<string, string>
 ) {
+  const p = `block.${block.id}`;
+
   switch (block.type) {
     // ── Columns: recurse into children
     case "columns": {
@@ -756,7 +758,9 @@ function applySingleBlockTranslations(
     case "accordion": {
       const ab = block as AccordionBlock;
       for (const item of ab.items) {
-        apply(`${p}.items.${item.id}.title`, (v) => (item.title = v));
+        const key = `block.${block.id}.items.${item.id}.title`;
+        const translated = t[key];
+        if (translated) item.title = translated;
         applyBlockTranslations(item.children, t);
       }
       break;

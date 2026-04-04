@@ -520,7 +520,7 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
         </div>
       )}
       <div
-        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${isPrint ? "" : s.blockShadow} ${s.styledBorder} ${
+        className={`border border-dashed rounded-sm py-3 pr-3 pl-6 ${s.blockShadow} ${s.styledBorder} ${
           hasPill ? "rounded-tl-none" : ""
         }`}
         style={{ "--block-color": borderTextColor } as React.CSSProperties}
