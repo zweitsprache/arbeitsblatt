@@ -543,8 +543,13 @@
   }
 
   .print-header-content img {
+    display: block;
     height: 8mm;
+    max-height: 8mm;
     width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .print-footer-spacer {

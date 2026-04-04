@@ -2941,6 +2941,7 @@ function UnscrambleWordsView({
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
   const hintColor = accentColor || "#3b82f6";  // blue-500 fallback
+  const mutedBorderColor = "rgba(107, 114, 128, 0.4)";
   const handleAnswer = (val: unknown) => {
     if (answer !== undefined) {
       onAnswer(val);
@@ -3002,11 +3003,11 @@ function UnscrambleWordsView({
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
-              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              <ArrowRight className="h-4 w-4 shrink-0" style={{ color: hintColor }} />
               {isPrint && showSolutions ? (
                 <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : isPrint ? (
-                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
+                <span className="flex-1 inline-block" style={{ borderBottom: `1px dashed ${hintColor}`, opacity: 1.0, minWidth: 80 }}>
                   &nbsp;
                 </span>
               ) : (
@@ -3018,8 +3019,18 @@ function UnscrambleWordsView({
                       handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
                     style={{
-                      borderBottom: isCorrect ? `2px solid #22c55e` : isWrong ? `2px solid #ef4444` : `2px solid rgba(107, 114, 128, 0.4)`,
+                      borderBottom: isCorrect ? `2px solid #22c55e` : isWrong ? `2px solid #ef4444` : `2px solid ${mutedBorderColor}`,
                       color: isCorrect ? "#15803d" : isWrong ? "#b91c1c" : "inherit"
+                    }}
+                    onFocus={(e) => {
+                      if (!isCorrect && !isWrong) {
+                        e.currentTarget.style.borderBottom = `2px solid ${hintColor}`;
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!isCorrect && !isWrong) {
+                        e.currentTarget.style.borderBottom = `2px solid ${mutedBorderColor}`;
+                      }
                     }}
                     className="w-full bg-transparent px-1 py-0.5 focus:outline-none transition-colors"
                     placeholder="..."
