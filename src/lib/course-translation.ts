@@ -14,6 +14,21 @@ import {
   AccordionBlock,
 } from "@/types/worksheet";
 
+const TRANSLATABLE_TEXT_STYLES = new Set([
+  "standard",
+  "hinweis",
+  "hinweis-wichtig",
+  "hinweis-alarm",
+  "lernziel",
+  "rows",
+  "kompetenzziele",
+  "handlungsziele",
+]);
+
+function isTranslatableTextStyle(style?: string): boolean {
+  return !style || TRANSLATABLE_TEXT_STYLES.has(style);
+}
+
 // ─── AI instructions for special content ─────────────────────
 
 const HTML_AI_INSTRUCTIONS =
@@ -82,6 +97,440 @@ function addStr(
   }
 }
 
+type TranslationFieldSetter = (value: string) => void;
+type TranslationFieldVisitor = (
+  key: string,
+  getValue: () => string | undefined | null,
+  setValue?: TranslationFieldSetter
+) => void;
+
+function forEachBlockTranslationField(
+  block: WorksheetBlock,
+  visit: TranslationFieldVisitor
+) {
+  const p = `block.${block.id}`;
+  const add = (
+    suffix: string,
+    getValue: () => string | undefined | null,
+    setValue?: TranslationFieldSetter
+  ) => {
+    visit(`${p}.${suffix}`, getValue, setValue);
+  };
+
+  switch (block.type) {
+    case "text": {
+      const tb = block as TextBlock;
+      if (isTranslatableTextStyle(tb.textStyle)) {
+        add("content", () => tb.content, (v) => {
+          tb.content = v;
+        });
+      }
+      add("comment", () => tb.comment, (v) => {
+        tb.comment = v;
+      });
+      break;
+    }
+
+    case "heading": {
+      if (!(block as HeadingBlock).skipTranslation) {
+        add("content", () => block.content, (v) => {
+          block.content = v;
+        });
+      }
+      break;
+    }
+
+    case "image": {
+      add("alt", () => block.alt, (v) => {
+        block.alt = v;
+      });
+      add("caption", () => block.caption, (v) => {
+        block.caption = v;
+      });
+      break;
+    }
+
+    case "image-cards": {
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "text-cards": {
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+        add(`items.${item.id}.caption`, () => item.caption, (v) => {
+          item.caption = v;
+        });
+      }
+      break;
+    }
+
+    case "multiple-choice": {
+      add("question", () => block.question, (v) => {
+        block.question = v;
+      });
+      for (const opt of block.options) {
+        add(`options.${opt.id}.text`, () => opt.text, (v) => {
+          opt.text = v;
+        });
+      }
+      break;
+    }
+
+    case "fill-in-blank": {
+      add("content", () => block.content, (v) => {
+        block.content = v;
+      });
+      break;
+    }
+
+    case "fill-in-blank-items": {
+      for (const item of block.items) {
+        add(`items.${item.id}.content`, () => item.content, (v) => {
+          item.content = v;
+        });
+      }
+      break;
+    }
+
+    case "matching": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const pair of block.pairs) {
+        add(`pairs.${pair.id}.left`, () => pair.left, (v) => {
+          pair.left = v;
+        });
+        add(`pairs.${pair.id}.right`, () => pair.right, (v) => {
+          pair.right = v;
+        });
+      }
+      break;
+    }
+
+    case "two-column-fill": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.left`, () => item.left, (v) => {
+          item.left = v;
+        });
+        add(`items.${item.id}.right`, () => item.right, (v) => {
+          item.right = v;
+        });
+      }
+      break;
+    }
+
+    case "glossary": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const pair of block.pairs) {
+        add(`pairs.${pair.id}.definition`, () => pair.definition, (v) => {
+          pair.definition = v;
+        });
+      }
+      break;
+    }
+
+    case "open-response": {
+      add("question", () => block.question, (v) => {
+        block.question = v;
+      });
+      break;
+    }
+
+    case "word-bank": {
+      for (let i = 0; i < block.words.length; i++) {
+        add(`words.${i}`, () => block.words[i], (v) => {
+          block.words[i] = v;
+        });
+      }
+      break;
+    }
+
+    case "true-false-matrix": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      add("statementColumnHeader", () => block.statementColumnHeader, (v) => {
+        block.statementColumnHeader = v;
+      });
+      add("trueLabel", () => block.trueLabel, (v) => {
+        block.trueLabel = v;
+      });
+      add("falseLabel", () => block.falseLabel, (v) => {
+        block.falseLabel = v;
+      });
+      for (const stmt of block.statements) {
+        add(`statements.${stmt.id}.text`, () => stmt.text, (v) => {
+          stmt.text = v;
+        });
+      }
+      break;
+    }
+
+    case "order-items": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "inline-choices": {
+      for (const item of block.items) {
+        add(`items.${item.id}.content`, () => item.content, (v) => {
+          item.content = v;
+        });
+      }
+      break;
+    }
+
+    case "sorting-categories": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const cat of block.categories) {
+        add(`categories.${cat.id}.label`, () => cat.label, (v) => {
+          cat.label = v;
+        });
+      }
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "unscramble-words": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.words) {
+        add(`words.${item.id}.word`, () => item.word, (v) => {
+          item.word = v;
+        });
+      }
+      break;
+    }
+
+    case "fix-sentences": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.sentences) {
+        add(`sentences.${item.id}.sentence`, () => item.sentence, (v) => {
+          item.sentence = v;
+        });
+      }
+      break;
+    }
+
+    case "complete-sentences": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.sentences) {
+        add(`sentences.${item.id}.beginning`, () => item.beginning, (v) => {
+          item.beginning = v;
+        });
+      }
+      break;
+    }
+
+    case "verb-table": {
+      add("verb", () => block.verb, (v) => {
+        block.verb = v;
+      });
+      for (const row of block.singularRows) {
+        add(`singularRows.${row.id}.person`, () => row.person, (v) => {
+          row.person = v;
+        });
+        add(`singularRows.${row.id}.detail`, () => row.detail, (v) => {
+          if (row.detail !== undefined) row.detail = v;
+        });
+        add(`singularRows.${row.id}.pronoun`, () => row.pronoun, (v) => {
+          row.pronoun = v;
+        });
+        add(`singularRows.${row.id}.conjugation`, () => row.conjugation, (v) => {
+          row.conjugation = v;
+        });
+        add(`singularRows.${row.id}.conjugation2`, () => row.conjugation2, (v) => {
+          if (row.conjugation2 !== undefined) row.conjugation2 = v;
+        });
+      }
+      for (const row of block.pluralRows) {
+        add(`pluralRows.${row.id}.person`, () => row.person, (v) => {
+          row.person = v;
+        });
+        add(`pluralRows.${row.id}.detail`, () => row.detail, (v) => {
+          if (row.detail !== undefined) row.detail = v;
+        });
+        add(`pluralRows.${row.id}.pronoun`, () => row.pronoun, (v) => {
+          row.pronoun = v;
+        });
+        add(`pluralRows.${row.id}.conjugation`, () => row.conjugation, (v) => {
+          row.conjugation = v;
+        });
+        add(`pluralRows.${row.id}.conjugation2`, () => row.conjugation2, (v) => {
+          if (row.conjugation2 !== undefined) row.conjugation2 = v;
+        });
+      }
+      break;
+    }
+
+    case "dialogue": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.speaker`, () => item.speaker, (v) => {
+          item.speaker = v;
+        });
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "article-training": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "chart": {
+      add("title", () => block.title, (v) => {
+        if (block.title !== undefined) block.title = v;
+      });
+      add("xAxisLabel", () => block.xAxisLabel, (v) => {
+        if (block.xAxisLabel !== undefined) block.xAxisLabel = v;
+      });
+      add("yAxisLabel", () => block.yAxisLabel, (v) => {
+        if (block.yAxisLabel !== undefined) block.yAxisLabel = v;
+      });
+      for (const dp of block.data) {
+        add(`data.${dp.id}.label`, () => dp.label, (v) => {
+          dp.label = v;
+        });
+      }
+      break;
+    }
+
+    case "email-skeleton": {
+      add("comment", () => block.comment, (v) => {
+        block.comment = v;
+      });
+      break;
+    }
+
+    case "dos-and-donts": {
+      add("dosTitle", () => block.dosTitle, (v) => {
+        block.dosTitle = v;
+      });
+      add("dontsTitle", () => block.dontsTitle, (v) => {
+        block.dontsTitle = v;
+      });
+      for (const item of block.dos) {
+        add(`dos.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      for (const item of block.donts) {
+        add(`donts.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
+    case "text-comparison": {
+      add("leftContent", () => block.leftContent, (v) => {
+        block.leftContent = v;
+      });
+      add("rightContent", () => block.rightContent, (v) => {
+        block.rightContent = v;
+      });
+      add("comment", () => block.comment, (v) => {
+        block.comment = v;
+      });
+      break;
+    }
+
+    case "numbered-items": {
+      for (const item of block.items) {
+        add(`items.${item.id}.content`, () => item.content, (v) => {
+          item.content = v;
+        });
+      }
+      break;
+    }
+
+    case "table": {
+      add("content", () => block.content, (v) => {
+        block.content = v;
+      });
+      add("caption", () => block.caption, (v) => {
+        if (block.caption !== undefined) block.caption = v;
+      });
+      break;
+    }
+
+    case "checklist": {
+      for (const item of block.items) {
+        add(`items.${item.id}.content`, () => item.content, (v) => {
+          item.content = v;
+        });
+      }
+      break;
+    }
+
+    case "text-snippet": {
+      add("content", () => (block as TextSnippetBlock).content, (v) => {
+        (block as TextSnippetBlock).translatedContent = v;
+      });
+      break;
+    }
+
+    // non-translatable block types
+    case "spacer":
+    case "divider":
+    case "logo-divider":
+    case "page-break":
+    case "writing-lines":
+    case "writing-rows":
+    case "number-line":
+    case "numbered-label":
+    case "linked-blocks":
+    case "word-search":
+    case "job-application":
+    case "columns":
+    case "accordion":
+      break;
+  }
+}
+
 export function extractBlockStrings(
   blocks: WorksheetBlock[],
   strings: Record<string, string>
@@ -95,268 +544,7 @@ function extractSingleBlockStrings(
   block: WorksheetBlock,
   strings: Record<string, string>
 ) {
-  const p = `block.${block.id}`;
-
   switch (block.type) {
-    // ── Skip non-translatable blocks
-    case "spacer":
-    case "divider":
-    case "logo-divider":
-    case "page-break":
-    case "writing-lines":
-    case "writing-rows":
-    case "number-line":
-    case "numbered-label":
-    case "linked-blocks":
-    case "word-search":
-    case "text-snippet":
-      addStr(strings, `${p}.content`, (block as TextSnippetBlock).content);
-      break;
-    case "job-application":  // form blocks not translated
-      break;
-
-    // ── Text block: content only if no set style; comment always
-    case "text": {
-      const tb = block as TextBlock;
-      if (!tb.textStyle || tb.textStyle === "standard" || tb.textStyle === "hinweis" || tb.textStyle === "hinweis-wichtig" || tb.textStyle === "hinweis-alarm" || tb.textStyle === "lernziel" || tb.textStyle === "rows" || tb.textStyle === "kompetenzziele" || tb.textStyle === "handlungsziele") {
-        addStr(strings, `${p}.content`, tb.content);
-      }
-      addStr(strings, `${p}.comment`, tb.comment);
-      break;
-    }
-
-    // ── Heading
-    case "heading":
-      if (!(block as HeadingBlock).skipTranslation) {
-        addStr(strings, `${p}.content`, block.content);
-      }
-      break;
-
-    // ── Image
-    case "image":
-      addStr(strings, `${p}.alt`, block.alt);
-      addStr(strings, `${p}.caption`, block.caption);
-      break;
-
-    // ── Image cards
-    case "image-cards":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Text cards
-    case "text-cards":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-        addStr(strings, `${p}.items.${item.id}.caption`, item.caption);
-      }
-      break;
-
-    // ── Multiple choice
-    case "multiple-choice":
-      addStr(strings, `${p}.question`, block.question);
-      for (const opt of block.options) {
-        addStr(strings, `${p}.options.${opt.id}.text`, opt.text);
-      }
-      break;
-
-    // ── Fill-in-blank
-    case "fill-in-blank":
-      addStr(strings, `${p}.content`, block.content);
-      break;
-
-    // ── Fill-in-blank items
-    case "fill-in-blank-items":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.content`, item.content);
-      }
-      break;
-
-    // ── Matching
-    case "matching":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const pair of block.pairs) {
-        addStr(strings, `${p}.pairs.${pair.id}.left`, pair.left);
-        addStr(strings, `${p}.pairs.${pair.id}.right`, pair.right);
-      }
-      break;
-
-    // ── Two-column fill
-    case "two-column-fill":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.left`, item.left);
-        addStr(strings, `${p}.items.${item.id}.right`, item.right);
-      }
-      break;
-
-    // ── Glossary: only definition, NOT term
-    case "glossary":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const pair of block.pairs) {
-        addStr(strings, `${p}.pairs.${pair.id}.definition`, pair.definition);
-      }
-      break;
-
-    // ── Open response
-    case "open-response":
-      addStr(strings, `${p}.question`, block.question);
-      break;
-
-    // ── Word bank
-    case "word-bank":
-      for (let i = 0; i < block.words.length; i++) {
-        addStr(strings, `${p}.words.${i}`, block.words[i]);
-      }
-      break;
-
-    // ── True/false matrix
-    case "true-false-matrix":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      addStr(strings, `${p}.statementColumnHeader`, block.statementColumnHeader);
-      addStr(strings, `${p}.trueLabel`, block.trueLabel);
-      addStr(strings, `${p}.falseLabel`, block.falseLabel);
-      for (const stmt of block.statements) {
-        addStr(strings, `${p}.statements.${stmt.id}.text`, stmt.text);
-      }
-      break;
-
-    // ── Order items
-    case "order-items":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Inline choices
-    case "inline-choices":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.content`, item.content);
-      }
-      break;
-
-    // ── Sorting categories
-    case "sorting-categories":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const cat of block.categories) {
-        addStr(strings, `${p}.categories.${cat.id}.label`, cat.label);
-      }
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Unscramble words
-    case "unscramble-words":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.words) {
-        addStr(strings, `${p}.words.${item.id}.word`, item.word);
-      }
-      break;
-
-    // ── Fix sentences
-    case "fix-sentences":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.sentences) {
-        addStr(strings, `${p}.sentences.${item.id}.sentence`, item.sentence);
-      }
-      break;
-
-    // ── Complete sentences
-    case "complete-sentences":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.sentences) {
-        addStr(strings, `${p}.sentences.${item.id}.beginning`, item.beginning);
-      }
-      break;
-
-    // ── Verb table
-    case "verb-table":
-      addStr(strings, `${p}.verb`, block.verb);
-      for (const row of block.singularRows) {
-        addStr(strings, `${p}.singularRows.${row.id}.person`, row.person);
-        addStr(strings, `${p}.singularRows.${row.id}.detail`, row.detail);
-        addStr(strings, `${p}.singularRows.${row.id}.pronoun`, row.pronoun);
-        addStr(strings, `${p}.singularRows.${row.id}.conjugation`, row.conjugation);
-        if (row.conjugation2)
-          addStr(strings, `${p}.singularRows.${row.id}.conjugation2`, row.conjugation2);
-      }
-      for (const row of block.pluralRows) {
-        addStr(strings, `${p}.pluralRows.${row.id}.person`, row.person);
-        addStr(strings, `${p}.pluralRows.${row.id}.detail`, row.detail);
-        addStr(strings, `${p}.pluralRows.${row.id}.pronoun`, row.pronoun);
-        addStr(strings, `${p}.pluralRows.${row.id}.conjugation`, row.conjugation);
-        if (row.conjugation2)
-          addStr(strings, `${p}.pluralRows.${row.id}.conjugation2`, row.conjugation2);
-      }
-      break;
-
-    // ── Dialogue
-    case "dialogue":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.speaker`, item.speaker);
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Article training
-    case "article-training":
-      addStr(strings, `${p}.instruction`, block.instruction);
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Chart
-    case "chart":
-      addStr(strings, `${p}.title`, block.title);
-      addStr(strings, `${p}.xAxisLabel`, block.xAxisLabel);
-      addStr(strings, `${p}.yAxisLabel`, block.yAxisLabel);
-      for (const dp of block.data) {
-        addStr(strings, `${p}.data.${dp.id}.label`, dp.label);
-      }
-      break;
-
-    // ── Email skeleton: only comment is translated
-    case "email-skeleton":
-      addStr(strings, `${p}.comment`, block.comment);
-      break;
-
-    // ── Dos and Don'ts
-    case "dos-and-donts":
-      addStr(strings, `${p}.dosTitle`, block.dosTitle);
-      addStr(strings, `${p}.dontsTitle`, block.dontsTitle);
-      for (const item of block.dos) {
-        addStr(strings, `${p}.dos.${item.id}.text`, item.text);
-      }
-      for (const item of block.donts) {
-        addStr(strings, `${p}.donts.${item.id}.text`, item.text);
-      }
-      break;
-
-    // ── Text Comparison
-    case "text-comparison":
-      addStr(strings, `${p}.leftContent`, block.leftContent);
-      addStr(strings, `${p}.rightContent`, block.rightContent);
-      addStr(strings, `${p}.comment`, block.comment);
-      break;
-
-    // ── Numbered Items
-    case "numbered-items":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.content`, item.content);
-      }
-      break;
-
-    // ── Table
-    case "table":
-      addStr(strings, `${p}.content`, block.content);
-      addStr(strings, `${p}.caption`, block.caption);
-      break;
-
     // ── Columns: recurse into children
     case "columns": {
       const cb = block as ColumnsBlock;
@@ -378,9 +566,15 @@ function extractSingleBlockStrings(
 
     // ── Checklist
     case "checklist":
-      for (const item of block.items) {
-        addStr(strings, `${p}.items.${item.id}.content`, item.content);
-      }
+      forEachBlockTranslationField(block, (key, getValue) => {
+        addStr(strings, key, getValue());
+      });
+      break;
+
+    default:
+      forEachBlockTranslationField(block, (key, getValue) => {
+        addStr(strings, key, getValue());
+      });
       break;
   }
 }
@@ -553,181 +747,7 @@ function applySingleBlockTranslations(
   block: WorksheetBlock,
   t: Record<string, string>
 ) {
-  const p = `block.${block.id}`;
-
-  function apply(key: string, setter: (val: string) => void) {
-    if (t[key]) setter(t[key]);
-  }
-
   switch (block.type) {
-    case "text": {
-      if (!block.textStyle || block.textStyle === "standard" || block.textStyle === "hinweis" || block.textStyle === "hinweis-wichtig" || block.textStyle === "hinweis-alarm" || block.textStyle === "lernziel" || block.textStyle === "rows" || block.textStyle === "kompetenzziele" || block.textStyle === "handlungsziele") {
-        apply(`${p}.content`, (v) => (block.content = v));
-      }
-      apply(`${p}.comment`, (v) => (block.comment = v));
-      break;
-    }
-    case "heading":
-      if (!(block as HeadingBlock).skipTranslation) {
-        apply(`${p}.content`, (v) => (block.content = v));
-      }
-      break;
-    case "image":
-      apply(`${p}.alt`, (v) => (block.alt = v));
-      apply(`${p}.caption`, (v) => (block.caption = v));
-      break;
-    case "image-cards":
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-      break;
-    case "text-cards":
-      for (const item of block.items) {
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-        apply(`${p}.items.${item.id}.caption`, (v) => (item.caption = v));
-      }
-      break;
-    case "multiple-choice":
-      apply(`${p}.question`, (v) => (block.question = v));
-      for (const opt of block.options)
-        apply(`${p}.options.${opt.id}.text`, (v) => (opt.text = v));
-      break;
-    case "fill-in-blank":
-      apply(`${p}.content`, (v) => (block.content = v));
-      break;
-    case "fill-in-blank-items":
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
-      break;
-    case "matching":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const pair of block.pairs) {
-        apply(`${p}.pairs.${pair.id}.left`, (v) => (pair.left = v));
-        apply(`${p}.pairs.${pair.id}.right`, (v) => (pair.right = v));
-      }
-      break;
-    case "two-column-fill":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.items) {
-        apply(`${p}.items.${item.id}.left`, (v) => (item.left = v));
-        apply(`${p}.items.${item.id}.right`, (v) => (item.right = v));
-      }
-      break;
-    case "glossary":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const pair of block.pairs)
-        apply(`${p}.pairs.${pair.id}.definition`, (v) => (pair.definition = v));
-      break;
-    case "open-response":
-      apply(`${p}.question`, (v) => (block.question = v));
-      break;
-    case "word-bank":
-      for (let i = 0; i < block.words.length; i++)
-        apply(`${p}.words.${i}`, (v) => (block.words[i] = v));
-      break;
-    case "true-false-matrix":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      apply(`${p}.statementColumnHeader`, (v) => (block.statementColumnHeader = v));
-      apply(`${p}.trueLabel`, (v) => (block.trueLabel = v));
-      apply(`${p}.falseLabel`, (v) => (block.falseLabel = v));
-      for (const stmt of block.statements)
-        apply(`${p}.statements.${stmt.id}.text`, (v) => (stmt.text = v));
-      break;
-    case "order-items":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-      break;
-    case "inline-choices":
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
-      break;
-    case "sorting-categories":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const cat of block.categories)
-        apply(`${p}.categories.${cat.id}.label`, (v) => (cat.label = v));
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-      break;
-    case "unscramble-words":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.words)
-        apply(`${p}.words.${item.id}.word`, (v) => (item.word = v));
-      break;
-    case "fix-sentences":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.sentences)
-        apply(`${p}.sentences.${item.id}.sentence`, (v) => (item.sentence = v));
-      break;
-    case "complete-sentences":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.sentences)
-        apply(`${p}.sentences.${item.id}.beginning`, (v) => (item.beginning = v));
-      break;
-    case "verb-table":
-      apply(`${p}.verb`, (v) => (block.verb = v));
-      for (const row of block.singularRows) {
-        apply(`${p}.singularRows.${row.id}.person`, (v) => (row.person = v));
-        apply(`${p}.singularRows.${row.id}.detail`, (v) => { if (row.detail !== undefined) row.detail = v; });
-        apply(`${p}.singularRows.${row.id}.pronoun`, (v) => (row.pronoun = v));
-        apply(`${p}.singularRows.${row.id}.conjugation`, (v) => (row.conjugation = v));
-        apply(`${p}.singularRows.${row.id}.conjugation2`, (v) => { if (row.conjugation2 !== undefined) row.conjugation2 = v; });
-      }
-      for (const row of block.pluralRows) {
-        apply(`${p}.pluralRows.${row.id}.person`, (v) => (row.person = v));
-        apply(`${p}.pluralRows.${row.id}.detail`, (v) => { if (row.detail !== undefined) row.detail = v; });
-        apply(`${p}.pluralRows.${row.id}.pronoun`, (v) => (row.pronoun = v));
-        apply(`${p}.pluralRows.${row.id}.conjugation`, (v) => (row.conjugation = v));
-        apply(`${p}.pluralRows.${row.id}.conjugation2`, (v) => { if (row.conjugation2 !== undefined) row.conjugation2 = v; });
-      }
-      break;
-    case "dialogue":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.items) {
-        apply(`${p}.items.${item.id}.speaker`, (v) => (item.speaker = v));
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-      }
-      break;
-    case "article-training":
-      apply(`${p}.instruction`, (v) => (block.instruction = v));
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.text`, (v) => (item.text = v));
-      break;
-    case "chart":
-      apply(`${p}.title`, (v) => { if (block.title !== undefined) block.title = v; });
-      apply(`${p}.xAxisLabel`, (v) => { if (block.xAxisLabel !== undefined) block.xAxisLabel = v; });
-      apply(`${p}.yAxisLabel`, (v) => { if (block.yAxisLabel !== undefined) block.yAxisLabel = v; });
-      for (const dp of block.data)
-        apply(`${p}.data.${dp.id}.label`, (v) => (dp.label = v));
-      break;
-    case "email-skeleton":
-      apply(`${p}.comment`, (v) => (block.comment = v));
-      break;
-    case "dos-and-donts":
-      apply(`${p}.dosTitle`, (v) => (block.dosTitle = v));
-      apply(`${p}.dontsTitle`, (v) => (block.dontsTitle = v));
-      for (const item of block.dos)
-        apply(`${p}.dos.${item.id}.text`, (v) => (item.text = v));
-      for (const item of block.donts)
-        apply(`${p}.donts.${item.id}.text`, (v) => (item.text = v));
-      break;
-    case "text-snippet":
-      apply(`${p}.content`, (v) => {
-        (block as TextSnippetBlock).translatedContent = v;
-      });
-      break;
-    case "text-comparison":
-      apply(`${p}.leftContent`, (v) => (block.leftContent = v));
-      apply(`${p}.rightContent`, (v) => (block.rightContent = v));
-      apply(`${p}.comment`, (v) => (block.comment = v));
-      break;
-    case "numbered-items":
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
-      break;
-    case "table":
-      apply(`${p}.content`, (v) => (block.content = v));
-      apply(`${p}.caption`, (v) => { if (block.caption !== undefined) block.caption = v; });
-      break;
     case "columns": {
       for (const col of (block as ColumnsBlock).children)
         applyBlockTranslations(col, t);
@@ -741,9 +761,13 @@ function applySingleBlockTranslations(
       }
       break;
     }
-    case "checklist":
-      for (const item of block.items)
-        apply(`${p}.items.${item.id}.content`, (v) => (item.content = v));
+    default:
+      forEachBlockTranslationField(block, (key, _getValue, setValue) => {
+        const translated = t[key];
+        if (translated && setValue) {
+          setValue(translated);
+        }
+      });
       break;
   }
 }

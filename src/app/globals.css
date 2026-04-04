@@ -363,6 +363,11 @@
 
 /* ─── Print / PDF styles (Prince XML compliant) ──────────── */
 
+@page {
+  margin: 0;
+  size: A4;
+}
+
 /* Block-level page break control */
 .worksheet-block {
   break-inside: avoid;
@@ -408,9 +413,163 @@
 }
 
 @media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  p {
+    widows: 2;
+    orphans: 2;
+  }
+
+  .print-worksheet-root {
+    font-family: var(--print-body-font);
+  }
+
+  .print-worksheet-root h1,
+  .print-worksheet-root h2,
+  .print-worksheet-root h3,
+  .print-worksheet-root h4,
+  .print-worksheet-root h5,
+  .print-worksheet-root h6 {
+    font-family: var(--print-headline-font);
+    font-weight: var(--print-headline-weight);
+  }
+
+  .print-worksheet-root h1 {
+    font-weight: var(--print-h1-weight, var(--print-headline-weight));
+  }
+
+  .print-worksheet-root h2 {
+    font-weight: var(--print-h2-weight, var(--print-headline-weight));
+  }
+
+  .print-worksheet-root h3 {
+    font-weight: var(--print-h3-weight, 800);
+  }
+
+  .print-worksheet-root .text-cv-base {
+    font-size: var(--print-body-size, var(--text-cv-base));
+  }
+
+  .print-worksheet-root .text-cv-3xl {
+    font-size: var(--print-h1-size, var(--text-cv-3xl));
+  }
+
+  .print-worksheet-root .text-cv-2xl {
+    font-size: var(--print-h2-size, var(--text-cv-2xl));
+  }
+
+  .print-worksheet-root .text-cv-xl {
+    font-size: var(--print-h3-size, var(--text-cv-xl));
+  }
+
+  .worksheet-block-page-break {
+    break-after: page;
+    page-break-after: always;
+    height: 0;
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .worksheet-block-image,
+  .worksheet-block-columns,
+  .worksheet-block-word-search,
+  .worksheet-block-image-cards .image-card-row,
+  .worksheet-block-text-cards .text-card-row,
+  .glossary-row,
+  .tiptap-rows p,
+  [data-text-style="lernziel"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .worksheet-block-true-false-matrix,
+  .worksheet-block-article-training,
+  .worksheet-block-fix-sentences,
+  .worksheet-block-complete-sentences,
+  .worksheet-block-verb-table,
+  .worksheet-block-order-items,
+  .worksheet-block-matching,
+  .worksheet-block-fill-in-blank,
+  .worksheet-block-fill-in-blank-items,
+  .worksheet-block-inline-choices,
+  .worksheet-block-image-cards,
+  .worksheet-block-text-cards,
+  .worksheet-block-glossary {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-table thead {
+    display: table-header-group;
+  }
+
+  .print-table thead td,
+  .print-table tfoot td {
+    padding: 0;
+  }
+
+  .print-table tfoot {
+    display: table-footer-group;
+  }
+
+  .print-header-content {
+    height: 30mm;
+    padding: 15mm 15mm 0 20mm;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-family: var(--print-header-footer-font);
+    font-size: 7pt;
+    line-height: 1.5;
+    color: #666;
+  }
+
+  .print-header-content img {
+    height: 8mm;
+    width: auto;
+  }
+
+  .print-footer-spacer {
+    height: 25mm;
+  }
+
+  .print-footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 25mm;
+    padding: 0 15mm 8mm 20mm;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-family: var(--print-header-footer-font);
+    font-size: 7pt;
+    line-height: 1.5;
+    color: #666;
+  }
+
+  .print-body-content {
+    padding: 0 20mm 0 25mm;
+    font-size: var(--print-body-size);
+    font-family: var(--print-body-font);
   }
 
   /* Print-only: keep list spacing compact.
@@ -421,10 +580,22 @@
   }
 
   .print-body-content .tiptap li,
-  .print-body-content .tiptap li p {
+  .print-body-content .tiptap li p,
+  .print-body-content .course-content li,
+  .print-body-content .course-content li p,
+  .print-body-content li,
+  .print-body-content li p {
     line-height: 1.15em !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .print-body-content .tiptap ul > li,
+  .print-body-content .tiptap ol > li,
+  .print-body-content ul > li,
+  .print-body-content ol > li {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
   }

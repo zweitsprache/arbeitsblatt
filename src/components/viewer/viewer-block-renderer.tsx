@@ -57,9 +57,10 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer, Square } from "lucide-react";
+import { Check, X, ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, SquareMousePointer, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
 import s from "./viewer-blocks.module.css";
 
 /** Safe lookup for BRAND_FONTS — falls back to edoomio if brand slug not in static map */
@@ -67,96 +68,36 @@ function getBrandFonts(brand: string) {
   return BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
 }
 
-// ─── Tiptap HTML sanitiser ───────────────────────────────────
-/** Replace non-breaking spaces with regular spaces so the browser
- *  can line-wrap normally, but preserve &nbsp; inside .nobreak spans. */
-function nbspToSpace(html: string): string {
-  // Temporarily protect content inside <span ... data-nobreak ...>…</span>
-  const placeholder = "\x00NB\x00";
-  const protected_: string[] = [];
-  const safe = html.replace(
-    /<span[^>]*data-nobreak[^>]*>.*?<\/span>/gi,
-    (match) => { protected_.push(match); return placeholder; }
-  );
-  // Replace nbsp in the rest
-  const cleaned = safe.replace(/&nbsp;/g, " ").replace(/\u00A0/g, " ");
-  // Restore protected spans
-  let idx = 0;
-  return cleaned.replace(new RegExp(placeholder.replace(/\x00/g, "\\x00"), "g"), () => protected_[idx++]);
-}
+const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
 
-// ─── Date shortcode helper ───────────────────────────────────
-const GERMAN_MONTHS = [
-  "Januar", "Februar", "März", "April", "Mai", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "Dezember",
-];
-
-/** Add or subtract weekdays (Mon–Fri) from a date. */
-function addWeekdays(start: Date, days: number): Date {
-  const d = new Date(start);
-  const step = days >= 0 ? 1 : -1;
-  let remaining = Math.abs(days);
-  while (remaining > 0) {
-    d.setDate(d.getDate() + step);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) remaining--;
+/** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
+function hashString(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  return d;
+  return h >>> 0;
 }
 
-/** Replace {{df+N}}, {{df-N}}, {{ds+N}}, {{ds-N}} with formatted dates.
- *  df = date full (28. Februar 2026), ds = date short (28.02.2026).
- *  Also strips any TipTap color-span wrapping around the shortcode. */
-function resolveDateShortcodes(html: string): string {
-  // First strip color spans wrapping a shortcode so the date inherits the block color
-  html = html.replace(
-    /<span[^>]*style="[^"]*color:[^"]*"[^>]*>(\{\{d[fs][+-]\d+\}\})<\/span>/gi,
-    "$1",
-  );
-  return html.replace(/\{\{d([fs])([+-]\d+)\}\}/g, (_match, fmt: string, offset: string) => {
-    const target = addWeekdays(new Date(), parseInt(offset, 10));
-    if (fmt === "f") {
-      return `${target.getDate()}. ${GERMAN_MONTHS[target.getMonth()]} ${target.getFullYear()}`;
-    }
-    const dd = String(target.getDate()).padStart(2, "0");
-    const mm = String(target.getMonth() + 1).padStart(2, "0");
-    return `${dd}.${mm}.${target.getFullYear()}`;
-  });
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/** Replace {{de:…}} markers in HTML with styled <span> elements */
-function resolveDeMarkers(html: string): string {
-  return html.replace(
-    /\{\{de:(.*?)\}\}/g,
-    '«<span style="font-weight:600">$1</span>»',
-  );
-}
-
-/** Remove inline typography overrides so brand profile font settings can apply uniformly.
- *  Keeps other inline styles (e.g. color, weight) intact. */
-function stripInlineTypographyStyles(html: string): string {
-  return html
-    .replace(/style="([^"]*)"/gi, (_m, styleContent: string) => {
-      const kept = styleContent
-        .split(";")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .filter((decl) => !/^font-family\s*:/i.test(decl) && !/^font-size\s*:/i.test(decl) && !/^line-height\s*:/i.test(decl));
-      return kept.length ? `style="${kept.join("; ")}"` : "";
-    })
-    .replace(/\s{2,}/g, " ");
-}
-
-/** Pipeline: sanitise nbsp + resolve date shortcodes + resolve {{de:…}} markers. */
-function prepareTiptapHtml(html: string): string {
-  return stripInlineTypographyStyles(
-    resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)))
-  );
-}
-
-/** Strip outer <p>…</p> wrapper so content can render inline */
-function stripOuterP(html: string): string {
-  return html.replace(/^<p[^>]*>([\s\S]*)<\/p>$/i, "$1");
+function deterministicShuffle<T>(items: T[], seedKey: string): T[] {
+  const out = [...items];
+  const rand = mulberry32(hashString(seedKey));
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 // ─── German marker helper ────────────────────────────────────
@@ -292,7 +233,7 @@ function HeadingView({ block, originalBlock, brand, isNonLatin, translationScale
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", mode }: { block: TextBlock; originalBlock?: TextBlock; brand?: Brand; bodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; mode?: ViewMode }) {
+function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; bodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -309,7 +250,6 @@ function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLa
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
-  const isPrint = mode === "print";
 
   // Inline SVG icon for the "rows" style — replaces CSS background-image/::before entirely.
   // background-image (even on real elements, not just ::before) is NOT rendered by Chromium's PDF engine.
@@ -324,7 +264,6 @@ function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLa
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
-  const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || "inherit";
   const baseTextStyle: React.CSSProperties = {
     ...(resolvedBodyFont !== "inherit" ? { fontFamily: resolvedBodyFont } : {}),
@@ -409,11 +348,11 @@ function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLa
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
-                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
-                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
           ))}
@@ -449,10 +388,10 @@ function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLa
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
-                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
-                <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
           ))}
@@ -525,7 +464,7 @@ function TextView({ block, originalBlock, brand, bodyFont, bodyFontSize, isNonLa
               <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 14, height: 14 }}>
                 <RowsIconSvg />
               </div>
-              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: para }} />
+              <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
             </div>
           ))}
         </div>
@@ -849,10 +788,11 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
   // Shuffle word bank items for display (memoized to maintain consistency)
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
-    return [...block.items]
-      .filter(item => item.text)
-      .sort(() => Math.random() - 0.5);
-  }, [block.items, block.showWordBank]);
+    return deterministicShuffle(
+      block.items.filter((item) => item.text),
+      `image-cards:${block.id}`
+    );
+  }, [block.id, block.items, block.showWordBank]);
 
   return (
     <div className="space-y-3">
@@ -913,10 +853,11 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
 function TextCardsView({ block }: { block: TextCardsBlock }) {
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
-    return [...block.items]
-      .filter(item => item.text)
-      .sort(() => Math.random() - 0.5);
-  }, [block.items, block.showWordBank]);
+    return deterministicShuffle(
+      block.items.filter((item) => item.text),
+      `text-cards:${block.id}`
+    );
+  }, [block.id, block.items, block.showWordBank]);
 
   const sizeClasses: Record<string, string> = {
     xs: "text-cv-xs",
@@ -1437,7 +1378,10 @@ function MatchingView({
     return arr;
   }, [block.pairs, block.id]);
 
-  const selections = (answer as Record<string, string> | undefined) || {};
+  const selections = useMemo<Record<string, string>>(
+    () => (answer as Record<string, string> | undefined) || {},
+    [answer]
+  );
 
   // Reverse map: rightId → leftId
   const rightToLeft = useMemo(() => {
@@ -1685,11 +1629,13 @@ function TwoColumnFillView({
   // Collect fill-side values for word bank (shuffled)
   const shuffledWordBank = useMemo(() => {
     if (!block.showWordBank) return [];
-    return block.items
+    return deterministicShuffle(
+      block.items
       .map((item) => (block.fillSide === "left" ? item.left : item.right))
-      .filter(Boolean)
-      .sort(() => Math.random() - 0.5);
-  }, [block.items, block.showWordBank, block.fillSide]);
+      .filter(Boolean),
+      `two-column-fill:${block.id}:${block.fillSide}`
+    );
+  }, [block.id, block.items, block.showWordBank, block.fillSide]);
 
   // Column ratio → grid-template-columns
   const gridCols = block.colRatio === "1-2" ? "1fr 2fr"
@@ -3788,11 +3734,10 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale, brand }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number; brand?: Brand }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
-  const brandFonts = getBrandFonts(brand || "edoomio");
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
 
@@ -3822,8 +3767,8 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
               {String(block.startNumber + i).padStart(2, '0')}
             </div>
             {showBilingual ? (
-              <div className="flex-1 min-w-0 px-3 py-1.5">
-                <span style={{ fontFamily: brandFonts.bodyFont }} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
+              <div className="flex-1 min-w-0 px-3 py-1.5 tiptap-compact">
+                <span dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
                 <span style={{ fontWeight: 400 }}> | </span>
                 <span style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(item.content)) }} />
               </div>
@@ -4521,7 +4466,6 @@ export function ViewerBlockRenderer({
   const noop = () => {};
 
   // Compute sequential task number for blocks with the AUFGABE pill
-  const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
   const taskNumber = useMemo(() => {
     if (!allBlocks || !TASK_BLOCK_TYPES.has(block.type)) return undefined;
     const showsPill = "showPill" in block ? (block as { showPill?: boolean }).showPill !== false : true;
@@ -4541,7 +4485,7 @@ export function ViewerBlockRenderer({
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} brand={brand} bodyFont={bodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} mode={mode} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} bodyFont={bodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -4808,7 +4752,7 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} brand={brand} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "checklist":
       return <ChecklistView block={block as ChecklistBlock} />;
     case "accordion":

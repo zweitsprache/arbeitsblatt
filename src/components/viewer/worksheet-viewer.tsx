@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, DEFAULT_BRAND_SETTINGS, BRAND_FONTS, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -13,7 +13,6 @@ import { useTranslations } from "next-intl";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
-const NOTO_SANS_BODY = "'Noto Sans', sans-serif";
 
 export function WorksheetViewer({
   title,
@@ -208,111 +207,33 @@ export function WorksheetViewer({
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
 
+  const printCssVars = mode === "print" ? ({
+    ["--print-body-font" as string]: fontFamily,
+    ["--print-body-size" as string]: resolvedBodyFontSize,
+    ["--print-headline-font" as string]: headlineFont,
+    ["--print-headline-weight" as string]: String(brandFonts.headlineWeight),
+    ["--print-h1-size" as string]: resolvedProfile.h1Size,
+    ["--print-h2-size" as string]: resolvedProfile.h2Size,
+    ["--print-h3-size" as string]: resolvedProfile.h3Size,
+    ["--print-h1-weight" as string]: resolvedProfile.h1Weight ? String(resolvedProfile.h1Weight) : undefined,
+    ["--print-h2-weight" as string]: resolvedProfile.h2Weight ? String(resolvedProfile.h2Weight) : undefined,
+    ["--print-h3-weight" as string]: String(resolvedProfile.h3Weight ?? 800),
+    ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
+  } as React.CSSProperties) : undefined;
+
   return (
-    <div className={`min-h-screen ${mode === "print" ? "bg-white" : "bg-muted/30"}`}>
+    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root" : "bg-muted/30"}`} style={printCssVars}>
       {/* Print/PDF styles + Google Fonts link for reliable font loading */}
       {mode === "print" && (
         <>
-          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
           <link
             rel="stylesheet"
             href={fontUrl}
           />
           {/* Noto Sans as universal fallback for non-Latin scripts (Cyrillic, Arabic, etc.) */}
-          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap"
-          />
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-                @page { margin: 0; size: A4; }
-                html, body { margin: 0; padding: 0; }
-                .worksheet-block { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-text { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-heading { break-after: avoid; page-break-after: avoid; }
-                .worksheet-block-page-break { break-after: page; page-break-after: always; height: 0; overflow: hidden; margin: 0 !important; padding: 0 !important; }
-                .worksheet-block-page-break + .worksheet-block { margin-top: 0 !important; }
-                .worksheet-block-image { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-columns { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-true-false-matrix { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-article-training { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-fix-sentences { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-complete-sentences { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-verb-table { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-order-items { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-matching { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-fill-in-blank { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-fill-in-blank-items { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-word-search { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-inline-choices { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-image-cards { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-image-cards .image-card-row { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-text-cards { break-inside: auto; page-break-inside: auto; }
-                .worksheet-block-text-cards .text-card-row { break-inside: avoid; page-break-inside: avoid; }
-                .worksheet-block-glossary { break-inside: auto; page-break-inside: auto; }
-                .glossary-row { break-inside: avoid; page-break-inside: avoid; }
-                .tiptap-rows p { break-inside: avoid; page-break-inside: avoid; }
-                [data-text-style="lernziel"] { break-inside: avoid; page-break-inside: avoid; }
-                p { widows: 2; orphans: 2; }
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: ${fontFamily}; }
-                h1, h2, h3, h4, h5, h6 { font-family: ${headlineFont}; font-weight: ${brandFonts.headlineWeight}; }
-                h3 { font-weight: ${resolvedProfile.h3Weight ?? 800}; }
-                ${resolvedProfile.h1Weight ? `h1 { font-weight: ${resolvedProfile.h1Weight}; }` : ""}
-                ${resolvedProfile.h2Weight ? `h2 { font-weight: ${resolvedProfile.h2Weight}; }` : ""}
-                ${resolvedProfile.textBaseSize ? `.text-cv-base { font-size: ${resolvedProfile.textBaseSize}; }` : ""}
-                ${resolvedProfile.h1Size ? `.text-cv-3xl { font-size: ${resolvedProfile.h1Size}; }` : ""}
-                ${resolvedProfile.h2Size ? `.text-cv-2xl { font-size: ${resolvedProfile.h2Size}; }` : ""}
-                ${resolvedProfile.h3Size ? `.text-cv-xl { font-size: ${resolvedProfile.h3Size}; }` : ""}
-
-                /* Table-based repeating header */
-                .print-table { width: 100%; border-collapse: collapse; }
-                .print-table thead { display: table-header-group; }
-                .print-table thead td { padding: 0; }
-
-                .print-header-content {
-                  height: 30mm;
-                  padding: 15mm 15mm 0 20mm;
-                  box-sizing: border-box;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: flex-start;
-                  font-family: ${brandFonts.headerFooterFont};
-                  font-size: 7pt;
-                  line-height: 1.5;
-                  color: #666;
-                }
-                .print-header-content img { height: 8mm; width: auto; }
-
-                /* Invisible tfoot spacer — reserves space on every page so content doesn't overlap the fixed footer */
-                .print-table tfoot { display: table-footer-group; }
-                .print-table tfoot td { padding: 0; }
-                .print-footer-spacer { height: 25mm; }
-
-                /* Fixed footer — rendered at the very bottom of every physical page */
-                .print-footer-fixed {
-                  position: fixed;
-                  bottom: 0;
-                  left: 0;
-                  right: 0;
-                  height: 25mm;
-                  padding: 0 15mm 8mm 20mm;
-                  box-sizing: border-box;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: flex-end;
-                  font-family: ${brandFonts.headerFooterFont};
-                  font-size: 7pt;
-                  line-height: 1.5;
-                  color: #666;
-                }
-
-                .print-body-content {
-                  padding: 0 20mm 0 25mm;
-                }
-              `,
-            }}
           />
         </>
       )}
@@ -388,9 +309,7 @@ export function WorksheetViewer({
             <tbody>
               <tr>
                 <td>
-                  <div className="print-body-content"
-                    style={{ fontSize: resolvedBodyFontSize, fontFamily: fontFamily }}
-                  >
+                  <div className="print-body-content">
                     <div className="space-y-6">
                       {visibleBlocks.map((block) => (
                         <div
