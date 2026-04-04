@@ -764,7 +764,7 @@
   }
 
   .print-body-content {
-    padding: 0 20mm 25mm 25mm;
+    padding: 0 20mm var(--print-margin-bottom, 30mm) 25mm;
     font-size: var(--print-body-size);
     font-family: var(--print-body-font);
   }
