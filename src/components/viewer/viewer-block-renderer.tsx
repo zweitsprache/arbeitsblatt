@@ -138,7 +138,7 @@ function colorWithAlpha(color: string, alpha: number): string {
 function TaskContainer({ showPill, taskNumber, lessonLabel, children, accentColor }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode; accentColor?: string | null }) {
   const headerBg = accentColor || "#F9F6ED";
   const headerText = accentColor ? "#ffffff" : "inherit";
-  const panelBg = accentColor ? colorWithAlpha(accentColor, 0.08) : "#FCFBF6";
+  const panelBg = "#ffffff";
   const panelBorder = accentColor || "#F9F6ED";
   return (
     <div>
@@ -2041,7 +2041,7 @@ function TrueFalseMatrixView({
                     <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                   </div>
                 </td>
-                <td className="p-2 align-middle">
+                <td className="py-2 px-2 align-middle">
                   <div className="flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
@@ -2059,7 +2059,7 @@ function TrueFalseMatrixView({
                   )}
                   </div>
                 </td>
-                <td className="p-2 align-middle">
+                <td className="py-2 px-2 align-middle">
                   <div className="flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (

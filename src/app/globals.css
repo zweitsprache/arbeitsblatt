@@ -306,7 +306,7 @@
 .tiptap li, .tiptap li p {
   margin-top: 0;
   margin-bottom: 0;
-  line-height: 1.75rem;
+  line-height: 1.25em;
   padding-top: 0.125rem;
   padding-bottom: 0.125rem;
 }
@@ -314,7 +314,7 @@
 .course-content li p {
   margin-top: 0;
   margin-bottom: 0;
-  line-height: 1.75rem;
+  line-height: 1.25em;
 }
 
 /* Prevent images from intercepting scroll events */
