@@ -1926,6 +1926,7 @@ function TrueFalseMatrixView({
   bodyFont,
   bodyFontSize,
   isNonLatin = false,
+  accentColor,
 }: {
   block: TrueFalseMatrixBlock;
   interactive: boolean;
@@ -1940,10 +1941,12 @@ function TrueFalseMatrixView({
   bodyFont?: string;
   bodyFontSize?: string;
   isNonLatin?: boolean;
+  accentColor?: string | null;
 }) {
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
+  const hintColor = accentColor || "#3b82f6";  // blue-500 fallback
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -1975,32 +1978,35 @@ function TrueFalseMatrixView({
             const isCorrect = hasAnswered && selected === stmt.correctAnswer;
 
             // Determine radio style for the "true" column
-            const trueRadioClass = (() => {
-              if (!hasAnswered) return "border-muted-foreground/30 hover:border-primary/50";
+            const getTrueRadioStyle = () => {
+              if (!hasAnswered) return {};
               if (selected === true) {
                 // User picked true
                 return isCorrect
-                  ? "bg-green-500 border-green-500 text-white"   // correct
-                  : "bg-red-500 border-red-500 text-white";      // wrong
+                  ? { backgroundColor: "#22c55e", borderColor: "#22c55e", color: "white" }   // green-500
+                  : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
               }
               // User picked false — highlight correct answer if it's true
-              if (stmt.correctAnswer === true) return "bg-blue-500 border-blue-500 text-white";
-              return "border-muted-foreground/30";
-            })();
+              if (stmt.correctAnswer === true) return { backgroundColor: hintColor, borderColor: hintColor, color: "white" };
+              return {};
+            };
 
             // Determine radio style for the "false" column
-            const falseRadioClass = (() => {
-              if (!hasAnswered) return "border-muted-foreground/30 hover:border-primary/50";
+            const getFalseRadioStyle = () => {
+              if (!hasAnswered) return {};
               if (selected === false) {
                 // User picked false
                 return isCorrect
-                  ? "bg-green-500 border-green-500 text-white"   // correct
-                  : "bg-red-500 border-red-500 text-white";      // wrong
+                  ? { backgroundColor: "#22c55e", borderColor: "#22c55e", color: "white" }   // green-500
+                  : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
               }
               // User picked true — highlight correct answer if it's false
-              if (stmt.correctAnswer === false) return "bg-blue-500 border-blue-500 text-white";
-              return "border-muted-foreground/30";
-            })();
+              if (stmt.correctAnswer === false) return { backgroundColor: hintColor, borderColor: hintColor, color: "white" };
+              return {};
+            };
+
+            const trueRadioClass = !hasAnswered ? "border-muted-foreground/30 hover:border-primary/50" : "";
+            const falseRadioClass = !hasAnswered ? "border-muted-foreground/30 hover:border-primary/50" : "";
 
             return (
               <tr key={stmt.id} className="border-b last:border-b-0">
@@ -2022,7 +2028,8 @@ function TrueFalseMatrixView({
                     )
                   ) : (
                     <button
-                      className={`w-6 h-6 min-w-6 min-h-6 rounded-full border-2 transition-colors ${trueRadioClass}`}
+                      style={{ ...getTrueRadioStyle(), width: 24, height: 24, minWidth: 24, minHeight: 24, borderRadius: '50%', border: '2px solid', transition: 'colors' }}
+                      className={`transition-colors ${trueRadioClass}`}
                       onClick={() => handleSelect(stmt.id, true)}
                       disabled={hasAnswered}
                     />
@@ -2039,7 +2046,8 @@ function TrueFalseMatrixView({
                     )
                   ) : (
                     <button
-                      className={`w-6 h-6 min-w-6 min-h-6 rounded-full border-2 transition-colors ${falseRadioClass}`}
+                      style={{ ...getFalseRadioStyle(), width: 24, height: 24, minWidth: 24, minHeight: 24, borderRadius: '50%', border: '2px solid', transition: 'colors' }}
+                      className={`transition-colors ${falseRadioClass}`}
                       onClick={() => handleSelect(stmt.id, false)}
                       disabled={hasAnswered}
                     />
@@ -2907,6 +2915,7 @@ function UnscrambleWordsView({
   bodyFont,
   bodyFontSize,
   isNonLatin = false,
+  accentColor,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -2922,6 +2931,7 @@ function UnscrambleWordsView({
   bodyFont?: string;
   bodyFontSize?: string;
   isNonLatin?: boolean;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const tb = useTranslations("blockRenderer");
@@ -2930,6 +2940,7 @@ function UnscrambleWordsView({
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
+  const hintColor = accentColor || "#3b82f6";  // blue-500 fallback
   const handleAnswer = (val: unknown) => {
     if (answer !== undefined) {
       onAnswer(val);
@@ -3006,13 +3017,11 @@ function UnscrambleWordsView({
                     onChange={(e) =>
                       handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
-                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
-                      isCorrect
-                        ? "border-green-500 text-green-700"
-                        : isWrong
-                          ? "border-red-500 text-red-700"
-                          : "border-muted-foreground/40 focus:border-primary"
-                    }`}
+                    style={{
+                      borderBottom: isCorrect ? `2px solid #22c55e` : isWrong ? `2px solid #ef4444` : `2px solid rgba(107, 114, 128, 0.4)`,
+                      color: isCorrect ? "#15803d" : isWrong ? "#b91c1c" : "inherit"
+                    }}
+                    className="w-full bg-transparent px-1 py-0.5 focus:outline-none transition-colors"
                     placeholder="..."
                   />
                 </div>
@@ -4437,6 +4446,7 @@ export function ViewerBlockRenderer({
   showResults = false,
   showSolutions = false,
   primaryColor = "#1a1a1a",
+  accentColor,
   allBlocks,
   brand = "edoomio",
   bodyFont,
@@ -4453,6 +4463,7 @@ export function ViewerBlockRenderer({
   showResults?: boolean;
   showSolutions?: boolean;
   primaryColor?: string;
+  accentColor?: string | null;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
   bodyFont?: string;
@@ -4597,6 +4608,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
+          accentColor={accentColor}
         />
       );
     case "article-training":
@@ -4675,6 +4687,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
+          accentColor={accentColor}
         />
       );
     case "fix-sentences":

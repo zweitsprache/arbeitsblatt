@@ -519,8 +519,10 @@
   }
 
   .print-table thead td,
+  .print-table tbody td,
   .print-table tfoot td {
     padding: 0;
+    width: 100%;
   }
 
   .print-table tfoot {

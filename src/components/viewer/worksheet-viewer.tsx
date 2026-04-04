@@ -316,7 +316,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={fontFamily} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={fontFamily} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
