@@ -167,6 +167,17 @@
   margin-bottom: 0 !important;
 }
 
+.tiptap-compact .tiptap li,
+.tiptap-compact .tiptap li p,
+.tiptap-compact.tiptap li,
+.tiptap-compact.tiptap li p {
+  line-height: 1.25em !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Rows text style: each <p> rendered as a table row with dividers */
 .tiptap-rows .tiptap p,
 .tiptap-rows.tiptap p,
@@ -648,6 +659,11 @@
     margin-bottom: 0 !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+  }
+
+  .print-body-content .tiptap li *,
+  .print-body-content li * {
+    line-height: inherit !important;
   }
 
   .print-body-content .tiptap ul > li,

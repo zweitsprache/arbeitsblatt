@@ -136,16 +136,17 @@ function colorWithAlpha(color: string, alpha: number): string {
 }
 
 function TaskContainer({ showPill, taskNumber, lessonLabel, children, accentColor }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode; accentColor?: string | null }) {
-  const headerBg = accentColor ? colorWithAlpha(accentColor, 0.18) : "#F9F6ED";
+  const headerBg = accentColor || "#F9F6ED";
+  const headerText = accentColor ? "#ffffff" : "inherit";
   const panelBg = accentColor ? colorWithAlpha(accentColor, 0.08) : "#FCFBF6";
-  const panelBorder = accentColor ? colorWithAlpha(accentColor, 0.35) : "#F9F6ED";
+  const panelBorder = accentColor || "#F9F6ED";
   return (
     <div>
       {showPill && (
         <div className="flex">
           <div
             className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
-            style={{ backgroundColor: headerBg }}
+            style={{ backgroundColor: headerBg, color: headerText }}
           >
             AUFGABE{taskNumber != null ? ` ${lessonLabel ? `${lessonLabel}.` : ""}${String(taskNumber).padStart(2, "0")}` : ""}
           </div>
@@ -229,13 +230,14 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
   );
 }
 
-function HeadingView({ block, originalBlock, brand, isNonLatin, translationScale, primaryColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
+function HeadingView({ block, originalBlock, brand, headlineFont, isNonLatin, translationScale, primaryColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const style: React.CSSProperties = {
     ...(block.level === 1 ? { marginBottom: -4 } : {}),
-    ...(isNonLatin ? { fontFamily: brandFonts.headlineFont } : {}),
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     color: primaryColor,
   };
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
@@ -243,7 +245,7 @@ function HeadingView({ block, originalBlock, brand, isNonLatin, translationScale
     const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
       <Tag className={sizes[block.level]} style={style}>
-        <span style={{ fontFamily: brandFonts.headlineFont }}>{originalBlock.content}</span>
+        <span style={resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : undefined}>{originalBlock.content}</span>
         <span style={{ fontWeight: 400 }}> | </span>
         <span style={scale ? { fontSize: `${scale}em` } : undefined}>{block.content}</span>
       </Tag>
@@ -437,11 +439,11 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
         <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
           <Flag className="h-5 w-5" style={{ color: "#ffffff" }} />
         </div>
-        <div className="flex-1 min-w-0 px-3 py-2">
+        <div className="flex-1 min-w-0 px-3 py-2" style={baseTextStyle}>
           {imageEl}
           {showStacked ? (
             <div>
-              <div style={originalFontStyle}>{renderContent(originalBlock.content)}</div>
+              <div style={baseTextStyle}>{renderContent(originalBlock.content)}</div>
               <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle }}>{renderContent(block.content)}</div>
             </div>
           ) : (
@@ -1965,8 +1967,8 @@ function TrueFalseMatrixView({
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
-  const itemBg = accentColor ? colorWithAlpha(accentColor, 0.16) : undefined;
-  const itemBorder = accentColor ? colorWithAlpha(accentColor, 0.4) : undefined;
+  const itemBg = undefined;
+  const itemBorder = accentColor || undefined;
   const itemText = accentColor || undefined;
 
   const handleSelect = (stmtId: string, value: boolean) => {
@@ -2033,7 +2035,7 @@ function TrueFalseMatrixView({
               <tr key={stmt.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-2 align-middle">
                   <div className="flex items-center gap-3">
-                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
+                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground text-cv-micro">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
                     <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
@@ -2049,7 +2051,7 @@ function TrueFalseMatrixView({
                     )
                   ) : (
                     <button
-                      style={{ ...getTrueRadioStyle(), width: 24, height: 24, minWidth: 24, minHeight: 24, borderRadius: '50%', border: '2px solid', transition: 'colors' }}
+                      style={{ ...getTrueRadioStyle(), width: 16, height: 14, minWidth: 16, minHeight: 14, borderRadius: 4, border: '2px solid', transition: 'colors' }}
                       className={`transition-colors ${trueRadioClass}`}
                       onClick={() => handleSelect(stmt.id, true)}
                       disabled={hasAnswered}
@@ -2067,7 +2069,7 @@ function TrueFalseMatrixView({
                     )
                   ) : (
                     <button
-                      style={{ ...getFalseRadioStyle(), width: 24, height: 24, minWidth: 24, minHeight: 24, borderRadius: '50%', border: '2px solid', transition: 'colors' }}
+                      style={{ ...getFalseRadioStyle(), width: 16, height: 14, minWidth: 16, minHeight: 14, borderRadius: 4, border: '2px solid', transition: 'colors' }}
                       className={`transition-colors ${falseRadioClass}`}
                       onClick={() => handleSelect(stmt.id, false)}
                       disabled={hasAnswered}
@@ -2961,8 +2963,8 @@ function UnscrambleWordsView({
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
-  const itemBg = accentColor ? colorWithAlpha(accentColor, 0.16) : undefined;
-  const itemBorder = accentColor ? colorWithAlpha(accentColor, 0.4) : undefined;
+  const itemBg = undefined;
+  const itemBorder = accentColor || undefined;
   const itemText = accentColor || undefined;
   const handleAnswer = (val: unknown) => {
     if (answer !== undefined) {
@@ -3019,7 +3021,7 @@ function UnscrambleWordsView({
               key={item.id}
               className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
-              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground shrink-0 text-cv-micro">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
@@ -4472,6 +4474,7 @@ export function ViewerBlockRenderer({
   showSolutions = false,
   primaryColor = "#1a1a1a",
   accentColor,
+  headlineFont,
   allBlocks,
   brand = "edoomio",
   bodyFont,
@@ -4489,6 +4492,7 @@ export function ViewerBlockRenderer({
   showSolutions?: boolean;
   primaryColor?: string;
   accentColor?: string | null;
+  headlineFont?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
   bodyFont?: string;
@@ -4519,7 +4523,7 @@ export function ViewerBlockRenderer({
 
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
       return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} bodyFont={bodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "image":
