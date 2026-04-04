@@ -74,6 +74,10 @@
       --print-body-size: 13px;
       --border: #e5e7eb;
       --row-divider: #e5e7eb;
+      --success-green: #22c55e;
+      --control-box-size: 20px;
+      --control-border-width: 2px;
+      --control-radius: 3px;
       /* heading size vars (mirrors globals.css @theme) */
       --text-cv-3xl: clamp(1.75rem, 1.5893rem + 0.536vw, 2.125rem);
       --text-cv-2xl: clamp(1.5rem, 1.3929rem + 0.357vw, 1.75rem);
@@ -122,7 +126,6 @@
       font-family: monospace;
       color: #94a3b8;
       margin-bottom: 2px;
-      letter-spacing: 0.02em;
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -334,16 +337,16 @@
     /* ── Number badge ────────────────────────────────────────── */
     .number-badge {
       display: inline-flex;
-      height: 1.35rem;
-      width: 1.35rem;
-      min-width: 1.35rem;
+      height: var(--control-box-size);
+      width: var(--control-box-size);
+      min-width: var(--control-box-size);
       align-items: center;
       justify-content: center;
       align-self: center;
-      border-radius: 3px;
+      border-radius: var(--control-radius);
       background-color: transparent;
       color: #334155;
-      border: 1px solid var(--brand-accent);
+      border: var(--control-border-width) solid var(--brand-accent);
       font-weight: 700;
       line-height: 1;
       font-size: 0.65rem;
@@ -378,17 +381,32 @@
     }
     .tf-checkbox {
       box-sizing: border-box;
-      height: 1.25rem;
-      width: 1.25rem;
-      min-height: 1.25rem;
-      min-width: 1.25rem;
-      border-radius: 3px;
-      border: 2px solid #9ca3af;
+      height: var(--control-box-size);
+      width: var(--control-box-size);
+      min-height: var(--control-box-size);
+      min-width: var(--control-box-size);
+      border-radius: var(--control-radius);
+      border: var(--control-border-width) solid #9ca3af;
     }
-    .tf-checkbox-checked-true  { background: #22c55e; border-color: #16a34a; }
+    .tf-checkbox-solution {
+      box-sizing: border-box;
+      height: var(--control-box-size);
+      width: var(--control-box-size);
+      min-height: var(--control-box-size);
+      min-width: var(--control-box-size);
+      border-radius: var(--control-radius);
+      background: var(--success-green);
+      border: var(--control-border-width) solid var(--success-green);
+    }
+    .tf-checkbox-checked-true  { background: var(--success-green); border-color: var(--success-green); }
     .tf-checkbox-checked-false { border-color: #9ca3af; /* empty = false answer */ }
-    .tf-checkbox-solution-true  { background: #22c55e; border-color: #16a34a; }
-    .tf-checkbox-solution-false { border-color: #16a34a; }
+    .tf-checkbox-solution-true,
+    .tf-checkbox-solution-false {
+      background: var(--success-green) !important;
+      border: var(--control-border-width) solid var(--success-green) !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
 
     /* ── Unscramble words rows ──────────────────────────────── */
     .uw-row {
@@ -493,11 +511,20 @@
     }
 
     .debug-mc-dot {
-      width: 1rem;
-      height: 1rem;
-      min-width: 1rem;
-      border: 1.5px solid #94a3b8;
-      border-radius: 999px;
+      box-sizing: border-box;
+      width: var(--control-box-size);
+      height: var(--control-box-size);
+      min-width: var(--control-box-size);
+      min-height: var(--control-box-size);
+      border: var(--control-border-width) solid #9ca3af;
+      border-radius: var(--control-radius);
+    }
+
+    .debug-mc-dot.debug-mc-dot-solution {
+      background: var(--success-green) !important;
+      border: var(--control-border-width) solid var(--success-green) !important;
+      box-shadow: none !important;
+      outline: none !important;
     }
 
     .debug-fill-sentence {
@@ -548,7 +575,6 @@
       font-weight: 600;
       text-transform: uppercase;
       font-size: 0.75rem;
-      letter-spacing: 0.02em;
     }
 
     .debug-word-bank {
@@ -560,7 +586,7 @@
     .debug-word-chip {
       padding: 0.35rem 0.6rem;
       border: 1px solid #cbd5e1;
-      border-radius: 999px;
+      border-radius: 4px;
       background: #f8fafc;
     }
 
@@ -588,9 +614,9 @@
     .debug-numbered-item {
       display: grid;
       grid-template-columns: 2rem 1fr;
-      gap: 0.75rem;
-      align-items: start;
-      padding: 0.6rem 0.75rem;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.6rem 1.5rem;
       border: 1px solid #e5e7eb;
       border-radius: 4px;
     }
@@ -601,10 +627,41 @@
       height: 2rem;
       align-items: center;
       justify-content: center;
-      border-radius: 999px;
+      border-radius: 4px;
       background: var(--brand-primary);
       color: #fff;
       font-weight: 700;
+    }
+
+    .debug-numbered-items-default-badge .number-badge,
+    .debug-checklist .number-badge {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .debug-numbered-items-rows {
+      gap: 0;
+    }
+
+    .debug-numbered-items-rows .debug-numbered-item {
+      border: 0;
+      border-bottom: 1px solid var(--row-divider);
+      border-radius: 0;
+      padding: 0.5rem 0;
+    }
+
+    .debug-numbered-items-rows .debug-numbered-item:first-child {
+      border-top: 1px solid var(--row-divider);
+    }
+
+    .debug-numbered-item > :last-child {
+      display: flex;
+      align-items: center;
+      min-height: 2rem;
+      font-size: inherit;
+      line-height: 1.35;
     }
 
     .debug-checklist {
@@ -613,20 +670,22 @@
     }
 
     .debug-check-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
+      display: grid;
+      grid-template-columns: 2rem var(--control-box-size) 1fr;
+      align-items: center;
+      column-gap: 1rem;
       padding-bottom: 0.55rem;
       border-bottom: 1px solid #e5e7eb;
     }
 
     .debug-check-box {
-      width: 1rem;
-      height: 1rem;
-      min-width: 1rem;
-      border: 1.5px solid #94a3b8;
-      border-radius: 3px;
-      margin-top: 0.15rem;
+      box-sizing: border-box;
+      width: var(--control-box-size);
+      height: var(--control-box-size);
+      min-width: var(--control-box-size);
+      min-height: var(--control-box-size);
+      border: var(--control-border-width) solid #9ca3af;
+      border-radius: var(--control-radius);
     }
 
     .debug-dialogue {
@@ -655,21 +714,38 @@
 
     .debug-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
     }
 
     .debug-table th,
     .debug-table td {
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--row-divider);
+      border-right: 0;
+      border-bottom: 0;
       padding: 0.55rem 0.7rem;
       text-align: left;
       vertical-align: top;
+    }
+
+    .debug-table th:last-child,
+    .debug-table td:last-child {
+      border-right: 1px solid var(--row-divider);
+    }
+
+    .debug-table tbody tr:last-child td {
+      border-bottom: 1px solid var(--row-divider);
     }
 
     .debug-table th {
       background: #f8fafc;
       font-weight: 600;
     }
+
+    .debug-table thead tr:first-child th:first-child { border-top-left-radius: 4px; }
+    .debug-table thead tr:first-child th:last-child { border-top-right-radius: 4px; }
+    .debug-table tbody tr:last-child td:first-child { border-bottom-left-radius: 4px; }
+    .debug-table tbody tr:last-child td:last-child { border-bottom-right-radius: 4px; }
 
     .debug-columns {
       display: grid;
@@ -725,6 +801,7 @@
       flex-direction: column;
       justify-content: space-between;
       gap: 0.75rem;
+      line-height: 1.35em;
     }
 
     .debug-card-lines {
@@ -748,6 +825,7 @@
       border-radius: 4px;
       padding: 0.8rem;
       background: #fff;
+      line-height: 1.35em;
     }
 
     .debug-compare-box h4 {
@@ -783,13 +861,50 @@
 
     .debug-dos-box ul,
     .debug-donts-box ul {
-      padding-left: 1.15rem;
-      margin: 0;
+      list-style-type: none;
+      padding-left: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
     }
 
     .debug-dos-box li,
     .debug-donts-box li {
-      margin-bottom: 0.35rem;
+      position: relative;
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-top: 0.3rem !important;
+      padding-bottom: 0.3rem !important;
+      padding-left: 2rem !important;
+      line-height: 1.35em !important;
+      border-bottom: 1px solid var(--border, #e5e7eb) !important;
+    }
+
+    .debug-dos-box li:first-child,
+    .debug-donts-box li:first-child {
+      border-top: 1px solid var(--border, #e5e7eb) !important;
+    }
+
+    .debug-dos-box li::before,
+    .debug-donts-box li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%) rotate(180deg);
+      width: 16px;
+      height: 10px;
+      border-radius: 0;
+      background-color: transparent;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='%231a1a1a'/%3E%3Crect x='6' y='4' width='10' height='2' fill='%231a1a1a'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    .debug-dos-box li::after,
+    .debug-donts-box li::after {
+      content: none !important;
     }
 
     .debug-snippet {
@@ -797,6 +912,7 @@
       border-radius: 4px;
       background: #fff;
       padding: 0.85rem 1rem;
+      line-height: 1.35em;
       position: relative;
     }
 
@@ -810,7 +926,6 @@
       font-size: 0.72rem;
       color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.02em;
     }
 
     .debug-email {
@@ -821,17 +936,48 @@
     }
 
     .debug-email-header {
-      background: #f8fafc;
+      background: #fcfcfd;
       border-bottom: 1px solid #e5e7eb;
-      padding: 0.65rem 0.8rem;
+      padding: 0.7rem 1rem;
       display: grid;
-      gap: 0.35rem;
+      gap: 0.45rem;
       font-size: 0.92rem;
+    }
+
+    .debug-email-meta-row {
+      display: grid;
+      grid-template-columns: 4.25rem 1fr;
+      gap: 0.5rem;
+      align-items: baseline;
+    }
+
+    .debug-email-meta-label {
+      color: #64748b;
+      font-size: 0.78rem;
+      font-weight: 400;
+      background: #e2e8f0;
+      padding: 0.25rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .debug-email-meta-value {
+      color: #0f172a;
+      background: #fff;
+      padding: 0.25rem 0.45rem;
+      border-radius: 4px;
     }
 
     .debug-email-body {
       padding: 0.9rem 1rem;
       line-height: 1.45;
+    }
+
+    .debug-email-body p {
+      margin-bottom: 0.75rem;
+    }
+
+    .debug-email-body p:last-child {
+      margin-bottom: 0;
     }
 
     .debug-job-app {
@@ -862,22 +1008,39 @@
 
     .debug-schedule {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       background: #fff;
     }
 
     .debug-schedule th,
     .debug-schedule td {
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--row-divider);
+      border-right: 0;
+      border-bottom: 0;
       padding: 0.55rem 0.7rem;
       vertical-align: top;
       text-align: left;
+    }
+
+    .debug-schedule th:last-child,
+    .debug-schedule td:last-child {
+      border-right: 1px solid var(--row-divider);
+    }
+
+    .debug-schedule tbody tr:last-child td {
+      border-bottom: 1px solid var(--row-divider);
     }
 
     .debug-schedule th {
       background: #f8fafc;
       font-weight: 600;
     }
+
+    .debug-schedule thead tr:first-child th:first-child { border-top-left-radius: 4px; }
+    .debug-schedule thead tr:first-child th:last-child { border-top-right-radius: 4px; }
+    .debug-schedule tbody tr:last-child td:first-child { border-bottom-left-radius: 4px; }
+    .debug-schedule tbody tr:last-child td:last-child { border-bottom-right-radius: 4px; }
 
     .debug-accordion {
       display: grid;
@@ -898,6 +1061,10 @@
       justify-content: space-between;
       gap: 0.75rem;
       font-weight: 600;
+    }
+
+    .debug-accordion-head span:last-child {
+      display: none;
     }
 
     .debug-accordion-body {
@@ -1172,13 +1339,31 @@
     }
     /* Hinweis default */
     .box-hinweis-default { border-color: #475569; background-color: #47556908; color: #475569; }
-    .box-hinweis-default .box-icon { color: #475569; }
+    .box-hinweis-default .box-icon {
+      width: 2.75rem;
+      justify-content: flex-start;
+      padding-left: 1.5rem;
+      color: #475569;
+    }
+    .box-hinweis-default .box-body { padding-left: 0.7rem; }
     /* Hinweis wichtig */
     .box-hinweis-wichtig { border-color: #0369a1; background-color: #0369a108; color: #0369a1; }
-    .box-hinweis-wichtig .box-icon { color: #0369a1; }
+    .box-hinweis-wichtig .box-icon {
+      width: 2.75rem;
+      justify-content: flex-start;
+      padding-left: 1.5rem;
+      color: #0369a1;
+    }
+    .box-hinweis-wichtig .box-body { padding-left: 0.7rem; }
     /* Hinweis alarm */
     .box-hinweis-alarm { border-color: #990033; background-color: #99003308; color: #990033; }
-    .box-hinweis-alarm .box-icon { color: #990033; }
+    .box-hinweis-alarm .box-icon {
+      width: 2.75rem;
+      justify-content: flex-start;
+      padding-left: 1.5rem;
+      color: #990033;
+    }
+    .box-hinweis-alarm .box-body { padding-left: 0.7rem; }
 
     /* Example box (dashed) */
     .box-example {
@@ -1186,6 +1371,52 @@
       border-radius: 4px;
       padding: 0.75rem 0.75rem 0.75rem 1.5rem;
       position: relative;
+    }
+
+    .debug-example-split {
+      display: flex;
+      align-items: stretch;
+      color: #475569;
+    }
+
+    .debug-example-split-icon {
+      flex-shrink: 0;
+      width: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .debug-example-split-standard { color: #990033; }
+    .debug-example-split-improved { color: #3a4f40; }
+
+    .debug-example-split-standard .debug-example-split-icon { background: #990033; }
+    .debug-example-split-improved .debug-example-split-icon { background: #3a4f40; }
+
+    .debug-example-split-body {
+      flex: 1;
+      min-width: 0;
+      border: 1px dashed currentColor;
+      border-radius: 0 4px 4px 0;
+      padding: 0.75rem 0.75rem 0.75rem 1.5rem;
+      background: #fff;
+    }
+
+    .debug-example-comment-box {
+      margin-top: 1.25rem;
+      background: #f8f8f8;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+    }
+
+    .debug-example-comment-standard { color: #990033; }
+    .debug-example-comment-improved { color: #3a4f40; }
+
+    .debug-text-metadaten {
+      margin-bottom: -1.5rem;
+      color: var(--brand-primary);
     }
 
     /* Keep box content vertically balanced and line-height-consistent (styles 5-9) */
@@ -1324,6 +1555,49 @@
         <div class="box-example">
           <div class="tiptap max-w-none">
             <p>«Sehr geehrte Damen und Herren, mit grossem Interesse habe ich Ihre Stellenanzeige gelesen und bewerbe mich hiermit um die ausgeschriebene Position.»</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">5a · example-standard</div>
+        <div>
+          <div class="debug-example-split debug-example-split-standard">
+            <div class="debug-example-split-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15H6.5a2.5 2.5 0 0 1 0-5H10"/><path d="M14 9V5a3 3 0 0 0-3-3l-1 7"/><path d="M18 9h1.5a2.5 2.5 0 0 1 0 5H18"/><path d="M14 9v10"/></svg>
+            </div>
+            <div class="debug-example-split-body">
+              <div class="tiptap max-w-none">
+                <p>Ich möchte diesen Job, weil ich eine neue Herausforderung suche und hoffe, dass ich dabei etwas lernen kann.</p>
+              </div>
+            </div>
+          </div>
+          <div class="debug-example-comment-box debug-example-comment-standard">Zu allgemein und ohne klaren Bezug zur ausgeschriebenen Stelle.</div>
+        </div>
+      </div>
+
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">5b · example-improved</div>
+        <div>
+          <div class="debug-example-split debug-example-split-improved">
+            <div class="debug-example-split-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9h3.5a2.5 2.5 0 0 1 0 5H14"/><path d="M10 15v4a3 3 0 0 0 3 3l1-7"/><path d="M6 15H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M10 15V5"/></svg>
+            </div>
+            <div class="debug-example-split-body">
+              <div class="tiptap max-w-none">
+                <p>Die ausgeschriebene Stelle spricht mich besonders an, weil ich meine organisatorischen Fähigkeiten und meine Erfahrung im Kundenkontakt gezielt einbringen kann.</p>
+              </div>
+            </div>
+          </div>
+          <div class="debug-example-comment-box debug-example-comment-improved">Klarer Bezug zur Stelle und präzisere Begründung der eigenen Eignung.</div>
+        </div>
+      </div>
+
+      <div class="worksheet-block worksheet-block-text">
+        <div class="debug-label">5c · metadaten</div>
+        <div class="debug-text-metadaten">
+          <div class="tiptap max-w-none">
+            <p>Kapitel 2 · Bewerbung · Niveau A2</p>
           </div>
         </div>
       </div>
@@ -1689,7 +1963,7 @@
                 <span class="number-badge">01</span>
                 <span>Ein Bewerbungsbrief ist etwas anderes als ein Motivationsschreiben.</span>
               </div>
-              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox-solution tf-checkbox-solution-true"></div></div>
               <div class="tf-cell"><div class="tf-checkbox"></div></div>
             </div>
             <!-- row 2: correct=true -->
@@ -1698,7 +1972,7 @@
                 <span class="number-badge">02</span>
                 <span>Der Lebenslauf enthält alle beruflichen Stationen und Ausbildungen.</span>
               </div>
-              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox-solution tf-checkbox-solution-true"></div></div>
               <div class="tf-cell"><div class="tf-checkbox"></div></div>
             </div>
             <!-- row 3: correct=false → green in "Falsch" col -->
@@ -1708,7 +1982,7 @@
                 <span>Das Anschreiben darf keine persönlichen Informationen enthalten.</span>
               </div>
               <div class="tf-cell"><div class="tf-checkbox"></div></div>
-              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-false"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox-solution tf-checkbox-solution-false"></div></div>
             </div>
             <!-- row 4: correct=true -->
             <div class="tf-row">
@@ -1716,7 +1990,7 @@
                 <span class="number-badge">04</span>
                 <span>Referenzen können auf Anfrage vorgelegt werden.</span>
               </div>
-              <div class="tf-cell"><div class="tf-checkbox tf-checkbox-solution-true"></div></div>
+              <div class="tf-cell"><div class="tf-checkbox-solution tf-checkbox-solution-true"></div></div>
               <div class="tf-cell"><div class="tf-checkbox"></div></div>
             </div>
           </div>
@@ -1880,7 +2154,7 @@
         </div>
         <div class="task-panel">
           <div class="debug-mc-list">
-            <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Ein Motivationsschreiben beschreibt, warum du dich für eine Stelle interessierst.</div></div>
+            <div class="debug-mc-option"><div class="debug-mc-dot debug-mc-dot-solution"></div><div>Ein Motivationsschreiben beschreibt, warum du dich für eine Stelle interessierst.</div></div>
             <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Der Lebenslauf wird ausschliesslich handschriftlich verfasst.</div></div>
             <div class="debug-mc-option"><div class="debug-mc-dot"></div><div>Das Anschreiben sollte immer länger als zwei Seiten sein.</div></div>
           </div>
@@ -1954,7 +2228,12 @@
           <p class="task-instruction">Formulieren Sie einen kurzen Einleitungssatz für ein Anschreiben.</p>
         </div>
         <div class="task-panel">
-          <div class="debug-open-response"></div>
+          <div class="debug-writing-rows">
+            <div class="debug-writing-row"></div>
+            <div class="debug-writing-row"></div>
+            <div class="debug-writing-row"></div>
+            <div class="debug-writing-row"></div>
+          </div>
         </div>
       </div>
 
@@ -1982,6 +2261,17 @@
           <div class="debug-numbered-item"><div class="debug-index">1</div><div>Lesen Sie die Stellenanzeige aufmerksam und markieren Sie wichtige Anforderungen.</div></div>
           <div class="debug-numbered-item"><div class="debug-index">2</div><div>Ordnen Sie Ihre Unterlagen logisch und überprüfen Sie die Vollständigkeit.</div></div>
           <div class="debug-numbered-item"><div class="debug-index">3</div><div>Passen Sie Anschreiben und Lebenslauf an die konkrete Stelle an.</div></div>
+          <div class="debug-numbered-item"><div class="debug-index">4</div><div>Formulieren Sie anschliessend eine kurze Begründung, weshalb Ihre Erfahrungen und Fähigkeiten gut zu den Anforderungen der Stelle passen, und prüfen Sie dabei, wie der Umbruch bei mehrzeiligem Text aussieht.</div></div>
+        </div>
+      </div>
+
+      <div class="worksheet-block worksheet-block-numbered-items">
+        <div class="debug-label">37a · numbered-items (default badge size)</div>
+        <div class="debug-numbered-items debug-numbered-items-default-badge debug-numbered-items-rows">
+          <div class="debug-numbered-item"><span class="number-badge">01</span><div>Lesen Sie die Stellenanzeige aufmerksam und markieren Sie wichtige Anforderungen.</div></div>
+          <div class="debug-numbered-item"><span class="number-badge">02</span><div>Ordnen Sie Ihre Unterlagen logisch und überprüfen Sie die Vollständigkeit.</div></div>
+          <div class="debug-numbered-item"><span class="number-badge">03</span><div>Passen Sie Anschreiben und Lebenslauf an die konkrete Stelle an.</div></div>
+          <div class="debug-numbered-item"><span class="number-badge">04</span><div>Formulieren Sie anschliessend eine kurze Begründung, weshalb Ihre Erfahrungen und Fähigkeiten gut zu den Anforderungen der Stelle passen, und prüfen Sie dabei, wie der Umbruch bei mehrzeiligem Text aussieht.</div></div>
         </div>
       </div>
 
@@ -1991,9 +2281,9 @@
       <div class="worksheet-block worksheet-block-checklist">
         <div class="debug-label">38 · checklist</div>
         <div class="debug-checklist">
-          <div class="debug-check-item"><div class="debug-check-box"></div><div>Ich habe die Anrede korrekt formuliert.</div></div>
-          <div class="debug-check-item"><div class="debug-check-box"></div><div>Mein Lebenslauf ist aktuell und vollständig.</div></div>
-          <div class="debug-check-item"><div class="debug-check-box"></div><div>Ich habe Rechtschreibung und Datum kontrolliert.</div></div>
+          <div class="debug-check-item"><span class="number-badge">01</span><div class="debug-check-box"></div><div>Ich habe die Anrede korrekt formuliert.</div></div>
+          <div class="debug-check-item"><span class="number-badge">02</span><div class="debug-check-box"></div><div>Mein Lebenslauf ist aktuell und vollständig.</div></div>
+          <div class="debug-check-item"><span class="number-badge">03</span><div class="debug-check-box"></div><div>Ich habe Rechtschreibung und Datum kontrolliert.</div></div>
         </div>
       </div>
 
@@ -2132,8 +2422,14 @@
         <div class="debug-label">47 · email-skeleton</div>
         <div class="debug-email">
           <div class="debug-email-header">
-            <div><strong>An:</strong> personal@example.ch</div>
-            <div><strong>Betreff:</strong> Bewerbung als Kaufmännische Mitarbeitende</div>
+            <div class="debug-email-meta-row">
+              <div class="debug-email-meta-label">An</div>
+              <div class="debug-email-meta-value">personal@example.ch</div>
+            </div>
+            <div class="debug-email-meta-row">
+              <div class="debug-email-meta-label">Betreff</div>
+              <div class="debug-email-meta-value">Bewerbung als Kaufmännische Mitarbeitende</div>
+            </div>
           </div>
           <div class="debug-email-body">
             <p>Sehr geehrte Damen und Herren</p>
@@ -2170,9 +2466,9 @@
             <tr><th>Zeit</th><th>Inhalt</th><th>Sozialform</th></tr>
           </thead>
           <tbody>
-            <tr><td>08:30-08:45</td><td>Einstieg: Bestandteile einer Bewerbung sammeln</td><td>Plenum</td></tr>
-            <tr><td>08:45-09:10</td><td>Textvergleich und Analyse guter Formulierungen</td><td>Partnerarbeit</td></tr>
-            <tr><td>09:10-09:30</td><td>Eigenes Anschreiben formulieren</td><td>Einzelarbeit</td></tr>
+            <tr><td>08:30 – 08:45</td><td>Einstieg: Bestandteile einer Bewerbung sammeln</td><td>Plenum</td></tr>
+            <tr><td>08:45 – 09:10</td><td>Textvergleich und Analyse guter Formulierungen</td><td>Partnerarbeit</td></tr>
+            <tr><td>09:10 – 09:30</td><td>Eigenes Anschreiben formulieren</td><td>Einzelarbeit</td></tr>
           </tbody>
         </table>
       </div>
