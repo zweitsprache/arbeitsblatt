@@ -338,9 +338,12 @@ function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
   return (
     <div className="relative group/text-snippet">
       <div className="border border-dashed border-amber-300 rounded-sm p-3 bg-amber-50/30">
-        <div className="flex items-center gap-1.5 mb-2 text-xs text-amber-600 font-medium">
-          <Copy className="h-3.5 w-3.5" />
-          {t("textSnippetLabel")}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+            <Copy className="h-3.5 w-3.5" />
+            {t("textSnippetLabel")}
+          </div>
+          <span className="text-xs text-amber-400">{t("textSnippetHint")}</span>
         </div>
         <RichTextEditor
           content={block.content}
@@ -350,6 +353,7 @@ function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
             )
           }
           placeholder={t("startTyping")}
+          snippetBreak
         />
       </div>
     </div>
@@ -3673,6 +3677,7 @@ function ChartRenderer({ block }: { block: ChartBlock }) {
 // ─── Numbered Label ─────────────────────────────────────────
 function NumberedLabelRenderer({ block }: { block: NumberedLabelBlock }) {
   const { state, dispatch } = useEditor();
+  const primaryColor = state.brandProfile.primaryColor || "#1a1a1a";
 
   // Compute the ordinal position of this block among all numbered-label blocks
   const allNL = React.useMemo(() => collectNumberedLabelBlocks(state.blocks), [state.blocks]);
@@ -3680,8 +3685,8 @@ function NumberedLabelRenderer({ block }: { block: NumberedLabelBlock }) {
   const displayNumber = String(block.startNumber + (index >= 0 ? index : 0)).padStart(2, "0");
 
   return (
-    <div className="rounded bg-slate-100 px-2 py-1">
-      <span className="font-semibold text-slate-800" style={{ paddingLeft: '2em', textIndent: '-2em', display: 'block' }}>
+    <div className="rounded px-2 py-1" style={{ backgroundColor: `${primaryColor}14` }}>
+      <span className="font-semibold" style={{ paddingLeft: '2em', textIndent: '-2em', display: 'block', color: primaryColor }}>
         {block.prefix}{displayNumber}{block.suffix ? `\u2003${block.suffix}` : ''}
       </span>
     </div>

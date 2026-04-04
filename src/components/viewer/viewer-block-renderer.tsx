@@ -244,7 +244,7 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
   return result;
 }
 
-function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; allBlocks?: WorksheetBlock[] }) {
+function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1a1a1a" }: { block: NumberedLabelBlock; originalBlock?: NumberedLabelBlock; allBlocks?: WorksheetBlock[]; primaryColor?: string }) {
   let displayNumber: string;
   if (allBlocks) {
     const all = collectNumberedLabelBlocks(allBlocks);
@@ -253,11 +253,24 @@ function NumberedLabelView({ block, allBlocks }: { block: NumberedLabelBlock; al
   } else {
     displayNumber = String(block.startNumber).padStart(2, "0");
   }
+  const currentLabel = `${block.prefix}${displayNumber}${block.suffix ? `\u2003${block.suffix}` : ""}`;
+  const originalLabel = originalBlock
+    ? `${originalBlock.prefix}${displayNumber}${originalBlock.suffix ? `\u2003${originalBlock.suffix}` : ""}`
+    : undefined;
+  const isBilingual = !!block.bilingual && !!originalLabel && originalLabel !== currentLabel;
   return (
-    <div className="rounded bg-slate-100 px-2 py-1">
-      <span className={`font-semibold text-slate-800 ${s.numberedLabel}`}>
-        {block.prefix}{displayNumber}{block.suffix ? `\u2003${block.suffix}` : ''}
-      </span>
+    <div className="rounded px-2 py-1" style={{ backgroundColor: `${primaryColor}14` }}>
+      {isBilingual ? (
+        <span className={s.numberedLabel} style={{ color: primaryColor }}>
+          <span style={{ fontWeight: 700 }}>{originalLabel}</span>
+          <span style={{ fontWeight: 400 }}> | </span>
+          <span style={{ fontWeight: 400 }}>{currentLabel}</span>
+        </span>
+      ) : (
+        <span className={`font-semibold ${s.numberedLabel}`} style={{ color: primaryColor }}>
+          {currentLabel}
+        </span>
+      )}
     </div>
   );
 }
@@ -740,72 +753,114 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
   );
 }
 
-function TextSnippetView({ block }: { block: TextSnippetBlock }) {
-  const t = useTranslations("viewer");
-  const [copied, setCopied] = React.useState(false);
+/** Split Tiptap HTML into items on <hr data-snippet-break> markers. */
+function splitSnippetItems(html: string): string[] {
+  const parts = html.split(/<hr[^>]*data-snippet-break[^>]*>/gi);
+  return parts.map((s) => s.trim()).filter(Boolean);
+}
 
-  const handleCopy = async () => {
-    // Extract plain text from HTML content
+function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewMode }) {
+  const t = useTranslations("viewer");
+  const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
+  const isPrint = mode === "print";
+
+  const deItems = splitSnippetItems(block.content);
+  const trItems = block.translatedContent
+    ? splitSnippetItems(block.translatedContent)
+    : [];
+  const showBilingual = !!block.bilingual && !!block.translatedContent;
+  const count = showBilingual
+    ? Math.max(deItems.length, trItems.length)
+    : deItems.length;
+
+  const handleCopy = async (html: string, index: number) => {
     const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = block.content;
+    tempDiv.innerHTML = html;
     const plainText = tempDiv.textContent || tempDiv.innerText || "";
     try {
       await navigator.clipboard.writeText(plainText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement("textarea");
       textarea.value = plainText;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
     }
   };
 
-  const copyButton = (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="absolute bottom-2 right-2 text-slate-400 hover:text-slate-600 transition-colors"
-      title={t("copyToClipboard")}
-    >
-      {copied ? <ClipboardCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-    </button>
-  );
-
-  if (block.translatedContent) {
+  if (showBilingual) {
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className={`relative border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
-          <div
-            className={`tiptap max-w-none ${s.tiptapFlush}`}
-            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
-          />
-          {copyButton}
-        </div>
-        <div className={`border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
-          <div
-            className={`tiptap max-w-none ${s.tiptapFlush}`}
-            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.translatedContent) }}
-          />
-        </div>
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: count }).map((_, i) => {
+          const deHtml = deItems[i] ?? "";
+          const trHtml = trItems[i] ?? "";
+          return (
+            <div key={i} className="grid grid-cols-2 gap-4 items-stretch">
+              <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
+                <div
+                  className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
+                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(deHtml) }}
+                />
+                {!isPrint && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(deHtml, i)}
+                    className="absolute bottom-2 right-2 text-slate-400 hover:text-slate-600 transition-colors"
+                    title={t("copyToClipboard")}
+                  >
+                    {copiedIndex === i ? (
+                      <ClipboardCheck className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className={`snippet-item-card flex flex-col border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
+                <div
+                  className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
+                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   return (
-    <div>
-      <div className={`relative group border border-slate-200 rounded-sm p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors ${s.snippetCard}`}>
+    <div className="flex flex-col gap-3">
+      {deItems.map((html, i) => (
         <div
-          className={`tiptap max-w-none ${s.tiptapFlush}`}
-          dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.content) }}
-        />
-        {copyButton}
-      </div>
+          key={i}
+          className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${!isPrint ? "group hover:bg-slate-50 transition-colors" : ""} ${s.snippetCard}`}
+        >
+          <div
+            className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
+            dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(html) }}
+          />
+          {!isPrint && (
+            <button
+              type="button"
+              onClick={() => handleCopy(html, i)}
+              className="absolute bottom-2 right-2 text-slate-400 hover:text-slate-600 transition-colors"
+              title={t("copyToClipboard")}
+            >
+              {copiedIndex === i ? (
+                <ClipboardCheck className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -4772,7 +4827,7 @@ export function ViewerBlockRenderer({
         />
       );
     case "numbered-label":
-      return <NumberedLabelView block={block} allBlocks={allBlocks} />;
+      return <NumberedLabelView block={block} originalBlock={originalBlock as NumberedLabelBlock | undefined} allBlocks={allBlocks} primaryColor={primaryColor} />;
     case "columns":
       return (
         <ColumnsView
@@ -4788,7 +4843,7 @@ export function ViewerBlockRenderer({
         />
       );
     case "text-snippet":
-      return <TextSnippetView block={block as TextSnippetBlock} />;
+      return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
       return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
     case "job-application":

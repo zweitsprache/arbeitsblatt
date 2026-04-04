@@ -34,6 +34,9 @@ function isTranslatableTextStyle(style?: string): boolean {
 const HTML_AI_INSTRUCTIONS =
   "HTML content. Translate text only, preserve all HTML tags exactly.";
 
+const SNIPPET_BREAK_AI_INSTRUCTIONS =
+  "HTML content. Translate text only, preserve all HTML tags exactly. CRITICAL: preserve every <hr data-snippet-break=\"\"> tag exactly as-is — do not remove, alter, or close it differently. These are item separators and must remain intact.";
+
 const BLANK_AI_INSTRUCTIONS =
   "Translate text, keep {{blank:...}} syntax. Translate word inside blank: too.";
 
@@ -480,6 +483,16 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "numbered-label": {
+      add("prefix", () => block.prefix, (v) => {
+        block.prefix = v;
+      });
+      add("suffix", () => block.suffix, (v) => {
+        block.suffix = v;
+      });
+      break;
+    }
+
     // non-translatable block types
     case "spacer":
     case "divider":
@@ -488,7 +501,6 @@ function forEachBlockTranslationField(
     case "writing-lines":
     case "writing-rows":
     case "number-line":
-    case "numbered-label":
     case "linked-blocks":
     case "word-search":
     case "job-application":
@@ -624,6 +636,10 @@ export function getAiInstructions(
   key: string,
   value: string
 ): string | undefined {
+  // Snippet break markers — check before generic HTML so the stricter instruction takes priority
+  if (value.includes("data-snippet-break")) {
+    return SNIPPET_BREAK_AI_INSTRUCTIONS;
+  }
   // HTML content (text blocks, tables, lists, etc.)
   // Use a generic tag detector so <ul>/<li> and other markup also get strict preserve-tags instructions.
   if (/<\/?[a-z][^>]*>/i.test(value)) {

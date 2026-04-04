@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useEditor } from "@/store/editor-store";
@@ -52,6 +52,12 @@ export function PrintPreview({
   const [lang, setLang] = useState("de");
   const [showSolutions, setShowSolutions] = useState(false);
 
+  // Refs so the load effect doesn't re-fire when isDirty/save change mid-save
+  const isDirtyRef = useRef(state.isDirty);
+  isDirtyRef.current = state.isDirty;
+  const saveRef = useRef(save);
+  saveRef.current = save;
+
   const translationLangs = state.settings.translationLanguages ?? [];
 
   // Build the print URL — same one Puppeteer navigates to
@@ -90,9 +96,9 @@ export function PrintPreview({
     let cancelled = false;
 
     const loadPreview = async () => {
-      if (state.isDirty) {
+      if (isDirtyRef.current) {
         setSaving(true);
-        await save();
+        await saveRef.current();
         setSaving(false);
       }
       if (cancelled) return;
@@ -102,7 +108,7 @@ export function PrintPreview({
 
     loadPreview();
     return () => { cancelled = true; };
-  }, [open, state.worksheetId, state.isDirty, save, buildPrintUrl]);
+  }, [open, state.worksheetId, buildPrintUrl]);
 
   const handleReload = useCallback(async () => {
     setLoading(true);

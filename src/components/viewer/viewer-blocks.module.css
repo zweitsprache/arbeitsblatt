@@ -375,6 +375,11 @@
   margin-top: 0;
 }
 
+/* Remove bottom margin from last paragraph in text snippet cards */
+.snippetCard .tiptapFlush p:last-child {
+  margin-bottom: 0;
+}
+
 /* Remove box-shadow from example blocks in PDF — box-shadow is not rendered
    correctly by Chromium's PDF engine and creates a grey artefact. */
 @media print {

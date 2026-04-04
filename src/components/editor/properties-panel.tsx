@@ -67,6 +67,7 @@ import {
   JobApplicationBlock,
   JobApplicationStyle,
   DosAndDontsBlock,
+  TextSnippetBlock,
   TextComparisonBlock,
   AccordionBlock,
   AiPromptBlock,
@@ -217,6 +218,28 @@ function ChInput({
 }
 
 // ─── Block-specific property editors ────────────────────────
+
+// ─── Text Snippet Props ──────────────────────────────────────
+function TextSnippetProps({ block }: { block: TextSnippetBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+
+  const update = (updates: Partial<TextSnippetBlock>) => {
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) => update({ bilingual: checked })}
+        />
+      </div>
+    </div>
+  );
+}
 
 function HeadingProps({ block }: { block: HeadingBlock }) {
   const { dispatch } = useEditor();
@@ -5165,6 +5188,12 @@ function AccordionProps({ block }: { block: AccordionBlock }) {
 function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const update = (updates: Partial<NumberedLabelBlock>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates },
+    });
+  };
   return (
     <div className="space-y-3">
       <div>
@@ -5205,6 +5234,13 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
               payload: { id: block.id, updates: { suffix: e.target.value } },
             })
           }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) => update({ bilingual: checked })}
         />
       </div>
     </div>
@@ -6253,6 +6289,8 @@ export function PropertiesPanel() {
         return <DialogueProps block={selectedBlock} />;
       case "email-skeleton":
         return <EmailSkeletonProps block={selectedBlock} />;
+      case "text-snippet":
+        return <TextSnippetProps block={selectedBlock as TextSnippetBlock} />;
       case "job-application":
         return <JobApplicationProps block={selectedBlock as JobApplicationBlock} />;
       case "dos-and-donts":

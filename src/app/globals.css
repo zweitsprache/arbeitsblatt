@@ -107,6 +107,28 @@
   outline: none;
 }
 
+/* Snippet-break separator — amber dashed line shown only in the editor */
+.tiptap hr[data-snippet-break] {
+  border: none;
+  border-top: 2px dashed #fbbf24;
+  margin: 0.75rem 0;
+  position: relative;
+}
+.tiptap hr[data-snippet-break]::after {
+  content: "÷ neues Feld";
+  position: absolute;
+  top: -0.6em;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fffbeb;
+  color: #d97706;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0 0.4em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .tiptap .nobreak,
 .tiptap [data-nobreak],
 .course-content .nobreak,
@@ -397,8 +419,20 @@
   page-break-inside: auto;
 }
 
+/* Text snippets can be long — allow splitting within the block and item cards */
+.worksheet-block-text-snippet {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.worksheet-block-text-snippet .snippet-item-card {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
 /* Headings should never be orphaned at bottom of page */
-.worksheet-block-heading {
+.worksheet-block-heading,
+.worksheet-block-numbered-label {
   break-after: avoid;
   page-break-after: avoid;
 }
@@ -459,6 +493,11 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #666;
 }
 
 .print-worksheet-root .print-header-content img {
@@ -473,11 +512,27 @@
 
 .print-worksheet-root .print-footer-content {
   height: 25mm;
-  padding: 0 15mm 8mm 20mm;
+  padding: 0 15mm 12mm 20mm;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #666;
+}
+
+/* Screen preview: show placeholder page numbers when spans are empty.
+   Puppeteer sets textContent making them non-empty, so ::before won't fire in PDF mode. */
+.print-worksheet-root .var-current-page:empty::before {
+  content: "1";
+  opacity: 0.5;
+}
+.print-worksheet-root .var-total-pages:empty::before {
+  content: "1";
+  opacity: 0.5;
 }
 
 .print-worksheet-root .print-body-content {
@@ -630,6 +685,17 @@
     page-break-inside: auto;
   }
 
+  .worksheet-block-text-snippet {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .worksheet-block-text-snippet .snippet-item-card {
+    display: block;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
   .print-table {
     width: 100%;
     border-collapse: collapse;
@@ -679,7 +745,7 @@
 
   .print-footer-content {
     height: 25mm;
-    padding: 0 15mm 8mm 20mm;
+    padding: 0 15mm 12mm 20mm;
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;
@@ -688,10 +754,17 @@
     font-size: 7pt;
     line-height: 1.5;
     color: #666;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 210mm;
+    margin: 0 auto;
+    z-index: 20;
   }
 
   .print-body-content {
-    padding: 0 20mm 0 25mm;
+    padding: 0 20mm 25mm 25mm;
     font-size: var(--print-body-size);
     font-family: var(--print-body-font);
   }

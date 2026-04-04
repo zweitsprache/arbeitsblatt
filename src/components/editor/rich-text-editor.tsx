@@ -14,7 +14,7 @@ import Color from "@tiptap/extension-color";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import Link from "@tiptap/extension-link";
-import { Mark, mergeAttributes } from "@tiptap/core";
+import { Mark, Node, mergeAttributes } from "@tiptap/core";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -43,6 +43,7 @@ import {
   Quote,
   WrapText,
   Languages,
+  SeparatorHorizontal,
 } from "lucide-react";
 import {
   Tooltip,
@@ -65,6 +66,19 @@ const CustomHeading = Heading.extend({
         },
       },
     };
+  },
+});
+
+/* ── SnippetBreak node: inserts <hr data-snippet-break> as an item separator ─ */
+const SnippetBreakNode = Node.create({
+  name: "snippetBreak",
+  group: "block",
+  atom: true,
+  parseHTML() {
+    return [{ tag: "hr[data-snippet-break]" }];
+  },
+  renderHTML() {
+    return ["hr", { "data-snippet-break": "" }];
   },
 });
 
@@ -109,6 +123,8 @@ interface RichTextEditorProps {
   editable?: boolean;
   floatingElement?: React.ReactNode;
   editorClassName?: string;
+  /** When true, registers the SnippetBreak node and shows a break button in the toolbar. */
+  snippetBreak?: boolean;
 }
 
 function ToolbarButton({
@@ -151,6 +167,7 @@ export function RichTextEditor({
   editable = true,
   floatingElement,
   editorClassName,
+  snippetBreak = false,
 }: RichTextEditorProps) {
   const t = useTranslations("richtext");
   const resolvedPlaceholder = placeholder ?? t("startTyping");
@@ -210,6 +227,7 @@ export function RichTextEditor({
         },
       }),
       NoBreak,
+      ...(snippetBreak ? [SnippetBreakNode] : []),
     ],
     content,
     editable,
@@ -518,6 +536,20 @@ export function RichTextEditor({
               icon={RemoveFormatting}
               label={t("clearFormatting")}
             />
+
+            {/* Snippet break (only shown when snippetBreak prop is enabled) */}
+            {snippetBreak && (
+              <>
+                <Separator orientation="vertical" className="mx-1 h-5" />
+                <ToolbarButton
+                  onClick={() =>
+                    editor.chain().focus().insertContent({ type: "snippetBreak" }).run()
+                  }
+                  icon={SeparatorHorizontal}
+                  label={t("snippetBreak")}
+                />
+              </>
+            )}
           </div>
         )}
 

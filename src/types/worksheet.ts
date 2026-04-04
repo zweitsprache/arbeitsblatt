@@ -513,6 +513,7 @@ export interface NumberedLabelBlock extends BlockBase {
   startNumber: number;
   prefix: string;
   suffix: string;
+  bilingual?: boolean;
 }
 
 // ─── Page Break block ────────────────────────────────────────
@@ -540,6 +541,8 @@ export interface TextSnippetBlock extends BlockBase {
   content: string; // HTML string for WYSIWYG
   /** Populated by applyTranslations – holds the translated HTML while content stays DE. */
   translatedContent?: string;
+  /** When true, render original and translation side-by-side in two columns. */
+  bilingual?: boolean;
 }
 
 // ─── Email Skeleton block ─────────────────────────────────────
