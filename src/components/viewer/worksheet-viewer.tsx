@@ -224,6 +224,7 @@ export function WorksheetViewer({
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
+  const printBottomReservePx = Math.max(settings.margins.bottom || 0, 113);
 
   const printCssVars = mode === "print" ? ({
     ["--print-body-font" as string]: activeBodyFont,
@@ -237,7 +238,7 @@ export function WorksheetViewer({
     ["--print-h2-weight" as string]: resolvedProfile.h2Weight ? String(resolvedProfile.h2Weight) : undefined,
     ["--print-h3-weight" as string]: String(resolvedProfile.h3Weight ?? 800),
     ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
-    ["--print-tfoot-height" as string]: `${settings.margins.bottom}px`,
+    ["--print-tfoot-height" as string]: `${printBottomReservePx}px`,
   } as React.CSSProperties) : undefined;
 
   return (
