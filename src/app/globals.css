@@ -482,6 +482,10 @@
   width: 100%;
 }
 
+.print-worksheet-root .print-table tfoot td {
+  height: var(--print-tfoot-height, 25mm);
+}
+
 .print-worksheet-root .print-table tfoot {
   display: table-footer-group;
 }
@@ -712,6 +716,10 @@
     width: 100%;
   }
 
+  .print-table tfoot td {
+    height: var(--print-tfoot-height, 25mm);
+  }
+
   .print-table tfoot {
     display: table-footer-group;
   }
@@ -754,13 +762,6 @@
     font-size: 7pt;
     line-height: 1.5;
     color: #666;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 210mm;
-    margin: 0 auto;
-    z-index: 20;
   }
 
   .print-body-content {
