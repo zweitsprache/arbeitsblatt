@@ -9,14 +9,71 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
-import type { BrandProfile, BrandSubProfile } from "@/types/worksheet";
+import type {
+  BrandProfile,
+  BrandSubProfile,
+  TranslationFontOverrides,
+} from "@/types/worksheet";
 import { Textarea } from "@/components/ui/textarea";
+
+type TranslationFontOverrideRow = {
+  id: string;
+  locale: string;
+  fontFamily: string;
+  googleFontsUrl: string;
+};
+
+function createTranslationFontOverrideRow(
+  partial?: Partial<TranslationFontOverrideRow>,
+): TranslationFontOverrideRow {
+  return {
+    id: partial?.id ?? `translation-font-${Math.random().toString(36).slice(2, 10)}`,
+    locale: partial?.locale ?? "",
+    fontFamily: partial?.fontFamily ?? "",
+    googleFontsUrl: partial?.googleFontsUrl ?? "",
+  };
+}
+
+function translationFontOverrideRowsFromMap(
+  overrides?: TranslationFontOverrides | null,
+): TranslationFontOverrideRow[] {
+  return Object.entries(overrides ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([locale, value]) =>
+      createTranslationFontOverrideRow({
+        locale,
+        fontFamily: value.fontFamily ?? "",
+        googleFontsUrl: value.googleFontsUrl ?? "",
+      }),
+    );
+}
+
+function translationFontOverrideMapFromRows(
+  rows: TranslationFontOverrideRow[],
+): TranslationFontOverrides {
+  return rows.reduce<TranslationFontOverrides>((acc, row) => {
+    const locale = row.locale.trim().toLowerCase();
+    const fontFamily = row.fontFamily.trim();
+    const googleFontsUrl = row.googleFontsUrl.trim();
+
+    if (!locale || !fontFamily) {
+      return acc;
+    }
+
+    acc[locale] = {
+      fontFamily,
+      ...(googleFontsUrl ? { googleFontsUrl } : {}),
+    };
+    return acc;
+  }, {});
+}
 
 export function BrandEditor({ brandId }: { brandId: string }) {
   const t = useTranslations("admin");
   const [brand, setBrand] = useState<BrandProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [translationFontRows, setTranslationFontRows] = useState<TranslationFontOverrideRow[]>([]);
 
   // Sub-profiles
   const [subProfiles, setSubProfiles] = useState<BrandSubProfile[]>([]);
@@ -107,6 +164,9 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           pdfTranslationScale: data.pdfTranslationScale ?? "",
           pageTitle: data.pageTitle || "",
         });
+        setTranslationFontRows(
+          translationFontOverrideRowsFromMap(data.translationFontOverrides),
+        );
       }
     } finally {
       setLoading(false);
@@ -119,6 +179,24 @@ export function BrandEditor({ brandId }: { brandId: string }) {
 
   const update = (key: string, value: string | number) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const addTranslationFontRow = () => {
+    setTranslationFontRows((prev) => [...prev, createTranslationFontOverrideRow()]);
+  };
+
+  const updateTranslationFontRow = (
+    rowId: string,
+    key: keyof Omit<TranslationFontOverrideRow, "id">,
+    value: string,
+  ) => {
+    setTranslationFontRows((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
+    );
+  };
+
+  const removeTranslationFontRow = (rowId: string) => {
+    setTranslationFontRows((prev) => prev.filter((row) => row.id !== rowId));
   };
 
   /** Strip "px" suffix so stored "28px" displays as "28" in number inputs */
@@ -153,6 +231,9 @@ export function BrandEditor({ brandId }: { brandId: string }) {
       const payload = {
         ...form,
         googleFontsUrl: cleanedFontsUrl,
+        translationFontOverrides: translationFontOverrideMapFromRows(
+          translationFontRows,
+        ),
         headlineWeight: Number(form.headlineWeight) || 700,
         subHeadlineWeight: Number(form.subHeadlineWeight) || 700,
         pdfFontSize: form.pdfFontSize !== "" ? Number(form.pdfFontSize) : null,
@@ -458,6 +539,68 @@ export function BrandEditor({ brandId }: { brandId: string }) {
               placeholder="https://fonts.googleapis.com/css2?family=..."
               className="mt-1"
             />
+          </div>
+
+          <div className="pt-2 border-t space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{t("translationFonts")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("translationFontHelp")}</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addTranslationFontRow}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t("translationFontAdd")}
+              </Button>
+            </div>
+
+            {translationFontRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("translationFontNone")}</p>
+            ) : (
+              <div className="space-y-3">
+                {translationFontRows.map((row) => (
+                  <div key={row.id} className="rounded-md border p-3 space-y-3">
+                    <div className="grid grid-cols-[140px_1fr_auto] gap-3 items-end">
+                      <div>
+                        <Label>{t("translationFontLocale")}</Label>
+                        <Input
+                          value={row.locale}
+                          onChange={(e) => updateTranslationFontRow(row.id, "locale", e.target.value)}
+                          placeholder={t("translationFontLocalePlaceholder")}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label>{t("fontFamily")}</Label>
+                        <Input
+                          value={row.fontFamily}
+                          onChange={(e) => updateTranslationFontRow(row.id, "fontFamily", e.target.value)}
+                          placeholder="Noto Sans Arabic, sans-serif"
+                          className="mt-1"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-destructive"
+                        onClick={() => removeTranslationFontRow(row.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div>
+                      <Label>{t("googleFontsUrl")}</Label>
+                      <Input
+                        value={row.googleFontsUrl}
+                        onChange={(e) => updateTranslationFontRow(row.id, "googleFontsUrl", e.target.value)}
+                        placeholder="https://fonts.googleapis.com/css2?family=..."
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Heading & text sizes */}

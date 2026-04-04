@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         subHeadlineWeight: body.subHeadlineWeight,
         headerFooterFont: body.headerFooterFont,
         googleFontsUrl: body.googleFontsUrl,
+        translationFontOverrides: body.translationFontOverrides,
         primaryColor: body.primaryColor,
         accentColor: body.accentColor,
         logo: body.logo,

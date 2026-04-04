@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter, resolveTranslationFontOverride } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
+const NOTO_SANS_STYLESHEET = "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap";
 
 export function WorksheetViewer({
   title,
@@ -120,11 +121,21 @@ export function WorksheetViewer({
   }
 
   const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
-  // Keep brand typography as the base in all locales (including bilingual/translated print).
-  // Non-Latin-specific tweaks are handled in individual block renderers where needed.
-  const fontFamily = nonEmpty(brandFonts.bodyFont, "Asap Condensed, sans-serif");
-  const headlineFont = nonEmpty(brandFonts.headlineFont, fontFamily);
-  const fontUrl = nonEmpty(brandFonts.googleFontsUrl, staticBrandFonts.googleFontsUrl);
+  const baseBodyFont = nonEmpty(brandFonts.bodyFont, "Asap Condensed, sans-serif");
+  const translationFontOverride = isTranslated
+    ? resolveTranslationFontOverride(resolvedProfile, contentLocale)
+    : null;
+  const activeBodyFont = nonEmpty(translationFontOverride?.fontFamily, baseBodyFont);
+  const headlineFont = nonEmpty(brandFonts.headlineFont, baseBodyFont);
+  const fontStylesheetUrls = Array.from(
+    new Set(
+      [
+        nonEmpty(brandFonts.googleFontsUrl, staticBrandFonts.googleFontsUrl),
+        nonEmpty(translationFontOverride?.googleFontsUrl ?? undefined),
+        isNonLatin ? NOTO_SANS_STYLESHEET : "",
+      ].filter(Boolean),
+    ),
+  );
 
   // Get brand settings — prefer per-worksheet brandSettings (which includes
   // print-page defaults like pagination placeholders), then resolved profile, then empty
@@ -215,7 +226,7 @@ export function WorksheetViewer({
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
 
   const printCssVars = mode === "print" ? ({
-    ["--print-body-font" as string]: fontFamily,
+    ["--print-body-font" as string]: activeBodyFont,
     ["--print-body-size" as string]: resolvedBodyFontSize,
     ["--print-headline-font" as string]: headlineFont,
     ["--print-headline-weight" as string]: String(brandFonts.headlineWeight),
@@ -230,20 +241,9 @@ export function WorksheetViewer({
 
   return (
     <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root print-skin-final" : "bg-muted/30"}`} style={printCssVars}>
-      {/* Print/PDF styles + Google Fonts link for reliable font loading */}
-      {mode === "print" && (
-        <>
-          <link
-            rel="stylesheet"
-            href={fontUrl}
-          />
-          {/* Noto Sans as universal fallback for non-Latin scripts (Cyrillic, Arabic, etc.) */}
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap"
-          />
-        </>
-      )}
+      {fontStylesheetUrls.map((href) => (
+        <link key={href} rel="stylesheet" href={href} />
+      ))}
 
       {mode === "print" ? (
         /* Print mode: table thead/tfoot for repeating header & footer */
@@ -323,7 +323,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={fontFamily} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -363,7 +363,7 @@ export function WorksheetViewer({
 
           <div className="bg-background rounded-xl shadow-sm border p-8">
             {/* Blocks */}
-            <div className="space-y-6">
+            <div className="space-y-6" style={{ fontFamily: activeBodyFont }}>
               {visibleBlocks.map((block) => (
                 <div
                   key={block.id}
@@ -379,7 +379,8 @@ export function WorksheetViewer({
                     primaryColor={brandFonts.primaryColor}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
-                    bodyFont={fontFamily}
+                    bodyFont={activeBodyFont}
+                    originalBodyFont={baseBodyFont}
                     bodyFontSize={resolvedBodyFontSize}
                     originalBlock={originalBlockMap?.[block.id]}
                     isNonLatin={isNonLatin}

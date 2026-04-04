@@ -748,6 +748,13 @@ export type WorksheetBlock =
  * DB-backed brand profile. All brand-specific settings live here.
  * Worksheets reference a brand by slug and inherit everything.
  */
+export interface TranslationFontOverride {
+  fontFamily: string;
+  googleFontsUrl?: string | null;
+}
+
+export type TranslationFontOverrides = Record<string, TranslationFontOverride>;
+
 export interface BrandProfile {
   id: string;
   name: string;
@@ -761,6 +768,7 @@ export interface BrandProfile {
   subHeadlineWeight: number;
   headerFooterFont: string;
   googleFontsUrl: string;
+  translationFontOverrides?: TranslationFontOverrides | null;
 
   // Font sizes & weights per heading level and text base
   h1Size?: string | null;
@@ -950,6 +958,7 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     subHeadlineWeight: fonts.subHeadlineWeight,
     headerFooterFont: fonts.headerFooterFont,
     googleFontsUrl: fonts.googleFontsUrl,
+    translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
     logo: settings.logo,
     iconLogo: BRAND_ICON_LOGOS[slug] ?? BRAND_ICON_LOGOS["edoomio"],
@@ -971,6 +980,32 @@ export function applyBrandOverrides(
 ): BrandProfile {
   if (!overrides) return profile;
   return { ...profile, ...stripUndefined(overrides) };
+}
+
+export function resolveTranslationFontOverride(
+  profile: BrandProfile,
+  locale?: string | null,
+): TranslationFontOverride | null {
+  const normalizedLocale = locale?.trim().toLowerCase();
+  if (!normalizedLocale) return null;
+
+  const overrides = profile.translationFontOverrides;
+  if (!overrides) return null;
+
+  const directMatch = overrides[normalizedLocale];
+  if (directMatch?.fontFamily?.trim()) {
+    return directMatch;
+  }
+
+  const baseLocale = normalizedLocale.split("-")[0];
+  if (baseLocale && baseLocale !== normalizedLocale) {
+    const baseMatch = overrides[baseLocale];
+    if (baseMatch?.fontFamily?.trim()) {
+      return baseMatch;
+    }
+  }
+
+  return null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

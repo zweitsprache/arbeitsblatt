@@ -286,7 +286,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, isNonLatin, tr
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; bodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
+function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -317,12 +317,18 @@ function TextView({ block, originalBlock, bodyFont, bodyFontSize, isNonLatin, tr
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   const resolvedBodyFont = bodyFont || "inherit";
+  const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
   const baseTextStyle: React.CSSProperties = {
     ...(resolvedBodyFont !== "inherit" ? { fontFamily: resolvedBodyFont } : {}),
     ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
   };
   // Font override for the original (German) column in bilingual mode — ensures brand font for Latin text
-  const originalFontStyle: React.CSSProperties | undefined = isBilingual ? { ...baseTextStyle } : undefined;
+  const originalFontStyle: React.CSSProperties | undefined = isBilingual
+    ? {
+        ...(resolvedOriginalBodyFont !== "inherit" ? { fontFamily: resolvedOriginalBodyFont } : {}),
+        ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+      }
+    : undefined;
   // Reduce font size for non-Latin translated text (e.g. Cyrillic renders visually larger at same pt size)
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const translatedFontStyle: React.CSSProperties | undefined = isBilingual
@@ -1814,17 +1820,20 @@ function TwoColumnFillView({
 function GlossaryView({
   block,
   brand,
+  bodyFont,
   isNonLatin,
   translationScale,
 }: {
   block: GlossaryBlock;
   brand?: Brand;
+  bodyFont?: string;
   isNonLatin?: boolean;
   translationScale?: number;
 }) {
   const colWidth = `${block.leftColWidth ?? 25}%`;
   const brandFonts = getBrandFonts(brand || "edoomio");
-  const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: brandFonts.bodyFont } : {};
+  const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
+  const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
   const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const defStyle: React.CSSProperties = scale ? { fontSize: `${scale}em` } : {};
   return (
@@ -4008,14 +4017,17 @@ function AudioView({ block }: { block: AudioBlock }) {
 function ScheduleView({
   block,
   brand,
+  bodyFont,
   isNonLatin,
 }: {
   block: ScheduleBlock;
   brand?: Brand;
+  bodyFont?: string;
   isNonLatin?: boolean;
 }) {
   const brandFonts = getBrandFonts(brand || "edoomio");
-  const bodyStyle: React.CSSProperties = isNonLatin ? { fontFamily: brandFonts.bodyFont } : {};
+  const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
+  const bodyStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
   return (
     <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
       {block.instruction && (
@@ -4467,6 +4479,7 @@ export function ViewerBlockRenderer({
   allBlocks,
   brand = "edoomio",
   bodyFont,
+  originalBodyFont,
   bodyFontSize,
   lessonLabel,
   originalBlock,
@@ -4485,6 +4498,7 @@ export function ViewerBlockRenderer({
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
   bodyFont?: string;
+  originalBodyFont?: string;
   bodyFontSize?: string;
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
@@ -4514,7 +4528,7 @@ export function ViewerBlockRenderer({
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} bodyFont={bodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -4593,6 +4607,7 @@ export function ViewerBlockRenderer({
         <GlossaryView
           block={block}
           brand={brand}
+          bodyFont={bodyFont}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
         />
@@ -4809,7 +4824,7 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} brand={brand} isNonLatin={isNonLatin} />;
+      return <ScheduleView block={block as ScheduleBlock} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} />;
     default:
       return null;
   }

@@ -73,6 +73,9 @@ export async function PUT(
         ...(body.googleFontsUrl !== undefined && {
           googleFontsUrl: body.googleFontsUrl,
         }),
+        ...(body.translationFontOverrides !== undefined && {
+          translationFontOverrides: body.translationFontOverrides,
+        }),
         ...(body.h1Size !== undefined && { h1Size: body.h1Size }),
         ...(body.h1Weight !== undefined && { h1Weight: body.h1Weight }),
         ...(body.h2Size !== undefined && { h2Size: body.h2Size }),

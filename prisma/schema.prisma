@@ -149,6 +149,7 @@ model BrandProfile {
   subHeadlineWeight   Int      @default(700)
   headerFooterFont    String   @default("Asap Condensed, sans-serif")
   googleFontsUrl      String   @default("")
+  translationFontOverrides Json @default("{}")
 
   // Font sizes & weights per heading level and text base (CSS values, e.g. "28px", "1.75rem")
   h1Size              String?                       // e.g. "28px" or "1.75rem"
