@@ -291,8 +291,8 @@ function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1
   return (
     <div className="rounded px-2 py-1" style={{ backgroundColor: `${primaryColor}14` }}>
       {isBilingual ? (
-        <span style={{ color: primaryColor }}>
-          <span className={s.numberedLabel} style={{ fontWeight: 700 }}>{originalLabel}</span>
+        <span className={s.numberedLabel} style={{ color: primaryColor }}>
+          <span style={{ fontWeight: 700 }}>{originalLabel}</span>
           <span style={{ fontWeight: 400 }}> | </span>
           <span style={{ fontWeight: 400 }}>{translatedLabelNoNumber}</span>
         </span>

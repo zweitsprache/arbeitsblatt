@@ -536,7 +536,7 @@
 }
 
 .print-worksheet-root .print-body-content {
-  padding: 0 20mm 0 25mm;
+  padding: 0 20mm var(--print-margin-bottom, 30mm) 25mm;
 }
 
 /* Keep preview typography aligned with PDF output.
