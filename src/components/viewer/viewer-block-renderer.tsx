@@ -119,14 +119,33 @@ function renderDeMarkers(text: string): React.ReactNode {
 }
 
 // ─── Task pill + container ───────────────────────────────────
-function TaskContainer({ showPill, taskNumber, lessonLabel, children }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode }) {
+function colorWithAlpha(color: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const a = Math.round(clamped * 255);
+  const hexA = a.toString(16).padStart(2, "0");
+  const short = color.match(/^#([0-9a-fA-F]{3})$/);
+  if (short) {
+    const [r, g, b] = short[1].split("");
+    return `#${r}${r}${g}${g}${b}${b}${hexA}`;
+  }
+  const full = color.match(/^#([0-9a-fA-F]{6})$/);
+  if (full) {
+    return `${color}${hexA}`;
+  }
+  return color;
+}
+
+function TaskContainer({ showPill, taskNumber, lessonLabel, children, accentColor }: { showPill: boolean; taskNumber?: number; lessonLabel?: string; children: React.ReactNode; accentColor?: string | null }) {
+  const headerBg = accentColor ? colorWithAlpha(accentColor, 0.18) : "#F9F6ED";
+  const panelBg = accentColor ? colorWithAlpha(accentColor, 0.08) : "#FCFBF6";
+  const panelBorder = accentColor ? colorWithAlpha(accentColor, 0.35) : "#F9F6ED";
   return (
     <div>
       {showPill && (
         <div className="flex">
           <div
             className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
-            style={{ backgroundColor: "#F9F6ED" }}
+            style={{ backgroundColor: headerBg }}
           >
             AUFGABE{taskNumber != null ? ` ${lessonLabel ? `${lessonLabel}.` : ""}${String(taskNumber).padStart(2, "0")}` : ""}
           </div>
@@ -134,7 +153,7 @@ function TaskContainer({ showPill, taskNumber, lessonLabel, children }: { showPi
       )}
       <div
         className={`p-4 border-2 ${showPill ? "rounded-b-lg rounded-tr-lg" : "rounded-lg"}`}
-        style={{ backgroundColor: "#FCFBF6", borderColor: "#F9F6ED" }}
+        style={{ backgroundColor: panelBg, borderColor: panelBorder }}
       >
         {children}
       </div>
@@ -1946,7 +1965,9 @@ function TrueFalseMatrixView({
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
-  const hintColor = accentColor || "#3b82f6";  // blue-500 fallback
+  const itemBg = accentColor ? colorWithAlpha(accentColor, 0.16) : undefined;
+  const itemBorder = accentColor ? colorWithAlpha(accentColor, 0.4) : undefined;
+  const itemText = accentColor || undefined;
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -1954,7 +1975,7 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
+    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel} accentColor={accentColor}>
       <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <table className="w-full border-collapse">
         <thead>
@@ -1987,7 +2008,7 @@ function TrueFalseMatrixView({
                   : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
               }
               // User picked false — highlight correct answer if it's true
-              if (stmt.correctAnswer === true) return { backgroundColor: hintColor, borderColor: hintColor, color: "white" };
+              if (stmt.correctAnswer === true) return { backgroundColor: "#3b82f6", borderColor: "#3b82f6", color: "white" };
               return {};
             };
 
@@ -2001,7 +2022,7 @@ function TrueFalseMatrixView({
                   : { backgroundColor: "#ef4444", borderColor: "#ef4444", color: "white" };  // red-500
               }
               // User picked true — highlight correct answer if it's false
-              if (stmt.correctAnswer === false) return { backgroundColor: hintColor, borderColor: hintColor, color: "white" };
+              if (stmt.correctAnswer === false) return { backgroundColor: "#3b82f6", borderColor: "#3b82f6", color: "white" };
               return {};
             };
 
@@ -2012,7 +2033,7 @@ function TrueFalseMatrixView({
               <tr key={stmt.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-2 align-middle">
                   <div className="flex items-center gap-3">
-                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
+                    <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground bg-muted text-cv-micro">
                       {String(stmtIndex + 1).padStart(2, "0")}
                     </span>
                     <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
@@ -2940,8 +2961,9 @@ function UnscrambleWordsView({
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
-  const hintColor = accentColor || "#3b82f6";  // blue-500 fallback
-  const mutedBorderColor = "rgba(107, 114, 128, 0.4)";
+  const itemBg = accentColor ? colorWithAlpha(accentColor, 0.16) : undefined;
+  const itemBorder = accentColor ? colorWithAlpha(accentColor, 0.4) : undefined;
+  const itemText = accentColor || undefined;
   const handleAnswer = (val: unknown) => {
     if (answer !== undefined) {
       onAnswer(val);
@@ -2972,7 +2994,7 @@ function UnscrambleWordsView({
     : block.words;
 
   return (
-    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
+    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel} accentColor={accentColor}>
       <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       {block.instruction && (
         <p className="font-medium flex items-center gap-1.5"><SquareMousePointer className="h-4 w-4 text-muted-foreground shrink-0" />{block.instruction}</p>
@@ -2997,17 +3019,17 @@ function UnscrambleWordsView({
               key={item.id}
               className="flex items-center gap-3 py-2 border-b last:border-b-0"
             >
-              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
+              <span style={{ width: 20, height: 20, minWidth: 20, lineHeight: '20px', borderRadius: 4, textAlign: 'center', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...(itemBg ? { backgroundColor: itemBg } : {}), ...(itemBorder ? { border: `1px solid ${itemBorder}` } : {}), ...(itemText ? { color: itemText } : {}) }} className="font-bold text-muted-foreground bg-muted shrink-0 text-cv-micro">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0" style={{ color: hintColor }} />
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
               {isPrint && showSolutions ? (
                 <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : isPrint ? (
-                <span className="flex-1 inline-block" style={{ borderBottom: `1px dashed ${hintColor}`, opacity: 1.0, minWidth: 80 }}>
+                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
                   &nbsp;
                 </span>
               ) : (
@@ -3018,21 +3040,13 @@ function UnscrambleWordsView({
                     onChange={(e) =>
                       handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
-                    style={{
-                      borderBottom: isCorrect ? `2px solid #22c55e` : isWrong ? `2px solid #ef4444` : `2px solid ${mutedBorderColor}`,
-                      color: isCorrect ? "#15803d" : isWrong ? "#b91c1c" : "inherit"
-                    }}
-                    onFocus={(e) => {
-                      if (!isCorrect && !isWrong) {
-                        e.currentTarget.style.borderBottom = `2px solid ${hintColor}`;
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (!isCorrect && !isWrong) {
-                        e.currentTarget.style.borderBottom = `2px solid ${mutedBorderColor}`;
-                      }
-                    }}
-                    className="w-full bg-transparent px-1 py-0.5 focus:outline-none transition-colors"
+                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
+                      isCorrect
+                        ? "border-green-500 text-green-700"
+                        : isWrong
+                          ? "border-red-500 text-red-700"
+                          : "border-muted-foreground/40 focus:border-primary"
+                    }`}
                     placeholder="..."
                   />
                 </div>

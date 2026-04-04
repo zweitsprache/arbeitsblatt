@@ -412,6 +412,61 @@
   page-break-inside: avoid;
 }
 
+/* Print page preview (screen) shares core print layout so margins/logo are accurate */
+.print-worksheet-root .print-table {
+  width: 210mm;
+  margin: 0 auto;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.print-worksheet-root .print-table thead {
+  display: table-header-group;
+}
+
+.print-worksheet-root .print-table thead td,
+.print-worksheet-root .print-table tbody td,
+.print-worksheet-root .print-table tfoot td {
+  padding: 0;
+  width: 100%;
+}
+
+.print-worksheet-root .print-table tfoot {
+  display: table-footer-group;
+}
+
+.print-worksheet-root .print-header-content {
+  height: 30mm;
+  padding: 15mm 15mm 0 20mm;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.print-worksheet-root .print-header-content img {
+  display: block;
+  height: 8mm;
+  max-height: 8mm;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.print-worksheet-root .print-footer-content {
+  height: 25mm;
+  padding: 0 15mm 8mm 20mm;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.print-worksheet-root .print-body-content {
+  padding: 0 20mm 0 25mm;
+}
+
 @media print {
   html,
   body {
