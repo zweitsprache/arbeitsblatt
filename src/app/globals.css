@@ -467,9 +467,16 @@
 /* Print page preview (screen) shares core print layout so margins/logo are accurate */
 .print-worksheet-root .print-table {
   width: 210mm;
+  min-height: 297mm;
   margin: 0 auto;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+.print-worksheet-root .print-table tbody,
+.print-worksheet-root .print-table tbody > tr,
+.print-worksheet-root .print-table tbody > tr > td {
+  height: 100%;
 }
 
 .print-worksheet-root .print-table thead {
@@ -712,7 +719,14 @@
 
   .print-table {
     width: 100%;
+    min-height: 100vh;
     border-collapse: collapse;
+  }
+
+  .print-table tbody,
+  .print-table tbody > tr,
+  .print-table tbody > tr > td {
+    height: 100%;
   }
 
   .print-table thead {
