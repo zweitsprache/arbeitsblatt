@@ -623,6 +623,100 @@
   margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul,
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ol {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Mirror @media print list geometry in preview to avoid preview/PDF drift. */
+.print-worksheet-root.print-skin-final .print-body-content {
+  --print-list-row-py: 0.2rem;
+  --print-list-text-pad-left: 0;
+  --print-list-icon-lane: 1.5rem;
+  --print-list-divider-lane: 1.75rem;
+  --print-list-divider: 1px solid #d1d5db;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul {
+  padding-left: var(--print-list-divider-lane) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul,
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ol,
+.print-worksheet-root.print-skin-final .print-body-content ul,
+.print-worksheet-root.print-skin-final .print-body-content ol {
+  position: relative;
+  border-top: var(--print-list-divider);
+  border-bottom: var(--print-list-divider);
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap li,
+.print-worksheet-root.print-skin-final .print-body-content .tiptap li p,
+.print-worksheet-root.print-skin-final .print-body-content .course-content li,
+.print-worksheet-root.print-skin-final .print-body-content .course-content li p,
+.print-worksheet-root.print-skin-final .print-body-content li,
+.print-worksheet-root.print-skin-final .print-body-content li p {
+  line-height: 1.35em !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap li *,
+.print-worksheet-root.print-skin-final .print-body-content li * {
+  line-height: inherit !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul > li,
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ol > li,
+.print-worksheet-root.print-skin-final .print-body-content ul > li,
+.print-worksheet-root.print-skin-final .print-body-content ol > li {
+  position: relative;
+  padding-top: var(--print-list-row-py) !important;
+  padding-bottom: var(--print-list-row-py) !important;
+  padding-left: var(--print-list-text-pad-left) !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap li p,
+.print-worksheet-root.print-skin-final .print-body-content .course-content li p,
+.print-worksheet-root.print-skin-final .print-body-content li p {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul > li:not(:last-child),
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ol > li:not(:last-child),
+.print-worksheet-root.print-skin-final .print-body-content ol > li:not(:last-child),
+.print-worksheet-root.print-skin-final .print-body-content ul > li:not(:last-child) {
+  position: relative;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ul > li:not(:last-child)::after,
+.print-worksheet-root.print-skin-final .print-body-content ul > li:not(:last-child)::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin-left: calc(-1 * var(--print-list-divider-lane)) !important;
+  width: calc(100% + var(--print-list-divider-lane)) !important;
+  border-bottom: var(--print-list-divider) !important;
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap ol > li:not(:last-child)::after,
+.print-worksheet-root.print-skin-final .print-body-content ol > li:not(:last-child)::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin-left: calc(-1 * var(--print-list-icon-lane)) !important;
+  width: calc(100% + var(--print-list-icon-lane)) !important;
+  border-bottom: var(--print-list-divider) !important;
+}
+
 @media print {
   html,
   body {
@@ -852,11 +946,12 @@
     --print-list-row-py: 0.2rem;
     --print-list-text-pad-left: 0;
     --print-list-icon-lane: 1.5rem;
+    --print-list-divider-lane: 1.75rem;
     --print-list-divider: 1px solid #d1d5db;
   }
 
   .print-body-content .tiptap ul {
-    padding-left: 1.75rem !important;
+    padding-left: var(--print-list-divider-lane) !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
@@ -911,9 +1006,19 @@
   }
 
   .print-body-content .tiptap ul > li:not(:last-child)::after,
-  .print-body-content .tiptap ol > li:not(:last-child)::after,
-  .print-body-content ol > li:not(:last-child)::after,
   .print-body-content ul > li:not(:last-child)::after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    margin-left: calc(-1 * var(--print-list-divider-lane)) !important;
+    width: calc(100% + var(--print-list-divider-lane)) !important;
+    border-bottom: var(--print-list-divider) !important;
+  }
+
+  .print-body-content .tiptap ol > li:not(:last-child)::after,
+  .print-body-content ol > li:not(:last-child)::after {
     content: "";
     display: block;
     position: absolute;
