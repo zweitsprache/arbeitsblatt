@@ -531,7 +531,6 @@
   font-size: 7pt;
   font-weight: 400;
   line-height: 1.5;
-  color: #666;
 }
 
 /* Screen preview: show placeholder page numbers when spans are empty.
@@ -920,7 +919,6 @@
     font-family: var(--print-header-footer-font);
     font-size: 7pt;
     line-height: 1.5;
-    color: #666;
     position: fixed;
     left: 0;
     right: 0;
