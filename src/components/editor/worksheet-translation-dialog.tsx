@@ -259,12 +259,12 @@ export function WorksheetTranslationDialog() {
             </div>
           )}
 
-          {/* Translate button */}
-          <div className="flex gap-2">
+          {/* Translate buttons */}
+          <div className="grid grid-cols-2 gap-2">
             <Button
               onClick={() => handleTranslate(false)}
               disabled={isTranslating || !canTranslate}
-              className="flex-1 gap-2"
+              className="gap-2"
             >
               {translationMode === "delta" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

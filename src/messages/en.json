@@ -1495,6 +1495,7 @@
     "targetLanguages": "Target languages",
     "targetLanguagesHelp": "Select the languages this worksheet should be translated into.",
     "translateWorksheet": "Translate worksheet",
+    "translateWorksheetForce": "Force retranslate",
     "translateInProgress": "Translating…",
     "translateSuccess": "{count} strings translated ({languages})",
     "translateUpToDate": "All translations are up to date",
