@@ -476,6 +476,7 @@
 .print-worksheet-root .print-table tbody > tr,
 .print-worksheet-root .print-table tbody > tr > td {
   height: 100%;
+  vertical-align: top;
 }
 
 .print-worksheet-root .print-table thead {
