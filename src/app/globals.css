@@ -563,13 +563,14 @@
 .print-worksheet-root .print-body-content .course-content li p,
 .print-worksheet-root .print-body-content li p {
   padding-top: 0 !important;
-  padding-bottom: 0.1rem !important;
+  padding-bottom: 0 !important;
 }
 
 /* Keep preview typography aligned with PDF output.
    Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
 .print-worksheet-root.print-skin-final {
   font-family: var(--print-body-font);
+  --print-block-gap: 1.5rem;
 }
 
 .print-worksheet-root.print-skin-final .print-body-content {
@@ -620,7 +621,7 @@
   font-weight: var(--print-h1-weight, var(--print-headline-weight));
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h2 {
@@ -628,7 +629,7 @@
   font-weight: var(--print-h2-weight, var(--print-headline-weight));
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h3 {
@@ -636,7 +637,7 @@
   font-weight: var(--print-h3-weight, 800);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
 @media print {
@@ -658,6 +659,7 @@
 
   .print-worksheet-root {
     font-family: var(--print-body-font);
+    --print-block-gap: 1.5rem;
   }
 
   .print-worksheet-root h1,
@@ -703,7 +705,7 @@
     font-weight: var(--print-h1-weight, var(--print-headline-weight));
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: 0.6rem;
+    margin-bottom: var(--print-block-gap, 1.5rem);
   }
 
   .print-body-content .tiptap h2 {
@@ -711,7 +713,7 @@
     font-weight: var(--print-h2-weight, var(--print-headline-weight));
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--print-block-gap, 1.5rem);
   }
 
   .print-body-content .tiptap h3 {
@@ -719,7 +721,7 @@
     font-weight: var(--print-h3-weight, 800);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: 0.4rem;
+    margin-bottom: var(--print-block-gap, 1.5rem);
   }
 
   .worksheet-block-page-break {
@@ -890,30 +892,28 @@
   .print-body-content .tiptap ol > li,
   .print-body-content ul > li,
   .print-body-content ol > li {
+    position: relative;
     padding-top: 0.16rem !important;
     padding-bottom: 0.16rem !important;
     padding-left: 0.25rem !important;
-  }
-
-  .print-body-content .tiptap ul > li:first-child,
-  .print-body-content .tiptap ol > li:first-child,
-  .print-body-content ul > li:first-child,
-  .print-body-content ol > li:first-child {
-    border-top: 1px solid #d1d5db !important;
-  }
-
-  .print-body-content .tiptap ul > li:last-child,
-  .print-body-content .tiptap ol > li:last-child,
-  .print-body-content ul > li:last-child,
-  .print-body-content ol > li:last-child {
-    border-bottom: 1px solid #d1d5db !important;
   }
 
   .print-body-content .tiptap li p,
   .print-body-content .course-content li p,
   .print-body-content li p {
     padding-top: 0 !important;
-    padding-bottom: 0.1rem !important;
+    padding-bottom: 0 !important;
+  }
+
+  .print-body-content .tiptap ul > li:first-child::before,
+  .print-body-content .tiptap ol > li:first-child::before,
+  .print-body-content ul > li:first-child::before,
+  .print-body-content ol > li:first-child::before {
+    content: "";
+    display: block;
+    margin-left: -1.5rem !important;
+    width: calc(100% + 1.5rem) !important;
+    border-top: 1px solid #d1d5db !important;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),
@@ -922,15 +922,29 @@
   }
 
   .print-body-content .tiptap ul > li:not(:last-child)::after,
+  .print-body-content .tiptap ol > li:not(:last-child)::after,
   .print-body-content ul > li:not(:last-child)::after {
     margin-top: 0.4rem !important;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
+    border-bottom: 1px solid #d1d5db !important;
+  }
+
+  .print-body-content .tiptap ul > li:last-child::after,
+  .print-body-content .tiptap ol > li:last-child::after,
+  .print-body-content ul > li:last-child::after,
+  .print-body-content ol > li:last-child::after {
+    content: "";
+    display: block;
+    margin-top: 0.4rem !important;
+    margin-left: -1.5rem !important;
+    width: calc(100% + 1.5rem) !important;
+    border-bottom: 1px solid #d1d5db !important;
   }
 
   /* Ensure block spacing is preserved */
   .worksheet-block + .worksheet-block {
-    margin-top: 1.5rem;
+    margin-top: var(--print-block-gap, 1.5rem);
   }
 
   /* After a page break the first block on the new page must start
