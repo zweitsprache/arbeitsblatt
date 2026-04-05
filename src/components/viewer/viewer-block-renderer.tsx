@@ -433,6 +433,12 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   const wrapBilingual = (translatedHtml: string, originalHtml?: string) => {
     if (!isBilingual || !originalHtml) return renderContent(translatedHtml);
 
+    const bilingualGrid: React.CSSProperties = {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+      gap: "0 1em",
+    };
+
     // For rows style: render paragraph-by-paragraph aligned rows
     if (isRows) {
       const originalParas = splitRowItems(originalHtml);
@@ -444,7 +450,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
         borderBottom: "1px solid #d1d5db",
       };
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
+        <div style={bilingualGrid}>
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
@@ -468,7 +474,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       const hasListRows = /<li\b/i.test(originalHtml) || /<li\b/i.test(translatedHtml);
       if (hasListRows) {
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
+          <div style={bilingualGrid}>
             <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
               {renderContent(originalHtml)}
             </div>
@@ -485,7 +491,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       const hasMultipleRows = maxLen > 1;
       const rowPadding = hasMultipleRows ? "0.25em" : "0";
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
+        <div style={bilingualGrid}>
           {Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
@@ -501,7 +507,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     }
 
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1em", ...baseTextStyle }}>
+      <div style={{ ...bilingualGrid, ...baseTextStyle }}>
         <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
           {renderContent(originalHtml)}
         </div>
@@ -593,15 +599,17 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     // so both columns include icon + block frame consistently.
     const useFullBilingualHintBoxes =
       isBilingual && !!originalBlock && (isHinweisWichtig || isHinweisAlarm);
+    const bilingualHintIconStyle: React.CSSProperties | undefined =
+      isBilingual ? { paddingLeft: "0.75rem" } : undefined;
 
     if (useFullBilingualHintBoxes) {
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 1em" }}>
           <div
             className={s.hintBox}
             style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
-            <div className={s.hintIcon}>
+            <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
             </div>
             <div className={s.hintBody}>
@@ -613,7 +621,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
             className={s.hintBox}
             style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
-            <div className={s.hintIcon}>
+            <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
             </div>
             <div className={s.hintBody}>
@@ -630,7 +638,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
         className={s.hintBox}
         style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
       >
-        <div className={s.hintIcon}>
+        <div className={s.hintIcon} style={bilingualHintIconStyle}>
           {hinweisConfig.icon}
         </div>
         <div className={s.hintBody}>
