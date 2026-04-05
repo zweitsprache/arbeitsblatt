@@ -177,6 +177,15 @@
   line-height: 1;
 }
 
+.tiptap-bilingual-translated .tiptap h1,
+.tiptap-bilingual-translated .tiptap h2,
+.tiptap-bilingual-translated .tiptap h3,
+.tiptap-bilingual-translated.tiptap h1,
+.tiptap-bilingual-translated.tiptap h2,
+.tiptap-bilingual-translated.tiptap h3 {
+  font-weight: 400 !important;
+}
+
 .tiptap p,
 .course-content p {
   margin-top: 0.25rem;
@@ -867,12 +876,13 @@
   /* Print-only: keep list spacing compact.
      In bilingual/translated output, list content can carry larger line-height defaults. */
   .print-body-content .tiptap ul {
-    position: relative;
     padding-left: 1.75rem !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
 
+  .print-body-content ul,
+  .print-body-content .tiptap ul,
   .print-body-content .tiptap ol,
   .print-body-content ol {
     position: relative;
@@ -917,13 +927,10 @@
   .print-body-content ol::before {
     content: "";
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
     margin-left: -1.5rem !important;
+    margin-bottom: 0.16rem !important;
     width: calc(100% + 1.5rem) !important;
     border-top: 1px solid #d1d5db !important;
-    pointer-events: none;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),
@@ -946,13 +953,10 @@
   .print-body-content ol::after {
     content: "";
     display: block;
-    position: absolute;
-    bottom: 0;
-    left: 0;
+    margin-top: 0.16rem !important;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
     border-bottom: 1px solid #d1d5db !important;
-    pointer-events: none;
   }
 
   /* Ensure block spacing is preserved */

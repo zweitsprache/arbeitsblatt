@@ -502,7 +502,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       if (hasListRows) {
         return renderBilingualGrid(
           <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-          <div style={translatedFontStyle}>{renderContent(translatedHtml)}</div>
+            <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>
         );
       }
 
@@ -525,7 +525,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
 
     return renderBilingualGrid(
       <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-      <div style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+      <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
       baseTextStyle,
     );
   };
@@ -637,7 +637,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
             </div>
             <div className={s.hintBody}>
               {imageEl}
-              <div style={translatedFontStyle}>{renderContent(block.content)}</div>
+              <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(block.content)}</div>
             </div>
           </div>,
           undefined,
