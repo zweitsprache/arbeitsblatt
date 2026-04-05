@@ -377,6 +377,31 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   const translatedFontStyle: React.CSSProperties | undefined = isBilingual
     ? { ...baseTextStyle, ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}) }
     : undefined;
+  const bilingualGrid: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+    gap: "0 1em",
+    position: "relative",
+  };
+  const renderBilingualGrid = (left: React.ReactNode, right: React.ReactNode, style?: React.CSSProperties) => (
+    <div style={{ ...bilingualGrid, ...style }}>
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: 1,
+          transform: "translateX(-0.5px)",
+          backgroundColor: "#e2e8f0",
+          pointerEvents: "none",
+        }}
+      />
+      {left}
+      {right}
+    </div>
+  );
 
   const imageEl = block.imageSrc ? (
     <div
@@ -433,12 +458,6 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   const wrapBilingual = (translatedHtml: string, originalHtml?: string) => {
     if (!isBilingual || !originalHtml) return renderContent(translatedHtml);
 
-    const bilingualGrid: React.CSSProperties = {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-      gap: "0 1em",
-    };
-
     // For rows style: render paragraph-by-paragraph aligned rows
     if (isRows) {
       const originalParas = splitRowItems(originalHtml);
@@ -449,9 +468,8 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
         position: "relative",
         borderBottom: "1px solid #d1d5db",
       };
-      return (
-        <div style={bilingualGrid}>
-          {Array.from({ length: maxLen }, (_, i) => (
+      return renderBilingualGrid(
+        Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
@@ -462,8 +480,8 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
-          ))}
-        </div>
+          )),
+        null,
       );
     }
 
@@ -473,15 +491,9 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       // Splitting into standalone <p> rows strips <ul>/<li> context and drops list icons.
       const hasListRows = /<li\b/i.test(originalHtml) || /<li\b/i.test(translatedHtml);
       if (hasListRows) {
-        return (
-          <div style={bilingualGrid}>
-            <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
-              {renderContent(originalHtml)}
-            </div>
-            <div style={translatedFontStyle}>
-              {renderContent(translatedHtml)}
-            </div>
-          </div>
+        return renderBilingualGrid(
+          <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+          <div style={translatedFontStyle}>{renderContent(translatedHtml)}</div>
         );
       }
 
@@ -490,31 +502,22 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       const maxLen = Math.max(originalParas.length, translatedParas.length);
       const hasMultipleRows = maxLen > 1;
       const rowPadding = hasMultipleRows ? "0.25em" : "0";
-      return (
-        <div style={bilingualGrid}>
-          {Array.from({ length: maxLen }, (_, i) => (
+      return renderBilingualGrid(Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div className="tiptap-compact" style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
+              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
-          ))}
-        </div>
-      );
+          )), null);
     }
 
-    return (
-      <div style={{ ...bilingualGrid, ...baseTextStyle }}>
-        <div style={{ borderRight: "1px solid #e2e8f0", paddingRight: "1em", ...originalFontStyle }}>
-          {renderContent(originalHtml)}
-        </div>
-        <div style={translatedFontStyle}>
-          {renderContent(translatedHtml)}
-        </div>
-      </div>
+    return renderBilingualGrid(
+      <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+      <div style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+      baseTextStyle,
     );
   };
 
@@ -600,11 +603,10 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     const useFullBilingualHintBoxes =
       isBilingual && !!originalBlock && (isHinweisWichtig || isHinweisAlarm);
     const bilingualHintIconStyle: React.CSSProperties | undefined =
-      isBilingual ? { paddingLeft: "0.75rem" } : undefined;
+      isBilingual ? { paddingLeft: "0.75rem", width: "2.1rem" } : undefined;
 
     if (useFullBilingualHintBoxes) {
-      return (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 1em" }}>
+      return renderBilingualGrid(
           <div
             className={s.hintBox}
             style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
@@ -616,7 +618,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
               {imageEl}
               {renderContent(originalBlock.content)}
             </div>
-          </div>
+          </div>,
           <div
             className={s.hintBox}
             style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
@@ -629,7 +631,6 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
               <div style={translatedFontStyle}>{renderContent(block.content)}</div>
             </div>
           </div>
-        </div>
       );
     }
 

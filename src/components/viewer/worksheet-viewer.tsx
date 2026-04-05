@@ -231,6 +231,7 @@ export function WorksheetViewer({
     ["--print-body-size" as string]: resolvedBodyFontSize,
     ["--print-headline-font" as string]: headlineFont,
     ["--print-headline-weight" as string]: String(brandFonts.headlineWeight),
+    ["--print-primary-color" as string]: brandFonts.primaryColor,
     ["--print-h1-size" as string]: resolvedProfile.h1Size,
     ["--print-h2-size" as string]: resolvedProfile.h2Size,
     ["--print-h3-size" as string]: resolvedProfile.h3Size,
