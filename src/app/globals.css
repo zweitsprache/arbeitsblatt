@@ -147,7 +147,7 @@
 
 .tiptap h1 {
   font-size: var(--text-cv-3xl);
-  font-weight: 700;
+  font-weight: var(--heading-h1-weight, 700);
   line-height: 1.2;
   margin-top: 0;
   margin-bottom: 0.6rem;
@@ -155,7 +155,7 @@
 
 .tiptap h2 {
   font-size: var(--text-cv-2xl);
-  font-weight: 700;
+  font-weight: var(--heading-h2-weight, 700);
   line-height: 1.25;
   margin-top: 0;
   margin-bottom: 0.5rem;
@@ -163,7 +163,7 @@
 
 .tiptap h3 {
   font-size: var(--text-cv-xl);
-  font-weight: 800 !important;
+  font-weight: var(--heading-h3-weight, 800) !important;
   line-height: 1.3;
   margin-top: 0;
   margin-bottom: 0.4rem;
@@ -597,7 +597,7 @@
 }
 
 .print-worksheet-root.print-skin-final h3 {
-  font-weight: var(--print-h3-weight, 800);
+  font-weight: var(--print-h3-weight, var(--print-headline-weight));
 }
 
 .print-worksheet-root.print-skin-final .text-cv-base {
@@ -634,7 +634,7 @@
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h3 {
   font-size: var(--print-h3-size, var(--text-cv-xl));
-  font-weight: var(--print-h3-weight, 800);
+  font-weight: var(--print-h3-weight, var(--print-headline-weight));
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
   margin-bottom: var(--print-block-gap, 1.5rem);
@@ -681,7 +681,7 @@
   }
 
   .print-worksheet-root h3 {
-    font-weight: var(--print-h3-weight, 800);
+    font-weight: var(--print-h3-weight, var(--print-headline-weight));
   }
 
   .print-worksheet-root .text-cv-base {
@@ -718,7 +718,7 @@
 
   .print-body-content .tiptap h3 {
     font-size: var(--print-h3-size, var(--text-cv-xl));
-    font-weight: var(--print-h3-weight, 800);
+    font-weight: var(--print-h3-weight, var(--print-headline-weight));
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
     margin-bottom: var(--print-block-gap, 1.5rem);
@@ -867,9 +867,15 @@
   /* Print-only: keep list spacing compact.
      In bilingual/translated output, list content can carry larger line-height defaults. */
   .print-body-content .tiptap ul {
+    position: relative;
     padding-left: 1.75rem !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
+  }
+
+  .print-body-content .tiptap ol,
+  .print-body-content ol {
+    position: relative;
   }
 
   .print-body-content .tiptap li,
@@ -905,15 +911,19 @@
     padding-bottom: 0 !important;
   }
 
-  .print-body-content .tiptap ul > li:first-child::before,
-  .print-body-content .tiptap ol > li:first-child::before,
-  .print-body-content ul > li:first-child::before,
-  .print-body-content ol > li:first-child::before {
+  .print-body-content .tiptap ul::before,
+  .print-body-content .tiptap ol::before,
+  .print-body-content ul::before,
+  .print-body-content ol::before {
     content: "";
     display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
     border-top: 1px solid #d1d5db !important;
+    pointer-events: none;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),
@@ -924,22 +934,25 @@
   .print-body-content .tiptap ul > li:not(:last-child)::after,
   .print-body-content .tiptap ol > li:not(:last-child)::after,
   .print-body-content ul > li:not(:last-child)::after {
-    margin-top: 0.4rem !important;
+    margin-top: 0.16rem !important;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
     border-bottom: 1px solid #d1d5db !important;
   }
 
-  .print-body-content .tiptap ul > li:last-child::after,
-  .print-body-content .tiptap ol > li:last-child::after,
-  .print-body-content ul > li:last-child::after,
-  .print-body-content ol > li:last-child::after {
+  .print-body-content .tiptap ul::after,
+  .print-body-content .tiptap ol::after,
+  .print-body-content ul::after,
+  .print-body-content ol::after {
     content: "";
     display: block;
-    margin-top: 0.4rem !important;
+    position: absolute;
+    bottom: 0;
+    left: 0;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
     border-bottom: 1px solid #d1d5db !important;
+    pointer-events: none;
   }
 
   /* Ensure block spacing is preserved */

@@ -225,6 +225,15 @@ export function WorksheetViewer({
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
   const printBottomReservePx = Math.max(settings.margins.bottom || 0, 113);
+  const resolvedH1Weight = resolvedProfile.h1Weight ?? brandFonts.headlineWeight;
+  const resolvedH2Weight = resolvedProfile.h2Weight ?? brandFonts.headlineWeight;
+  const resolvedH3Weight = resolvedProfile.h3Weight ?? brandFonts.headlineWeight;
+
+  const headingCssVars = {
+    ["--heading-h1-weight" as string]: String(resolvedH1Weight),
+    ["--heading-h2-weight" as string]: String(resolvedH2Weight),
+    ["--heading-h3-weight" as string]: String(resolvedH3Weight),
+  } as React.CSSProperties;
 
   const printCssVars = mode === "print" ? ({
     ["--print-body-font" as string]: activeBodyFont,
@@ -235,15 +244,20 @@ export function WorksheetViewer({
     ["--print-h1-size" as string]: resolvedProfile.h1Size,
     ["--print-h2-size" as string]: resolvedProfile.h2Size,
     ["--print-h3-size" as string]: resolvedProfile.h3Size,
-    ["--print-h1-weight" as string]: resolvedProfile.h1Weight ? String(resolvedProfile.h1Weight) : undefined,
-    ["--print-h2-weight" as string]: resolvedProfile.h2Weight ? String(resolvedProfile.h2Weight) : undefined,
-    ["--print-h3-weight" as string]: String(resolvedProfile.h3Weight ?? 800),
+    ["--print-h1-weight" as string]: String(resolvedH1Weight),
+    ["--print-h2-weight" as string]: String(resolvedH2Weight),
+    ["--print-h3-weight" as string]: String(resolvedH3Weight),
     ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
     ["--print-tfoot-height" as string]: `${printBottomReservePx}px`,
   } as React.CSSProperties) : undefined;
 
+  const viewerCssVars = {
+    ...headingCssVars,
+    ...(printCssVars || {}),
+  } as React.CSSProperties;
+
   return (
-    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root print-skin-final" : "bg-muted/30"}`} style={printCssVars}>
+    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root print-skin-final" : "bg-muted/30"}`} style={viewerCssVars}>
       {fontStylesheetUrls.map((href) => (
         <link key={href} rel="stylesheet" href={href} />
       ))}
@@ -326,7 +340,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -380,6 +394,7 @@ export function WorksheetViewer({
                     onAnswer={(value) => updateAnswer(block.id, value)}
                     showResults={showResults}
                     primaryColor={brandFonts.primaryColor}
+                    headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
                     bodyFont={activeBodyFont}
