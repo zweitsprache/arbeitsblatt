@@ -351,6 +351,14 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   // Inline SVG icon for the "rows" style — replaces CSS background-image/::before entirely.
   // background-image (even on real elements, not just ::before) is NOT rendered by Chromium's PDF engine.
   // Inline <svg> elements ARE rendered correctly.
+  // Lucide line-dot-right-horizontal icon injected into each <li> as a real inline SVG element.
+  // CSS background-image on ::before is not rendered by Chromium's PDF engine.
+  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.3rem;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+  const injectLiIcons = (html: string): string => {
+    if (!html.includes("<li")) return html;
+    return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
+  };
+
   const RowsIconSvg = () => {
     const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "#6b7280", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
     if (isKompetenzziele) return <svg {...p}><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg>;
@@ -432,7 +440,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
 
   /** Render a single column of tiptap content (used for both original and translated) */
   const renderContent = (html: string) => {
-    const processed = prepareTiptapHtml(html);
+    const processed = injectLiIcons(prepareTiptapHtml(html));
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasHinweisBox ? s.tiptapFlush : ""}`}

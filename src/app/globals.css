@@ -314,19 +314,6 @@
 .tiptap ul > li:last-child {
 }
 
-.tiptap ul > li::before {
-  content: "";
-  position: absolute;
-  left: -1.25rem;
-  top: 50%;
-  transform: translateY(-50%) rotate(180deg);
-  width: 16px;
-  height: 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Ccircle cx='3' cy='5' r='3' fill='%231a1a1a'/%3E%3Crect x='6' y='4' width='10' height='2' fill='%231a1a1a'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-size: contain;
-}
-
 .tiptap ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
@@ -953,19 +940,6 @@
   }
 
   /* Print-safe line-dot list marker using CSS gradients instead of SVG background assets. */
-  .tiptap ul > li::before {
-    width: 16px !important;
-    height: 10px !important;
-    top: 50% !important;
-    left: calc(-1 * var(--print-list-icon-lane) + 0.2rem) !important;
-    transform: translateY(-50%) rotate(180deg) !important;
-    border-radius: 0 !important;
-    background-color: transparent !important;
-    background-image: radial-gradient(circle at 3px 5px, currentColor 0 3px, transparent 3.2px), linear-gradient(currentColor, currentColor) !important;
-    background-repeat: no-repeat !important;
-    background-position: 0 0, 6px 4px !important;
-    background-size: 6px 10px, 10px 2px !important;
-  }
 }
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide {
