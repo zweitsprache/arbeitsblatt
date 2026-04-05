@@ -2505,6 +2505,23 @@ function TextProps({ block }: { block: TextBlock }) {
           }
         />
       </div>
+      {block.bilingual && (
+        <>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("bilingualDivider")}</Label>
+            <Switch
+              checked={block.bilingualDivider ?? false}
+              onCheckedChange={(checked) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { bilingualDivider: checked } },
+                })
+              }
+            />
+          </div>
+        </>
+      )}
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textImage")}</Label>

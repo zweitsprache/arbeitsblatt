@@ -1154,6 +1154,7 @@
     "autoGenerateVerbs": "Verben automatisch konjugieren",
     "backgroundColor": "Hintergrundfarbe",
     "bilingual": "Zweisprachig",
+    "bilingualDivider": "Spaltentrennlinie",
     "borderRadius": "Eckenradius",
     "caption": "Bildunterschrift",
     "cards": "Karten",

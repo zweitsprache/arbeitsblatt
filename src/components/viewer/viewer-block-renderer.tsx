@@ -353,7 +353,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   // Inline <svg> elements ARE rendered correctly.
   // Lucide line-dot-right-horizontal icon injected into each <li> as a real inline SVG element.
   // CSS background-image on ::before is not rendered by Chromium's PDF engine.
-  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.22rem;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.35rem;top:0.95em;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
   const injectLiIcons = (html: string): string => {
     if (!html.includes("<li")) return html;
     return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
@@ -369,6 +369,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
+  const showBilingualDivider = block.bilingualDivider === true;
   const resolvedBodyFont = bodyFont || "inherit";
   const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
   const baseTextStyle: React.CSSProperties = {
@@ -498,7 +499,8 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
               </div>
             </React.Fragment>
           )),
-        null,
+        undefined,
+        { showDivider: showBilingualDivider },
       );
     }
 
@@ -510,7 +512,9 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       if (hasListRows) {
         return renderBilingualGrid(
           <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-            <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>
+          <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+          undefined,
+          { showDivider: showBilingualDivider },
         );
       }
 
@@ -528,13 +532,14 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
-          )), null);
+          )), undefined, { showDivider: showBilingualDivider });
     }
 
     return renderBilingualGrid(
       <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
       <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
       baseTextStyle,
+      { showDivider: showBilingualDivider },
     );
   };
 
@@ -649,7 +654,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
             </div>
           </div>,
           undefined,
-          { showDivider: false }
+          { showDivider: showBilingualDivider }
       );
     }
 

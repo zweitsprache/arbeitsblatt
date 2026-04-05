@@ -83,6 +83,7 @@ export interface TextBlock extends BlockBase {
   imageAlign?: "left" | "right";
   imageScale?: number; // 10-100, percentage of container width
   bilingual?: boolean; // Show original + translation side-by-side in translated worksheets
+  bilingualDivider?: boolean; // Show vertical divider in bilingual two-column layout
 }
 
 // ─── Image block ─────────────────────────────────────────────
@@ -1180,6 +1181,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "text",
       content: "<p>Enter text here...</p>",
+      bilingualDivider: false,
       visibility: "both",
     },
   },
