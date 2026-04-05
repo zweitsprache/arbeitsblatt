@@ -150,7 +150,7 @@
   font-weight: 700;
   line-height: 1.2;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.6rem;
 }
 
 .tiptap h2 {
@@ -158,7 +158,7 @@
   font-weight: 700;
   line-height: 1.25;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.5rem;
 }
 
 .tiptap h3 {
@@ -166,7 +166,7 @@
   font-weight: 800 !important;
   line-height: 1.3;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.4rem;
 }
 
 .tiptap h1.no-margin,
@@ -563,7 +563,7 @@
 .print-worksheet-root .print-body-content .course-content li p,
 .print-worksheet-root .print-body-content li p {
   padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding-bottom: 0.1rem !important;
 }
 
 /* Keep preview typography aligned with PDF output.
@@ -620,6 +620,7 @@
   font-weight: var(--print-h1-weight, var(--print-headline-weight));
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
+  margin-bottom: 0.6rem;
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h2 {
@@ -627,6 +628,7 @@
   font-weight: var(--print-h2-weight, var(--print-headline-weight));
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
+  margin-bottom: 0.5rem;
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h3 {
@@ -634,6 +636,7 @@
   font-weight: var(--print-h3-weight, 800);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
+  margin-bottom: 0.4rem;
 }
 
 @media print {
@@ -700,6 +703,7 @@
     font-weight: var(--print-h1-weight, var(--print-headline-weight));
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
+    margin-bottom: 0.6rem;
   }
 
   .print-body-content .tiptap h2 {
@@ -707,6 +711,7 @@
     font-weight: var(--print-h2-weight, var(--print-headline-weight));
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
+    margin-bottom: 0.5rem;
   }
 
   .print-body-content .tiptap h3 {
@@ -714,6 +719,7 @@
     font-weight: var(--print-h3-weight, 800);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
+    margin-bottom: 0.4rem;
   }
 
   .worksheet-block-page-break {
@@ -907,7 +913,7 @@
   .print-body-content .course-content li p,
   .print-body-content li p {
     padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding-bottom: 0.1rem !important;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),

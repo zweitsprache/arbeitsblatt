@@ -383,21 +383,28 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     gap: "0 1em",
     position: "relative",
   };
-  const renderBilingualGrid = (left: React.ReactNode, right: React.ReactNode, style?: React.CSSProperties) => (
+  const renderBilingualGrid = (
+    left: React.ReactNode,
+    right: React.ReactNode,
+    style?: React.CSSProperties,
+    options?: { showDivider?: boolean }
+  ) => (
     <div style={{ ...bilingualGrid, ...style }}>
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: "50%",
-          width: 1,
-          transform: "translateX(-0.5px)",
-          backgroundColor: "#e2e8f0",
-          pointerEvents: "none",
-        }}
-      />
+      {options?.showDivider !== false && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: "50%",
+            width: 1,
+            transform: "translateX(-0.5px)",
+            backgroundColor: "#e2e8f0",
+            pointerEvents: "none",
+          }}
+        />
+      )}
       {left}
       {right}
     </div>
@@ -630,7 +637,9 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
               {imageEl}
               <div style={translatedFontStyle}>{renderContent(block.content)}</div>
             </div>
-          </div>
+          </div>,
+          undefined,
+          { showDivider: false }
       );
     }
 
