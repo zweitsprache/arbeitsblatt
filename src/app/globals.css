@@ -786,6 +786,11 @@
     font-size: 7pt;
     line-height: 1.5;
     color: #666;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
   }
 
   .print-body-content {
