@@ -675,7 +675,6 @@
   padding-left: var(--print-list-text-pad-left) !important;
   break-inside: avoid !important;
   page-break-inside: avoid !important;
-  overflow: auto;
 }
 
 .print-worksheet-root .print-body-content .tiptap li p,
