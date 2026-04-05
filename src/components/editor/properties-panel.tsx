@@ -5267,6 +5267,13 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
           onCheckedChange={(checked) => update({ bilingual: checked })}
         />
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("skipTranslation")}</Label>
+        <Switch
+          checked={block.skipTranslation ?? false}
+          onCheckedChange={(checked) => update({ skipTranslation: checked })}
+        />
+      </div>
     </div>
   );
 }

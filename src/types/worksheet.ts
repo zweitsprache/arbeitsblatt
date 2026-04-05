@@ -515,6 +515,7 @@ export interface NumberedLabelBlock extends BlockBase {
   prefix: string;
   suffix: string;
   bilingual?: boolean;
+  skipTranslation?: boolean;
 }
 
 // ─── Page Break block ────────────────────────────────────────

@@ -13,6 +13,7 @@ import {
   ColumnsBlock,
   AccordionBlock,
   NumberedItemsBlock,
+  NumberedLabelBlock,
 } from "@/types/worksheet";
 
 const TRANSLATABLE_TEXT_STYLES = new Set([
@@ -499,12 +500,14 @@ function forEachBlockTranslationField(
     }
 
     case "numbered-label": {
-      add("prefix", () => block.prefix, (v) => {
-        block.prefix = v;
-      });
-      add("suffix", () => block.suffix, (v) => {
-        block.suffix = v;
-      });
+      if (!(block as NumberedLabelBlock).skipTranslation) {
+        add("prefix", () => block.prefix, (v) => {
+          block.prefix = v;
+        });
+        add("suffix", () => block.suffix, (v) => {
+          block.suffix = v;
+        });
+      }
       break;
     }
 
