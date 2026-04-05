@@ -673,6 +673,8 @@
   padding-top: var(--print-list-row-py) !important;
   padding-bottom: var(--print-list-row-py) !important;
   padding-left: var(--print-list-text-pad-left) !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 
 .print-worksheet-root .print-body-content .tiptap li p,
@@ -813,7 +815,8 @@
   .worksheet-block-text-cards .text-card-row,
   .glossary-row,
   .tiptap-rows p,
-  [data-text-style="lernziel"] {
+  [data-text-style="lernziel"],
+  li {
     break-inside: avoid;
     page-break-inside: avoid;
   }
