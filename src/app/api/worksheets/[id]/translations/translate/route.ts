@@ -144,9 +144,14 @@ function parseTranslationResponse(
       return null;
     }
 
-    return Object.fromEntries(
-      Object.entries(parsed).filter(([, value]) => typeof value === "string")
-    );
+    const translationMap: TranslationMap = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "string") {
+        translationMap[key] = value;
+      }
+    }
+
+    return translationMap;
   } catch (parseErr) {
     console.error(
       `[translate] ${langCode} chunk ${chunkIndex + 1}: JSON parse failed:`,
