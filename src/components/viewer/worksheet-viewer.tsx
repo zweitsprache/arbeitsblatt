@@ -96,6 +96,14 @@ export function WorksheetViewer({
     const v = value?.trim();
     return v ? v : (fallback ?? "");
   };
+  const normalizeWeight = (value: unknown, fallback: number): number => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value.trim());
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  };
 
   const brandFonts: BrandFonts = {
     bodyFont: nonEmpty(staticBrandFonts.bodyFont, "Asap Condensed, sans-serif"),
@@ -112,9 +120,9 @@ export function WorksheetViewer({
   if (brandProfile) {
     brandFonts.bodyFont = nonEmpty(resolvedProfile.bodyFont, staticBrandFonts.bodyFont);
     brandFonts.headlineFont = nonEmpty(resolvedProfile.headlineFont, staticBrandFonts.headlineFont);
-    brandFonts.headlineWeight = resolvedProfile.headlineWeight;
+    brandFonts.headlineWeight = normalizeWeight(resolvedProfile.headlineWeight, staticBrandFonts.headlineWeight || 700);
     brandFonts.subHeadlineFont = nonEmpty(resolvedProfile.subHeadlineFont, staticBrandFonts.subHeadlineFont);
-    brandFonts.subHeadlineWeight = resolvedProfile.subHeadlineWeight;
+    brandFonts.subHeadlineWeight = normalizeWeight(resolvedProfile.subHeadlineWeight, staticBrandFonts.subHeadlineWeight || 700);
     brandFonts.headerFooterFont = nonEmpty(resolvedProfile.headerFooterFont, staticBrandFonts.headerFooterFont);
     brandFonts.googleFontsUrl = nonEmpty(resolvedProfile.googleFontsUrl, staticBrandFonts.googleFontsUrl);
     brandFonts.primaryColor = resolvedProfile.primaryColor;
@@ -225,9 +233,10 @@ export function WorksheetViewer({
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
   const printBottomReservePx = Math.max(settings.margins.bottom || 0, 113);
-  const resolvedH1Weight = resolvedProfile.h1Weight ?? brandFonts.headlineWeight;
-  const resolvedH2Weight = resolvedProfile.h2Weight ?? brandFonts.headlineWeight;
-  const resolvedH3Weight = resolvedProfile.h3Weight ?? brandFonts.headlineWeight;
+  const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
+  const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
+  const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
+  const resolvedH3Weight = normalizeWeight(resolvedProfile.h3Weight, resolvedHeadlineWeight);
 
   const headingCssVars = {
     ["--heading-h1-weight" as string]: String(resolvedH1Weight),
@@ -239,7 +248,7 @@ export function WorksheetViewer({
     ["--print-body-font" as string]: activeBodyFont,
     ["--print-body-size" as string]: resolvedBodyFontSize,
     ["--print-headline-font" as string]: headlineFont,
-    ["--print-headline-weight" as string]: String(brandFonts.headlineWeight),
+    ["--print-headline-weight" as string]: String(resolvedHeadlineWeight),
     ["--print-primary-color" as string]: brandFonts.primaryColor,
     ["--print-h1-size" as string]: resolvedProfile.h1Size,
     ["--print-h2-size" as string]: resolvedProfile.h2Size,

@@ -934,14 +934,21 @@
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),
+  .print-body-content .tiptap ol > li:not(:last-child),
+  .print-body-content ol > li:not(:last-child),
   .print-body-content ul > li:not(:last-child) {
     position: relative;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child)::after,
   .print-body-content .tiptap ol > li:not(:last-child)::after,
+  .print-body-content ol > li:not(:last-child)::after,
   .print-body-content ul > li:not(:last-child)::after {
-    margin-top: 0.16rem !important;
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    bottom: 0;
     margin-left: -1.5rem !important;
     width: calc(100% + 1.5rem) !important;
     border-bottom: 1px solid #d1d5db !important;
