@@ -353,7 +353,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   // Inline <svg> elements ARE rendered correctly.
   // Lucide line-dot-right-horizontal icon injected into each <li> as a real inline SVG element.
   // CSS background-image on ::before is not rendered by Chromium's PDF engine.
-  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.75rem;top:0.95em;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.75rem;top:var(--li-icon-top,0.95em);transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
   const injectLiIcons = (html: string): string => {
     if (!html.includes("<li")) return html;
     return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
@@ -485,16 +485,17 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
         padding: "0.375rem 0.75rem 0.375rem 1.75rem",
         position: "relative",
         borderBottom: "1px solid #d1d5db",
+        lineHeight: "1.35em",
       };
       return renderBilingualGrid(
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "0.95em", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.675em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "0.95em", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.675em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -589,12 +590,13 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
                 padding: "0.375rem 0 0.375rem 1.75rem",
                 position: "relative",
                 borderBottom: "1px solid #d1d5db",
+                lineHeight: "1.35em",
                 ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
                 breakInside: "avoid" as const,
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ position: "absolute", left: 0, top: "0.95em", transform: "translateY(-50%)", width: 14, height: 14 }}>
+              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.675em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
                 <RowsIconSvg />
               </div>
               <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
