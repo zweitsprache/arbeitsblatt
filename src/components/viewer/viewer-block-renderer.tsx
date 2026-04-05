@@ -360,7 +360,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   };
 
   const RowsIconSvg = () => {
-    const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "#6b7280", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+    const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
     if (isKompetenzziele) return <svg {...p}><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg>;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
     return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
