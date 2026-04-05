@@ -560,21 +560,6 @@
   padding: 0 20mm 0 25mm;
 }
 
-.print-worksheet-root .print-body-content .tiptap ul > li,
-.print-worksheet-root .print-body-content .tiptap ol > li,
-.print-worksheet-root .print-body-content ul > li,
-.print-worksheet-root .print-body-content ol > li {
-  padding-top: 0.16rem !important;
-  padding-bottom: 0.16rem !important;
-}
-
-.print-worksheet-root .print-body-content .tiptap li p,
-.print-worksheet-root .print-body-content .course-content li p,
-.print-worksheet-root .print-body-content li p {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
 /* Keep preview typography aligned with PDF output.
    Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
 .print-worksheet-root.print-skin-final {
@@ -598,15 +583,15 @@
 }
 
 .print-worksheet-root.print-skin-final h1 {
-  font-weight: var(--print-h1-weight, var(--print-headline-weight));
+  font-weight: var(--print-h1-weight);
 }
 
 .print-worksheet-root.print-skin-final h2 {
-  font-weight: var(--print-h2-weight, var(--print-headline-weight));
+  font-weight: var(--print-h2-weight);
 }
 
 .print-worksheet-root.print-skin-final h3 {
-  font-weight: var(--print-h3-weight, var(--print-headline-weight));
+  font-weight: var(--print-h3-weight);
 }
 
 .print-worksheet-root.print-skin-final .text-cv-base {
@@ -627,7 +612,7 @@
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h1 {
   font-size: var(--print-h1-size, var(--text-cv-3xl));
-  font-weight: var(--print-h1-weight, var(--print-headline-weight));
+  font-weight: var(--print-h1-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
   margin-bottom: var(--print-block-gap, 1.5rem);
@@ -635,7 +620,7 @@
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h2 {
   font-size: var(--print-h2-size, var(--text-cv-2xl));
-  font-weight: var(--print-h2-weight, var(--print-headline-weight));
+  font-weight: var(--print-h2-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
   margin-bottom: var(--print-block-gap, 1.5rem);
@@ -643,7 +628,7 @@
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h3 {
   font-size: var(--print-h3-size, var(--text-cv-xl));
-  font-weight: var(--print-h3-weight, var(--print-headline-weight));
+  font-weight: var(--print-h3-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
   margin-bottom: var(--print-block-gap, 1.5rem);
@@ -682,15 +667,15 @@
   }
 
   .print-worksheet-root h1 {
-    font-weight: var(--print-h1-weight, var(--print-headline-weight));
+    font-weight: var(--print-h1-weight);
   }
 
   .print-worksheet-root h2 {
-    font-weight: var(--print-h2-weight, var(--print-headline-weight));
+    font-weight: var(--print-h2-weight);
   }
 
   .print-worksheet-root h3 {
-    font-weight: var(--print-h3-weight, var(--print-headline-weight));
+    font-weight: var(--print-h3-weight);
   }
 
   .print-worksheet-root .text-cv-base {
@@ -711,7 +696,7 @@
 
   .print-body-content .tiptap h1 {
     font-size: var(--print-h1-size, var(--text-cv-3xl));
-    font-weight: var(--print-h1-weight, var(--print-headline-weight));
+    font-weight: var(--print-h1-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
     margin-bottom: var(--print-block-gap, 1.5rem);
@@ -719,7 +704,7 @@
 
   .print-body-content .tiptap h2 {
     font-size: var(--print-h2-size, var(--text-cv-2xl));
-    font-weight: var(--print-h2-weight, var(--print-headline-weight));
+    font-weight: var(--print-h2-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
     margin-bottom: var(--print-block-gap, 1.5rem);
@@ -727,7 +712,7 @@
 
   .print-body-content .tiptap h3 {
     font-size: var(--print-h3-size, var(--text-cv-xl));
-    font-weight: var(--print-h3-weight, var(--print-headline-weight));
+    font-weight: var(--print-h3-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
     margin-bottom: var(--print-block-gap, 1.5rem);
@@ -873,19 +858,27 @@
     font-family: var(--print-body-font);
   }
 
-  /* Print-only: keep list spacing compact.
-     In bilingual/translated output, list content can carry larger line-height defaults. */
+  /* Canonical print list system: one source of spacing, marker lane and dividers. */
+  .print-body-content {
+    --print-list-row-py: 0.16rem;
+    --print-list-text-pad-left: 0.25rem;
+    --print-list-icon-lane: 1.5rem;
+    --print-list-divider: 1px solid #d1d5db;
+  }
+
   .print-body-content .tiptap ul {
     padding-left: 1.75rem !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
 
-  .print-body-content ul,
   .print-body-content .tiptap ul,
   .print-body-content .tiptap ol,
+  .print-body-content ul,
   .print-body-content ol {
     position: relative;
+    border-top: var(--print-list-divider);
+    border-bottom: var(--print-list-divider);
   }
 
   .print-body-content .tiptap li,
@@ -909,9 +902,9 @@
   .print-body-content ul > li,
   .print-body-content ol > li {
     position: relative;
-    padding-top: 0.16rem !important;
-    padding-bottom: 0.16rem !important;
-    padding-left: 0.25rem !important;
+    padding-top: var(--print-list-row-py) !important;
+    padding-bottom: var(--print-list-row-py) !important;
+    padding-left: var(--print-list-text-pad-left) !important;
   }
 
   .print-body-content .tiptap li p,
@@ -919,18 +912,6 @@
   .print-body-content li p {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
-  }
-
-  .print-body-content .tiptap ul::before,
-  .print-body-content .tiptap ol::before,
-  .print-body-content ul::before,
-  .print-body-content ol::before {
-    content: "";
-    display: block;
-    margin-left: -1.5rem !important;
-    margin-bottom: 0.16rem !important;
-    width: calc(100% + 1.5rem) !important;
-    border-top: 1px solid #d1d5db !important;
   }
 
   .print-body-content .tiptap ul > li:not(:last-child),
@@ -949,21 +930,9 @@
     position: absolute;
     left: 0;
     bottom: 0;
-    margin-left: -1.5rem !important;
-    width: calc(100% + 1.5rem) !important;
-    border-bottom: 1px solid #d1d5db !important;
-  }
-
-  .print-body-content .tiptap ul::after,
-  .print-body-content .tiptap ol::after,
-  .print-body-content ul::after,
-  .print-body-content ol::after {
-    content: "";
-    display: block;
-    margin-top: 0.16rem !important;
-    margin-left: -1.5rem !important;
-    width: calc(100% + 1.5rem) !important;
-    border-bottom: 1px solid #d1d5db !important;
+    margin-left: calc(-1 * var(--print-list-icon-lane)) !important;
+    width: calc(100% + var(--print-list-icon-lane)) !important;
+    border-bottom: var(--print-list-divider) !important;
   }
 
   /* Ensure block spacing is preserved */
@@ -988,7 +957,7 @@
     width: 16px !important;
     height: 10px !important;
     top: 50% !important;
-    left: -1.3rem !important;
+    left: calc(-1 * var(--print-list-icon-lane) + 0.2rem) !important;
     transform: translateY(-50%) rotate(180deg) !important;
     border-radius: 0 !important;
     background-color: transparent !important;
