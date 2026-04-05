@@ -343,7 +343,6 @@ function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
             <Copy className="h-3.5 w-3.5" />
             {t("textSnippetLabel")}
           </div>
-          <span className="text-xs text-amber-400">{t("textSnippetHint")}</span>
         </div>
         <RichTextEditor
           content={block.content}
@@ -4333,9 +4332,6 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
 function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   return (
     <div className="space-y-3">
-      {block.instruction && (
-        <p className="text-base text-muted-foreground">{block.instruction}</p>
-      )}
       <div className="space-y-0 border-t">
         {block.items.map((item) => (
           <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">

@@ -589,6 +589,42 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
       : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
+    // For alarm/wichtig in bilingual mode, render each language as a full hint box
+    // so both columns include icon + block frame consistently.
+    const useFullBilingualHintBoxes =
+      isBilingual && !!originalBlock && (isHinweisWichtig || isHinweisAlarm);
+
+    if (useFullBilingualHintBoxes) {
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1em" }}>
+          <div
+            className={s.hintBox}
+            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+          >
+            <div className={s.hintIcon}>
+              {hinweisConfig.icon}
+            </div>
+            <div className={s.hintBody}>
+              {imageEl}
+              {renderContent(originalBlock.content)}
+            </div>
+          </div>
+          <div
+            className={s.hintBox}
+            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+          >
+            <div className={s.hintIcon}>
+              {hinweisConfig.icon}
+            </div>
+            <div className={s.hintBody}>
+              {imageEl}
+              <div style={translatedFontStyle}>{renderContent(block.content)}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className={s.hintBox}
@@ -4103,36 +4139,67 @@ function AudioView({ block }: { block: AudioBlock }) {
 // ─── Schedule View ───────────────────────────────────────────
 function ScheduleView({
   block,
+  originalBlock,
   brand,
   bodyFont,
   isNonLatin,
 }: {
   block: ScheduleBlock;
+  originalBlock?: ScheduleBlock;
   brand?: Brand;
   bodyFont?: string;
   isNonLatin?: boolean;
 }) {
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
-  const bodyStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
+  const bodyStyle: React.CSSProperties = { fontFamily: resolvedBodyFont };
+
+  const renderScheduleText = (
+    title: string,
+    description: string,
+    tone: "default" | "translated" = "default",
+  ) => {
+    const toneClass = tone === "translated" ? "text-slate-400" : "text-slate-900";
+    const descriptionToneClass = tone === "translated" ? "text-slate-400" : "text-muted-foreground";
+
+    return (
+      <div className="flex-1">
+        <div className={`font-bold ${toneClass}`}>{title}</div>
+        {description && <div className={descriptionToneClass}>{description}</div>}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
-      {block.instruction && (
-        <p className="text-muted-foreground">{block.instruction}</p>
-      )}
       <div className={s.scheduleCard}>
         {block.items.map((item) => (
           <div key={item.id} className={s.scheduleRow}>
             <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
-            <span className="flex-1">
-              <span className="font-medium">{item.title}</span>
-              {item.description && (
-                <>
-                  <br />
-                  <span className="text-muted-foreground">{item.description}</span>
-                </>
-              )}
-            </span>
+            {(() => {
+              const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+              const showBilingualItem =
+                !!block.bilingual &&
+                !!originalItem &&
+                (originalItem.title !== item.title || originalItem.description !== item.description);
+
+              if (!showBilingualItem || !originalItem) {
+                return renderScheduleText(item.title, item.description);
+              }
+
+              return (
+                <div className="flex-1">
+                  <div className="font-bold text-slate-900">{originalItem.title}</div>
+                  <div className="font-bold text-slate-400">{item.title}</div>
+                  {originalItem.description && (
+                    <div className="text-slate-900">{originalItem.description}</div>
+                  )}
+                  {item.description && (
+                    <div className="text-slate-400">{item.description}</div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>
@@ -4911,7 +4978,7 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} />;
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} />;
     default:
       return null;
   }

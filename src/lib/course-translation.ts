@@ -476,6 +476,18 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "schedule": {
+      for (const item of block.items) {
+        add(`items.${item.id}.title`, () => item.title, (v) => {
+          item.title = v;
+        });
+        add(`items.${item.id}.description`, () => item.description, (v) => {
+          item.description = v;
+        });
+      }
+      break;
+    }
+
     case "text-snippet": {
       add("content", () => (block as TextSnippetBlock).content, (v) => {
         (block as TextSnippetBlock).translatedContent = v;

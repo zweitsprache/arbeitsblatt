@@ -246,7 +246,6 @@ export const printFixtureBlocks: WorksheetBlock[] = [
   {
     id: "fixture-schedule",
     type: "schedule",
-    instruction: "Planned print verification steps",
     items: [
       { id: "fixture-sc-1", start: "08:30", end: "08:45", title: "Open fixture route", description: "Inspect the live DOM in the browser." },
       { id: "fixture-sc-2", start: "08:45", end: "09:00", title: "Generate fixture PDF", description: "Export the same route through Puppeteer." },

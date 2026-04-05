@@ -149,24 +149,24 @@
   font-size: 1.875rem;
   font-weight: 700;
   line-height: 2.25rem;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .tiptap h2 {
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 2rem;
-  margin-top: 0.75rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .tiptap h3 {
   font-size: 1.25rem;
   font-weight: 800 !important;
   line-height: 1.75rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.25rem;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .tiptap h1.no-margin,
@@ -551,6 +551,14 @@
   padding: 0 20mm 0 25mm;
 }
 
+.print-worksheet-root .print-body-content .tiptap ul > li,
+.print-worksheet-root .print-body-content .tiptap ol > li,
+.print-worksheet-root .print-body-content ul > li,
+.print-worksheet-root .print-body-content ol > li {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+}
+
 /* Keep preview typography aligned with PDF output.
    Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
 .print-worksheet-root.print-skin-final {
@@ -829,8 +837,8 @@
   .print-body-content .tiptap ol > li,
   .print-body-content ul > li,
   .print-body-content ol > li {
-    padding-top: 0.15rem !important;
-    padding-bottom: 0.15rem !important;
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
     padding-left: 0.25rem !important;
   }
 

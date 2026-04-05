@@ -662,8 +662,8 @@ export interface ScheduleItem {
 
 export interface ScheduleBlock extends BlockBase {
   type: "schedule";
-  instruction: string;
   items: ScheduleItem[];
+  bilingual?: boolean;
 }
 
 // ─── AI Prompt block ─────────────────────────────────────────
@@ -2023,7 +2023,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   translations: { de: { label: "Zeitplan", description: "Zeitplan mit Start-/Endzeit, Titel und Beschreibung" } },
   defaultData: {
     type: "schedule",
-    instruction: "",
+    bilingual: false,
     items: [
       { id: "s1", start: "08:00", end: "09:30", title: "Titel 1", description: "" },
       { id: "s2", start: "09:45", end: "11:15", title: "Titel 2", description: "" },
