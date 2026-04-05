@@ -228,7 +228,7 @@
   content: "";
   position: absolute;
   left: 0;
-  top: 50%;
+  top: 0.95em;
   transform: translateY(-50%);
   width: 14px;
   height: 14px;
