@@ -499,6 +499,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
               </div>
             </React.Fragment>
           )),
+        null,
         undefined,
         { showDivider: showBilingualDivider },
       );
@@ -532,7 +533,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
-          )), undefined, { showDivider: showBilingualDivider });
+          )), null, undefined, { showDivider: showBilingualDivider });
     }
 
     return renderBilingualGrid(
