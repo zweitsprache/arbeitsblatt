@@ -26,6 +26,140 @@ const LANGUAGE_NAMES: Record<string, string> = {
   ru: "Russian",
 };
 
+const MAX_CHUNK_JSON_BYTES = 12000;
+const MAX_CHUNK_KEYS = 80;
+const MAX_SPECIAL_INSTRUCTIONS = 50;
+
+type TranslationMap = Record<string, string>;
+type TranslationEntries = Array<[string, string]>;
+
+function buildSpecialInstructions(entries: TranslationEntries): string[] {
+  const specialInstructions: string[] = [];
+
+  for (const [key, value] of entries) {
+    const instruction = getAiInstructions(key, value);
+    if (instruction) {
+      specialInstructions.push(`- Keys matching "${key}": ${instruction}`);
+    }
+  }
+
+  return [...new Set(specialInstructions)].slice(0, MAX_SPECIAL_INSTRUCTIONS);
+}
+
+function buildSystemPrompt(
+  langName: string,
+  langCode: string,
+  specialInstructions: string[]
+) {
+  return `You are a professional translator for educational language-learning worksheet content. The source language is German (de).
+
+TASK: Translate ALL provided strings into ${langName} (${langCode}).
+
+CRITICAL RULES:
+1. Preserve ALL JSON keys exactly as-is — only translate the values.
+2. Preserve HTML tags exactly (<p>, <br>, <strong>, <em>, <ul>, <li>, etc.).
+3. Preserve {{blank:...}} syntax. Translate the word inside the blank too.
+4. Preserve {{option1|option2|...}} inline choice syntax. Keep {{}} and | characters. Translate each option. The first option is always the correct answer.
+5. Preserve {{de:...}} markers — keep the German text inside as-is, translate surrounding text.
+6. Preserve ' | ' separators in fix-sentence exercises — translate each part separately.
+7. Keep technical identifiers, IDs, and special markers unchanged.
+8. Translations should be natural and appropriate for language learners.
+9. This is educational content for German language learners — context matters for quality.
+10. For glossary definitions: translate naturally. The glossary terms (left column) remain in German — only definitions (right column) are translated.
+
+${specialInstructions.length > 0 ? `SPECIAL INSTRUCTIONS PER KEY:\n${specialInstructions.join("\n")}` : ""}
+
+RESPONSE FORMAT:
+Return a flat JSON object with the same keys, but values translated into ${langName}.
+Example: { "block.abc.content": "My heading", "block.xyz.pairs.p1.definition": "My definition" }
+
+Return ONLY valid JSON — no markdown fences, no commentary.`;
+}
+
+function chunkTranslationEntries(entries: TranslationEntries): TranslationEntries[] {
+  const chunks: TranslationEntries[] = [];
+  let currentChunk: TranslationEntries = [];
+  let currentChunkBytes = 2;
+
+  for (const entry of entries) {
+    const entryBytes = Buffer.byteLength(
+      JSON.stringify({ [entry[0]]: entry[1] }),
+      "utf8"
+    );
+
+    if (
+      currentChunk.length > 0 &&
+      (currentChunk.length >= MAX_CHUNK_KEYS ||
+        currentChunkBytes + entryBytes > MAX_CHUNK_JSON_BYTES)
+    ) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentChunkBytes = 2;
+    }
+
+    currentChunk.push(entry);
+    currentChunkBytes += entryBytes;
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+function parseTranslationResponse(
+  rawText: string,
+  stopReason: string | null | undefined,
+  langCode: string,
+  chunkIndex: number
+): TranslationMap | null {
+  try {
+    let raw = rawText.trim();
+    raw = raw.replace(/^```[a-z]*\s*\n?/i, "").replace(/\n?```\s*$/, "");
+
+    const firstBrace = raw.indexOf("{");
+    const lastBrace = raw.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      raw = raw.slice(firstBrace, lastBrace + 1);
+    }
+
+    if (stopReason === "max_tokens" && !raw.endsWith("}")) {
+      const lastCompleteComma = raw.lastIndexOf(",\n");
+      const lastCompleteQuote = raw.lastIndexOf('"\n');
+      const cutoff = Math.max(lastCompleteComma, lastCompleteQuote);
+      if (cutoff > 0) {
+        raw = raw.slice(0, cutoff) + "\n}";
+        console.warn(
+          `[translate] ${langCode} chunk ${chunkIndex + 1}: truncated response salvaged at offset ${cutoff}`
+        );
+      }
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      console.warn(
+        `[translate] ${langCode} chunk ${chunkIndex + 1}: Parsed response was not an object`
+      );
+      return null;
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => typeof value === "string")
+    );
+  } catch (parseErr) {
+    console.error(
+      `[translate] ${langCode} chunk ${chunkIndex + 1}: JSON parse failed:`,
+      parseErr instanceof Error ? parseErr.message : parseErr
+    );
+    console.error(
+      `[translate] ${langCode} chunk ${chunkIndex + 1}: Raw response (first 500):`,
+      rawText.slice(0, 500)
+    );
+    return null;
+  }
+}
+
 /**
  * Translate worksheet content to target languages using Claude.
  *
@@ -50,7 +184,7 @@ export async function POST(
   }
 
   const body = await req.json().catch(() => null);
-    const force = body?.force === true;
+  const force = body?.force === true;
 
   const blocks = (worksheet.blocks as unknown as WorksheetBlock[]) ?? [];
   const settings = (worksheet.settings as unknown as WorksheetSettings) ?? {};
@@ -91,16 +225,28 @@ export async function POST(
   const existingTranslations = ((worksheet as any).translations ?? {}) as Record<string, Record<string, string>>;
   const previousSource = existingTranslations._source ?? {};
 
-  const delta: Record<string, string> = {};
-  for (const [key, value] of Object.entries(strings)) {
-    if (force || previousSource[key] !== value) {
-      delta[key] = value;
+  const allEntries = Object.entries(strings);
+  const pendingEntriesByLang: Record<string, TranslationEntries> = {};
+  const pendingKeys = new Set<string>();
+
+  for (const langCode of Object.keys(targetLangs)) {
+    const existingLangTranslations = existingTranslations[langCode] ?? {};
+    const pendingEntries = allEntries.filter(
+      ([key, value]) =>
+        force ||
+        previousSource[key] !== value ||
+        typeof existingLangTranslations[key] !== "string"
+    );
+
+    pendingEntriesByLang[langCode] = pendingEntries;
+    for (const [key] of pendingEntries) {
+      pendingKeys.add(key);
     }
   }
 
   const removedKeys = Object.keys(previousSource).filter((k) => !(k in strings));
 
-  if (!force && Object.keys(delta).length === 0 && removedKeys.length === 0) {
+  if (!force && pendingKeys.size === 0 && removedKeys.length === 0) {
     return NextResponse.json({
       success: true,
       stringCount: 0,
@@ -110,7 +256,7 @@ export async function POST(
   }
 
   // ── Removal-only: no AI call needed, just clean up ────────
-  if (!force && Object.keys(delta).length === 0 && removedKeys.length > 0) {
+  if (!force && pendingKeys.size === 0 && removedKeys.length > 0) {
     const merged: Record<string, Record<string, string>> = {};
     for (const [lang, map] of Object.entries(existingTranslations)) {
       if (!lang.startsWith("_")) merged[lang] = { ...map };
@@ -133,107 +279,99 @@ export async function POST(
     });
   }
 
-  const deltaEntries = Object.entries(delta);
-
-  console.log(`[translate] Delta: ${deltaEntries.length} changed, ${removedKeys.length} removed, force=${force}. Keys: ${deltaEntries.map(([k]) => k).join(", ")}`);
-  console.log(`[translate] Delta values sample:`, JSON.stringify(delta).slice(0, 500));
-
-  // Build per-key AI instructions
-  const specialInstructions: string[] = [];
-  for (const [key, value] of deltaEntries) {
-    const instruction = getAiInstructions(key, value);
-    if (instruction) {
-      specialInstructions.push(`- Keys matching "${key}": ${instruction}`);
-    }
-  }
-  const uniqueInstructions = [...new Set(specialInstructions)];
-  const stringsJson = JSON.stringify(delta, null, 2);
+  console.log(
+    `[translate] Pending unique keys=${pendingKeys.size}, removed=${removedKeys.length}, force=${force}, per-language=${JSON.stringify(
+      Object.fromEntries(
+        Object.entries(pendingEntriesByLang).map(([langCode, entries]) => [
+          langCode,
+          entries.length,
+        ])
+      )
+    )}`
+  );
 
   try {
     const translatedLanguages: string[] = [];
     const newTranslationsByLang: Record<string, Record<string, string>> = {};
 
     for (const [langCode, langName] of Object.entries(targetLangs)) {
-      const systemPrompt = `You are a professional translator for educational language-learning worksheet content. The source language is German (de).
-
-TASK: Translate ALL provided strings into ${langName} (${langCode}).
-
-CRITICAL RULES:
-1. Preserve ALL JSON keys exactly as-is — only translate the values.
-2. Preserve HTML tags exactly (<p>, <br>, <strong>, <em>, <ul>, <li>, etc.).
-3. Preserve {{blank:...}} syntax. Translate the word inside the blank too.
-4. Preserve {{option1|option2|...}} inline choice syntax. Keep {{}} and | characters. Translate each option. The first option is always the correct answer.
-5. Preserve {{de:...}} markers — keep the German text inside as-is, translate surrounding text.
-6. Preserve ' | ' separators in fix-sentence exercises — translate each part separately.
-7. Keep technical identifiers, IDs, and special markers unchanged.
-8. Translations should be natural and appropriate for language learners.
-9. This is educational content for German language learners — context matters for quality.
-10. For glossary definitions: translate naturally. The glossary terms (left column) remain in German — only definitions (right column) are translated.
-
-${uniqueInstructions.length > 0 ? `SPECIAL INSTRUCTIONS PER KEY:\n${uniqueInstructions.slice(0, 50).join("\n")}` : ""}
-
-RESPONSE FORMAT:
-Return a flat JSON object with the same keys, but values translated into ${langName}.
-Example: { "block.abc.content": "My heading", "block.xyz.pairs.p1.definition": "My definition" }
-
-Return ONLY valid JSON — no markdown fences, no commentary.`;
-
-      const message = await client.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 16000,
-        messages: [
-          {
-            role: "user",
-            content: `Translate the following ${deltaEntries.length} strings into ${langName}:\n\n${stringsJson}`,
-          },
-        ],
-        system: systemPrompt,
-      });
-
-      console.log(`[translate] ${langCode}: stop_reason=${message.stop_reason}, content_blocks=${message.content.length}`);
-
-      const textBlock = message.content.find((c) => c.type === "text");
-      if (!textBlock || textBlock.type !== "text") {
-        console.warn(`[translate] ${langCode}: No text block in AI response`);
+      const pendingEntries = pendingEntriesByLang[langCode] ?? [];
+      if (pendingEntries.length === 0) {
         continue;
       }
 
-      console.log(`[translate] ${langCode}: response length=${textBlock.text.length}, first 200 chars: ${textBlock.text.slice(0, 200)}`);
+      const chunks = chunkTranslationEntries(pendingEntries);
+      const mergedChunkTranslations: TranslationMap = {};
 
-      try {
-        let raw = textBlock.text.trim();
-        // Strip markdown fences (case-insensitive)
-        raw = raw.replace(/^```[a-z]*\s*\n?/i, "").replace(/\n?```\s*$/, "");
-        // If there's still non-JSON text around the object, extract { … }
-        const firstBrace = raw.indexOf("{");
-        const lastBrace = raw.lastIndexOf("}");
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          raw = raw.slice(firstBrace, lastBrace + 1);
+      console.log(
+        `[translate] ${langCode}: translating ${pendingEntries.length} keys in ${chunks.length} chunk(s)`
+      );
+
+      for (const [chunkIndex, chunkEntries] of chunks.entries()) {
+        const chunkMap = Object.fromEntries(chunkEntries);
+        const chunkJson = JSON.stringify(chunkMap, null, 2);
+        const systemPrompt = buildSystemPrompt(
+          langName,
+          langCode,
+          buildSpecialInstructions(chunkEntries)
+        );
+
+        const message = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 16000,
+          messages: [
+            {
+              role: "user",
+              content: `Translate the following ${chunkEntries.length} strings into ${langName}:\n\n${chunkJson}`,
+            },
+          ],
+          system: systemPrompt,
+        });
+
+        console.log(
+          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: stop_reason=${message.stop_reason}, content_blocks=${message.content.length}`
+        );
+
+        const textBlock = message.content.find((content) => content.type === "text");
+        if (!textBlock || textBlock.type !== "text") {
+          console.warn(
+            `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: No text block in AI response`
+          );
+          continue;
         }
 
-        // If response was truncated (max_tokens), try to salvage partial JSON
-        if (message.stop_reason === "max_tokens" && !raw.endsWith("}")) {
-          // Find the last complete key-value pair and close the object
-          const lastCompleteComma = raw.lastIndexOf(",\n");
-          const lastCompleteQuote = raw.lastIndexOf('"\n');
-          const cutoff = Math.max(lastCompleteComma, lastCompleteQuote);
-          if (cutoff > 0) {
-            raw = raw.slice(0, cutoff) + "\n}";
-            console.warn(`[translate] ${langCode}: Truncated response — salvaged partial JSON at offset ${cutoff}`);
-          }
+        console.log(
+          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: response length=${textBlock.text.length}, first 200 chars: ${textBlock.text.slice(0, 200)}`
+        );
+
+        const parsedChunk = parseTranslationResponse(
+          textBlock.text,
+          message.stop_reason,
+          langCode,
+          chunkIndex
+        );
+
+        if (!parsedChunk || Object.keys(parsedChunk).length === 0) {
+          console.warn(
+            `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: Parsed OK but empty object`
+          );
+          continue;
         }
 
-        const langTranslations = JSON.parse(raw);
-        if (typeof langTranslations === "object" && Object.keys(langTranslations).length > 0) {
-          newTranslationsByLang[langCode] = langTranslations;
-          translatedLanguages.push(langCode);
-          console.log(`[translate] ${langCode}: parsed ${Object.keys(langTranslations).length} keys`);
-        } else {
-          console.warn(`[translate] ${langCode}: Parsed OK but empty object`);
-        }
-      } catch (parseErr) {
-        console.error(`[translate] ${langCode}: JSON parse failed:`, parseErr instanceof Error ? parseErr.message : parseErr);
-        console.error(`[translate] ${langCode}: Raw response (first 500):`, textBlock.text.slice(0, 500));
+        Object.assign(mergedChunkTranslations, parsedChunk);
+        console.log(
+          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: parsed ${Object.keys(parsedChunk).length} keys`
+        );
+      }
+
+      if (Object.keys(mergedChunkTranslations).length > 0) {
+        newTranslationsByLang[langCode] = mergedChunkTranslations;
+        translatedLanguages.push(langCode);
+        console.log(
+          `[translate] ${langCode}: merged ${Object.keys(mergedChunkTranslations).length} translated keys across ${chunks.length} chunk(s)`
+        );
+      } else {
+        console.warn(`[translate] ${langCode}: No valid chunk translations`);
       }
     }
 
@@ -286,7 +424,7 @@ Return ONLY valid JSON — no markdown fences, no commentary.`;
 
     return NextResponse.json({
       success: true,
-      stringCount: deltaEntries.length,
+      stringCount: pendingKeys.size,
       languages: translatedLanguages,
       translatedAt: new Date().toISOString(),
     });

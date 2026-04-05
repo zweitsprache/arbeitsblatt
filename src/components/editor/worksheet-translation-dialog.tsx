@@ -49,7 +49,7 @@ export function WorksheetTranslationDialog() {
   const [status, setStatus] = useState<TranslationStatus | null>(null);
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [isSavingLangs, setIsSavingLangs] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationMode, setTranslationMode] = useState<"delta" | "force" | null>(null);
   const [translateResult, setTranslateResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,9 +101,9 @@ export function WorksheetTranslationDialog() {
     }
   };
 
-  const handleTranslate = async () => {
+  const handleTranslate = async (force = false) => {
     if (!state.worksheetId) return;
-    setIsTranslating(true);
+    setTranslationMode(force ? "force" : "delta");
     setError(null);
     setTranslateResult(null);
     try {
@@ -113,7 +113,7 @@ export function WorksheetTranslationDialog() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ force: true }),
+          body: JSON.stringify({ force }),
         }
       );
       const data = await res.json();
@@ -135,7 +135,7 @@ export function WorksheetTranslationDialog() {
     } catch {
       setError(t("translateFailed"));
     } finally {
-      setIsTranslating(false);
+      setTranslationMode(null);
     }
   };
 
@@ -145,6 +145,7 @@ export function WorksheetTranslationDialog() {
     JSON.stringify([...(status?.targetLanguages ?? [])].sort());
 
   const canTranslate = selectedLangs.length > 0 && !langsChanged;
+  const isTranslating = translationMode !== null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -259,18 +260,37 @@ export function WorksheetTranslationDialog() {
           )}
 
           {/* Translate button */}
-          <Button
-            onClick={handleTranslate}
-            disabled={isTranslating || !canTranslate}
-            className="w-full gap-2"
-          >
-            {isTranslating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Languages className="h-4 w-4" />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => handleTranslate(false)}
+              disabled={isTranslating || !canTranslate}
+              className="flex-1 gap-2"
+            >
+              {translationMode === "delta" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Languages className="h-4 w-4" />
+              )}
+              {translationMode === "delta" ? t("translateInProgress") : t("translateWorksheet")}
+            </Button>
+            {status?.hasTranslations && (
+              <Button
+                onClick={() => handleTranslate(true)}
+                disabled={isTranslating || !canTranslate}
+                variant="outline"
+                className="gap-2"
+              >
+                {translationMode === "force" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
+                {translationMode === "force"
+                  ? t("forceRetranslateInProgress")
+                  : t("forceRetranslate")}
+              </Button>
             )}
-            {isTranslating ? t("translateInProgress") : t("translateWorksheet")}
-          </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
