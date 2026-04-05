@@ -75,7 +75,9 @@ const SnippetBreakNode = Node.create({
   group: "block",
   atom: true,
   parseHTML() {
-    return [{ tag: "hr[data-snippet-break]" }];
+    // Accept legacy/plain <hr> too, so existing content is recovered
+    // and re-serialized with the snippet marker attribute.
+    return [{ tag: "hr[data-snippet-break]" }, { tag: "hr" }];
   },
   renderHTML() {
     return ["hr", { "data-snippet-break": "" }];
@@ -202,6 +204,9 @@ export function RichTextEditor({
     extensions: [
       StarterKit.configure({
         heading: false,
+        // In snippet mode, prevent StarterKit's default horizontalRule node
+        // from swallowing snippet-break <hr> markers and dropping attributes.
+        horizontalRule: !snippetBreak,
       }),
       CustomHeading.configure({
         levels: [1, 2, 3],

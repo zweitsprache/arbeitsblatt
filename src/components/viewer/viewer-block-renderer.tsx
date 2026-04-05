@@ -783,9 +783,11 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
   );
 }
 
-/** Split Tiptap HTML into items on <hr data-snippet-break> markers. */
+/** Split Tiptap HTML into items on snippet separators.
+ * Accepts both explicit <hr data-snippet-break> and legacy/plain <hr>.
+ */
 function splitSnippetItems(html: string): string[] {
-  const parts = html.split(/<hr[^>]*data-snippet-break[^>]*>/gi);
+  const parts = html.split(/<hr(?:\s[^>]*)?>/gi);
   return parts.map((s) => s.trim()).filter(Boolean);
 }
 
