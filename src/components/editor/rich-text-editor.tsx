@@ -206,7 +206,7 @@ export function RichTextEditor({
         heading: false,
         // In snippet mode, prevent StarterKit's default horizontalRule node
         // from swallowing snippet-break <hr> markers and dropping attributes.
-        horizontalRule: !snippetBreak,
+        ...(snippetBreak ? { horizontalRule: false } : {}),
       }),
       CustomHeading.configure({
         levels: [1, 2, 3],
