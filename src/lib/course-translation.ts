@@ -12,6 +12,7 @@ import {
   TextSnippetBlock,
   ColumnsBlock,
   AccordionBlock,
+  NumberedItemsBlock,
 } from "@/types/worksheet";
 
 const TRANSLATABLE_TEXT_STYLES = new Set([
@@ -449,10 +450,12 @@ function forEachBlockTranslationField(
     }
 
     case "numbered-items": {
-      for (const item of block.items) {
-        add(`items.${item.id}.content`, () => item.content, (v) => {
-          item.content = v;
-        });
+      if (!(block as NumberedItemsBlock).skipTranslation) {
+        for (const item of block.items) {
+          add(`items.${item.id}.content`, () => item.content, (v) => {
+            item.content = v;
+          });
+        }
       }
       break;
     }

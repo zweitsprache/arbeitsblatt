@@ -5080,6 +5080,13 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
           onCheckedChange={(checked) => update({ bilingual: checked })}
         />
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("skipTranslation")}</Label>
+        <Switch
+          checked={block.skipTranslation ?? false}
+          onCheckedChange={(checked) => update({ skipTranslation: checked })}
+        />
+      </div>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>

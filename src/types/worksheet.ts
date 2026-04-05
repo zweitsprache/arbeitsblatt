@@ -617,6 +617,7 @@ export interface NumberedItemsBlock extends BlockBase {
   bgColor?: string;
   borderRadius?: number;
   bilingual?: boolean;
+  skipTranslation?: boolean;
 }
 
 // ─── Checklist block ────────────────────────────────────────
