@@ -228,7 +228,7 @@
   content: "";
   position: absolute;
   left: 0;
-  top: calc(0.375rem + 0.75em);
+  top: calc(0.375rem + 0.7em);
   transform: translateY(-50%);
   width: 14px;
   height: 14px;
@@ -292,7 +292,7 @@
 }
 
 .tiptap ul {
-  --li-icon-top: calc(0.16rem + 0.75em);
+  --li-icon-top: calc(0.16rem + 0.7em);
   list-style-type: none;
   padding-left: 1.5rem;
   margin-top: 0.25rem;
@@ -629,11 +629,11 @@
   --print-list-icon-lane: 1.5rem;
   --print-list-divider-lane: 1.75rem;
   --print-list-divider: 1px solid #d1d5db;
-  --li-icon-top: calc(0.375rem + 0.75em);
+  --li-icon-top: calc(0.375rem + 0.7em);
 }
 
 .print-worksheet-root .print-body-content .tiptap ul {
-  --li-icon-top: calc(0.375rem + 0.75em);
+  --li-icon-top: calc(0.375rem + 0.7em);
   padding-left: var(--print-list-divider-lane) !important;
   margin-top: 0 !important;
   margin-bottom: 0 !important;

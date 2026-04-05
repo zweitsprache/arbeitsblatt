@@ -491,11 +491,11 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.75em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.75em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -596,7 +596,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.75em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
+              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
                 <RowsIconSvg />
               </div>
               <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
