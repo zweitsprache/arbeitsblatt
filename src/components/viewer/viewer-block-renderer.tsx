@@ -353,7 +353,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   // Inline <svg> elements ARE rendered correctly.
   // Lucide line-dot-right-horizontal icon injected into each <li> as a real inline SVG element.
   // CSS background-image on ::before is not rendered by Chromium's PDF engine.
-  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.15rem;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.22rem;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
   const injectLiIcons = (html: string): string => {
     if (!html.includes("<li")) return html;
     return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
