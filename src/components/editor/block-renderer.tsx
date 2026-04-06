@@ -4352,10 +4352,10 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
         {showHeader && (
           <thead>
             <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              {showDate && <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold" colSpan={2}>Datum</th>}
-              <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold">Zeit</th>
-              {showRoom && <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold">Raum</th>}
-              <th className="text-left py-1.5 px-1 font-semibold">Inhalt</th>
+              {showDate && <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold" colSpan={2}>Datum</th>}
+              <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold">Zeit</th>
+              {showRoom && <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold">Raum</th>}
+              <th className="text-left py-1.5 px-2 font-semibold">Inhalt</th>
             </tr>
           </thead>
         )}
@@ -4364,11 +4364,11 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
             const { weekday, formatted } = formatScheduleDate(item.date ?? "");
             return (
               <tr key={item.id} className="border-b align-baseline">
-                {showDate && <td className="py-1.5 px-1 text-base font-semibold whitespace-nowrap">{weekday}</td>}
-                {showDate && <td className="py-1.5 px-1 text-base tabular-nums whitespace-nowrap">{formatted}</td>}
-                <td className="py-1.5 px-1 text-base tabular-nums whitespace-nowrap">{item.start} – {item.end}</td>
-                {showRoom && <td className="py-1.5 px-1 text-base whitespace-nowrap">{item.room ?? ""}</td>}
-                <td className="py-1.5 px-1 text-base">
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold whitespace-nowrap">{weekday}</td>}
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap">{formatted}</td>}
+                <td className="py-1.5 px-2 text-base tabular-nums whitespace-nowrap">{item.start} – {item.end}</td>
+                {showRoom && <td className="py-1.5 px-2 text-base whitespace-nowrap">{item.room ?? ""}</td>}
+                <td className="py-1.5 px-2 text-base">
                   <span className="font-semibold">{item.title}</span>
                   {item.description && (
                     <>

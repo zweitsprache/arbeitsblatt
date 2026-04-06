@@ -4241,7 +4241,7 @@ function ScheduleView({
             return (
               <tr key={item.id} className={s.scheduleRow}>
                 {showDate && <td className={`${s.scheduleTd} font-bold`}>{weekday}</td>}
-                {showDate && <td className={`${s.scheduleTd} tabular-nums`}>{formatted}</td>}
+                {showDate && <td className={`${s.scheduleTd} font-bold tabular-nums`}>{formatted}</td>}
                 <td className={`${s.scheduleTd} tabular-nums`} style={{ whiteSpace: "nowrap" }}>{item.start} – {item.end}</td>
                 {showRoom && <td className={s.scheduleTd}>{item.room ?? ""}</td>}
                 <td className={`${s.scheduleTd} ${s.scheduleTd100}`}>
