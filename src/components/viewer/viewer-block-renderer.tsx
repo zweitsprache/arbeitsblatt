@@ -4227,37 +4227,40 @@ function ScheduleView({
       }}>
         <thead>
           <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
-            <th colSpan={2} style={{ padding: "6px 10px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Datum</th>
-            <th colSpan={3} style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Zeit</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Raum</th>
-            <th style={{ padding: "6px 4px 6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", width: "100%" }}>Inhalt</th>
+            <th style={{ padding: "6px 4px 6px 10px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 10px 6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", width: "100%" }}>&nbsp;</th>
           </tr>
         </thead>
         <tbody>
           <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
             <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
           </tr>
           <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
             <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
           </tr>
           <tr>
             <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
             <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
           </tr>
