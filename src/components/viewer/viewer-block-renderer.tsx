@@ -57,7 +57,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -343,8 +343,9 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
   const isLernziel = block.textStyle === "lernziel";
   const isKompetenzziele = block.textStyle === "kompetenzziele";
   const isHandlungsziele = block.textStyle === "handlungsziele";
+  const isRedemittel = block.textStyle === "redemittel";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
 
@@ -363,6 +364,7 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
     if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
+    if (isRedemittel) return <MessageCircle size={14} strokeWidth={2.5} />;
     return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
   };
 

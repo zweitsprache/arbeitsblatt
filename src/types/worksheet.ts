@@ -72,7 +72,7 @@ export interface HeadingBlock extends BlockBase {
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
-export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "metadaten" | "rows";
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "redemittel" | "metadaten" | "rows";
 
 export interface TextBlock extends BlockBase {
   type: "text";

@@ -25,6 +25,7 @@ const TRANSLATABLE_TEXT_STYLES = new Set([
   "rows",
   "kompetenzziele",
   "handlungsziele",
+  "redemittel",
 ]);
 
 function isTranslatableTextStyle(style?: string): boolean {

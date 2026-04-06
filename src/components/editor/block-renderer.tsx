@@ -231,9 +231,18 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isLernziel = block.textStyle === "lernziel";
   const isKompetenzziele = block.textStyle === "kompetenzziele";
   const isHandlungsziele = block.textStyle === "handlungsziele";
+  const isRedemittel = block.textStyle === "redemittel";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele;
-  const rowsClass = isKompetenzziele ? "tiptap-rows tiptap-rows-goal" : isHandlungsziele ? "tiptap-rows tiptap-rows-arrow-right-to-line" : isRows ? "tiptap-rows" : "";
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel;
+  const rowsClass = isKompetenzziele
+    ? "tiptap-rows tiptap-rows-goal"
+    : isHandlungsziele
+    ? "tiptap-rows tiptap-rows-arrow-right-to-line"
+    : isRedemittel
+    ? "tiptap-rows tiptap-rows-message-circle"
+    : isRows
+    ? "tiptap-rows"
+    : "";
 
   const hinweisConfig = isHinweisAlarm
     ? { color: "#990033", bg: "#99003308", border: "#990033", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }

@@ -2468,6 +2468,7 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="lernziel">{t("textStyleLernziel")}</option>
           <option value="kompetenzziele">{t("textStyleKompetenzziele")}</option>
           <option value="handlungsziele">{t("textStyleHandlungsziele")}</option>
+          <option value="redemittel">{t("textStyleRedemittel")}</option>
           <option value="metadaten">{t("textStyleMetadaten")}</option>
           <option value="rows">{t("textStyleRows")}</option>
         </select>
