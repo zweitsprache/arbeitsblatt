@@ -34,9 +34,6 @@ interface SidebarTokens {
   textMuted: string;
   textFaint: string;
   accentText: string;
-  accentPercent: string;
-  progressBar: string;
-  progressTrack: string;
   ringTrack: string;
   ringFill: string;
   ringFillComplete: string;
@@ -69,9 +66,6 @@ const DARK_TOKENS: SidebarTokens = {
   textMuted: "rgba(255,255,255,0.90)",
   textFaint: "rgba(255,255,255,0.20)",
   accentText: "#F2EDDA",
-  accentPercent: "rgba(242,237,218,0.5)",
-  progressBar: "linear-gradient(90deg, #F2EDDA, #F7F4E8)",
-  progressTrack: "rgba(255,255,255,0.06)",
   ringTrack: "rgba(255,255,255,0.06)",
   ringFill: "rgba(242,237,218,0.7)",
   ringFillComplete: "#F2EDDA",
@@ -104,9 +98,6 @@ const LIGHT_TOKENS: SidebarTokens = {
   textMuted: "rgba(0,0,0,0.75)",
   textFaint: "rgba(0,0,0,0.30)",
   accentText: "#4a4639",
-  accentPercent: "rgba(74,70,57,0.5)",
-  progressBar: "linear-gradient(90deg, #4a4639, #635e4e)",
-  progressTrack: "rgba(0,0,0,0.06)",
   ringTrack: "rgba(0,0,0,0.08)",
   ringFill: "rgba(74,70,57,0.6)",
   ringFillComplete: "#4a4639",
@@ -139,9 +130,6 @@ const LINGOSTAR_LIGHT_TOKENS: SidebarTokens = {
   textMuted: "rgba(0,0,0,0.70)",
   textFaint: "rgba(0,0,0,0.25)",
   accentText: "#3a4f40",
-  accentPercent: "rgba(58,79,64,0.5)",
-  progressBar: "linear-gradient(90deg, #3a4f40, #4d6953)",
-  progressTrack: "rgba(0,0,0,0.06)",
   ringTrack: "rgba(0,0,0,0.08)",
   ringFill: "rgba(58,79,64,0.6)",
   ringFillComplete: "#3a4f40",
@@ -180,50 +168,6 @@ function useSidebarTheme() { return React.useContext(SidebarThemeContext); }
 
 // ─── Types ───────────────────────────────────────────────────
 
-interface FlatLesson {
-  moduleId: string;
-  moduleTitle: string;
-  moduleShortTitle: string;
-  moduleIndex: number;
-  topicId: string;
-  topicTitle: string;
-  topicShortTitle: string;
-  lessonId: string;
-  lessonTitle: string;
-  lessonShortTitle: string;
-  globalIndex: number;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────
-
-function flattenLessons(structure: CourseModule[]): FlatLesson[] {
-  const flat: FlatLesson[] = [];
-  structure.forEach((mod, mi) => {
-    for (const topic of mod.topics) {
-      for (const lesson of topic.lessons) {
-        flat.push({
-          moduleId: mod.id,
-          moduleTitle: mod.title,
-          moduleShortTitle: mod.shortTitle,
-          moduleIndex: mi,
-          topicId: topic.id,
-          topicTitle: topic.title,
-          topicShortTitle: topic.shortTitle,
-          lessonId: lesson.id,
-          lessonTitle: lesson.title,
-          lessonShortTitle: lesson.shortTitle,
-          globalIndex: flat.length,
-        });
-      }
-    }
-  });
-  return flat;
-}
-
-function countModuleVisitedLessons(moduleId: string, flatLessons: FlatLesson[], visitedLessons: Set<string>) {
-  return flatLessons.filter((lesson) => lesson.moduleId === moduleId && visitedLessons.has(lesson.lessonId)).length;
-}
-
 // ─── Module Number ──────────────────────────────────────────
 
 function ModuleNumber({ number }: { number: string }) {
@@ -245,24 +189,17 @@ function ModuleNumber({ number }: { number: string }) {
 function SidebarModuleSection({
   mod,
   moduleIndex,
-  flatLessons,
   currentModuleId,
-  visitedLessons,
   onSelectModule,
 }: {
   mod: CourseModule;
   moduleIndex: number;
-  flatLessons: FlatLesson[];
   currentModuleId: string | null;
-  visitedLessons: Set<string>;
   onSelectModule: (moduleId: string) => void;
 }) {
   const tk = useSidebarTheme();
-  const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
-  const moduleLessonCount = moduleLessons.length;
+  const moduleLessonCount = mod.topics.reduce((count, topic) => count + topic.lessons.length, 0);
   const topicCount = mod.topics.length;
-  const visitedCount = countModuleVisitedLessons(mod.id, flatLessons, visitedLessons);
-  const progress = moduleLessonCount > 0 ? Math.round((visitedCount / moduleLessonCount) * 100) : 0;
   const moduleNumber = String(getModuleNumber(moduleIndex));
   const isCurrentModule = currentModuleId === mod.id;
 
@@ -287,21 +224,6 @@ function SidebarModuleSection({
         </div>
         <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0" style={{ color: tk.chevron }} />
       </div>
-      <div className="mt-3 space-y-2">
-        <div className="h-1 overflow-hidden rounded-full" style={{ backgroundColor: tk.progressTrack }}>
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${progress}%`,
-              background: tk.progressBar,
-            }}
-          />
-        </div>
-        <div className="flex items-center justify-between text-[11px]" style={{ color: tk.textMuted }}>
-          <span>{visitedCount} opened</span>
-          <span>{progress}%</span>
-        </div>
-      </div>
     </button>
   );
 }
@@ -310,25 +232,19 @@ function SidebarModuleSection({
 
 function SidebarNav({
   structure,
-  flatLessons,
   currentModuleId,
-  visitedLessons,
   onSelectModule,
   searchQuery,
   onSearchChange,
 }: {
   structure: CourseModule[];
-  flatLessons: FlatLesson[];
   currentModuleId: string | null;
-  visitedLessons: Set<string>;
   onSelectModule: (moduleId: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }) {
   const { brand, sidebarTheme } = useCourse();
   const tk = getSidebarTokens(sidebarTheme, brand as Brand);
-  const totalLessons = flatLessons.length;
-  const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
 
   return (
     <SidebarThemeContext.Provider value={tk}>
@@ -361,27 +277,13 @@ function SidebarNav({
         </div>
       </div>
 
-      <div className="px-5 pb-2 shrink-0">
-        <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: tk.progressTrack }}>
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: totalLessons > 0 ? `${(completedLessons / totalLessons) * 100}%` : "0%",
-              background: tk.progressBar,
-            }}
-          />
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto pt-3 px-5 pb-6 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
             key={mod.id}
             mod={mod}
             moduleIndex={i}
-            flatLessons={flatLessons}
             currentModuleId={currentModuleId}
-            visitedLessons={visitedLessons}
             onSelectModule={onSelectModule}
           />
         ))}
@@ -411,19 +313,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
-  const [visitedLessons, setVisitedLessons] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-
-  const flatLessons = useMemo(() => flattenLessons(structure), [structure]);
-
-  // Detect current lesson from URL
-  const currentLessonId = useMemo(() => {
-    // URL: /{locale}/course/{slug}/{moduleId}/{topicId}/{lessonId}
-    const segments = pathname.split("/").filter(Boolean);
-    // segments: [locale, "course", slug, moduleId?, topicId?, lessonId?]
-    if (segments.length >= 6) return segments[5];
-    return null;
-  }, [pathname]);
 
   const currentModuleId = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
@@ -516,16 +406,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     [router, locale, slug]
   );
 
-  // Mark visited
-  React.useEffect(() => {
-    if (currentLessonId) {
-      setVisitedLessons((prev) => {
-        if (prev.has(currentLessonId)) return prev;
-        return new Set(prev).add(currentLessonId);
-      });
-    }
-  }, [currentLessonId]);
-
   const handleSelectModule = useCallback(
     (moduleId: string) => {
       setMobileNavOpen(false);
@@ -533,9 +413,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     },
     [router, locale, slug]
   );
-
-  const completedCount = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
-  const pct = flatLessons.length > 0 ? Math.round((completedCount / flatLessons.length) * 100) : 0;
 
   // Determine breadcrumb from URL
   const breadcrumb = useMemo(() => {
@@ -567,10 +444,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <p className="text-cv-sm font-medium truncate">{title}</p>
           </div>
           <CourseLanguageSwitcher />
-          <span className="shrink-0 text-[11px] font-medium text-muted-foreground">{completedCount}/{flatLessons.length}</span>
-        </div>
-        <div className="h-0.5 bg-muted">
-          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
@@ -583,9 +456,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           </SheetHeader>
           <SidebarNav
             structure={structure}
-            flatLessons={flatLessons}
             currentModuleId={currentModuleId}
-            visitedLessons={visitedLessons}
             onSelectModule={handleSelectModule}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -614,10 +485,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
         </div>
         {/* Language switcher */}
         <div className="ml-auto flex items-center gap-3">
-          <div className="hidden xl:flex items-center gap-2 rounded-full border bg-background px-3 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            <span>{completedCount} / {flatLessons.length} lessons</span>
-          </div>
           <CourseLanguageSwitcher />
           {!chatSidebarOpen && (
             <Button variant="outline" size="sm" className="rounded-full" onClick={() => setChatSidebarOpen(true)}>
@@ -642,9 +509,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             )}>
               <SidebarNav
                 structure={structure}
-                flatLessons={flatLessons}
                 currentModuleId={currentModuleId}
-                visitedLessons={visitedLessons}
                 onSelectModule={handleSelectModule}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
