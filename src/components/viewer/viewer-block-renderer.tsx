@@ -4217,7 +4217,7 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
     whiteSpace: "nowrap",
     textAlign: "left",
     color: "inherit",
-    fontSize: "0.75em",
+    fontSize: "0.8em",
     fontWeight: 400,
     textTransform: "uppercase",
     lineHeight: "1.5rem",
@@ -4227,7 +4227,7 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
     <>
       <style>{`
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
         .scheduleNew td:nth-child(4){padding-left:0;padding-right:0;}
         .scheduleNew thead tr th{border-top:none;}
@@ -4264,8 +4264,8 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.end)}</td>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{item.room}</td>
                 <td style={{ padding: "4px 8px" }}>
-                  <strong>{item.title}</strong>
-                  {item.description ? ` ${item.description}` : ""}
+                  <strong style={{ display: "block" }}>{item.title}</strong>
+                  {item.description ? <span style={{ display: "block" }}>{item.description}</span> : null}
                 </td>
               </tr>
             );
