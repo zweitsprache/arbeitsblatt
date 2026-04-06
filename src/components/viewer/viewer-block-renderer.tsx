@@ -4206,69 +4206,48 @@ function ScheduleView({
   const showRoom = block.showRoom ?? false;
   const showHeader = block.showHeader ?? false;
 
-  const renderScheduleText = (
-    title: string,
-    description: string,
-    tone: "default" | "translated" = "default",
-  ) => {
-    const toneClass = tone === "translated" ? "text-slate-400" : "text-slate-900";
-    const descriptionToneClass = tone === "translated" ? "text-slate-400" : "text-muted-foreground";
-
-    return (
-      <>
-        <div className={`font-bold ${toneClass}`}>{title}</div>
-        {description && <div className={descriptionToneClass}>{description}</div>}
-      </>
-    );
-  };
-
   return (
-    <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
-      <table className={s.scheduleCard} style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
+    <div style={isNonLatin ? bodyStyle : undefined}>
+      <table className={s.scheduleTable}>
         {showHeader && (
           <thead>
-            <tr className={s.scheduleHeader}>
-              {showDate && <th className={s.scheduleTh} colSpan={2}>Datum</th>}
-              <th className={s.scheduleTh}>Zeit</th>
-              {showRoom && <th className={s.scheduleTh}>Raum</th>}
-              <th className={`${s.scheduleTh} ${s.scheduleTd100}`}>Inhalt</th>
+            <tr className={s.scheduleHeaderRow}>
+              {showDate && <th className={s.scheduleHd} colSpan={2}>Datum</th>}
+              <th className={s.scheduleHd}>Zeit</th>
+              {showRoom && <th className={s.scheduleHd}>Raum</th>}
+              <th className={s.scheduleHdWide}>Inhalt</th>
             </tr>
           </thead>
         )}
         <tbody>
           {block.items.map((item) => {
             const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
+            const originalItem = originalBlock?.items.find((c) => c.id === item.id);
+            const bilingual =
+              !!block.bilingual &&
+              !!originalItem &&
+              (originalItem.title !== item.title || originalItem.description !== item.description);
+
             return (
-              <tr key={item.id} className={s.scheduleRow}>
-                {showDate && <td className={s.scheduleTdBold}>{weekday}</td>}
-                {showDate && <td className={s.scheduleTdBold}>{formatted}</td>}
-                <td className={s.scheduleTdNums}>{item.start} – {item.end}</td>
-                {showRoom && <td className={s.scheduleTd}>{item.room ?? ""}</td>}
-                <td className={`${s.scheduleTd} ${s.scheduleTd100}`}>
-                  {(() => {
-                    const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-                    const showBilingualItem =
-                      !!block.bilingual &&
-                      !!originalItem &&
-                      (originalItem.title !== item.title || originalItem.description !== item.description);
-
-                    if (!showBilingualItem || !originalItem) {
-                      return renderScheduleText(item.title, item.description);
-                    }
-
-                    return (
-                      <>
-                        <div className="font-bold text-slate-900">{originalItem.title}</div>
-                        <div className="font-bold text-slate-400">{item.title}</div>
-                        {originalItem.description && (
-                          <div className="text-slate-900">{originalItem.description}</div>
-                        )}
-                        {item.description && (
-                          <div className="text-slate-400">{item.description}</div>
-                        )}
-                      </>
-                    );
-                  })()}
+              <tr key={item.id} className={s.scheduleBodyRow}>
+                {showDate && <td className={s.scheduleCellBold}>{weekday}</td>}
+                {showDate && <td className={s.scheduleCellBold}>{formatted}</td>}
+                <td className={s.scheduleCell}>{item.start}&nbsp;–&nbsp;{item.end}</td>
+                {showRoom && <td className={s.scheduleCell}>{item.room ?? ""}</td>}
+                <td className={s.scheduleCellWide}>
+                  {bilingual && originalItem ? (
+                    <>
+                      <div className={s.scheduleTitleOriginal}>{originalItem.title}</div>
+                      <div className={s.scheduleTitleTranslated}>{item.title}</div>
+                      {originalItem.description && <div className={s.scheduleDescOriginal}>{originalItem.description}</div>}
+                      {item.description && <div className={s.scheduleDescTranslated}>{item.description}</div>}
+                    </>
+                  ) : (
+                    <>
+                      <div className={s.scheduleTitle}>{item.title}</div>
+                      {item.description && <div className={s.scheduleDesc}>{item.description}</div>}
+                    </>
+                  )}
                 </td>
               </tr>
             );

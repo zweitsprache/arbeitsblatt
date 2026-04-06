@@ -347,55 +347,93 @@
   line-height: 1.35;
 }
 
-.scheduleCard {
-  overflow: hidden;
+/* ── Schedule table ────────────────────────────────────────── */
+
+.scheduleTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   background: #fff;
+  overflow: hidden;
 }
 
-.scheduleRow {
-  border-bottom: 1px solid #e5e7eb;
+/* Header row */
+.scheduleHeaderRow {
+  background: #f8fafc;
 }
 
-.scheduleRow:last-child {
-  border-bottom: 0;
-}
-
-.scheduleTh {
+.scheduleHd {
   text-align: left;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   white-space: nowrap;
   font-weight: 600;
-}
-
-.scheduleTd {
-  padding: 0.55rem 0.75rem;
-  vertical-align: baseline;
-  white-space: nowrap;
-}
-
-.scheduleTdBold {
-  composes: scheduleTd;
-  font-weight: 700;
-}
-
-.scheduleTdNums {
-  composes: scheduleTd;
-  font-variant-numeric: tabular-nums;
-}
-
-.scheduleTd100 {
-  width: 100%;
-  white-space: normal;
-}
-
-.scheduleHeader {
-  background: #f8fafc;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scheduleHdWide {
+  composes: scheduleHd;
+  width: 100%;
+}
+
+/* Body rows */
+.scheduleBodyRow {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scheduleBodyRow:last-child {
+  border-bottom: 0;
+}
+
+/* Cells */
+.scheduleCell {
+  padding: 0.5rem 0.75rem;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.scheduleCellBold {
+  composes: scheduleCell;
+  font-weight: 700;
+}
+
+.scheduleCellWide {
+  composes: scheduleCell;
+  width: 100%;
+  white-space: normal;
+}
+
+/* Content inside cells */
+.scheduleTitle {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.scheduleTitleOriginal {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.scheduleTitleTranslated {
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.scheduleDesc {
+  color: #64748b;
+}
+
+.scheduleDescOriginal {
+  color: #0f172a;
+}
+
+.scheduleDescTranslated {
+  color: #94a3b8;
 }
 
 .accordionToggle {
