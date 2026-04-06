@@ -247,9 +247,9 @@ export const printFixtureBlocks: WorksheetBlock[] = [
     id: "fixture-schedule",
     type: "schedule",
     items: [
-      { id: "fixture-sc-1", start: "08:30", end: "08:45", title: "Open fixture route", description: "Inspect the live DOM in the browser." },
-      { id: "fixture-sc-2", start: "08:45", end: "09:00", title: "Generate fixture PDF", description: "Export the same route through Puppeteer." },
-      { id: "fixture-sc-3", start: "09:00", end: "09:15", title: "Compare results", description: "Log spacing or color drift before moving more CSS." },
+      { id: "fixture-sc-1", date: "", start: "08:30", end: "08:45", room: "", title: "Open fixture route", description: "Inspect the live DOM in the browser." },
+      { id: "fixture-sc-2", date: "", start: "08:45", end: "09:00", room: "", title: "Generate fixture PDF", description: "Export the same route through Puppeteer." },
+      { id: "fixture-sc-3", date: "", start: "09:00", end: "09:15", room: "", title: "Compare results", description: "Log spacing or color drift before moving more CSS." },
     ],
     ...baseVisibility,
   },
