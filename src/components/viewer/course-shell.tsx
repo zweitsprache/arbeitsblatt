@@ -202,6 +202,7 @@ function SidebarModuleSection({
   const topicCount = mod.topics.length;
   const moduleNumber = String(getModuleNumber(moduleIndex));
   const isCurrentModule = currentModuleId === mod.id;
+  const moduleTitleColor = DEFAULT_BRAND_SETTINGS[mod.brand || "edoomio"]?.primaryColor ?? DEFAULT_BRAND_SETTINGS.edoomio.primaryColor;
 
   return (
     <button
@@ -215,7 +216,7 @@ function SidebarModuleSection({
       <div className="flex items-start gap-3">
         <ModuleNumber number={moduleNumber} />
         <div className="min-w-0 flex-1">
-          <p className="text-cv-xs font-semibold leading-snug text-primary">
+          <p className="text-cv-xs font-semibold leading-snug" style={{ color: moduleTitleColor }}>
             {mod.shortTitle || mod.title || "Untitled Module"}
           </p>
           <p className="mt-1 text-[11px] leading-none" style={{ color: tk.textFaint }}>
