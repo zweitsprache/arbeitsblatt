@@ -4227,7 +4227,8 @@ function ScheduleView({
 
   return (
     <div style={isNonLatin ? bodyStyle : undefined}>
-      <table className={s.scheduleTable}>
+      <div className={s.scheduleTableShell}>
+        <table className={s.scheduleTable}>
         <colgroup>
           {showDate && (
             <>
@@ -4284,6 +4285,7 @@ function ScheduleView({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

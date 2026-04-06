@@ -349,12 +349,16 @@
 
 /* ── Schedule table ────────────────────────────────────────── */
 
+.scheduleTableShell {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
 .scheduleTable {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  background: #fff;
 }
 
 /* Header row */
