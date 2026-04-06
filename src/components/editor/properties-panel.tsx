@@ -5931,7 +5931,7 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-hidden">
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("bilingual")}</Label>
         <Switch
@@ -5965,15 +5965,15 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("scheduleItems")}</Label>
         {block.items.map((item, i) => (
           <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
+            {(block.showDate ?? false) && (
+              <Input
+                type="date"
+                value={item.date ?? ""}
+                onChange={(e) => updateItem(i, { date: e.target.value })}
+                className="h-8 text-xs"
+              />
+            )}
             <div className="flex items-center gap-1">
-              {(block.showDate ?? false) && (
-                <Input
-                  type="date"
-                  value={item.date ?? ""}
-                  onChange={(e) => updateItem(i, { date: e.target.value })}
-                  className="h-8 text-xs w-[130px]"
-                />
-              )}
               <Input
                 type="time"
                 value={item.start}
