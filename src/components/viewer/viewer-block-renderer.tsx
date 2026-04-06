@@ -3982,27 +3982,86 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
 }
 
 // ─── Checklist View ────────────────────────────────────────────
-function ChecklistView({ block }: { block: ChecklistBlock }) {
+function ChecklistView({
+  block,
+  originalBlock,
+  isNonLatin,
+  translationScale,
+}: {
+  block: ChecklistBlock;
+  originalBlock?: ChecklistBlock;
+  isNonLatin?: boolean;
+  translationScale?: number;
+}) {
+  const isBilingual = !!block.bilingual && !!originalBlock;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+
+  const renderChecklistColumn = (
+    item: ChecklistBlock["items"][number],
+    style?: React.CSSProperties,
+    options?: { withDivider?: boolean },
+  ) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "20px minmax(0, 1fr)",
+        columnGap: "1rem",
+        alignItems: "start",
+        ...(options?.withDivider
+          ? {
+              borderLeft: "1px solid #e5e7eb",
+              paddingLeft: "1rem",
+            }
+          : {}),
+      }}
+    >
+      <div className={CONTROL_BOX_CLASS} style={{ marginTop: "0.15rem" }} />
+      <div className={`${s.checklistText} tiptap-compact`} style={style}>
+        <div
+          className="tiptap max-w-none"
+          dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
+        />
+        {(item.writingLines ?? 0) > 0 && (
+          <div className="mt-2 space-y-2">
+            {Array.from({ length: item.writingLines! }).map((_, i) => (
+              <div key={i} style={{ height: 20, borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 0.5 }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className={s.checklistRows}>
       {block.items.map((item, index) => (
-        <div key={item.id} className={s.checklistRow}>
-          <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
-          <div className={CONTROL_BOX_CLASS} />
-          <div className={`${s.checklistText} tiptap-compact`}>
-            <div
-              className="tiptap max-w-none"
-              dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
-            />
-            {(item.writingLines ?? 0) > 0 && (
-              <div className="mt-2 space-y-2">
-                {Array.from({ length: item.writingLines! }).map((_, i) => (
-                  <div key={i} style={{ height: 20, borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 0.5 }} />
-                ))}
+        {
+          (() => {
+            const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+            const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+
+            return (
+              <div
+                key={item.id}
+                className={s.checklistRow}
+                style={showBilingual ? {
+                  gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
+                  alignItems: "start",
+                } : undefined}
+              >
+                <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
+                {showBilingual
+                  ? (
+                    <>
+                      {renderChecklistColumn(originalItem)}
+                      {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
+                    </>
+                  )
+                  : renderChecklistColumn(item)}
               </div>
-            )}
-          </div>
-        </div>
+            );
+          })()
+        }
       ))}
     </div>
   );
@@ -5099,7 +5158,7 @@ export function ViewerBlockRenderer({
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "checklist":
-      return <ChecklistView block={block as ChecklistBlock} />;
+      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":
       return (
         <AccordionView
