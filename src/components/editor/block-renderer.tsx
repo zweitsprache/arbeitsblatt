@@ -4358,7 +4358,7 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
           </div>
         )}
         {block.items.map((item) => {
-          const { weekday, formatted } = formatScheduleDate(item.date);
+          const { weekday, formatted } = formatScheduleDate(item.date ?? "");
           return (
             <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
               {showDate && (
@@ -4368,7 +4368,7 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
               )}
               <span className="text-base tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
               {showRoom && (
-                <span className="text-base whitespace-nowrap shrink-0 w-[80px]">{item.room}</span>
+                <span className="text-base whitespace-nowrap shrink-0 w-[80px]">{item.room ?? ""}</span>
               )}
               <span className="text-base flex-1">
                 <span className="font-semibold">{item.title}</span>
