@@ -189,11 +189,13 @@ function ModuleNumber({ number }: { number: string }) {
 function SidebarModuleSection({
   mod,
   moduleIndex,
+  brand,
   currentModuleId,
   onSelectModule,
 }: {
   mod: CourseModule;
   moduleIndex: number;
+  brand?: Brand;
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
 }) {
@@ -202,7 +204,7 @@ function SidebarModuleSection({
   const topicCount = mod.topics.length;
   const moduleNumber = String(getModuleNumber(moduleIndex));
   const isCurrentModule = currentModuleId === mod.id;
-  const moduleTitleColor = DEFAULT_BRAND_SETTINGS[mod.brand || "edoomio"]?.primaryColor ?? DEFAULT_BRAND_SETTINGS.edoomio.primaryColor;
+  const moduleTitleColor = DEFAULT_BRAND_SETTINGS[brand || "edoomio"]?.primaryColor ?? DEFAULT_BRAND_SETTINGS.edoomio.primaryColor;
 
   return (
     <button
@@ -287,6 +289,7 @@ function SidebarNav({
             key={mod.id}
             mod={mod}
             moduleIndex={i}
+            brand={brand}
             currentModuleId={currentModuleId}
             onSelectModule={onSelectModule}
           />
