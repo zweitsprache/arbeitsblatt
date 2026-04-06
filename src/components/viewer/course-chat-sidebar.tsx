@@ -349,7 +349,7 @@ export function CourseChatSidebar({
   return (
     <div
       className={cn(
-        "hidden lg:flex shrink-0 relative transition-all duration-300",
+        "hidden lg:flex shrink-0 relative min-h-0 h-full transition-all duration-300",
         open ? "w-[300px] 2xl:w-[360px]" : "w-0"
       )}
     >

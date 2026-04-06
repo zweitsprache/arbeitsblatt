@@ -204,7 +204,7 @@ function SidebarModuleSection({
   const topicCount = mod.topics.length;
   const moduleNumber = String(getModuleNumber(moduleIndex));
   const isCurrentModule = currentModuleId === mod.id;
-  const moduleTitleColor = DEFAULT_BRAND_SETTINGS[brand || "edoomio"]?.primaryColor ?? DEFAULT_BRAND_SETTINGS.edoomio.primaryColor;
+  const moduleTitleColor = BRAND_FONTS[brand || "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
 
   return (
     <button
@@ -667,14 +667,16 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="hidden lg:flex shrink-0 flex-col gap-4">
-            <SearchPanel value={searchQuery} onChange={setSearchQuery} className="rounded-lg" />
-            <CourseChatSidebar
-              open={chatSidebarOpen}
-              onClose={() => setChatSidebarOpen(false)}
-              lessonContext={currentLessonData?.context ?? ""}
-              lessonTitle={currentLessonData?.title ?? ""}
-            />
+          <div className="hidden lg:flex shrink-0 min-h-0 h-full flex-col gap-4">
+            <SearchPanel value={searchQuery} onChange={setSearchQuery} className="shrink-0 rounded-lg" />
+            <div className="min-h-0 flex-1">
+              <CourseChatSidebar
+                open={chatSidebarOpen}
+                onClose={() => setChatSidebarOpen(false)}
+                lessonContext={currentLessonData?.context ?? ""}
+                lessonTitle={currentLessonData?.title ?? ""}
+              />
+            </div>
           </div>
         </div>
       </div>
