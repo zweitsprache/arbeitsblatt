@@ -215,7 +215,7 @@ function SidebarModuleSection({
       <div className="flex items-start gap-3">
         <ModuleNumber number={moduleNumber} />
         <div className="min-w-0 flex-1">
-          <p className="text-cv-xs font-semibold leading-snug" style={{ color: tk.text }}>
+          <p className="text-cv-xs font-semibold leading-snug text-primary">
             {mod.shortTitle || mod.title || "Untitled Module"}
           </p>
           <p className="mt-1 text-[11px] leading-none" style={{ color: tk.textFaint }}>
