@@ -231,8 +231,7 @@ export function extractBlocksText(
         if (block.title) parts.push(block.title);
         for (const item of block.items ?? []) {
           if (item.title) parts.push(item.title);
-          if (item.category) parts.push(item.category);
-          if (item.description) parts.push(item.description);
+          if (item.category || item.description) parts.push(item.category || item.description);
         }
         break;
 

@@ -6225,16 +6225,18 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
 
     const importedItems = lines.map((line, index) => {
       const delimiter = detectDelimiter(line);
-      const [title = "", url = "", category = "", ...descriptionParts] = parseDelimitedRow(line, delimiter);
+      const [title = "", url = "", third = "", ...rest] = parseDelimitedRow(line, delimiter);
+      const body = rest.length > 0 ? rest.join(delimiter).trim() : third;
       return {
         id: `website-${Date.now()}-${index}`,
         title,
         url,
-        category,
-        description: descriptionParts.join(delimiter).trim(),
+        category: body,
+        description: "",
         image: "",
+        pageBreakAfter: false,
       };
-    }).filter((item) => item.title || item.url || item.category || item.description);
+    }).filter((item) => item.title || item.url || item.category);
 
     if (importedItems.length === 0) {
       setCsvError(t("csvNoData"));

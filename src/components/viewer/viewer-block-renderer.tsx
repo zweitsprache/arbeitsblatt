@@ -4287,7 +4287,9 @@ function WebsiteView({
         {block.items.map((item) => {
           const href = normalizeExternalUrl(item.url);
           const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-          const showBilingualDescription = !!block.bilingual && !!originalItem && originalItem.description !== item.description;
+          const body = item.category || item.description || "";
+          const originalBody = originalItem ? (originalItem.category || originalItem.description || "") : "";
+          const showBilingualDescription = !!block.bilingual && !!originalItem && originalBody !== body;
           const translatedTextStyle = {
             color: "rgba(15, 23, 42, 0.72)",
             fontWeight: 400,
@@ -4295,7 +4297,11 @@ function WebsiteView({
           } satisfies React.CSSProperties;
 
           return (
-            <article key={item.id} className="flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4">
+            <article
+              key={item.id}
+              className="flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4"
+              style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
+            >
               <div className="w-40 shrink-0 overflow-hidden rounded-sm border border-slate-200 bg-slate-50 aspect-video">
                 {item.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -4320,20 +4326,15 @@ function WebsiteView({
                 ) : (
                   <div className="font-bold text-slate-900">{item.title}</div>
                 )}
-                {item.category ? (
-                  <div className="mt-1 text-xs font-medium text-slate-500">
-                    {item.category}
-                  </div>
-                ) : null}
-                {item.description ? (
+                {body ? (
                   showBilingualDescription ? (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6">
-                      {originalItem.description ? <div>{originalItem.description}</div> : null}
-                      {item.description ? <div style={translatedTextStyle}>{item.description}</div> : null}
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-900">
+                      {originalBody ? <div>{originalBody}</div> : null}
+                      {body ? <div style={translatedTextStyle}>{body}</div> : null}
                     </div>
                   ) : (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6">
-                      {item.description}
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-900">
+                      {body}
                     </div>
                   )
                 ) : null}

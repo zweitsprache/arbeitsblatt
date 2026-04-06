@@ -497,8 +497,9 @@ function forEachBlockTranslationField(
     case "website": {
       if (!block.skipTranslation) {
         for (const item of block.items) {
-          add(`items.${item.id}.description`, () => item.description, (v) => {
-            item.description = v;
+          add(`items.${item.id}.description`, () => item.category || item.description, (v) => {
+            item.category = v;
+            item.description = "";
           });
         }
       }

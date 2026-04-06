@@ -684,6 +684,7 @@ export interface WebsiteItem {
   category: string;
   description: string;
   image?: string;
+  pageBreakAfter?: boolean;
 }
 
 export interface WebsiteBlock extends BlockBase {
@@ -2089,6 +2090,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         category: "Category",
         description: "Short description",
         image: "",
+        pageBreakAfter: false,
       },
       {
         id: crypto.randomUUID(),
@@ -2097,6 +2099,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         category: "Category",
         description: "Another short description",
         image: "",
+        pageBreakAfter: false,
       },
     ],
     visibility: "both",

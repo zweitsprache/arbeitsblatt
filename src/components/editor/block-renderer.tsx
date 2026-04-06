@@ -4436,6 +4436,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
         category: "",
         description: "",
         image: "",
+        pageBreakAfter: false,
       },
     ]);
   };
@@ -4453,6 +4454,14 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
     updateItems(next);
   };
 
+  const getBodyValue = (item: WebsiteBlock["items"][number]) => item.category || item.description || "";
+
+  const updateBodyField = (index: number, value: string) => {
+    localeUpdate(block.id, `items.${index}.category`, value, () => {
+      updateItem(index, { category: value, description: "" });
+    });
+  };
+
   return (
     <div className="space-y-4">
       {block.title.trim() ? (
@@ -4466,7 +4475,11 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
           const href = normalizeExternalUrl(item.url);
 
           return (
-            <div key={item.id} className="group relative rounded-sm border border-slate-200 bg-white p-3">
+            <div
+              key={item.id}
+              className="group relative rounded-sm border border-slate-200 bg-white p-3"
+              style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
+            >
               <div className="flex gap-3">
                 <div className="w-40 shrink-0">
                   {item.image ? (
@@ -4541,24 +4554,24 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                     className="h-8 w-full rounded-sm border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                   />
 
-                  <input
-                    type="text"
-                    value={item.category}
-                    onChange={(e) => updateLocaleField(index, "category", e.target.value)}
-                    placeholder={t("websiteCategory")}
-                    className="h-8 w-full rounded-sm border border-slate-200 bg-white px-2 text-xs text-slate-500 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                  />
-
                   <textarea
-                    value={item.description}
-                    onChange={(e) => updateLocaleField(index, "description", e.target.value)}
-                    placeholder={t("websiteDescription")}
-                    className="min-h-[72px] w-full rounded-sm border border-slate-200 bg-white px-2 py-2 text-sm font-normal normal-case tracking-normal outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200 resize-y"
+                    value={getBodyValue(item)}
+                    onChange={(e) => updateBodyField(index, e.target.value)}
+                    placeholder={t("websiteCategory")}
+                    className="min-h-[72px] w-full resize-y rounded-sm border border-slate-200 bg-white px-2 py-2 text-sm font-normal normal-case tracking-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                   />
                 </div>
               </div>
 
               <div className="mt-3 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => updateItem(index, { pageBreakAfter: !(item.pageBreakAfter ?? false) })}
+                  className={`text-slate-400 hover:text-slate-700 ${item.pageBreakAfter ? "text-slate-700" : ""}`}
+                  title={t("pageBreak")}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => moveItem(index, "up")}
@@ -4584,6 +4597,9 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {item.pageBreakAfter ? (
+                <div className="mt-2 text-[11px] text-muted-foreground">{t("pageBreak")}</div>
+              ) : null}
             </div>
           );
         })}
