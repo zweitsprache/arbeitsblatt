@@ -4346,18 +4346,23 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   const showRoom = block.showRoom ?? false;
   const showHeader = block.showHeader ?? false;
 
+  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
+  const dateColStyle: React.CSSProperties = { width: "10ch" };
+  const timeColStyle: React.CSSProperties = { width: "14ch" };
+  const autoColStyle: React.CSSProperties = { width: "1%" };
+
   return (
     <div className="space-y-3">
       <table className="w-full border-collapse border-t" style={{ tableLayout: "auto" }}>
         <colgroup>
           {showDate && (
             <>
-              <col style={{ width: "1%" }} />
-              <col style={{ width: "1%" }} />
+              <col style={weekdayColStyle} />
+              <col style={dateColStyle} />
             </>
           )}
-          <col style={{ width: "1%" }} />
-          {showRoom && <col style={{ width: "1%" }} />}
+          <col style={timeColStyle} />
+          {showRoom && <col style={autoColStyle} />}
           <col style={{ width: "auto" }} />
         </colgroup>
         {showHeader && (

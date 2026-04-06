@@ -4225,6 +4225,11 @@ function ScheduleView({
     borderBottom: "1px solid #e5e7eb",
   };
 
+  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
+  const dateColStyle: React.CSSProperties = { width: "10ch" };
+  const timeColStyle: React.CSSProperties = { width: "14ch" };
+  const autoColStyle: React.CSSProperties = { width: "1%" };
+
   return (
     <div style={isNonLatin ? bodyStyle : undefined}>
       <div className={s.scheduleTableShell}>
@@ -4232,12 +4237,12 @@ function ScheduleView({
         <colgroup>
           {showDate && (
             <>
-              <col style={{ width: "1%" }} />
-              <col style={{ width: "1%" }} />
+              <col style={weekdayColStyle} />
+              <col style={dateColStyle} />
             </>
           )}
-          <col style={{ width: "1%" }} />
-          {showRoom && <col style={{ width: "1%" }} />}
+          <col style={timeColStyle} />
+          {showRoom && <col style={autoColStyle} />}
           <col style={{ width: "auto" }} />
         </colgroup>
         {showHeader && (
