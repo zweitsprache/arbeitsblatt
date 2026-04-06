@@ -4042,10 +4042,15 @@ function ChecklistView({
           <div
             key={item.id}
             className={s.checklistRow}
-            style={showBilingual ? {
-              gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
-              alignItems: "start",
-            } : undefined}
+            style={showBilingual
+              ? {
+                  gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
+                  alignItems: "start",
+                }
+              : {
+                  gridTemplateColumns: "2rem minmax(0, 1fr)",
+                  alignItems: "start",
+                }}
           >
             <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
             {showBilingual
