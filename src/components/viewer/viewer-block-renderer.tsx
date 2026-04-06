@@ -4174,9 +4174,11 @@ function AudioView({ block }: { block: AudioBlock }) {
 
 function ScheduleView({
   block,
+  originalBlock,
   brand,
   bodyFont,
   isNonLatin,
+  translationScale,
   primaryColor = "#1a1a1a",
 }: {
   block: ScheduleBlock;
@@ -4184,6 +4186,7 @@ function ScheduleView({
   brand?: Brand;
   bodyFont?: string;
   isNonLatin?: boolean;
+  translationScale?: number;
   primaryColor?: string;
 }) {
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -4194,10 +4197,14 @@ function ScheduleView({
     <div style={wrapStyle}>
       <StaticScheduleTable
         items={block.items}
+        originalItems={originalBlock?.items}
         primaryColor={primaryColor}
         showDate={block.showDate ?? false}
         showRoom={block.showRoom ?? false}
         showHeader={block.showHeader ?? false}
+        bilingual={block.bilingual ?? false}
+        translationScale={translationScale}
+        isNonLatin={isNonLatin}
       />
     </div>
   );
@@ -4220,17 +4227,26 @@ function formatScheduleCellTime(value: string) {
 
 function StaticScheduleTable({
   items,
+  originalItems,
   primaryColor,
   showDate,
   showRoom,
   showHeader,
+  bilingual,
+  translationScale,
+  isNonLatin,
 }: {
   items: ScheduleBlock["items"];
+  originalItems?: ScheduleBlock["items"];
   primaryColor: string;
   showDate: boolean;
   showRoom: boolean;
   showHeader: boolean;
+  bilingual: boolean;
+  translationScale?: number;
+  isNonLatin?: boolean;
 }) {
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     padding: "4px 8px",
@@ -4282,7 +4298,15 @@ function StaticScheduleTable({
         )}
         <tbody>
           {items.map((item) => {
+            const originalItem = originalItems?.find((candidate) => candidate.id === item.id);
             const { weekday, formatted } = formatScheduleCellDate(item.date);
+            const showBilingualTitle = bilingual && !!originalItem && originalItem.title !== item.title;
+            const showBilingualDescription = bilingual && !!originalItem && originalItem.description !== item.description;
+            const translatedTextStyle = {
+              color: "rgba(15, 23, 42, 0.72)",
+              fontWeight: 400,
+              ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}),
+            } satisfies React.CSSProperties;
 
             return (
               <tr key={item.id}>
@@ -4293,8 +4317,22 @@ function StaticScheduleTable({
                 <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
                 {showRoom && <td style={rowCellStyle}>{item.room}</td>}
                 <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
-                  <div style={{ fontWeight: 700 }}>{item.title}</div>
-                  {item.description ? <div>{item.description}</div> : null}
+                  {showBilingualTitle ? (
+                    <>
+                      <div style={{ fontWeight: 700 }}>{originalItem.title}</div>
+                      <div style={translatedTextStyle}>{item.title}</div>
+                    </>
+                  ) : (
+                    <div style={{ fontWeight: 700 }}>{item.title}</div>
+                  )}
+                  {showBilingualDescription ? (
+                    <>
+                      {originalItem.description ? <div>{originalItem.description}</div> : null}
+                      {item.description ? <div style={translatedTextStyle}>{item.description}</div> : null}
+                    </>
+                  ) : item.description ? (
+                    <div>{item.description}</div>
+                  ) : null}
                 </td>
               </tr>
             );
@@ -5078,7 +5116,7 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} primaryColor={primaryColor} />;
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     default:
       return null;
   }
