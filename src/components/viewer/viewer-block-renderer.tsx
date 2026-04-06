@@ -4172,22 +4172,7 @@ function AudioView({ block }: { block: AudioBlock }) {
   );
 }
 
-// ─── Schedule View ───────────────────────────────────────────
-const WEEKDAY_DE_VIEWER = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"] as const;
-
-function formatScheduleDateViewer(dateStr: string): { weekday: string; formatted: string } {
-  if (!dateStr) return { weekday: "", formatted: "" };
-  const d = new Date(dateStr + "T00:00:00");
-  if (isNaN(d.getTime())) return { weekday: "", formatted: "" };
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return { weekday: WEEKDAY_DE_VIEWER[d.getDay()], formatted: `${dd}.${mm}.${yyyy}` };
-}
-
 function ScheduleView({
-  block,
-  originalBlock,
   brand,
   bodyFont,
   isNonLatin,
@@ -4202,84 +4187,64 @@ function ScheduleView({
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
   const wrapStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
 
-  const showDate   = block.showDate   ?? false;
-  const showRoom   = block.showRoom   ?? false;
-  const showHeader = block.showHeader ?? false;
-
-  // Header padding mirrors the outermost paddings of the spanned body columns.
-  const hdDatum:  React.CSSProperties = { paddingLeft: "0.625rem", paddingRight: "0.25rem"  };
-  const hdZeit:   React.CSSProperties = { paddingLeft: showDate ? "0.25rem" : "0.625rem", paddingRight: "0.25rem"  };
-  const hdRaum:   React.CSSProperties = { paddingLeft: "0.25rem",  paddingRight: "0.25rem"  };
-  const hdInhalt: React.CSSProperties = { paddingLeft: "0.25rem",  paddingRight: "0.625rem" };
-
   return (
     <div style={wrapStyle}>
-
-      {/* ── STATIC PROTOTYPE ── completely self-contained, no classes ── */}
-      <table><colgroup><col /><col /><col /><col /><col /><col /><col /></colgroup><tbody><tr><th colSpan={1} rowSpan={1}><p>Datum</p></th><th colSpan={1} rowSpan={1}><p></p></th><th colSpan={1} rowSpan={1}><p>Zeit</p></th><th colSpan={1} rowSpan={1}><p></p></th><th colSpan={1} rowSpan={1}><p></p></th><th colSpan={1} rowSpan={1}><p>Raum</p></th><th colSpan={1} rowSpan={1}><p>Inhalt</p></th></tr><tr><td colSpan={1} rowSpan={1}><p>MO</p></td><td colSpan={1} rowSpan={1}><p>07.04.2026</p></td><td colSpan={1} rowSpan={1}><p>08.30</p></td><td colSpan={1} rowSpan={1}><p>–</p></td><td colSpan={1} rowSpan={1}><p>12.00</p></td><td colSpan={1} rowSpan={1}><p>404</p></td><td colSpan={1} rowSpan={1}><p>Modul 2.1</p></td></tr><tr><td colSpan={1} rowSpan={1}><p>MO</p></td><td colSpan={1} rowSpan={1}><p>07.04.2026</p></td><td colSpan={1} rowSpan={1}><p>13.00</p></td><td colSpan={1} rowSpan={1}><p>–</p></td><td colSpan={1} rowSpan={1}><p>16.30</p></td><td colSpan={1} rowSpan={1}><p>MarieOtto</p></td><td colSpan={1} rowSpan={1}><p>Modul 2.2</p></td></tr></tbody></table>
-      {/* ── END STATIC PROTOTYPE ── */}
-
-      <div className={s.scheduleShell}>
-        <table className={s.scheduleTable}>
-          {showHeader && (
-            <thead>
-              <tr className={s.scheduleHeaderRow}>
-                {showDate && (
-                  <th className={s.scheduleTh} style={hdDatum} colSpan={2}>Datum</th>
-                )}
-                <th className={s.scheduleTh} style={hdZeit} colSpan={3}>Zeit</th>
-                {showRoom && (
-                  <th className={s.scheduleTh} style={hdRaum}>Raum</th>
-                )}
-                <th className={s.scheduleTh} style={hdInhalt}>Inhalt</th>
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {block.items.map((item) => {
-              const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
-              const originalItem = originalBlock?.items.find((c) => c.id === item.id);
-              const bilingual =
-                !!block.bilingual &&
-                !!originalItem &&
-                (originalItem.title !== item.title || originalItem.description !== item.description);
-
-              return (
-                <tr key={item.id} className={s.scheduleBodyRow}>
-                  {showDate && (
-                    <>
-                      <td className={`${s.scheduleTd} ${s.schC1} ${s.schBold}`}>{weekday || "–"}</td>
-                      <td className={`${s.scheduleTd} ${s.schC2} ${s.schBold}`}>{formatted || "–"}</td>
-                    </>
-                  )}
-                  <td className={`${s.scheduleTd} ${s.schC3}`} style={showDate ? undefined : { paddingLeft: "0.625rem" }}>{item.start}</td>
-                  <td className={`${s.scheduleTd} ${s.schC4}`}>–</td>
-                  <td className={`${s.scheduleTd} ${s.schC5}`}>{item.end}</td>
-                  {showRoom && (
-                    <td className={`${s.scheduleTd} ${s.schC6}`}>{item.room ?? ""}</td>
-                  )}
-                  <td className={`${s.scheduleTd} ${s.schC7}`}>
-                    {bilingual && originalItem ? (
-                      <>
-                        <div className={s.schTitleOriginal}>{originalItem.title}</div>
-                        <div className={s.schTitleTranslated}>{item.title}</div>
-                        {originalItem.description && <div className={s.schDescOriginal}>{originalItem.description}</div>}
-                        {item.description && <div className={s.schDescTranslated}>{item.description}</div>}
-                      </>
-                    ) : (
-                      <>
-                        <div className={s.schTitle}>{item.title}</div>
-                        {item.description && <div className={s.schDescText}>{item.description}</div>}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <StaticScheduleTable />
     </div>
+  );
+}
+
+function StaticScheduleTable() {
+  return (
+    <>
+      <style>{`
+        .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;}
+        .scheduleNew tbody tr:last-child td{border-bottom:none;}
+        .scheduleNew td:nth-child(4){padding-left:0;padding-right:0;}
+        .scheduleNew thead tr th{border-top:none;}
+        .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
+      `}</style>
+      <table className="scheduleNew">
+        <colgroup>
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col />
+        </colgroup>
+        <thead>
+          <tr>
+            <th colSpan={2} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Datum</th>
+            <th colSpan={3} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Zeit</th>
+            <th style={{ whiteSpace: "nowrap", textAlign: "left" }}>Raum</th>
+            <th style={{ textAlign: "left" }}>Inhalt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ whiteSpace: "nowrap" }}>MO</td>
+            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
+            <td style={{ whiteSpace: "nowrap" }}>08.30</td>
+            <td style={{ whiteSpace: "nowrap" }}>–</td>
+            <td style={{ whiteSpace: "nowrap" }}>12.00</td>
+            <td style={{ whiteSpace: "nowrap" }}>404</td>
+            <td>Modul 2.1</td>
+          </tr>
+          <tr>
+            <td style={{ whiteSpace: "nowrap" }}>MO</td>
+            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
+            <td style={{ whiteSpace: "nowrap" }}>13.00</td>
+            <td style={{ whiteSpace: "nowrap" }}>–</td>
+            <td style={{ whiteSpace: "nowrap" }}>16.30</td>
+            <td style={{ whiteSpace: "nowrap" }}>MarieOtto</td>
+            <td>Modul 2.2</td>
+          </tr>
+        </tbody>
+      </table>
+    </>
   );
 }
 
