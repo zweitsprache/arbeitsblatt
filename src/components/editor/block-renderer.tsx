@@ -4354,6 +4354,13 @@ function formatScheduleCellTime(value: string) {
 }
 
 function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["items"]; primaryColor: string }) {
+  const rowCellStyle: React.CSSProperties = {
+    whiteSpace: "nowrap",
+    padding: "4px 8px",
+    lineHeight: "1.5rem",
+    verticalAlign: "top",
+    boxSizing: "border-box",
+  };
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     textAlign: "left",
@@ -4362,13 +4369,16 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
     fontWeight: 400,
     textTransform: "uppercase",
     lineHeight: "1.5rem",
+    height: "2rem",
+    verticalAlign: "top",
+    boxSizing: "border-box",
   };
 
   return (
     <>
       <style>{`
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;box-sizing:border-box;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
         .scheduleNew td:nth-child(4){padding-left:0;padding-right:0;}
         .scheduleNew thead tr th{border-top:none;}
@@ -4398,15 +4408,15 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
 
             return (
               <tr key={item.id}>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{weekday}</td>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatted}</td>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.start)}</td>
-                <td style={{ whiteSpace: "nowrap", paddingTop: "4px", paddingBottom: "4px", paddingLeft: 0, paddingRight: 0 }}>–</td>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.end)}</td>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{item.room}</td>
-                <td style={{ padding: "4px 8px" }}>
-                  <strong style={{ display: "block" }}>{item.title}</strong>
-                  {item.description ? <span style={{ display: "block" }}>{item.description}</span> : null}
+                <td style={rowCellStyle}>{weekday}</td>
+                <td style={rowCellStyle}>{formatted}</td>
+                <td style={rowCellStyle}>{formatScheduleCellTime(item.start)}</td>
+                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 0 }}>–</td>
+                <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
+                <td style={rowCellStyle}>{item.room}</td>
+                <td style={{ padding: "4px 8px", lineHeight: "1.5rem", verticalAlign: "top", boxSizing: "border-box" }}>
+                  <div style={{ fontWeight: 700 }}>{item.title}</div>
+                  {item.description ? <div>{item.description}</div> : null}
                 </td>
               </tr>
             );
