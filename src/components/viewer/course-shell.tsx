@@ -8,7 +8,6 @@ import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
 import {
-  BookOpen,
   ChevronRight,
   ChevronLeft,
   Menu,
@@ -221,6 +220,10 @@ function flattenLessons(structure: CourseModule[]): FlatLesson[] {
   return flat;
 }
 
+function countModuleVisitedLessons(moduleId: string, flatLessons: FlatLesson[], visitedLessons: Set<string>) {
+  return flatLessons.filter((lesson) => lesson.moduleId === moduleId && visitedLessons.has(lesson.lessonId)).length;
+}
+
 // ─── Module Number ──────────────────────────────────────────
 
 function ModuleNumber({ number }: { number: string }) {
@@ -237,296 +240,102 @@ function ModuleNumber({ number }: { number: string }) {
   );
 }
 
-// ─── Sidebar Lesson Item ─────────────────────────────────────
-
-function SidebarLessonItem({
-  title,
-  isActive,
-  isVisited,
-  hasContent,
-  onSelect,
-}: {
-  title: string;
-  isActive: boolean;
-  isVisited: boolean;
-  hasContent: boolean;
-  onSelect: () => void;
-}) {
-  const t = useSidebarTheme();
-  const isLocked = !hasContent && !isVisited;
-
-  return (
-    <button
-      onClick={onSelect}
-      className={cn(
-        "group relative flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-cv-xs transition-colors",
-        isActive && "shadow-sm",
-        isLocked ? "cursor-default opacity-40" : "cursor-pointer",
-      )}
-      style={{
-        backgroundColor: isActive ? t.activeBg : "transparent",
-      }}
-    >
-      <span
-        className="h-1.5 w-1.5 rounded-full shrink-0 transition-colors"
-        style={{
-          backgroundColor: isActive
-            ? t.activeIndicator
-            : isVisited
-              ? t.textFaint
-              : "transparent",
-          boxShadow: isActive ? `0 0 0 4px ${t.slateBg}` : "none",
-        }}
-      />
-      <span
-        className="flex-1 min-w-0 leading-snug truncate"
-        style={{
-          color: isActive ? t.text : isLocked ? t.textFaint : t.textMuted,
-          fontWeight: isActive ? 600 : 400,
-        }}
-      >
-        {title || "Untitled Lesson"}
-      </span>
-    </button>
-  );
-}
-
-// ─── Sidebar Topic Section ───────────────────────────────────
-
-function SidebarTopicSection({
-  topic,
-  defaultOpen,
-  currentLessonId,
-  visitedLessons,
-  onSelectLesson,
-  onSelectTopic,
-}: {
-  topic: CourseModule["topics"][0];
-  defaultOpen: boolean;
-  currentLessonId: string | null;
-  visitedLessons: Set<string>;
-  onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
-  onSelectTopic: (moduleId: string, topicId: string) => void;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const { structure } = useCourse();
-  const tk = useSidebarTheme();
-  // Find which module this topic belongs to
-  const mod = structure.find((m) => m.topics.some((t) => t.id === topic.id));
-  const moduleId = mod?.id ?? "";
-
-  return (
-    <div className="mb-2">
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors" style={{ backgroundColor: open ? tk.slateBg : "transparent" }}>
-        <button onClick={() => setOpen(!open)} className="shrink-0">
-          <ChevronRight className={cn(
-            "h-3.5 w-3.5 transition-transform duration-200",
-            open && "rotate-90"
-          )} style={{ color: tk.chevron }} />
-        </button>
-        <button
-          onClick={() => {
-            onSelectTopic(moduleId, topic.id);
-            setOpen(true);
-          }}
-          className="flex-1 min-w-0 text-left"
-        >
-          <span className="text-cv-xs font-medium leading-snug truncate block" style={{ color: tk.topicText }}>
-            {topic.shortTitle || topic.title || "Untitled Topic"}
-          </span>
-        </button>
-      </div>
-
-      <div
-        className="grid transition-[grid-template-rows] duration-200"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          <div className="mt-1 ml-3 flex flex-col gap-1 border-l pl-3" style={{ borderColor: tk.borderLine }}>
-            {topic.lessons.map((lesson) => {
-              const hasContent = (lesson.blocks ?? []).length > 0;
-              return (
-                <SidebarLessonItem
-                  key={lesson.id}
-                  title={lesson.shortTitle || lesson.title}
-                  isActive={lesson.id === currentLessonId}
-                  isVisited={visitedLessons.has(lesson.id)}
-                  hasContent={hasContent}
-                  onSelect={() => onSelectLesson(moduleId, topic.id, lesson.id)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Sidebar Module Section ──────────────────────────────────
 
 function SidebarModuleSection({
   mod,
   moduleIndex,
-  defaultOpen,
   flatLessons,
-  currentLessonId,
+  currentModuleId,
   visitedLessons,
-  onSelectLesson,
   onSelectModule,
-  onSelectTopic,
 }: {
   mod: CourseModule;
   moduleIndex: number;
-  defaultOpen: boolean;
   flatLessons: FlatLesson[];
-  currentLessonId: string | null;
+  currentModuleId: string | null;
   visitedLessons: Set<string>;
-  onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
   onSelectModule: (moduleId: string) => void;
-  onSelectTopic: (moduleId: string, topicId: string) => void;
 }) {
+  const tk = useSidebarTheme();
   const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
   const moduleLessonCount = moduleLessons.length;
+  const topicCount = mod.topics.length;
+  const visitedCount = countModuleVisitedLessons(mod.id, flatLessons, visitedLessons);
+  const progress = moduleLessonCount > 0 ? Math.round((visitedCount / moduleLessonCount) * 100) : 0;
   const moduleNumber = String(getModuleNumber(moduleIndex));
-  const isCurrentModule = moduleLessons.some((lesson) => lesson.lessonId === currentLessonId);
-  const [open, setOpen] = useState(defaultOpen || isCurrentModule);
-  const tk = useSidebarTheme();
-
-  const topicHasProgress = (topic: CourseModule["topics"][0]) => {
-    const visited = topic.lessons.filter((l) => visitedLessons.has(l.id)).length;
-    return visited > 0 && visited < topic.lessons.length;
-  };
+  const isCurrentModule = currentModuleId === mod.id;
 
   return (
-    <div className="mb-3 rounded-lg border p-2" style={{ borderColor: tk.borderLine, backgroundColor: open || isCurrentModule ? tk.openBg : "transparent" }}>
-      <div className="flex items-center gap-3 px-2 py-2 rounded-md">
+    <button
+      onClick={() => onSelectModule(mod.id)}
+      className="mb-3 w-full rounded-lg border p-3 text-left transition-colors"
+      style={{
+        borderColor: tk.borderLine,
+        backgroundColor: isCurrentModule ? tk.activeBg : tk.openBg,
+      }}
+    >
+      <div className="flex items-start gap-3">
         <ModuleNumber number={moduleNumber} />
-        <button
-          onClick={() => {
-            onSelectModule(mod.id);
-            setOpen(true);
-          }}
-          className="flex-1 min-w-0 text-left"
-        >
+        <div className="min-w-0 flex-1">
           <p className="text-cv-xs font-semibold leading-snug" style={{ color: tk.text }}>
             {mod.shortTitle || mod.title || "Untitled Module"}
           </p>
-          <p className="mt-0.5 text-[11px] leading-none" style={{ color: tk.textFaint }}>
-            {moduleLessonCount} lessons
+          <p className="mt-1 text-[11px] leading-none" style={{ color: tk.textFaint }}>
+            {topicCount} topics • {moduleLessonCount} lessons
           </p>
-        </button>
-        <button onClick={() => setOpen(!open)} className="shrink-0">
-          <ChevronRight className={cn(
-            "h-3.5 w-3.5 transition-transform duration-200",
-            open && "rotate-90"
-          )} style={{ color: tk.chevron }} />
-        </button>
+        </div>
+        <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0" style={{ color: tk.chevron }} />
       </div>
-
-      <div
-        className="grid transition-[grid-template-rows] duration-200"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          <div className="pt-1 pb-1 px-2">
-            <div>
-              {mod.topics.map((topic) => (
-                <SidebarTopicSection
-                  key={topic.id}
-                  topic={topic}
-                  defaultOpen={topicHasProgress(topic)}
-                  currentLessonId={currentLessonId}
-                  visitedLessons={visitedLessons}
-                  onSelectLesson={onSelectLesson}
-                  onSelectTopic={onSelectTopic}
-                />
-              ))}
-            </div>
-          </div>
+      <div className="mt-3 space-y-2">
+        <div className="h-1 overflow-hidden rounded-full" style={{ backgroundColor: tk.progressTrack }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${progress}%`,
+              background: tk.progressBar,
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-[11px]" style={{ color: tk.textMuted }}>
+          <span>{visitedCount} opened</span>
+          <span>{progress}%</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
 // ─── Sidebar Navigation ─────────────────────────────────────
 
 function SidebarNav({
-  title,
   structure,
   flatLessons,
-  currentLessonId,
+  currentModuleId,
   visitedLessons,
-  onSelectLesson,
   onSelectModule,
-  onSelectTopic,
-  onContinue,
   searchQuery,
   onSearchChange,
 }: {
-  title: string;
   structure: CourseModule[];
   flatLessons: FlatLesson[];
-  currentLessonId: string | null;
+  currentModuleId: string | null;
   visitedLessons: Set<string>;
-  onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
   onSelectModule: (moduleId: string) => void;
-  onSelectTopic: (moduleId: string, topicId: string) => void;
-  onContinue?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }) {
-  const { brand, sidebarTheme, image: courseImage } = useCourse();
+  const { brand, sidebarTheme } = useCourse();
   const tk = getSidebarTokens(sidebarTheme, brand as Brand);
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
-
-  // Find current module from currentLessonId
-  const currentModuleIndex = structure.findIndex((mod) =>
-    mod.topics.some((t) => t.lessons.some((l) => l.id === currentLessonId))
-  );
-  const currentModule = currentModuleIndex >= 0 ? structure[currentModuleIndex] : null;
-
-  const moduleHasProgress = (mod: CourseModule) => {
-    const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
-    const visited = moduleLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
-    return visited > 0 && visited < moduleLessons.length;
-  };
 
   return (
     <SidebarThemeContext.Provider value={tk}>
     <div className="flex flex-col h-full relative overflow-hidden"
       style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
-      <div className="shrink-0 px-5 pt-5 pb-3">
-        <div className="relative overflow-hidden rounded-lg border px-4 py-4" style={{ borderColor: tk.borderLine, backgroundColor: tk.openBg }}>
-          {(currentModule?.image || courseImage) && (
-            <div className="absolute inset-0 opacity-[0.12]">
-              <img src={currentModule?.image || courseImage || ""} alt="" className="h-full w-full object-cover" />
-            </div>
-          )}
-          <div className="relative flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md" style={{ backgroundColor: tk.slateBg }}>
-              <BookOpen className="h-4.5 w-4.5" style={{ color: tk.accentText }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: tk.textFaint }}>
-                Course viewer
-              </p>
-              <h1 className="mt-1 text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
-                {title}
-              </h1>
-              <p className="mt-2 text-[12px] leading-relaxed" style={{ color: tk.textMuted }}>
-                {completedLessons} of {totalLessons} lessons opened
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search field */}
-      <div className="px-5 pt-1 pb-3 shrink-0">
+      <div className="px-5 pt-5 pb-3 shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tk.textFaint }} />
           <input
@@ -570,28 +379,13 @@ function SidebarNav({
             key={mod.id}
             mod={mod}
             moduleIndex={i}
-            defaultOpen={moduleHasProgress(mod)}
             flatLessons={flatLessons}
-            currentLessonId={currentLessonId}
+            currentModuleId={currentModuleId}
             visitedLessons={visitedLessons}
-            onSelectLesson={onSelectLesson}
             onSelectModule={onSelectModule}
-            onSelectTopic={onSelectTopic}
           />
         ))}
       </div>
-
-      {onContinue && (
-        <div className="p-4 px-5 shrink-0" style={{ borderTop: `1px solid ${tk.divider}` }}>
-          <button
-            onClick={onContinue}
-            className="w-full py-3 rounded-lg text-cv-xs font-semibold cursor-pointer transition-colors"
-            style={{ background: tk.continueGradient, color: tk.continueText }}
-          >
-            Continue Learning →
-          </button>
-        </div>
-      )}
 
       <style>{`
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
@@ -628,6 +422,12 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     const segments = pathname.split("/").filter(Boolean);
     // segments: [locale, "course", slug, moduleId?, topicId?, lessonId?]
     if (segments.length >= 6) return segments[5];
+    return null;
+  }, [pathname]);
+
+  const currentModuleId = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length >= 4) return segments[3];
     return null;
   }, [pathname]);
 
@@ -726,14 +526,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     }
   }, [currentLessonId]);
 
-  const handleSelectLesson = useCallback(
-    (moduleId: string, topicId: string, lessonId: string) => {
-      setMobileNavOpen(false);
-      router.push(`/${locale}/course/${slug}/${moduleId}/${topicId}/${lessonId}`);
-    },
-    [router, locale, slug]
-  );
-
   const handleSelectModule = useCallback(
     (moduleId: string) => {
       setMobileNavOpen(false);
@@ -741,21 +533,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     },
     [router, locale, slug]
   );
-
-  const handleSelectTopic = useCallback(
-    (moduleId: string, topicId: string) => {
-      setMobileNavOpen(false);
-      router.push(`/${locale}/course/${slug}/${moduleId}/${topicId}`);
-    },
-    [router, locale, slug]
-  );
-
-  const firstUnvisited = flatLessons.find((f) => !visitedLessons.has(f.lessonId));
-  const handleContinue = useCallback(() => {
-    if (firstUnvisited) {
-      handleSelectLesson(firstUnvisited.moduleId, firstUnvisited.topicId, firstUnvisited.lessonId);
-    }
-  }, [firstUnvisited, handleSelectLesson]);
 
   const completedCount = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
   const pct = flatLessons.length > 0 ? Math.round((completedCount / flatLessons.length) * 100) : 0;
@@ -805,15 +582,11 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <SheetDescription>Course navigation</SheetDescription>
           </SheetHeader>
           <SidebarNav
-            title={title}
             structure={structure}
             flatLessons={flatLessons}
-            currentLessonId={currentLessonId}
+            currentModuleId={currentModuleId}
             visitedLessons={visitedLessons}
-            onSelectLesson={handleSelectLesson}
             onSelectModule={handleSelectModule}
-            onSelectTopic={handleSelectTopic}
-            onContinue={firstUnvisited ? handleContinue : undefined}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -868,15 +641,11 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
-                title={title}
                 structure={structure}
                 flatLessons={flatLessons}
-                currentLessonId={currentLessonId}
+                currentModuleId={currentModuleId}
                 visitedLessons={visitedLessons}
-                onSelectLesson={handleSelectLesson}
                 onSelectModule={handleSelectModule}
-                onSelectTopic={handleSelectTopic}
-                onContinue={firstUnvisited ? handleContinue : undefined}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
               />
