@@ -4278,12 +4278,6 @@ function ScheduleView({
     </div>
   );
 }
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // ─── AI Prompt View ──────────────────────────────────────────
 function AiPromptView({ block }: { block: AiPromptBlock }) {
