@@ -1161,6 +1161,8 @@
     "caption": "Caption",
     "cards": "Cards",
     "cardText": "Card text",
+    "checklistCsvImportHelp": "One row per checklist item (single column).",
+    "checklistCsvPlaceholder": "First task\nSecond task\nThird task",
     "chOverrideRemove": "Remove CH override",
     "clickSentenceToEdit": "Click a sentence to edit",
     "colRatio": "Column ratio",

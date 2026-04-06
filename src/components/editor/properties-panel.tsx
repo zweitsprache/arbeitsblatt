@@ -5176,8 +5176,47 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
 function ChecklistProps({ block }: { block: ChecklistBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
   const update = (updates: Partial<ChecklistBlock>) =>
     dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const importedItems = lines.map((line, index) => ({
+      id: `checklist-${Date.now()}-${index}`,
+      content: `<p>${escapeHtml(line)}</p>`,
+    }));
+
+    update({
+      items: csvMode === "append"
+        ? [...block.items, ...importedItems]
+        : importedItems,
+    });
+    setCsvText("");
+  };
 
   return (
     <div className="space-y-3">
@@ -5187,6 +5226,49 @@ function ChecklistProps({ block }: { block: ChecklistBlock }) {
           checked={block.bilingual ?? false}
           onCheckedChange={(checked) => update({ bilingual: checked })}
         />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("checklistCsvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("checklistCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
       </div>
     </div>
   );

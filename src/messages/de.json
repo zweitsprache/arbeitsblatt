@@ -1161,6 +1161,8 @@
     "caption": "Bildunterschrift",
     "cards": "Karten",
     "cardText": "Kartentext",
+    "checklistCsvImportHelp": "Eine Zeile pro Checklisteneintrag (eine Spalte).",
+    "checklistCsvPlaceholder": "Erste Aufgabe\nZweite Aufgabe\nDritte Aufgabe",
     "chOverrideRemove": "CH-Anpassung entfernen",
     "clickSentenceToEdit": "Klicke auf einen Satz, um ihn zu bearbeiten",
     "colRatio": "Spaltenverhältnis",
