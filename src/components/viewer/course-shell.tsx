@@ -206,10 +206,10 @@ function SidebarModuleSection({
   return (
     <button
       onClick={() => onSelectModule(mod.id)}
-      className="mb-3 w-full rounded-lg border p-3 text-left transition-colors"
+      className="mb-3 w-full rounded-md border p-3 text-left transition-colors"
       style={{
         borderColor: tk.borderLine,
-        backgroundColor: isCurrentModule ? tk.activeBg : tk.openBg,
+        backgroundColor: isCurrentModule ? "rgba(255,255,255,0.96)" : "#ffffff",
       }}
     >
       <div className="flex items-start gap-3">
@@ -228,20 +228,49 @@ function SidebarModuleSection({
   );
 }
 
+function SearchPanel({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (query: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("border bg-white/92 shadow-[0_14px_36px_rgba(15,23,42,0.05)]", className)}>
+      <div className="relative px-4 py-3">
+        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Suchen…"
+          className="w-full rounded-md border bg-white py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
+        />
+        {value && (
+          <button
+            onClick={() => onChange("")}
+            className="absolute right-7 top-1/2 -translate-y-1/2"
+          >
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Sidebar Navigation ─────────────────────────────────────
 
 function SidebarNav({
   structure,
   currentModuleId,
   onSelectModule,
-  searchQuery,
-  onSearchChange,
 }: {
   structure: CourseModule[];
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
 }) {
   const { brand, sidebarTheme } = useCourse();
   const tk = getSidebarTokens(sidebarTheme, brand as Brand);
@@ -251,33 +280,7 @@ function SidebarNav({
     <div className="flex flex-col h-full relative overflow-hidden"
       style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
-      <div className="px-5 pt-5 pb-3 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tk.textFaint }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Suchen…"
-            className="w-full rounded-lg border py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
-            style={{
-              backgroundColor: tk.slateBg,
-              borderColor: tk.borderLine,
-              color: tk.text,
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-            >
-              <X className="h-3.5 w-3.5" style={{ color: tk.textMuted }} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto pt-3 px-5 pb-6 sidebar-scroll">
+      <div className="flex-1 overflow-y-auto pt-5 px-5 pb-6 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
             key={mod.id}
@@ -454,12 +457,13 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>Course navigation</SheetDescription>
           </SheetHeader>
+          <div className="border-b bg-[rgba(250,250,249,0.82)] p-4">
+            <SearchPanel value={searchQuery} onChange={setSearchQuery} className="rounded-md" />
+          </div>
           <SidebarNav
             structure={structure}
             currentModuleId={currentModuleId}
             onSelectModule={handleSelectModule}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
           />
         </SheetContent>
       </Sheet>
@@ -480,7 +484,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Lesson workspace</p>
+          <p className="text-[11px] uppercase text-muted-foreground/80">Lesson workspace</p>
           <p className="text-sm text-foreground truncate">{title}</p>
         </div>
         {/* Language switcher */}
@@ -504,15 +508,13 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             desktopSidebarOpen ? "w-[340px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[340px] h-full rounded-xl border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
+              "flex flex-col w-[340px] h-full rounded-lg border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
                 structure={structure}
                 currentModuleId={currentModuleId}
                 onSelectModule={handleSelectModule}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
               />
             </aside>
             <button
@@ -535,7 +537,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Content container */}
-          <div className="flex-1 min-w-0 rounded-xl border bg-white/94 shadow-[0_22px_60px_rgba(15,23,42,0.06)] overflow-hidden">
+          <div className="flex-1 min-w-0 rounded-lg border bg-white/94 shadow-[0_22px_60px_rgba(15,23,42,0.06)] overflow-hidden">
             <style>{`
               .content-scroll::-webkit-scrollbar { width: 6px; }
               .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 32px; }
@@ -661,13 +663,15 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Chat sidebar (desktop) */}
-          <CourseChatSidebar
-            open={chatSidebarOpen}
-            onClose={() => setChatSidebarOpen(false)}
-            lessonContext={currentLessonData?.context ?? ""}
-            lessonTitle={currentLessonData?.title ?? ""}
-          />
+          <div className="hidden lg:flex shrink-0 flex-col gap-4">
+            <SearchPanel value={searchQuery} onChange={setSearchQuery} className="rounded-lg" />
+            <CourseChatSidebar
+              open={chatSidebarOpen}
+              onClose={() => setChatSidebarOpen(false)}
+              lessonContext={currentLessonData?.context ?? ""}
+              lessonTitle={currentLessonData?.title ?? ""}
+            />
+          </div>
         </div>
       </div>
 

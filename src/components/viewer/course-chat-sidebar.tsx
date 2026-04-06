@@ -355,7 +355,7 @@ export function CourseChatSidebar({
     >
       <aside
         className={cn(
-          "flex flex-col w-[300px] 2xl:w-[360px] h-full rounded-xl border bg-white/88 shadow-[0_18px_50px_rgba(15,23,42,0.05)] overflow-hidden transition-all duration-300",
+          "flex flex-col w-[300px] 2xl:w-[360px] h-full rounded-lg border bg-white/88 shadow-[0_18px_50px_rgba(15,23,42,0.05)] overflow-hidden transition-all duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         style={{ fontFamily: brandFonts.bodyFont }}
@@ -363,7 +363,7 @@ export function CourseChatSidebar({
         {/* Header */}
         <div className="flex items-center gap-2 px-5 py-4 border-b bg-[rgba(250,250,249,0.8)]">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
+            <p className="text-[11px] uppercase text-muted-foreground">Assistant</p>
             <p className="text-sm font-semibold truncate">{t("title")}</p>
           </div>
           <button
@@ -380,7 +380,7 @@ export function CourseChatSidebar({
             <button
               onClick={handleSummary}
               disabled={isStreaming}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-full border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <BookOpen className="h-3 w-3" />
               {t("presetSummary")}
@@ -388,7 +388,7 @@ export function CourseChatSidebar({
             <button
               onClick={handleReflect}
               disabled={isStreaming}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-full border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lightbulb className="h-3 w-3" />
               {t("presetReflect")}
@@ -427,7 +427,7 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "rounded-lg px-3.5 py-3 text-[15px] leading-relaxed shadow-sm",
+                    "rounded-md px-3.5 py-3 text-[15px] leading-relaxed shadow-sm",
                     msg.role === "user"
                       ? "max-w-[85%] bg-primary text-primary-foreground"
                       : msg.quiz
@@ -477,7 +477,7 @@ export function CourseChatSidebar({
                   noLesson ? t("noLessonShort") : t("inputPlaceholder")
                 }
                 disabled={noLesson || isStreaming}
-                className="w-full resize-none rounded-lg border bg-white/90 px-3 py-2.5 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full resize-none rounded-md border bg-white/90 px-3 py-2.5 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={1}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;

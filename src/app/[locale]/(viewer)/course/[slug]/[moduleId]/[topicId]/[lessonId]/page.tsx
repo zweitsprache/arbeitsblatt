@@ -62,8 +62,8 @@ export default function LessonPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
         {/* Lesson header */}
-        <div className="mb-10 rounded-xl border bg-[rgba(250,250,249,0.8)] px-6 py-6 sm:px-8 sm:py-7">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="mb-10 rounded-lg border bg-[rgba(250,250,249,0.8)] px-6 py-6 sm:px-8 sm:py-7">
+          <p className="text-[11px] font-medium uppercase text-muted-foreground">
             {mod.shortTitle || mod.title} / {topic.shortTitle || topic.title}
           </p>
           <h1 className="mt-3 text-2xl sm:text-3xl font-bold leading-tight">
@@ -100,14 +100,14 @@ export default function LessonPage() {
         <div className="flex items-center gap-3 mt-12">
           {prevLesson ? (
             <button
-              className="flex-1 flex items-center gap-2 px-5 py-4 bg-[rgba(250,250,249,0.8)] border rounded-lg hover:bg-muted/50 transition-colors text-left group"
+              className="flex-1 flex items-center gap-2 px-5 py-4 bg-[rgba(250,250,249,0.8)] border rounded-md hover:bg-muted/50 transition-colors text-left group"
               onClick={() =>
                 router.push(`${basePath}/${prevLesson.id}`)
               }
             >
               <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
               <div className="min-w-0">
-                <span className="block text-[11px] text-muted-foreground uppercase tracking-[0.18em] leading-snug">{t("previous")}</span>
+                <span className="block text-[11px] text-muted-foreground uppercase leading-snug">{t("previous")}</span>
                 <span className="mt-1 block !text-[16px] font-medium truncate leading-snug">{prevLesson.title}</span>
               </div>
             </button>
@@ -116,13 +116,13 @@ export default function LessonPage() {
           )}
           {nextLesson ? (
             <button
-              className="flex-1 flex items-center justify-end gap-2 px-5 py-4 bg-[rgba(250,250,249,0.8)] border rounded-lg hover:bg-muted/50 transition-colors text-right group"
+              className="flex-1 flex items-center justify-end gap-2 px-5 py-4 bg-[rgba(250,250,249,0.8)] border rounded-md hover:bg-muted/50 transition-colors text-right group"
               onClick={() =>
                 router.push(`${basePath}/${nextLesson.id}`)
               }
             >
               <div className="min-w-0">
-                <span className="block text-[11px] text-muted-foreground uppercase tracking-[0.18em] leading-snug">{t("next")}</span>
+                <span className="block text-[11px] text-muted-foreground uppercase leading-snug">{t("next")}</span>
                 <span className="mt-1 block !text-[16px] font-medium truncate leading-snug">{nextLesson.title}</span>
               </div>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
