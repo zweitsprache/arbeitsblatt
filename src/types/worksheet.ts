@@ -691,6 +691,8 @@ export interface WebsiteBlock extends BlockBase {
   title: string;
   level: 1 | 2 | 3;
   items: WebsiteItem[];
+  bilingual?: boolean;
+  skipTranslation?: boolean;
 }
 
 // ─── AI Prompt block ─────────────────────────────────────────
@@ -2077,6 +2079,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "website",
     title: "Website",
     level: 2,
+    bilingual: false,
+    skipTranslation: false,
     items: [
       {
         id: crypto.randomUUID(),

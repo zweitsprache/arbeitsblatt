@@ -4346,7 +4346,7 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
 
 // ─── Website block ──────────────────────────────────────────
 function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
-  const { dispatch } = useEditor();
+  const { dispatch, state } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("properties");
   const { upload } = useUpload();
@@ -4358,6 +4358,8 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   const [cropIndex, setCropIndex] = React.useState<number | null>(null);
 
   const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
+  const headingSizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
+  const primaryColor = state.brandProfile.primaryColor || "#1a1a1a";
 
   const updateItems = (items: WebsiteBlock["items"]) => {
     dispatch({
@@ -4454,7 +4456,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   return (
     <div className="space-y-4">
       {block.title.trim() ? (
-        <HeadingTag className={block.level === 1 ? "text-2xl font-bold" : block.level === 2 ? "text-xl font-bold" : "text-lg font-semibold"}>
+        <HeadingTag className={headingSizes[block.level]} style={{ color: primaryColor }}>
           {block.title}
         </HeadingTag>
       ) : null}
@@ -4551,7 +4553,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                     value={item.description}
                     onChange={(e) => updateLocaleField(index, "description", e.target.value)}
                     placeholder={t("websiteDescription")}
-                    className="min-h-[72px] w-full rounded-sm border border-slate-200 bg-white px-2 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200 resize-y"
+                    className="min-h-[72px] w-full rounded-sm border border-slate-200 bg-white px-2 py-2 text-sm font-normal normal-case tracking-normal outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200 resize-y"
                   />
                 </div>
               </div>

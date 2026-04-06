@@ -4237,8 +4237,36 @@ function AudioView({ block }: { block: AudioBlock }) {
   );
 }
 
-function WebsiteView({ block }: { block: WebsiteBlock }) {
+function WebsiteView({
+  block,
+  originalBlock,
+  brand,
+  headlineFont,
+  headingWeights,
+  isNonLatin,
+  translationScale,
+  primaryColor,
+}: {
+  block: WebsiteBlock;
+  originalBlock?: WebsiteBlock;
+  brand?: Brand;
+  headlineFont?: string;
+  headingWeights?: { h1: number; h2: number; h3: number };
+  isNonLatin?: boolean;
+  translationScale?: number;
+  primaryColor?: string;
+}) {
   const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const headingStyle: React.CSSProperties = {
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: primaryColor,
+  };
 
   const normalizeExternalUrl = (url: string) => {
     const trimmed = url.trim();
@@ -4250,7 +4278,7 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
   return (
     <div className="space-y-4">
       {block.title.trim() ? (
-        <HeadingTag className={block.level === 1 ? "text-2xl font-bold" : block.level === 2 ? "text-xl font-bold" : "text-lg font-semibold"}>
+        <HeadingTag className={sizes[block.level]} style={headingStyle}>
           {block.title}
         </HeadingTag>
       ) : null}
@@ -4258,6 +4286,13 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
       <div className="grid gap-3">
         {block.items.map((item) => {
           const href = normalizeExternalUrl(item.url);
+          const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+          const showBilingualDescription = !!block.bilingual && !!originalItem && originalItem.description !== item.description;
+          const translatedTextStyle = {
+            color: "rgba(15, 23, 42, 0.72)",
+            fontWeight: 400,
+            ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}),
+          } satisfies React.CSSProperties;
 
           return (
             <article key={item.id} className="flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4">
@@ -4291,9 +4326,16 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
                   </div>
                 ) : null}
                 {item.description ? (
-                  <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-700">
-                    {item.description}
-                  </div>
+                  showBilingualDescription ? (
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6">
+                      {originalItem.description ? <div>{originalItem.description}</div> : null}
+                      {item.description ? <div style={translatedTextStyle}>{item.description}</div> : null}
+                    </div>
+                  ) : (
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6">
+                      {item.description}
+                    </div>
+                  )
                 ) : null}
               </div>
             </article>
@@ -5253,7 +5295,7 @@ export function ViewerBlockRenderer({
     case "schedule":
       return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":
-      return <WebsiteView block={block as WebsiteBlock} />;
+      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     default:
       return null;
   }
