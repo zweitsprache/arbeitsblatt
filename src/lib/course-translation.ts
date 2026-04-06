@@ -23,6 +23,7 @@ const TRANSLATABLE_TEXT_STYLES = new Set([
   "hinweis-alarm",
   "lernziel",
   "rows",
+  "fragen",
   "kompetenzziele",
   "handlungsziele",
   "redemittel",

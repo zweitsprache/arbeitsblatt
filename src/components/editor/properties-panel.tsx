@@ -2462,6 +2462,7 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="example">{t("textStyleExample")}</option>
           <option value="example-standard">{t("textStyleExampleStandard")}</option>
           <option value="example-improved">{t("textStyleExampleImproved")}</option>
+          <option value="fragen">{t("textStyleFragen")}</option>
           <option value="hinweis">{t("textStyleHinweis")}</option>
           <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
           <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>

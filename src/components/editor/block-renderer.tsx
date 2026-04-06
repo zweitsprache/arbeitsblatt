@@ -231,13 +231,16 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isLernziel = block.textStyle === "lernziel";
   const isKompetenzziele = block.textStyle === "kompetenzziele";
   const isHandlungsziele = block.textStyle === "handlungsziele";
+  const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel;
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const rowsClass = isKompetenzziele
     ? "tiptap-rows tiptap-rows-goal"
     : isHandlungsziele
     ? "tiptap-rows tiptap-rows-arrow-right-to-line"
+    : isFragen
+    ? "tiptap-rows tiptap-rows-circle-help"
     : isRedemittel
     ? "tiptap-rows tiptap-rows-message-circle"
     : isRows
