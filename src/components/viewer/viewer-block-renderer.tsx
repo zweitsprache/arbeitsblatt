@@ -4177,12 +4177,14 @@ function ScheduleView({
   brand,
   bodyFont,
   isNonLatin,
+  primaryColor = "#1a1a1a",
 }: {
   block: ScheduleBlock;
   originalBlock?: ScheduleBlock;
   brand?: Brand;
   bodyFont?: string;
   isNonLatin?: boolean;
+  primaryColor?: string;
 }) {
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
@@ -4190,7 +4192,7 @@ function ScheduleView({
 
   return (
     <div style={wrapStyle}>
-      <StaticScheduleTable items={block.items} />
+      <StaticScheduleTable items={block.items} primaryColor={primaryColor} />
     </div>
   );
 }
@@ -4210,7 +4212,7 @@ function formatScheduleCellTime(value: string) {
   return value ? value.replace(":", ".") : "";
 }
 
-function StaticScheduleTable({ items }: { items: ScheduleBlock["items"] }) {
+function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["items"]; primaryColor: string }) {
   return (
     <>
       <style>{`
@@ -4233,26 +4235,28 @@ function StaticScheduleTable({ items }: { items: ScheduleBlock["items"] }) {
         </colgroup>
         <thead>
           <tr>
-            <th colSpan={2} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Datum</th>
-            <th colSpan={3} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Zeit</th>
-            <th style={{ whiteSpace: "nowrap", textAlign: "left" }}>Raum</th>
-            <th style={{ textAlign: "left" }}>Inhalt</th>
+            <th colSpan={2} style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Datum</th>
+            <th colSpan={3} style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Zeit</th>
+            <th style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Raum</th>
+            <th style={{ textAlign: "left", color: primaryColor }}>Inhalt</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => {
             const { weekday, formatted } = formatScheduleCellDate(item.date);
-            const content = item.description ? `${item.title} ${item.description}` : item.title;
 
             return (
               <tr key={item.id}>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{weekday}</td>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatted}</td>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.start)}</td>
-                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>–</td>
+                <td style={{ whiteSpace: "nowrap", paddingTop: "4px", paddingBottom: "4px", paddingLeft: 0, paddingRight: 0 }}>–</td>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.end)}</td>
                 <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{item.room}</td>
-                <td style={{ padding: "4px 8px" }}>{content}</td>
+                <td style={{ padding: "4px 8px" }}>
+                  <strong>{item.title}</strong>
+                  {item.description ? ` ${item.description}` : ""}
+                </td>
               </tr>
             );
           })}
@@ -5035,7 +5039,7 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} />;
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} primaryColor={primaryColor} />;
     default:
       return null;
   }
