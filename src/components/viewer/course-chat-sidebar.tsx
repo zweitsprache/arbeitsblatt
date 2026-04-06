@@ -1,19 +1,17 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useCourse } from "./course-context";
 import { BRAND_FONTS } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
 import {
-  MessageCircle,
   Send,
   Bot,
   X,
   Loader2,
   BookOpen,
-  Languages,
   Lightbulb,
   CircleHelp,
   Check,
@@ -215,14 +213,14 @@ export function CourseChatSidebar({
   }, [lessonTitle]);
 
   // Show welcome message when chat has no messages and lesson is available
-  const welcomeMessage: ChatMessage | null =
-    messages.length === 0 && lessonTitle
-      ? { id: "welcome", role: "assistant", content: WELCOME_MESSAGES[contentLocale ?? "de"] ?? WELCOME_MESSAGES.de }
-      : null;
+  const displayMessages = useMemo(() => {
+    const welcomeMessage: ChatMessage | null =
+      messages.length === 0 && lessonTitle
+        ? { id: "welcome", role: "assistant", content: WELCOME_MESSAGES[contentLocale ?? "de"] ?? WELCOME_MESSAGES.de }
+        : null;
 
-  const displayMessages = welcomeMessage
-    ? [welcomeMessage, ...messages]
-    : messages;
+    return welcomeMessage ? [welcomeMessage, ...messages] : messages;
+  }, [contentLocale, lessonTitle, messages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -338,91 +336,36 @@ export function CourseChatSidebar({
 
   const noLesson = !lessonContext;
 
-  // Get selected text from the content area for "translate" preset
-  const getSelectedText = useCallback((): string => {
-    const selection = window.getSelection();
-    return selection?.toString().trim() ?? "";
-  }, []);
-
   const handleSummary = useCallback(() => {
     if (isStreaming || noLesson) return;
     sendMessage(t("presetSummaryPrompt"), t("presetSummary"));
   }, [isStreaming, noLesson, sendMessage, t]);
-
-  const handleTranslate = useCallback(() => {
-    if (isStreaming || noLesson) return;
-    const selected = getSelectedText();
-    if (!selected) return;
-    sendMessage(t("presetTranslatePrompt", { text: selected }), t("presetTranslate"));
-  }, [isStreaming, noLesson, getSelectedText, sendMessage, t]);
 
   const handleReflect = useCallback(() => {
     if (isStreaming || noLesson) return;
     sendMessage(t("presetReflectPrompt"), t("presetReflect"));
   }, [isStreaming, noLesson, sendMessage, t]);
 
-  const handleQuiz = useCallback(async () => {
-    if (isStreaming || noLesson) return;
-    setIsStreaming(true);
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: t("presetQuizPrompt"),
-      displayContent: t("presetQuiz"),
-    };
-    const assistantId = `assistant-quiz-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      { id: assistantId, role: "assistant", content: "" },
-    ]);
-
-    try {
-      const res = await authFetch("/api/ai/course-quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonContext, courseTitle, lessonTitle, locale: contentLocale }),
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? { ...m, content: t("quizReady"), quiz: data.questions }
-            : m
-        )
-      );
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId ? { ...m, content: t("errorMessage") } : m
-        )
-      );
-    } finally {
-      setIsStreaming(false);
-    }
-  }, [isStreaming, noLesson, lessonContext, courseTitle, lessonTitle, contentLocale, t]);
-
   return (
     <div
       className={cn(
         "hidden lg:flex shrink-0 relative transition-all duration-300",
-        open ? "w-[320px] 2xl:w-[420px]" : "w-0"
+        open ? "w-[300px] 2xl:w-[360px]" : "w-0"
       )}
     >
       <aside
         className={cn(
-          "flex flex-col w-[320px] 2xl:w-[420px] h-full rounded-sm border bg-background overflow-hidden transition-all duration-300",
+          "flex flex-col w-[300px] 2xl:w-[360px] h-full rounded-[28px] border bg-white/88 shadow-[0_18px_50px_rgba(15,23,42,0.05)] overflow-hidden transition-all duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         style={{ fontFamily: brandFonts.bodyFont }}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 px-6 py-4 border-b bg-muted/30">
-          <p className="text-sm font-semibold flex-1 min-w-0">{t("title")}</p>
+        <div className="flex items-center gap-2 px-5 py-4 border-b bg-[rgba(250,250,249,0.8)]">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
+            <p className="text-sm font-semibold truncate">{t("title")}</p>
+          </div>
           <button
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             onClick={onClose}
@@ -433,11 +376,11 @@ export function CourseChatSidebar({
 
         {/* Preset prompt buttons — pinned above messages */}
         {!noLesson && (
-          <div className="flex gap-2 px-4 py-3 border-b shrink-0">
+          <div className="grid grid-cols-2 gap-2 px-4 py-3 border-b shrink-0 bg-[rgba(250,250,249,0.45)]">
             <button
               onClick={handleSummary}
               disabled={isStreaming}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-full border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <BookOpen className="h-3 w-3" />
               {t("presetSummary")}
@@ -445,7 +388,7 @@ export function CourseChatSidebar({
             <button
               onClick={handleReflect}
               disabled={isStreaming}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-full border bg-background/90 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lightbulb className="h-3 w-3" />
               {t("presetReflect")}
@@ -454,7 +397,7 @@ export function CourseChatSidebar({
         )}
 
         {/* Messages area */}
-        <div className="flex-1 min-h-0 py-3 pr-3">
+        <div className="flex-1 min-h-0 py-4 pr-3">
           <div
             ref={scrollRef}
             className="h-full overflow-y-auto pl-4 pr-3 space-y-4 chat-scroll"
@@ -484,12 +427,12 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "rounded-sm px-3.5 py-2.5 text-base leading-snug",
+                    "rounded-2xl px-3.5 py-3 text-[15px] leading-relaxed shadow-sm",
                     msg.role === "user"
                       ? "max-w-[85%] bg-primary text-primary-foreground"
                       : msg.quiz
-                        ? "w-full bg-muted"
-                        : "max-w-[85%] bg-muted"
+                        ? "w-full bg-[rgba(245,245,244,0.9)]"
+                        : "max-w-[88%] bg-[rgba(245,245,244,0.9)]"
                   )}
                 >
                   {msg.quiz ? (
@@ -523,7 +466,7 @@ export function CourseChatSidebar({
         </div>
 
         {/* Input area */}
-        <div className="border-t p-3">
+        <div className="border-t bg-[rgba(250,250,249,0.65)] p-3">
           <div className="flex items-start gap-2">
             <div className="flex-1 relative">
               <textarea
@@ -534,7 +477,7 @@ export function CourseChatSidebar({
                   noLesson ? t("noLessonShort") : t("inputPlaceholder")
                 }
                 disabled={noLesson || isStreaming}
-                className="w-full resize-none rounded-sm border bg-muted/30 px-3 py-2.5 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full resize-none rounded-2xl border bg-white/90 px-3 py-2.5 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={1}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
@@ -551,7 +494,7 @@ export function CourseChatSidebar({
             </div>
             <Button
               size="icon"
-              className="h-[40px] w-[40px] shrink-0 rounded-sm"
+              className="h-[40px] w-[40px] shrink-0 rounded-full"
               disabled={!inputValue.trim() || isStreaming || noLesson}
               onClick={() => sendMessage()}
             >

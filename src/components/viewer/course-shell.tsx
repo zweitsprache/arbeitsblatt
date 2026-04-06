@@ -14,12 +14,9 @@ import {
   Menu,
   MessageCircle,
   Search,
-  ToyBrick,
   X,
 } from "lucide-react";
-import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CourseChatSidebar } from "./course-chat-sidebar";
 import { CourseLanguageSwitcher } from "./course-language-switcher";
 import {
@@ -229,8 +226,11 @@ function flattenLessons(structure: CourseModule[]): FlatLesson[] {
 function ModuleNumber({ number }: { number: string }) {
   return (
     <span
-      className="flex items-center justify-center h-7 min-w-9 px-1.5 rounded-sm text-cv-micro font-bold shrink-0"
-      style={{ color: "#1a1a1a", border: "2px solid #1a1a1a" }}
+      className="flex items-center justify-center h-7 min-w-7 px-2 rounded-full text-[11px] font-semibold shrink-0"
+      style={{
+        color: "rgba(24,24,27,0.8)",
+        backgroundColor: "rgba(24,24,27,0.06)",
+      }}
     >
       {number}
     </span>
@@ -259,10 +259,25 @@ function SidebarLessonItem({
     <button
       onClick={onSelect}
       className={cn(
-        "relative flex items-center w-full py-1.5 pl-[38px] pr-3 text-left text-cv-xs transition-colors",
+        "group relative flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-cv-xs transition-colors",
+        isActive && "shadow-sm",
         isLocked ? "cursor-default opacity-40" : "cursor-pointer",
       )}
+      style={{
+        backgroundColor: isActive ? t.activeBg : "transparent",
+      }}
     >
+      <span
+        className="h-1.5 w-1.5 rounded-full shrink-0 transition-colors"
+        style={{
+          backgroundColor: isActive
+            ? t.activeIndicator
+            : isVisited
+              ? t.textFaint
+              : "transparent",
+          boxShadow: isActive ? `0 0 0 4px ${t.slateBg}` : "none",
+        }}
+      />
       <span
         className="flex-1 min-w-0 leading-snug truncate"
         style={{
@@ -293,7 +308,7 @@ function SidebarTopicSection({
   onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
   onSelectTopic: (moduleId: string, topicId: string) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   const { structure } = useCourse();
   const tk = useSidebarTheme();
   // Find which module this topic belongs to
@@ -301,8 +316,8 @@ function SidebarTopicSection({
   const moduleId = mod?.id ?? "";
 
   return (
-    <div className="mb-0.5">
-      <div className="flex items-center gap-3 py-2 pl-3 pr-3 rounded-[5px]" style={{ backgroundColor: tk.slateBg }}>
+    <div className="mb-2">
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl transition-colors" style={{ backgroundColor: open ? tk.slateBg : "transparent" }}>
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
             "h-3.5 w-3.5 transition-transform duration-200",
@@ -327,8 +342,8 @@ function SidebarTopicSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-0 pt-1 pb-1">
-            {topic.lessons.map((lesson, lessonIdx) => {
+          <div className="mt-1 ml-3 flex flex-col gap-1 border-l pl-3" style={{ borderColor: tk.borderLine }}>
+            {topic.lessons.map((lesson) => {
               const hasContent = (lesson.blocks ?? []).length > 0;
               return (
                 <SidebarLessonItem
@@ -371,16 +386,12 @@ function SidebarModuleSection({
   onSelectModule: (moduleId: string) => void;
   onSelectTopic: (moduleId: string, topicId: string) => void;
 }) {
-  const [open, setOpen] = useState(true);
-  const tk = useSidebarTheme();
-
   const moduleLessons = flatLessons.filter((f) => f.moduleId === mod.id);
-  const moduleCompleted = moduleLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
   const moduleLessonCount = moduleLessons.length;
-  const progress = moduleLessonCount > 0 ? Math.round((moduleCompleted / moduleLessonCount) * 100) : 0;
-  const isFullyComplete = progress === 100 && moduleLessonCount > 0;
   const moduleNumber = String(getModuleNumber(moduleIndex));
-  const pastelBg = "#ECF3F9";
+  const isCurrentModule = moduleLessons.some((lesson) => lesson.lessonId === currentLessonId);
+  const [open, setOpen] = useState(defaultOpen || isCurrentModule);
+  const tk = useSidebarTheme();
 
   const topicHasProgress = (topic: CourseModule["topics"][0]) => {
     const visited = topic.lessons.filter((l) => visitedLessons.has(l.id)).length;
@@ -388,8 +399,8 @@ function SidebarModuleSection({
   };
 
   return (
-    <div className="mb-1 rounded-[5px]">
-      <div className="flex items-center gap-7 px-3 py-2 rounded-[5px]" style={{ backgroundColor: pastelBg }}>
+    <div className="mb-3 rounded-2xl border p-2" style={{ borderColor: tk.borderLine, backgroundColor: open || isCurrentModule ? tk.openBg : "transparent" }}>
+      <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
         <ModuleNumber number={moduleNumber} />
         <button
           onClick={() => {
@@ -400,6 +411,9 @@ function SidebarModuleSection({
         >
           <p className="text-cv-xs font-semibold leading-snug" style={{ color: tk.text }}>
             {mod.shortTitle || mod.title || "Untitled Module"}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-none" style={{ color: tk.textFaint }}>
+            {moduleLessonCount} lessons
           </p>
         </button>
         <button onClick={() => setOpen(!open)} className="shrink-0">
@@ -415,8 +429,8 @@ function SidebarModuleSection({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="pr-0 pt-1.5 pb-2 pl-6">
-            <div className="ml-1 pl-2.5" style={{ borderLeft: `1.5px solid ${tk.borderLine}` }}>
+          <div className="pt-1 pb-1 px-2">
+            <div>
               {mod.topics.map((topic) => (
                 <SidebarTopicSection
                   key={topic.id}
@@ -447,7 +461,6 @@ function SidebarNav({
   onSelectLesson,
   onSelectModule,
   onSelectTopic,
-  onShowOverview,
   onContinue,
   searchQuery,
   onSearchChange,
@@ -460,7 +473,6 @@ function SidebarNav({
   onSelectLesson: (moduleId: string, topicId: string, lessonId: string) => void;
   onSelectModule: (moduleId: string) => void;
   onSelectTopic: (moduleId: string, topicId: string) => void;
-  onShowOverview: () => void;
   onContinue?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -469,7 +481,6 @@ function SidebarNav({
   const tk = getSidebarTokens(sidebarTheme, brand as Brand);
   const totalLessons = flatLessons.length;
   const completedLessons = flatLessons.filter((f) => visitedLessons.has(f.lessonId)).length;
-  const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   // Find current module from currentLessonId
   const currentModuleIndex = structure.findIndex((mod) =>
@@ -488,36 +499,34 @@ function SidebarNav({
     <div className="flex flex-col h-full relative overflow-hidden"
       style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
-      <div className="shrink-0 relative">
-        {currentModule?.image ? (
-          <div className="relative w-full overflow-hidden">
-            <img src={currentModule.image} alt="" className="w-full h-auto object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-sm backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shrink-0">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-cv-sm text-white drop-shadow-md leading-snug" style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
-                  {title}
-                </h1>
-              </div>
+      <div className="shrink-0 px-5 pt-5 pb-3">
+        <div className="relative overflow-hidden rounded-[24px] border px-4 py-4" style={{ borderColor: tk.borderLine, backgroundColor: tk.openBg }}>
+          {(currentModule?.image || courseImage) && (
+            <div className="absolute inset-0 opacity-[0.12]">
+              <img src={currentModule?.image || courseImage || ""} alt="" className="h-full w-full object-cover" />
             </div>
-          </div>
-        ) : (
-          <div className="p-5 pb-4">
-            <div className="flex items-start gap-3">
-              <BookOpen className="h-7 w-7 shrink-0" style={{ color: tk.text }} />
-              <h1 className="text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
+          )}
+          <div className="relative flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ backgroundColor: tk.slateBg }}>
+              <BookOpen className="h-4.5 w-4.5" style={{ color: tk.accentText }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: tk.textFaint }}>
+                Course viewer
+              </p>
+              <h1 className="mt-1 text-cv-lg leading-snug" style={{ color: tk.text, fontFamily: BRAND_FONTS[brand || "edoomio"].headlineFont, fontWeight: BRAND_FONTS[brand || "edoomio"].headlineWeight }}>
                 {title}
               </h1>
+              <p className="mt-2 text-[12px] leading-relaxed" style={{ color: tk.textMuted }}>
+                {completedLessons} of {totalLessons} lessons opened
+              </p>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Search field */}
-      <div className="px-5 pt-4 pb-2 shrink-0">
+      <div className="px-5 pt-1 pb-3 shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tk.textFaint }} />
           <input
@@ -525,9 +534,10 @@ function SidebarNav({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Suchen…"
-            className="w-full py-2 pl-9 pr-9 rounded-[5px] text-cv-xs outline-none transition-colors"
+            className="w-full rounded-xl border py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
             style={{
               backgroundColor: tk.slateBg,
+              borderColor: tk.borderLine,
               color: tk.text,
             }}
           />
@@ -542,9 +552,19 @@ function SidebarNav({
         </div>
       </div>
 
-      <div className="h-px mx-5" style={{ backgroundColor: tk.divider }} />
+      <div className="px-5 pb-2 shrink-0">
+        <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: tk.progressTrack }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: totalLessons > 0 ? `${(completedLessons / totalLessons) * 100}%` : "0%",
+              background: tk.progressBar,
+            }}
+          />
+        </div>
+      </div>
 
-      <div className="flex-1 overflow-y-auto pt-5 px-5 pb-6 sidebar-scroll">
+      <div className="flex-1 overflow-y-auto pt-3 px-5 pb-6 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
             key={mod.id}
@@ -565,7 +585,7 @@ function SidebarNav({
         <div className="p-4 px-5 shrink-0" style={{ borderTop: `1px solid ${tk.divider}` }}>
           <button
             onClick={onContinue}
-            className="w-full py-2.5 rounded-sm text-cv-sm font-semibold cursor-pointer transition-colors"
+            className="w-full py-3 rounded-2xl text-cv-xs font-semibold cursor-pointer transition-colors"
             style={{ background: tk.continueGradient, color: tk.continueText }}
           >
             Continue Learning →
@@ -730,11 +750,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     [router, locale, slug]
   );
 
-  const handleShowOverview = useCallback(() => {
-    setMobileNavOpen(false);
-    router.push(`/${locale}/course/${slug}`);
-  }, [router, locale, slug]);
-
   const firstUnvisited = flatLessons.find((f) => !visitedLessons.has(f.lessonId));
   const handleContinue = useCallback(() => {
     if (firstUnvisited) {
@@ -761,7 +776,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   }, [pathname, structure]);
 
   return (
-    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-muted/30">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-[linear-gradient(180deg,rgba(250,250,249,1)_0%,rgba(245,245,244,1)_100%)]">
       {/* Load brand fonts */}
       <link rel="stylesheet" href={brandFonts.googleFontsUrl} />
 
@@ -775,7 +790,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <p className="text-cv-sm font-medium truncate">{title}</p>
           </div>
           <CourseLanguageSwitcher />
-          <Badge variant="secondary" className="shrink-0 text-cv-micro">{pct}%</Badge>
+          <span className="shrink-0 text-[11px] font-medium text-muted-foreground">{completedCount}/{flatLessons.length}</span>
         </div>
         <div className="h-0.5 bg-muted">
           <div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
@@ -798,7 +813,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             onSelectLesson={handleSelectLesson}
             onSelectModule={handleSelectModule}
             onSelectTopic={handleSelectTopic}
-            onShowOverview={handleShowOverview}
             onContinue={firstUnvisited ? handleContinue : undefined}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -808,12 +822,12 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop layout */}
       {/* Top bar (full width, outside padding) */}
-      <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-b" style={{ fontFamily: brandFonts.bodyFont }}>
+      <div className="hidden lg:flex items-center gap-3 px-6 2xl:px-8 py-4 text-cv-xs text-muted-foreground shrink-0 bg-white/80 backdrop-blur border-b" style={{ fontFamily: brandFonts.bodyFont }}>
         {/* Brand logo */}
         <img
           src={DEFAULT_BRAND_SETTINGS[brand].logo}
           alt=""
-          className="h-8 w-auto mr-2"
+          className="h-7 w-auto mr-1"
         />
         {/* Menu button for sidebar (lg to 2xl) */}
         <div className="2xl:hidden">
@@ -821,22 +835,36 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </Button>
         </div>
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Lesson workspace</p>
+          <p className="text-sm text-foreground truncate">{title}</p>
+        </div>
         {/* Language switcher */}
         <div className="ml-auto flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-2 rounded-full border bg-background px-3 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            <span>{completedCount} / {flatLessons.length} lessons</span>
+          </div>
           <CourseLanguageSwitcher />
+          {!chatSidebarOpen && (
+            <Button variant="outline" size="sm" className="rounded-full" onClick={() => setChatSidebarOpen(true)}>
+              <MessageCircle className="h-3.5 w-3.5" />
+              Assistant
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="min-h-screen lg:flex-1 lg:min-h-0 flex flex-col p-4 lg:p-6 2xl:p-8 pt-0 lg:pt-4 2xl:pt-6 gap-4 lg:gap-4 2xl:gap-6">
+      <div className="min-h-screen lg:flex-1 lg:min-h-0 flex flex-col p-4 lg:p-6 2xl:p-8 pt-0 lg:pt-5 2xl:pt-6 gap-4 lg:gap-4 2xl:gap-6">
         {/* Middle row: sidebar + content + chat */}
         <div className="flex-1 min-h-0 flex flex-row gap-4 lg:gap-4 2xl:gap-6">
           {/* Desktop sidebar (2xl+ only — push layout) */}
           <div className={cn(
             "hidden 2xl:flex shrink-0 relative transition-all duration-300",
-            desktopSidebarOpen ? "w-[400px]" : "w-0"
+            desktopSidebarOpen ? "w-[340px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[400px] h-full rounded-sm border bg-background overflow-hidden transition-all duration-300",
+              "flex flex-col w-[340px] h-full rounded-[28px] border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
@@ -848,14 +876,13 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 onSelectLesson={handleSelectLesson}
                 onSelectModule={handleSelectModule}
                 onSelectTopic={handleSelectTopic}
-                onShowOverview={handleShowOverview}
                 onContinue={firstUnvisited ? handleContinue : undefined}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
               />
             </aside>
             <button
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center h-9 w-6 bg-white border rounded-r-full shadow-sm hover:bg-muted transition-colors"
               onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
               aria-label={desktopSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
@@ -865,7 +892,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
           {!desktopSidebarOpen && (
             <button
-              className="hidden 2xl:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-8 w-5 bg-background border rounded-r-md shadow-sm hover:bg-muted transition-colors -ml-6"
+              className="hidden 2xl:flex sticky top-1/2 -translate-y-1/2 z-10 items-center justify-center h-9 w-6 bg-white border rounded-r-full shadow-sm hover:bg-muted transition-colors -ml-6"
               onClick={() => setDesktopSidebarOpen(true)}
               aria-label="Expand sidebar"
             >
@@ -874,7 +901,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Content container */}
-          <div className="flex-1 min-w-0 rounded-sm border bg-background overflow-hidden">
+          <div className="flex-1 min-w-0 rounded-[32px] border bg-white/94 shadow-[0_22px_60px_rgba(15,23,42,0.06)] overflow-hidden">
             <style>{`
               .content-scroll::-webkit-scrollbar { width: 6px; }
               .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 32px; }
@@ -902,7 +929,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <div className="h-full flex flex-col">
               {/* Breadcrumb path */}
               {searchResults ? (
-                <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground border-b shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+                <div className="flex items-center gap-2 px-6 lg:px-8 py-5 text-sm text-muted-foreground border-b shrink-0 bg-[rgba(250,250,249,0.8)]" style={{ fontFamily: brandFonts.bodyFont }}>
                   <button onClick={() => { setSearchQuery(""); router.push(`/${locale}/course/${slug}`); }} className="font-medium hover:text-foreground/80 transition-colors">
                     Start
                   </button>
@@ -910,7 +937,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                   <span className="font-medium text-foreground">Suchresultate</span>
                 </div>
               ) : breadcrumb && (
-                <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground border-b shrink-0" style={{ fontFamily: brandFonts.bodyFont }}>
+                <div className="flex items-center gap-2 px-6 lg:px-8 py-5 text-sm text-muted-foreground border-b shrink-0 bg-[rgba(250,250,249,0.8)]" style={{ fontFamily: brandFonts.bodyFont }}>
                   {breadcrumb.isOverview ? (
                     <span className="font-medium text-foreground">Start</span>
                   ) : (
@@ -953,7 +980,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
               <div className="flex-1 min-h-0 flex">
                 <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
                   {searchResults ? (
-                    <div className="p-6" style={{ fontFamily: brandFonts.bodyFont }}>
+                    <div className="p-6 lg:p-8" style={{ fontFamily: brandFonts.bodyFont }}>
                       <p className="text-sm text-muted-foreground mb-4">
                         {searchResults.length === 0
                           ? "Keine Ergebnisse gefunden."
@@ -996,7 +1023,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                     children
                   )}
                 </div>
-                <div className="w-6 shrink-0" />
               </div>
             </div>
           </div>
@@ -1012,17 +1038,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Footer (full width) */}
-      <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-t" style={{ fontFamily: brandFonts.bodyFont }}>
+      <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-4 text-cv-xs text-muted-foreground shrink-0 bg-white/80 backdrop-blur border-t" style={{ fontFamily: brandFonts.bodyFont }}>
         <span>© {new Date().getFullYear()} {brand === "lingostar" ? "lingostar | Marcel Allenspach" : "Edoomio"}. Alle Rechte vorbehalten.</span>
-        {!chatSidebarOpen && (
-          <button
-            onClick={() => setChatSidebarOpen(true)}
-            className="ml-auto flex items-center justify-center h-8 w-8 rounded-full bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200"
-            aria-label="Open chat"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </button>
-        )}
       </div>
     </div>
   );
