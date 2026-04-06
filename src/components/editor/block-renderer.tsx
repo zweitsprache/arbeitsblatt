@@ -4357,7 +4357,7 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     padding: "4px 8px",
-    lineHeight: "1.5rem",
+    lineHeight: "1.35rem",
     verticalAlign: "top",
     boxSizing: "border-box",
   };
@@ -4368,7 +4368,7 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
     fontSize: "0.8em",
     fontWeight: 400,
     textTransform: "uppercase",
-    lineHeight: "1.5rem",
+    lineHeight: "1.35rem",
     height: "2rem",
     verticalAlign: "top",
     boxSizing: "border-box",
@@ -4414,7 +4414,7 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
                 <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 0 }}>–</td>
                 <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
                 <td style={rowCellStyle}>{item.room}</td>
-                <td style={{ padding: "4px 8px", lineHeight: "1.5rem", verticalAlign: "top", boxSizing: "border-box" }}>
+                <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
                   <div style={{ fontWeight: 700 }}>{item.title}</div>
                   {item.description ? <div>{item.description}</div> : null}
                 </td>
