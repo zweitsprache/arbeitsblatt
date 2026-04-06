@@ -444,6 +444,21 @@
   page-break-inside: avoid;
 }
 
+/* Website blocks may break between cards, but never inside an individual card. */
+.worksheet-block-website {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.worksheet-block-website .website-items {
+  display: block;
+}
+
+.worksheet-block-website .website-item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 /* Keep subheadings with the following block, but allow top-level titles to flow normally.
    Chromium can otherwise push an h1 to the next page when it tries to keep it with a large following block. */
 .worksheet-block-heading:not([data-heading-level="1"]),

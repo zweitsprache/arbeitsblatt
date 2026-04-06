@@ -4283,7 +4283,7 @@ function WebsiteView({
         </HeadingTag>
       ) : null}
 
-      <div className="grid gap-3">
+      <div className="website-items space-y-3">
         {block.items.map((item) => {
           const href = normalizeExternalUrl(item.url);
           const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
@@ -4299,7 +4299,7 @@ function WebsiteView({
           return (
             <article
               key={item.id}
-              className="flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4"
+              className="website-item flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4"
               style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
             >
               <div className="w-40 shrink-0 overflow-hidden rounded-sm border border-slate-200 bg-slate-50 aspect-video">
