@@ -4348,41 +4348,40 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-0 border-t">
+      <table className="w-full border-collapse border-t" style={{ tableLayout: "auto" }}>
         {showHeader && (
-          <div className="flex items-baseline gap-4 py-1.5 border-b bg-slate-50 font-semibold text-xs uppercase tracking-wider text-slate-500">
-            {showDate && <span className="tabular-nums whitespace-nowrap shrink-0 w-[130px]">Datum</span>}
-            <span className="tabular-nums whitespace-nowrap shrink-0">Zeit</span>
-            {showRoom && <span className="whitespace-nowrap shrink-0 w-[80px]">Raum</span>}
-            <span className="flex-1">Inhalt</span>
-          </div>
+          <thead>
+            <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {showDate && <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold" colSpan={2}>Datum</th>}
+              <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold">Zeit</th>
+              {showRoom && <th className="text-left py-1.5 px-1 whitespace-nowrap font-semibold">Raum</th>}
+              <th className="text-left py-1.5 px-1 font-semibold">Inhalt</th>
+            </tr>
+          </thead>
         )}
-        {block.items.map((item) => {
-          const { weekday, formatted } = formatScheduleDate(item.date ?? "");
-          return (
-            <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
-              {showDate && (
-                <span className="text-base tabular-nums whitespace-nowrap shrink-0 w-[130px]">
-                  {weekday && <span className="font-semibold">{weekday}</span>}{weekday && formatted && " "}{formatted}
-                </span>
-              )}
-              <span className="text-base tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
-              {showRoom && (
-                <span className="text-base whitespace-nowrap shrink-0 w-[80px]">{item.room ?? ""}</span>
-              )}
-              <span className="text-base flex-1">
-                <span className="font-semibold">{item.title}</span>
-                {item.description && (
-                  <>
-                    <br />
-                    <span className="text-muted-foreground">{item.description}</span>
-                  </>
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+        <tbody>
+          {block.items.map((item) => {
+            const { weekday, formatted } = formatScheduleDate(item.date ?? "");
+            return (
+              <tr key={item.id} className="border-b align-baseline">
+                {showDate && <td className="py-1.5 px-1 text-base font-semibold whitespace-nowrap">{weekday}</td>}
+                {showDate && <td className="py-1.5 px-1 text-base tabular-nums whitespace-nowrap">{formatted}</td>}
+                <td className="py-1.5 px-1 text-base tabular-nums whitespace-nowrap">{item.start} – {item.end}</td>
+                {showRoom && <td className="py-1.5 px-1 text-base whitespace-nowrap">{item.room ?? ""}</td>}
+                <td className="py-1.5 px-1 text-base">
+                  <span className="font-semibold">{item.title}</span>
+                  {item.description && (
+                    <>
+                      <br />
+                      <span className="text-muted-foreground">{item.description}</span>
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

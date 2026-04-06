@@ -4215,62 +4215,69 @@ function ScheduleView({
     const descriptionToneClass = tone === "translated" ? "text-slate-400" : "text-muted-foreground";
 
     return (
-      <div className="flex-1">
+      <>
         <div className={`font-bold ${toneClass}`}>{title}</div>
         {description && <div className={descriptionToneClass}>{description}</div>}
-      </div>
+      </>
     );
   };
 
   return (
     <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
-      <div className={s.scheduleCard}>
+      <table className={s.scheduleCard} style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
         {showHeader && (
-          <div className={`${s.scheduleRow} ${s.scheduleHeader}`}>
-            {showDate && <span className="tabular-nums whitespace-nowrap shrink-0" style={{ minWidth: "7.5rem" }}>Datum</span>}
-            <span className="tabular-nums whitespace-nowrap shrink-0">Zeit</span>
-            {showRoom && <span className="whitespace-nowrap shrink-0" style={{ minWidth: "4.5rem" }}>Raum</span>}
-            <span className="flex-1">Inhalt</span>
-          </div>
+          <thead>
+            <tr className={s.scheduleHeader}>
+              {showDate && <th className={s.scheduleTh} colSpan={2}>Datum</th>}
+              <th className={s.scheduleTh}>Zeit</th>
+              {showRoom && <th className={s.scheduleTh}>Raum</th>}
+              <th className={`${s.scheduleTh} ${s.scheduleTd100}`}>Inhalt</th>
+            </tr>
+          </thead>
         )}
-        {block.items.map((item) => {
-          const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
-          return (
-            <div key={item.id} className={s.scheduleRow}>
-              {showDate && (
-                <span className="tabular-nums whitespace-nowrap shrink-0" style={{ minWidth: "7.5rem" }}>
-                  {weekday && <span className="font-bold">{weekday}</span>}{weekday && formatted && " "}{formatted}
-                </span>
-              )}
-              <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
-              {showRoom && (
-                <span className="whitespace-nowrap shrink-0" style={{ minWidth: "4.5rem" }}>{item.room ?? ""}</span>
-              )}
-              {(() => {
-                const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-                const showBilingualItem =
-                  !!block.bilingual &&
-                  !!originalItem &&
-                  (originalItem.title !== item.title || originalItem.description !== item.description);
+        <tbody>
+          {block.items.map((item) => {
+            const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
+            return (
+              <tr key={item.id} className={s.scheduleRow}>
+                {showDate && <td className={`${s.scheduleTd} font-bold`}>{weekday}</td>}
+                {showDate && <td className={`${s.scheduleTd} tabular-nums`}>{formatted}</td>}
+                <td className={`${s.scheduleTd} tabular-nums`} style={{ whiteSpace: "nowrap" }}>{item.start} – {item.end}</td>
+                {showRoom && <td className={s.scheduleTd}>{item.room ?? ""}</td>}
+                <td className={`${s.scheduleTd} ${s.scheduleTd100}`}>
+                  {(() => {
+                    const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+                    const showBilingualItem =
+                      !!block.bilingual &&
+                      !!originalItem &&
+                      (originalItem.title !== item.title || originalItem.description !== item.description);
 
-                if (!showBilingualItem || !originalItem) {
-                  return renderScheduleText(item.title, item.description);
-                }
+                    if (!showBilingualItem || !originalItem) {
+                      return renderScheduleText(item.title, item.description);
+                    }
 
-                return (
-                  <div className="flex-1">
-                    <div className="font-bold text-slate-900">{originalItem.title}</div>
-                    <div className="font-bold text-slate-400">{item.title}</div>
-                    {originalItem.description && (
-                      <div className="text-slate-900">{originalItem.description}</div>
-                    )}
-                    {item.description && (
-                      <div className="text-slate-400">{item.description}</div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+                    return (
+                      <>
+                        <div className="font-bold text-slate-900">{originalItem.title}</div>
+                        <div className="font-bold text-slate-400">{item.title}</div>
+                        {originalItem.description && (
+                          <div className="text-slate-900">{originalItem.description}</div>
+                        )}
+                        {item.description && (
+                          <div className="text-slate-400">{item.description}</div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
           );
         })}
       </div>
