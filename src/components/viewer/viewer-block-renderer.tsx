@@ -4214,6 +4214,48 @@ function ScheduleView({
 
   return (
     <div style={wrapStyle}>
+
+      {/* ── STATIC PROTOTYPE ── completely self-contained, no classes ── */}
+      <table style={{
+        width: "100%",
+        borderCollapse: "collapse",
+        border: "1px solid #e2e8f0",
+        borderRadius: "6px",
+        overflow: "hidden",
+        marginBottom: "1rem",
+        tableLayout: "auto",
+      }}>
+        <thead>
+          <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
+            <th colSpan={2} style={{ padding: "6px 10px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Datum</th>
+            <th colSpan={3} style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Zeit</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", whiteSpace: "nowrap" }}>Raum</th>
+            <th style={{ padding: "6px 4px 6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", width: "100%" }}>Inhalt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            { wd: "DI", dt: "07.04.2026", start: "08:30", end: "09:15", room: "A101", title: "Grammatik: Perfekt", desc: "Regelmäßige Verben" },
+            { wd: "FR", dt: "10.04.2026", start: "13:00", end: "14:30", room: "B203", title: "Hören & Sprechen", desc: "" },
+            { wd: "MI", dt: "22.04.2026", start: "09:30", end: "10:15", room: "A101", title: "Schreiben: E-Mail", desc: "Formelle Schreibweise" },
+          ].map((row, i, arr) => (
+            <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+              <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap", fontWeight: 700 }}>{row.wd}</td>
+              <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>{row.dt}</td>
+              <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>{row.start}</td>
+              <td style={{ padding: "6px 2px", whiteSpace: "nowrap", color: "#94a3b8" }}>–</td>
+              <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>{row.end}</td>
+              <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>{row.room}</td>
+              <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>
+                <div style={{ fontWeight: 700 }}>{row.title}</div>
+                {row.desc && <div style={{ color: "#64748b", marginTop: "2px" }}>{row.desc}</div>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {/* ── END STATIC PROTOTYPE ── */}
+
       <div className={s.scheduleShell}>
         <table className={s.scheduleTable}>
           {showHeader && (
