@@ -168,22 +168,6 @@ function useSidebarTheme() { return React.useContext(SidebarThemeContext); }
 
 // ─── Types ───────────────────────────────────────────────────
 
-// ─── Module Number ──────────────────────────────────────────
-
-function ModuleNumber({ number }: { number: string }) {
-  return (
-    <span
-      className="flex items-center justify-center h-7 min-w-7 px-2 rounded-full text-[11px] font-semibold shrink-0"
-      style={{
-        color: "rgba(24,24,27,0.8)",
-        backgroundColor: "rgba(24,24,27,0.06)",
-      }}
-    >
-      {number}
-    </span>
-  );
-}
-
 // ─── Sidebar Module Section ──────────────────────────────────
 
 function SidebarModuleSection({
@@ -200,8 +184,6 @@ function SidebarModuleSection({
   onSelectModule: (moduleId: string) => void;
 }) {
   const tk = useSidebarTheme();
-  const moduleLessonCount = mod.topics.reduce((count, topic) => count + topic.lessons.length, 0);
-  const topicCount = mod.topics.length;
   const moduleNumber = String(getModuleNumber(moduleIndex));
   const isCurrentModule = currentModuleId === mod.id;
   const moduleTitleColor = BRAND_FONTS[brand || "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
@@ -216,13 +198,12 @@ function SidebarModuleSection({
       }}
     >
       <div className="flex items-start gap-3">
-        <ModuleNumber number={moduleNumber} />
         <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-normal leading-none" style={{ color: tk.textFaint }}>
+            {moduleNumber}
+          </p>
           <p className="text-cv-xs font-semibold leading-snug" style={{ color: moduleTitleColor }}>
             {mod.shortTitle || mod.title || "Untitled Module"}
-          </p>
-          <p className="mt-1 text-[11px] leading-none" style={{ color: tk.textFaint }}>
-            {topicCount} topics • {moduleLessonCount} lessons
           </p>
         </div>
         <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0" style={{ color: tk.chevron }} />
