@@ -4034,35 +4034,31 @@ function ChecklistView({
 
   return (
     <div className={s.checklistRows}>
-      {block.items.map((item, index) => (
-        {
-          (() => {
-            const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-            const showBilingual = isBilingual && !!originalItem;
+      {block.items.map((item, index) => {
+        const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+        const showBilingual = isBilingual && !!originalItem;
 
-            return (
-              <div
-                key={item.id}
-                className={s.checklistRow}
-                style={showBilingual ? {
-                  gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
-                  alignItems: "start",
-                } : undefined}
-              >
-                <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
-                {showBilingual
-                  ? (
-                    <>
-                      {renderChecklistColumn(originalItem)}
-                      {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
-                    </>
-                  )
-                  : renderChecklistColumn(item)}
-              </div>
-            );
-          })()
-        }
-      ))}
+        return (
+          <div
+            key={item.id}
+            className={s.checklistRow}
+            style={showBilingual ? {
+              gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
+              alignItems: "start",
+            } : undefined}
+          >
+            <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
+            {showBilingual
+              ? (
+                <>
+                  {renderChecklistColumn(originalItem)}
+                  {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
+                </>
+              )
+              : renderChecklistColumn(item)}
+          </div>
+        );
+      })}
     </div>
   );
 }
