@@ -4228,6 +4228,17 @@ function ScheduleView({
   return (
     <div style={isNonLatin ? bodyStyle : undefined}>
       <table className={s.scheduleTable}>
+        <colgroup>
+          {showDate && (
+            <>
+              <col style={{ width: "1%" }} />
+              <col style={{ width: "1%" }} />
+            </>
+          )}
+          <col style={{ width: "1%" }} />
+          {showRoom && <col style={{ width: "1%" }} />}
+          <col style={{ width: "auto" }} />
+        </colgroup>
         {showHeader && (
           <thead>
             <tr className={s.scheduleHeaderRow}>
@@ -4249,8 +4260,8 @@ function ScheduleView({
 
             return (
               <tr key={item.id} className={s.scheduleBodyRow}>
-                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{weekday}</td>}
-                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{formatted}</td>}
+                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{weekday || "-"}</td>}
+                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{formatted || "-"}</td>}
                 <td className={s.scheduleCell} style={tdStyle}>{item.start}&nbsp;–&nbsp;{item.end}</td>
                 {showRoom && <td className={s.scheduleCell} style={tdStyle}>{item.room ?? ""}</td>}
                 <td className={s.scheduleCellWide} style={{ ...tdStyle, width: "100%", whiteSpace: "normal" }}>

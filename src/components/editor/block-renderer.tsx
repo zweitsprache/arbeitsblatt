@@ -4349,6 +4349,17 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   return (
     <div className="space-y-3">
       <table className="w-full border-collapse border-t" style={{ tableLayout: "auto" }}>
+        <colgroup>
+          {showDate && (
+            <>
+              <col style={{ width: "1%" }} />
+              <col style={{ width: "1%" }} />
+            </>
+          )}
+          <col style={{ width: "1%" }} />
+          {showRoom && <col style={{ width: "1%" }} />}
+          <col style={{ width: "auto" }} />
+        </colgroup>
         {showHeader && (
           <thead>
             <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -4364,8 +4375,8 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
             const { weekday, formatted } = formatScheduleDate(item.date ?? "");
             return (
               <tr key={item.id} className="border-b align-baseline">
-                {showDate && <td className="py-1.5 px-2 text-base font-semibold whitespace-nowrap">{weekday}</td>}
-                {showDate && <td className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap">{formatted}</td>}
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold whitespace-nowrap">{weekday || "-"}</td>}
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap">{formatted || "-"}</td>}
                 <td className="py-1.5 px-2 text-base tabular-nums whitespace-nowrap">{item.start} – {item.end}</td>
                 {showRoom && <td className="py-1.5 px-2 text-base whitespace-nowrap">{item.room ?? ""}</td>}
                 <td className="py-1.5 px-2 text-base">
