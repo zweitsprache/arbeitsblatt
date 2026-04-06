@@ -4354,6 +4354,16 @@ function formatScheduleCellTime(value: string) {
 }
 
 function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["items"]; primaryColor: string }) {
+  const headerCellStyle: React.CSSProperties = {
+    whiteSpace: "nowrap",
+    textAlign: "left",
+    color: "inherit",
+    fontSize: "0.75em",
+    fontWeight: 400,
+    textTransform: "uppercase",
+    lineHeight: "1.5rem",
+  };
+
   return (
     <>
       <style>{`
@@ -4376,10 +4386,10 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
         </colgroup>
         <thead>
           <tr>
-            <th colSpan={2} style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Datum</th>
-            <th colSpan={3} style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Zeit</th>
-            <th style={{ whiteSpace: "nowrap", textAlign: "left", color: primaryColor }}>Raum</th>
-            <th style={{ textAlign: "left", color: primaryColor }}>Inhalt</th>
+            <th colSpan={2} style={headerCellStyle}>Datum</th>
+            <th colSpan={3} style={headerCellStyle}>Zeit</th>
+            <th style={headerCellStyle}>Raum</th>
+            <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
           </tr>
         </thead>
         <tbody>
