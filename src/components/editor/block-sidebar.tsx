@@ -45,6 +45,7 @@ import {
   Table,
   Volume2,
   Clock,
+  Globe,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -86,6 +87,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Table,
   Volume2,
   Clock,
+  Globe,
 };
 
 function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {

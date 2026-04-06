@@ -4255,18 +4255,18 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
         </HeadingTag>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3">
         {block.items.map((item) => {
           const href = normalizeExternalUrl(item.url);
 
           return (
-            <article key={item.id} className="flex min-h-[8rem] gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+            <article key={item.id} className="flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4">
+              <div className="w-40 shrink-0 overflow-hidden rounded-sm border border-slate-200 bg-slate-50 aspect-video">
                 {item.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                  <div className="flex h-full items-center justify-center text-[11px] text-slate-300">
                     Web
                   </div>
                 )}
@@ -4278,7 +4278,7 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-700"
+                    className="font-bold text-slate-900"
                   >
                     {item.title || href}
                   </a>
@@ -4286,12 +4286,12 @@ function WebsiteView({ block }: { block: WebsiteBlock }) {
                   <div className="font-bold text-slate-900">{item.title}</div>
                 )}
                 {item.category ? (
-                  <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                  <div className="mt-1 text-xs font-medium text-slate-500">
                     {item.category}
                   </div>
                 ) : null}
                 {item.description ? (
-                  <div className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+                  <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-700">
                     {item.description}
                   </div>
                 ) : null}
