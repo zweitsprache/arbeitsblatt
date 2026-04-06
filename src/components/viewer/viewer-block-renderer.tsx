@@ -4173,6 +4173,7 @@ function AudioView({ block }: { block: AudioBlock }) {
 }
 
 function ScheduleView({
+  block,
   brand,
   bodyFont,
   isNonLatin,
@@ -4189,12 +4190,27 @@ function ScheduleView({
 
   return (
     <div style={wrapStyle}>
-      <StaticScheduleTable />
+      <StaticScheduleTable items={block.items} />
     </div>
   );
 }
 
-function StaticScheduleTable() {
+function formatScheduleCellDate(dateStr: string): { weekday: string; formatted: string } {
+  if (!dateStr) return { weekday: "", formatted: "" };
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return { weekday: "", formatted: dateStr };
+  const weekday = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"][d.getDay()] || "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return { weekday, formatted: `${dd}.${mm}.${yyyy}` };
+}
+
+function formatScheduleCellTime(value: string) {
+  return value ? value.replace(":", ".") : "";
+}
+
+function StaticScheduleTable({ items }: { items: ScheduleBlock["items"] }) {
   return (
     <>
       <style>{`
@@ -4224,24 +4240,22 @@ function StaticScheduleTable() {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td style={{ whiteSpace: "nowrap" }}>MO</td>
-            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
-            <td style={{ whiteSpace: "nowrap" }}>08.30</td>
-            <td style={{ whiteSpace: "nowrap" }}>–</td>
-            <td style={{ whiteSpace: "nowrap" }}>12.00</td>
-            <td style={{ whiteSpace: "nowrap" }}>404</td>
-            <td>Modul 2.1</td>
-          </tr>
-          <tr>
-            <td style={{ whiteSpace: "nowrap" }}>MO</td>
-            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
-            <td style={{ whiteSpace: "nowrap" }}>13.00</td>
-            <td style={{ whiteSpace: "nowrap" }}>–</td>
-            <td style={{ whiteSpace: "nowrap" }}>16.30</td>
-            <td style={{ whiteSpace: "nowrap" }}>MarieOtto</td>
-            <td>Modul 2.2</td>
-          </tr>
+          {items.map((item) => {
+            const { weekday, formatted } = formatScheduleCellDate(item.date);
+            const content = item.description ? `${item.title} ${item.description}` : item.title;
+
+            return (
+              <tr key={item.id}>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{weekday}</td>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatted}</td>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.start)}</td>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>–</td>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{formatScheduleCellTime(item.end)}</td>
+                <td style={{ whiteSpace: "nowrap", padding: "4px 8px" }}>{item.room}</td>
+                <td style={{ padding: "4px 8px" }}>{content}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </>
