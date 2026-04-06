@@ -127,14 +127,14 @@ function forEachBlockTranslationField(
   switch (block.type) {
     case "text": {
       const tb = block as TextBlock;
-      if (isTranslatableTextStyle(tb.textStyle)) {
+      if (!tb.skipTranslation && isTranslatableTextStyle(tb.textStyle)) {
         add("content", () => tb.content, (v) => {
           tb.content = v;
         });
+        add("comment", () => tb.comment, (v) => {
+          tb.comment = v;
+        });
       }
-      add("comment", () => tb.comment, (v) => {
-        tb.comment = v;
-      });
       break;
     }
 

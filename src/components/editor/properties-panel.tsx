@@ -2507,6 +2507,19 @@ function TextProps({ block }: { block: TextBlock }) {
           }
         />
       </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("skipTranslation")}</Label>
+        <Switch
+          checked={block.skipTranslation ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { skipTranslation: checked } },
+            })
+          }
+        />
+      </div>
       {block.bilingual && (
         <>
           <Separator />

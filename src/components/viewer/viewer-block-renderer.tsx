@@ -4038,7 +4038,7 @@ function ChecklistView({
         {
           (() => {
             const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-            const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+            const showBilingual = isBilingual && !!originalItem;
 
             return (
               <div

@@ -84,6 +84,7 @@ export interface TextBlock extends BlockBase {
   imageScale?: number; // 10-100, percentage of container width
   bilingual?: boolean; // Show original + translation side-by-side in translated worksheets
   bilingualDivider?: boolean; // Show vertical divider in bilingual two-column layout
+  skipTranslation?: boolean;
 }
 
 // ─── Image block ─────────────────────────────────────────────
