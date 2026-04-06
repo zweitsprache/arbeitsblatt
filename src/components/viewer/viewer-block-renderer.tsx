@@ -51,6 +51,7 @@ import {
   AiToolBlock,
   AudioBlock,
   ScheduleBlock,
+  WebsiteBlock,
   TableBlock,
   BRAND_ICON_LOGOS,
   BRAND_FONTS,
@@ -4236,6 +4237,73 @@ function AudioView({ block }: { block: AudioBlock }) {
   );
 }
 
+function WebsiteView({ block }: { block: WebsiteBlock }) {
+  const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
+
+  const normalizeExternalUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (/^[a-z]+:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
+
+  return (
+    <div className="space-y-4">
+      {block.title.trim() ? (
+        <HeadingTag className={block.level === 1 ? "text-2xl font-bold" : block.level === 2 ? "text-xl font-bold" : "text-lg font-semibold"}>
+          {block.title}
+        </HeadingTag>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {block.items.map((item) => {
+          const href = normalizeExternalUrl(item.url);
+
+          return (
+            <article key={item.id} className="flex min-h-[8rem] gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                {item.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                    Web
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                {href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-700"
+                  >
+                    {item.title || href}
+                  </a>
+                ) : (
+                  <div className="font-bold text-slate-900">{item.title}</div>
+                )}
+                {item.category ? (
+                  <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                    {item.category}
+                  </div>
+                ) : null}
+                {item.description ? (
+                  <div className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+                    {item.description}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ScheduleView({
   block,
   originalBlock,
@@ -5184,6 +5252,8 @@ export function ViewerBlockRenderer({
       return <AudioView block={block as AudioBlock} />;
     case "schedule":
       return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+    case "website":
+      return <WebsiteView block={block as WebsiteBlock} />;
     default:
       return null;
   }

@@ -59,16 +59,20 @@ import {
   AudioBlock,
   ScheduleBlock,
   ScheduleItem,
+  WebsiteBlock,
   TableBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
 import { authFetch } from "@/lib/auth-fetch";
+import { useUpload } from "@/lib/use-upload";
 import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
+import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
+import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
@@ -4340,6 +4344,291 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
   );
 }
 
+// ─── Website block ──────────────────────────────────────────
+function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [browserIndex, setBrowserIndex] = React.useState<number | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropIndex, setCropIndex] = React.useState<number | null>(null);
+
+  const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
+
+  const updateItems = (items: WebsiteBlock["items"]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items } },
+    });
+  };
+
+  const updateItem = (index: number, updates: Partial<WebsiteBlock["items"][number]>) => {
+    const next = [...block.items];
+    next[index] = { ...next[index], ...updates };
+    updateItems(next);
+  };
+
+  const updateLocaleField = (
+    index: number,
+    field: "title" | "category" | "description",
+    value: string,
+  ) => {
+    localeUpdate(block.id, `items.${index}.${field}`, value, () => {
+      updateItem(index, { [field]: value });
+    });
+  };
+
+  const normalizeExternalUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (/^[a-z]+:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
+
+  const openBrowser = (index: number) => {
+    setBrowserIndex(index);
+    setBrowserOpen(true);
+  };
+
+  const handleFileSelected = (file: File, index: number) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropIndex(index);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (cropIndex === null) {
+      URL.revokeObjectURL(result.url);
+      return;
+    }
+
+    setUploadingIndex(cropIndex);
+    try {
+      const file = new File([result.blob], `website-${cropIndex}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateItem(cropIndex, { image: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadingIndex(null);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+      setCropSrc(null);
+      setCropIndex(null);
+    }
+  };
+
+  const addItem = () => {
+    updateItems([
+      ...block.items,
+      {
+        id: crypto.randomUUID(),
+        title: "",
+        url: "",
+        category: "",
+        description: "",
+        image: "",
+      },
+    ]);
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    updateItems(block.items.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= block.items.length) return;
+    const next = [...block.items];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    updateItems(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      {block.title.trim() ? (
+        <HeadingTag className={block.level === 1 ? "text-2xl font-bold" : block.level === 2 ? "text-xl font-bold" : "text-lg font-semibold"}>
+          {block.title}
+        </HeadingTag>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {block.items.map((item, index) => {
+          const href = normalizeExternalUrl(item.url);
+
+          return (
+            <div key={item.id} className="group relative rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex gap-3">
+                <div className="w-28 shrink-0">
+                  {item.image ? (
+                    <div className="relative h-28 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => updateItem(index, { image: "" })}
+                        className="absolute right-1 top-1 rounded-full bg-black/65 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="flex h-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-center transition-colors hover:border-slate-400 hover:bg-slate-100">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelected(file, index);
+                          }}
+                        />
+                        {uploadingIndex === index ? (
+                          <Loader2 className="mb-1 h-4 w-4 animate-spin text-slate-500" />
+                        ) : (
+                          <Upload className="mb-1 h-4 w-4 text-slate-500" />
+                        )}
+                        <span className="px-2 text-[11px] text-slate-500">{uploadingIndex === index ? t("uploading") : t("dragOrClick")}</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => openBrowser(index)}
+                        className="flex h-7 w-full items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-600 transition hover:bg-slate-50"
+                      >
+                        <Upload className="mr-1 h-3.5 w-3.5" />
+                        {t("mediaBrowser")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start gap-1">
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) => updateLocaleField(index, "title", e.target.value)}
+                      placeholder={t("websiteTitle")}
+                      className="min-w-0 flex-1 border-none bg-transparent px-0 text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:ring-0"
+                    />
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-0.5 shrink-0 text-slate-400 transition-colors hover:text-slate-700"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={item.url}
+                    onChange={(e) => updateItem(index, { url: e.target.value })}
+                    placeholder={t("websiteUrl")}
+                    className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                  />
+
+                  <input
+                    type="text"
+                    value={item.category}
+                    onChange={(e) => updateLocaleField(index, "category", e.target.value)}
+                    placeholder={t("websiteCategory")}
+                    className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-xs uppercase tracking-wide text-slate-500 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                  />
+
+                  <textarea
+                    value={item.description}
+                    onChange={(e) => updateLocaleField(index, "description", e.target.value)}
+                    placeholder={t("websiteDescription")}
+                    className="min-h-[72px] w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200 resize-y"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => moveItem(index, "up")}
+                  disabled={index === 0}
+                  className="text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveItem(index, "down")}
+                  disabled={index === block.items.length - 1}
+                  className="text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  disabled={block.items.length <= 1}
+                  className="text-slate-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+
+      <MediaBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelectUrl={(url) => {
+          if (browserIndex !== null) {
+            updateItem(browserIndex, { image: url });
+          }
+        }}
+        onSelectFile={(file) => {
+          if (browserIndex !== null) {
+            handleFileSelected(file, browserIndex);
+          }
+        }}
+      />
+
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open && cropSrc) {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
+            setCropIndex(null);
+          }
+        }}
+        onCropComplete={handleCropComplete}
+        title={t("cropImage")}
+        aspect={1}
+      />
+    </div>
+  );
+}
+
 // ─── Schedule block ──────────────────────────────────────────
 function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   const { state } = useEditor();
@@ -4739,6 +5028,8 @@ export function BlockRenderer({
       return <AudioRenderer block={block as AudioBlock} />;
     case "schedule":
       return <ScheduleRenderer block={block as ScheduleBlock} />;
+    case "website":
+      return <WebsiteRenderer block={block as WebsiteBlock} />;
     default:
       return (
         <div className="p-4 bg-red-50 text-red-600 rounded text-sm">

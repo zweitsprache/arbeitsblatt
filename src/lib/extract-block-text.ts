@@ -227,6 +227,15 @@ export function extractBlocksText(
         }
         break;
 
+      case "website":
+        if (block.title) parts.push(block.title);
+        for (const item of block.items ?? []) {
+          if (item.title) parts.push(item.title);
+          if (item.category) parts.push(item.category);
+          if (item.description) parts.push(item.description);
+        }
+        break;
+
       // Skip visual-only blocks: image, spacer, divider, page-break,
       // writing-lines, writing-rows, number-line, numbered-label, word-search
       default:

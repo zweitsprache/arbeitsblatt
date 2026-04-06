@@ -494,6 +494,24 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "website": {
+      add("title", () => block.title, (v) => {
+        block.title = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.title`, () => item.title, (v) => {
+          item.title = v;
+        });
+        add(`items.${item.id}.category`, () => item.category, (v) => {
+          item.category = v;
+        });
+        add(`items.${item.id}.description`, () => item.description, (v) => {
+          item.description = v;
+        });
+      }
+      break;
+    }
+
     case "text-snippet": {
       add("content", () => (block as TextSnippetBlock).content, (v) => {
         (block as TextSnippetBlock).translatedContent = v;

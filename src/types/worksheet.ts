@@ -53,6 +53,7 @@ export type BlockType =
   | "accordion"
   | "audio"
   | "schedule"
+  | "website"
   | "checklist";
 
 // ─── Base block ──────────────────────────────────────────────
@@ -675,6 +676,23 @@ export interface ScheduleBlock extends BlockBase {
   showHeader?: boolean;
 }
 
+// ─── Website block ───────────────────────────────────────────
+export interface WebsiteItem {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+  description: string;
+  image?: string;
+}
+
+export interface WebsiteBlock extends BlockBase {
+  type: "website";
+  title: string;
+  level: 1 | 2 | 3;
+  items: WebsiteItem[];
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 export interface AiPromptBlock extends BlockBase {
   type: "ai-prompt";
@@ -750,6 +768,7 @@ export type WorksheetBlock =
   | AccordionBlock
   | AudioBlock
   | ScheduleBlock
+  | WebsiteBlock
   | AiPromptBlock
   | AiToolBlock
   | TableBlock;
@@ -2041,6 +2060,40 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       { id: "s1", date: "", start: "08:00", end: "09:30", room: "", title: "Titel 1", description: "" },
       { id: "s2", date: "", start: "09:45", end: "11:15", room: "", title: "Titel 2", description: "" },
       { id: "s3", date: "", start: "11:30", end: "13:00", room: "", title: "Titel 3", description: "" },
+    ],
+    visibility: "both",
+  },
+},
+{
+  type: "website",
+  label: "Website",
+  description: "Two-column website cards with image, link, category and description",
+  labelKey: "website",
+  descriptionKey: "websiteDesc",
+  icon: "Globe",
+  category: "content",
+  translations: { de: { label: "Website", description: "Zweispaltige Website-Karten mit Bild, Link, Kategorie und Beschreibung" } },
+  defaultData: {
+    type: "website",
+    title: "Website",
+    level: 2,
+    items: [
+      {
+        id: crypto.randomUUID(),
+        title: "Website title",
+        url: "https://example.com",
+        category: "Category",
+        description: "Short description",
+        image: "",
+      },
+      {
+        id: crypto.randomUUID(),
+        title: "Another website",
+        url: "https://example.org",
+        category: "Category",
+        description: "Another short description",
+        image: "",
+      },
     ],
     visibility: "both",
   },

@@ -258,6 +258,31 @@ export const printFixtureBlocks: WorksheetBlock[] = [
     ...baseVisibility,
   },
   {
+    id: "fixture-website",
+    type: "website",
+    title: "Useful websites",
+    level: 2,
+    items: [
+      {
+        id: "fixture-web-1",
+        title: "Arbeitsblatt",
+        url: "https://arbeitsblatt.ch",
+        category: "Platform",
+        description: "Worksheet publishing and editor workflows used for browser and print verification.",
+        image: "/logo/arbeitsblatt_logo_icon.svg",
+      },
+      {
+        id: "fixture-web-2",
+        title: "Frauenfeld",
+        url: "https://www.frauenfeld.ch",
+        category: "Reference",
+        description: "City reference page used here to verify multi-line titles, categories and linked descriptions.",
+        image: "/logo/logo-stadt-frauenfeld.svg",
+      },
+    ],
+    ...baseVisibility,
+  },
+  {
     id: "fixture-accordion",
     type: "accordion",
     showNumbers: true,
