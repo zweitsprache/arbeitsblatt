@@ -4335,6 +4335,60 @@ function ScheduleRenderer({}: { block: ScheduleBlock }) {
   );
 }
 
+function StaticScheduleTable() {
+  return (
+    <>
+      <style>{`
+        .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;}
+        .scheduleNew tbody tr:last-child td{border-bottom:none;}
+        .scheduleNew td:nth-child(4){padding-left:0;padding-right:0;}
+        .scheduleNew thead tr th{border-top:none;}
+        .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
+      `}</style>
+      <table className="scheduleNew">
+        <colgroup>
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col style={{ width: "1%" }} />
+          <col />
+        </colgroup>
+        <thead>
+          <tr>
+            <th colSpan={2} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Datum</th>
+            <th colSpan={3} style={{ whiteSpace: "nowrap", textAlign: "left" }}>Zeit</th>
+            <th style={{ whiteSpace: "nowrap", textAlign: "left" }}>Raum</th>
+            <th style={{ textAlign: "left" }}>Inhalt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ whiteSpace: "nowrap" }}>MO</td>
+            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
+            <td style={{ whiteSpace: "nowrap" }}>08.30</td>
+            <td style={{ whiteSpace: "nowrap" }}>–</td>
+            <td style={{ whiteSpace: "nowrap" }}>12.00</td>
+            <td style={{ whiteSpace: "nowrap" }}>404</td>
+            <td>Modul 2.1</td>
+          </tr>
+          <tr>
+            <td style={{ whiteSpace: "nowrap" }}>MO</td>
+            <td style={{ whiteSpace: "nowrap" }}>07.04.2026</td>
+            <td style={{ whiteSpace: "nowrap" }}>13.00</td>
+            <td style={{ whiteSpace: "nowrap" }}>–</td>
+            <td style={{ whiteSpace: "nowrap" }}>16.30</td>
+            <td style={{ whiteSpace: "nowrap" }}>MarieOtto</td>
+            <td>Modul 2.2</td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 // ─── AI Prompt block ─────────────────────────────────────────
 function AiPromptRenderer({ block }: { block: AiPromptBlock }) {
   const { dispatch } = useEditor();
