@@ -4225,7 +4225,7 @@ function ScheduleView({
     borderBottom: "1px solid #e5e7eb",
   };
 
-  const weekdayColStyle: React.CSSProperties = { width: "2.8ch" };
+  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
   const dateColStyle: React.CSSProperties = { width: "10ch" };
   const timeColStyle: React.CSSProperties = { width: "13ch" };
   const autoColStyle: React.CSSProperties = { width: "1%" };
@@ -4266,9 +4266,23 @@ function ScheduleView({
 
             return (
               <tr key={item.id} className={s.scheduleBodyRow}>
-                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, width: "2.8ch", fontWeight: 700 }}>{weekday || "-"}</td>}
-                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, width: "10ch", fontWeight: 700 }}>{formatted || "-"}</td>}
-                <td className={s.scheduleCell} style={{ ...tdStyle, width: "13ch" }}>{item.start}&nbsp;–&nbsp;{item.end}</td>
+                {showDate && (
+                  <td
+                    className={s.scheduleCellBold}
+                    style={{ ...tdStyle, width: "3ch", minWidth: "3ch", maxWidth: "3ch", fontWeight: 700 }}
+                  >
+                    {weekday || "-"}
+                  </td>
+                )}
+                {showDate && (
+                  <td
+                    className={s.scheduleCellBold}
+                    style={{ ...tdStyle, width: "10ch", minWidth: "10ch", maxWidth: "10ch", fontWeight: 700 }}
+                  >
+                    {formatted || "-"}
+                  </td>
+                )}
+                <td className={s.scheduleCell} style={{ ...tdStyle, width: "13ch", minWidth: "13ch" }}>{item.start}&nbsp;–&nbsp;{item.end}</td>
                 {showRoom && <td className={s.scheduleCell} style={tdStyle}>{item.room ?? ""}</td>}
                 <td className={s.scheduleCellWide} style={{ ...tdStyle, width: "100%", whiteSpace: "normal" }}>
                   {bilingual && originalItem ? (
