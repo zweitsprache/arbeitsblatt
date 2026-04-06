@@ -4227,42 +4227,42 @@ function ScheduleView({
       }}>
         <thead>
           <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
-            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>&nbsp;</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>Tag</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>Datum</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>Von</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>–</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>Bis</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" }}>Raum</th>
+            <th style={{ padding: "6px 4px", textAlign: "left", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "#64748b" }}>Inhalt</th>
           </tr>
         </thead>
         <tbody>
           <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>DI</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>07.04.2026</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>08:30</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", color: "#94a3b8" }}>–</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>09:15</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>A101</td>
+            <td style={{ padding: "6px 4px" }}>Grammatik: Perfekt</td>
           </tr>
           <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>FR</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>10.04.2026</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>13:00</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", color: "#94a3b8" }}>–</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>16:30</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>B203</td>
+            <td style={{ padding: "6px 4px" }}>Hören &amp; Sprechen</td>
           </tr>
           <tr>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
-            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>MI</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>22.04.2026</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>09:30</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap", color: "#94a3b8" }}>–</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>10:15</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>A101</td>
+            <td style={{ padding: "6px 4px" }}>Schreiben: E-Mail</td>
           </tr>
         </tbody>
       </table>
