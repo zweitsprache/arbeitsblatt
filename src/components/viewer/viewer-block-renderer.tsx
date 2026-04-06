@@ -4240,9 +4240,9 @@ function ScheduleView({
             const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
             return (
               <tr key={item.id} className={s.scheduleRow}>
-                {showDate && <td className={`${s.scheduleTd} font-bold`}>{weekday}</td>}
-                {showDate && <td className={`${s.scheduleTd} font-bold tabular-nums`}>{formatted}</td>}
-                <td className={`${s.scheduleTd} tabular-nums`} style={{ whiteSpace: "nowrap" }}>{item.start} – {item.end}</td>
+                {showDate && <td className={s.scheduleTdBold}>{weekday}</td>}
+                {showDate && <td className={s.scheduleTdBold}>{formatted}</td>}
+                <td className={s.scheduleTdNums}>{item.start} – {item.end}</td>
                 {showRoom && <td className={s.scheduleTd}>{item.room ?? ""}</td>}
                 <td className={`${s.scheduleTd} ${s.scheduleTd100}`}>
                   {(() => {

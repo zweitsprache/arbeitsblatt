@@ -375,6 +375,16 @@
   white-space: nowrap;
 }
 
+.scheduleTdBold {
+  composes: scheduleTd;
+  font-weight: 700;
+}
+
+.scheduleTdNums {
+  composes: scheduleTd;
+  font-variant-numeric: tabular-nums;
+}
+
 .scheduleTd100 {
   width: 100%;
   white-space: normal;
