@@ -355,7 +355,7 @@ export function CourseChatSidebar({
     >
       <aside
         className={cn(
-          "flex flex-col w-[300px] 2xl:w-[360px] h-full rounded-[28px] border bg-white/88 shadow-[0_18px_50px_rgba(15,23,42,0.05)] overflow-hidden transition-all duration-300",
+          "flex flex-col w-[300px] 2xl:w-[360px] h-full rounded-xl border bg-white/88 shadow-[0_18px_50px_rgba(15,23,42,0.05)] overflow-hidden transition-all duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         style={{ fontFamily: brandFonts.bodyFont }}
@@ -427,7 +427,7 @@ export function CourseChatSidebar({
                 )}
                 <div
                   className={cn(
-                    "rounded-2xl px-3.5 py-3 text-[15px] leading-relaxed shadow-sm",
+                    "rounded-lg px-3.5 py-3 text-[15px] leading-relaxed shadow-sm",
                     msg.role === "user"
                       ? "max-w-[85%] bg-primary text-primary-foreground"
                       : msg.quiz
@@ -477,7 +477,7 @@ export function CourseChatSidebar({
                   noLesson ? t("noLessonShort") : t("inputPlaceholder")
                 }
                 disabled={noLesson || isStreaming}
-                className="w-full resize-none rounded-2xl border bg-white/90 px-3 py-2.5 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full resize-none rounded-lg border bg-white/90 px-3 py-2.5 text-[15px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={1}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;

@@ -259,7 +259,7 @@ function SidebarLessonItem({
     <button
       onClick={onSelect}
       className={cn(
-        "group relative flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-cv-xs transition-colors",
+        "group relative flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-cv-xs transition-colors",
         isActive && "shadow-sm",
         isLocked ? "cursor-default opacity-40" : "cursor-pointer",
       )}
@@ -317,7 +317,7 @@ function SidebarTopicSection({
 
   return (
     <div className="mb-2">
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl transition-colors" style={{ backgroundColor: open ? tk.slateBg : "transparent" }}>
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors" style={{ backgroundColor: open ? tk.slateBg : "transparent" }}>
         <button onClick={() => setOpen(!open)} className="shrink-0">
           <ChevronRight className={cn(
             "h-3.5 w-3.5 transition-transform duration-200",
@@ -399,8 +399,8 @@ function SidebarModuleSection({
   };
 
   return (
-    <div className="mb-3 rounded-2xl border p-2" style={{ borderColor: tk.borderLine, backgroundColor: open || isCurrentModule ? tk.openBg : "transparent" }}>
-      <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
+    <div className="mb-3 rounded-lg border p-2" style={{ borderColor: tk.borderLine, backgroundColor: open || isCurrentModule ? tk.openBg : "transparent" }}>
+      <div className="flex items-center gap-3 px-2 py-2 rounded-md">
         <ModuleNumber number={moduleNumber} />
         <button
           onClick={() => {
@@ -500,14 +500,14 @@ function SidebarNav({
       style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
     >
       <div className="shrink-0 px-5 pt-5 pb-3">
-        <div className="relative overflow-hidden rounded-[24px] border px-4 py-4" style={{ borderColor: tk.borderLine, backgroundColor: tk.openBg }}>
+        <div className="relative overflow-hidden rounded-lg border px-4 py-4" style={{ borderColor: tk.borderLine, backgroundColor: tk.openBg }}>
           {(currentModule?.image || courseImage) && (
             <div className="absolute inset-0 opacity-[0.12]">
               <img src={currentModule?.image || courseImage || ""} alt="" className="h-full w-full object-cover" />
             </div>
           )}
           <div className="relative flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ backgroundColor: tk.slateBg }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-md" style={{ backgroundColor: tk.slateBg }}>
               <BookOpen className="h-4.5 w-4.5" style={{ color: tk.accentText }} />
             </div>
             <div className="min-w-0 flex-1">
@@ -534,7 +534,7 @@ function SidebarNav({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Suchen…"
-            className="w-full rounded-xl border py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
+            className="w-full rounded-lg border py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
             style={{
               backgroundColor: tk.slateBg,
               borderColor: tk.borderLine,
@@ -585,7 +585,7 @@ function SidebarNav({
         <div className="p-4 px-5 shrink-0" style={{ borderTop: `1px solid ${tk.divider}` }}>
           <button
             onClick={onContinue}
-            className="w-full py-3 rounded-2xl text-cv-xs font-semibold cursor-pointer transition-colors"
+            className="w-full py-3 rounded-lg text-cv-xs font-semibold cursor-pointer transition-colors"
             style={{ background: tk.continueGradient, color: tk.continueText }}
           >
             Continue Learning →
@@ -864,7 +864,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             desktopSidebarOpen ? "w-[340px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[340px] h-full rounded-[28px] border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
+              "flex flex-col w-[340px] h-full rounded-xl border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
@@ -901,7 +901,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Content container */}
-          <div className="flex-1 min-w-0 rounded-[32px] border bg-white/94 shadow-[0_22px_60px_rgba(15,23,42,0.06)] overflow-hidden">
+          <div className="flex-1 min-w-0 rounded-xl border bg-white/94 shadow-[0_22px_60px_rgba(15,23,42,0.06)] overflow-hidden">
             <style>{`
               .content-scroll::-webkit-scrollbar { width: 6px; }
               .content-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 32px; }
