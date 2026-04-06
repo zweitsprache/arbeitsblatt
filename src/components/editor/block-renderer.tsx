@@ -4334,7 +4334,13 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   const primaryColor = state.brandProfile.primaryColor || "#1a1a1a";
 
   return (
-    <StaticScheduleTable items={block.items} primaryColor={primaryColor} />
+    <StaticScheduleTable
+      items={block.items}
+      primaryColor={primaryColor}
+      showDate={block.showDate ?? false}
+      showRoom={block.showRoom ?? false}
+      showHeader={block.showHeader ?? false}
+    />
   );
 }
 
@@ -4353,7 +4359,19 @@ function formatScheduleCellTime(value: string) {
   return value ? value.replace(":", ".") : "";
 }
 
-function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["items"]; primaryColor: string }) {
+function StaticScheduleTable({
+  items,
+  primaryColor,
+  showDate,
+  showRoom,
+  showHeader,
+}: {
+  items: ScheduleBlock["items"];
+  primaryColor: string;
+  showDate: boolean;
+  showRoom: boolean;
+  showHeader: boolean;
+}) {
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     padding: "4px 8px",
@@ -4380,40 +4398,41 @@ function StaticScheduleTable({ items, primaryColor }: { items: ScheduleBlock["it
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
         .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;box-sizing:border-box;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
-        .scheduleNew td:nth-child(4){padding-left:0;padding-right:0;}
         .scheduleNew thead tr th{border-top:none;}
         .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
+          {showDate && <col style={{ width: "1%" }} />}
+          {showDate && <col style={{ width: "1%" }} />}
           <col style={{ width: "1%" }} />
           <col style={{ width: "1%" }} />
           <col style={{ width: "1%" }} />
-          <col style={{ width: "1%" }} />
-          <col style={{ width: "1%" }} />
-          <col style={{ width: "1%" }} />
+          {showRoom && <col style={{ width: "1%" }} />}
           <col />
         </colgroup>
-        <thead>
-          <tr>
-            <th colSpan={2} style={headerCellStyle}>Datum</th>
-            <th colSpan={3} style={headerCellStyle}>Zeit</th>
-            <th style={headerCellStyle}>Raum</th>
-            <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
-          </tr>
-        </thead>
+        {showHeader && (
+          <thead>
+            <tr>
+              {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
+              <th colSpan={3} style={headerCellStyle}>Zeit</th>
+              {showRoom && <th style={headerCellStyle}>Raum</th>}
+              <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
+            </tr>
+          </thead>
+        )}
         <tbody>
           {items.map((item) => {
             const { weekday, formatted } = formatScheduleCellDate(item.date);
 
             return (
               <tr key={item.id}>
-                <td style={rowCellStyle}>{weekday}</td>
-                <td style={rowCellStyle}>{formatted}</td>
+                {showDate && <td style={rowCellStyle}>{weekday}</td>}
+                {showDate && <td style={rowCellStyle}>{formatted}</td>}
                 <td style={rowCellStyle}>{formatScheduleCellTime(item.start)}</td>
                 <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 0 }}>–</td>
                 <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
-                <td style={rowCellStyle}>{item.room}</td>
+                {showRoom && <td style={rowCellStyle}>{item.room}</td>}
                 <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
                   <div style={{ fontWeight: 700 }}>{item.title}</div>
                   {item.description ? <div>{item.description}</div> : null}
