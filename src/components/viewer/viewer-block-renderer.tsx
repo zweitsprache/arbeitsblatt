@@ -4200,110 +4200,79 @@ function ScheduleView({
 }) {
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
-  const bodyStyle: React.CSSProperties = { fontFamily: resolvedBodyFont };
+  const wrapStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
 
-  const showDate = block.showDate ?? false;
-  const showRoom = block.showRoom ?? false;
+  const showDate   = block.showDate   ?? false;
+  const showRoom   = block.showRoom   ?? false;
   const showHeader = block.showHeader ?? false;
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    padding: "0.5rem 0.75rem",
-    whiteSpace: "nowrap",
-    fontWeight: 600,
-    fontSize: "0.75rem",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    color: "#64748b",
-    borderBottom: "1px solid #e5e7eb",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "0.5rem 0.75rem",
-    verticalAlign: "baseline",
-    whiteSpace: "nowrap",
-    borderBottom: "1px solid #e5e7eb",
-  };
-
-  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
-  const dateColStyle: React.CSSProperties = { width: "10ch" };
-  const timeColStyle: React.CSSProperties = { width: "13ch" };
-  const autoColStyle: React.CSSProperties = { width: "1%" };
+  // Header padding mirrors the outermost paddings of the spanned body columns.
+  const hdDatum:  React.CSSProperties = { paddingLeft: "0.625rem", paddingRight: "0.25rem"  };
+  const hdZeit:   React.CSSProperties = { paddingLeft: showDate ? "0.25rem" : "0.625rem", paddingRight: "0.25rem"  };
+  const hdRaum:   React.CSSProperties = { paddingLeft: "0.25rem",  paddingRight: "0.25rem"  };
+  const hdInhalt: React.CSSProperties = { paddingLeft: "0.25rem",  paddingRight: "0.625rem" };
 
   return (
-    <div style={isNonLatin ? bodyStyle : undefined}>
-      <div className={s.scheduleTableShell}>
+    <div style={wrapStyle}>
+      <div className={s.scheduleShell}>
         <table className={s.scheduleTable}>
-        <colgroup>
-          {showDate && (
-            <>
-              <col style={weekdayColStyle} />
-              <col style={dateColStyle} />
-            </>
+          {showHeader && (
+            <thead>
+              <tr className={s.scheduleHeaderRow}>
+                {showDate && (
+                  <th className={s.scheduleTh} style={hdDatum} colSpan={2}>Datum</th>
+                )}
+                <th className={s.scheduleTh} style={hdZeit} colSpan={3}>Zeit</th>
+                {showRoom && (
+                  <th className={s.scheduleTh} style={hdRaum}>Raum</th>
+                )}
+                <th className={s.scheduleTh} style={hdInhalt}>Inhalt</th>
+              </tr>
+            </thead>
           )}
-          <col style={timeColStyle} />
-          {showRoom && <col style={autoColStyle} />}
-          <col style={{ width: "auto" }} />
-        </colgroup>
-        {showHeader && (
-          <thead>
-            <tr className={s.scheduleHeaderRow}>
-              {showDate && <th className={s.scheduleHd} style={thStyle} colSpan={2}>Datum</th>}
-              <th className={s.scheduleHd} style={thStyle}>Zeit</th>
-              {showRoom && <th className={s.scheduleHd} style={thStyle}>Raum</th>}
-              <th className={s.scheduleHdWide} style={{ ...thStyle, width: "100%" }}>Inhalt</th>
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {block.items.map((item) => {
-            const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
-            const originalItem = originalBlock?.items.find((c) => c.id === item.id);
-            const bilingual =
-              !!block.bilingual &&
-              !!originalItem &&
-              (originalItem.title !== item.title || originalItem.description !== item.description);
+          <tbody>
+            {block.items.map((item) => {
+              const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
+              const originalItem = originalBlock?.items.find((c) => c.id === item.id);
+              const bilingual =
+                !!block.bilingual &&
+                !!originalItem &&
+                (originalItem.title !== item.title || originalItem.description !== item.description);
 
-            return (
-              <tr key={item.id} className={s.scheduleBodyRow}>
-                {showDate && (
-                  <td
-                    className={s.scheduleCellBold}
-                    style={{ ...tdStyle, width: "3ch", minWidth: "3ch", maxWidth: "3ch", fontWeight: 700 }}
-                  >
-                    {weekday || "-"}
-                  </td>
-                )}
-                {showDate && (
-                  <td
-                    className={s.scheduleCellBold}
-                    style={{ ...tdStyle, width: "10ch", minWidth: "10ch", maxWidth: "10ch", fontWeight: 700 }}
-                  >
-                    {formatted || "-"}
-                  </td>
-                )}
-                <td className={s.scheduleCell} style={{ ...tdStyle, width: "13ch", minWidth: "13ch" }}>{item.start}&nbsp;–&nbsp;{item.end}</td>
-                {showRoom && <td className={s.scheduleCell} style={tdStyle}>{item.room ?? ""}</td>}
-                <td className={s.scheduleCellWide} style={{ ...tdStyle, width: "100%", whiteSpace: "normal" }}>
-                  {bilingual && originalItem ? (
+              return (
+                <tr key={item.id} className={s.scheduleBodyRow}>
+                  {showDate && (
                     <>
-                      <div className={s.scheduleTitleOriginal}>{originalItem.title}</div>
-                      <div className={s.scheduleTitleTranslated}>{item.title}</div>
-                      {originalItem.description && <div className={s.scheduleDescOriginal}>{originalItem.description}</div>}
-                      {item.description && <div className={s.scheduleDescTranslated}>{item.description}</div>}
-                    </>
-                  ) : (
-                    <>
-                      <div className={s.scheduleTitle}>{item.title}</div>
-                      {item.description && <div className={s.scheduleDesc}>{item.description}</div>}
+                      <td className={`${s.scheduleTd} ${s.schC1} ${s.schBold}`}>{weekday || "–"}</td>
+                      <td className={`${s.scheduleTd} ${s.schC2} ${s.schBold}`}>{formatted || "–"}</td>
                     </>
                   )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className={`${s.scheduleTd} ${s.schC3}`} style={showDate ? undefined : { paddingLeft: "0.625rem" }}>{item.start}</td>
+                  <td className={`${s.scheduleTd} ${s.schC4}`}>–</td>
+                  <td className={`${s.scheduleTd} ${s.schC5}`}>{item.end}</td>
+                  {showRoom && (
+                    <td className={`${s.scheduleTd} ${s.schC6}`}>{item.room ?? ""}</td>
+                  )}
+                  <td className={`${s.scheduleTd} ${s.schC7}`}>
+                    {bilingual && originalItem ? (
+                      <>
+                        <div className={s.schTitleOriginal}>{originalItem.title}</div>
+                        <div className={s.schTitleTranslated}>{item.title}</div>
+                        {originalItem.description && <div className={s.schDescOriginal}>{originalItem.description}</div>}
+                        {item.description && <div className={s.schDescTranslated}>{item.description}</div>}
+                      </>
+                    ) : (
+                      <>
+                        <div className={s.schTitle}>{item.title}</div>
+                        {item.description && <div className={s.schDescText}>{item.description}</div>}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -4341,70 +4341,92 @@ function formatScheduleDate(dateStr: string): { weekday: string; formatted: stri
   return { weekday: WEEKDAY_DE[d.getDay()], formatted: `${dd}.${mm}.${yyyy}` };
 }
 
+// Spacing tokens (mirrored in viewer-blocks.module.css)
+const SCH_OUTER = "0.625rem";
+const SCH_GF    = "0.25rem";   // half of full gap
+const SCH_GH    = "0.125rem";  // half of half gap
+
+const schShell: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: "6px",
+  overflow: "hidden",
+  background: "#fff",
+};
+const schTable: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+const schHeaderRow: React.CSSProperties = {
+  background: "#f8fafc",
+  borderBottom: "2px solid #e2e8f0",
+};
+const schBodyRow: React.CSSProperties = { borderBottom: "1px solid #f1f5f9" };
+const schBodyRowLast: React.CSSProperties = {};
+
+const schTh = (pl: string, pr: string): React.CSSProperties => ({
+  paddingTop: "0.45rem", paddingBottom: "0.45rem",
+  paddingLeft: pl, paddingRight: pr,
+  textAlign: "left",
+  fontSize: "0.7rem", fontWeight: 600,
+  textTransform: "uppercase", letterSpacing: "0.05em",
+  color: "#64748b",
+});
+const schTd = (pl: string, pr: string, extra?: React.CSSProperties): React.CSSProperties => ({
+  paddingTop: "0.45rem", paddingBottom: "0.45rem",
+  paddingLeft: pl, paddingRight: pr,
+  textAlign: "left", color: "#1e293b",
+  whiteSpace: "nowrap",
+  width: "1%",
+  ...extra,
+});
+
 function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
-  const showDate = block.showDate ?? false;
-  const showRoom = block.showRoom ?? false;
+  const showDate   = block.showDate   ?? false;
+  const showRoom   = block.showRoom   ?? false;
   const showHeader = block.showHeader ?? false;
 
-  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
-  const dateColStyle: React.CSSProperties = { width: "10ch" };
-  const timeColStyle: React.CSSProperties = { width: "13ch" };
-  const autoColStyle: React.CSSProperties = { width: "1%" };
+  const startLeftPad = showDate ? SCH_GF : SCH_OUTER;
 
   return (
-    <div className="space-y-3">
-      <table className="w-full border-collapse border-t" style={{ tableLayout: "auto" }}>
-        <colgroup>
-          {showDate && (
-            <>
-              <col style={weekdayColStyle} />
-              <col style={dateColStyle} />
-            </>
-          )}
-          <col style={timeColStyle} />
-          {showRoom && <col style={autoColStyle} />}
-          <col style={{ width: "auto" }} />
-        </colgroup>
+    <div style={schShell}>
+      <table style={schTable}>
         {showHeader && (
           <thead>
-            <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              {showDate && <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold" colSpan={2}>Datum</th>}
-              <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold">Zeit</th>
-              {showRoom && <th className="text-left py-1.5 px-2 whitespace-nowrap font-semibold">Raum</th>}
-              <th className="text-left py-1.5 px-2 font-semibold">Inhalt</th>
+            <tr style={schHeaderRow}>
+              {showDate && (
+                <th colSpan={2} style={schTh(SCH_OUTER, SCH_GF)}>Datum</th>
+              )}
+              <th colSpan={3} style={schTh(startLeftPad, SCH_GF)}>Zeit</th>
+              {showRoom && (
+                <th style={schTh(SCH_GF, SCH_GF)}>Raum</th>
+              )}
+              <th style={schTh(SCH_GF, SCH_OUTER)}>Inhalt</th>
             </tr>
           </thead>
         )}
         <tbody>
-          {block.items.map((item) => {
+          {block.items.map((item, idx) => {
             const { weekday, formatted } = formatScheduleDate(item.date ?? "");
+            const isLast = idx === block.items.length - 1;
+            const rowStyle = isLast ? schBodyRowLast : schBodyRow;
             return (
-              <tr key={item.id} className="border-b align-baseline">
+              <tr key={item.id} style={rowStyle}>
                 {showDate && (
-                  <td
-                    className="py-1.5 px-2 text-base font-semibold whitespace-nowrap"
-                    style={{ width: "3ch", minWidth: "3ch", maxWidth: "3ch" }}
-                  >
-                    {weekday || "-"}
-                  </td>
+                  <>
+                    <td style={schTd(SCH_OUTER, SCH_GF, { fontWeight: 700 })}>{weekday || "–"}</td>
+                    <td style={schTd(SCH_GF,    SCH_GF, { fontWeight: 700 })}>{formatted || "–"}</td>
+                  </>
                 )}
-                {showDate && (
-                  <td
-                    className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap"
-                    style={{ width: "10ch", minWidth: "10ch", maxWidth: "10ch" }}
-                  >
-                    {formatted || "-"}
-                  </td>
+                <td style={schTd(startLeftPad, SCH_GH)}>{item.start}</td>
+                <td style={schTd(SCH_GH, SCH_GH, { color: "#94a3b8" })}>–</td>
+                <td style={schTd(SCH_GH, SCH_GF)}>{item.end}</td>
+                {showRoom && (
+                  <td style={schTd(SCH_GF, SCH_GF)}>{item.room ?? ""}</td>
                 )}
-                <td className="py-1.5 px-2 text-base tabular-nums whitespace-nowrap" style={{ width: "13ch", minWidth: "13ch" }}>{item.start} – {item.end}</td>
-                {showRoom && <td className="py-1.5 px-2 text-base whitespace-nowrap">{item.room ?? ""}</td>}
-                <td className="py-1.5 px-2 text-base">
-                  <span className="font-semibold">{item.title}</span>
+                <td style={{ ...schTd(SCH_GF, SCH_OUTER), width: "100%", whiteSpace: "normal" }}>
+                  <div style={{ fontWeight: 700 }}>{item.title}</div>
                   {item.description && (
-                    <>
-                      <br />
-                      <span className="text-muted-foreground">{item.description}</span>
-                    </>
+                    <div style={{ color: "#64748b", marginTop: "0.1em" }}>{item.description}</div>
                   )}
                 </td>
               </tr>

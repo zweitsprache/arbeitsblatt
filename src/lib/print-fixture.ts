@@ -246,10 +246,14 @@ export const printFixtureBlocks: WorksheetBlock[] = [
   {
     id: "fixture-schedule",
     type: "schedule",
+    showDate: true,
+    showRoom: true,
+    showHeader: true,
     items: [
-      { id: "fixture-sc-1", date: "", start: "08:30", end: "08:45", room: "", title: "Open fixture route", description: "Inspect the live DOM in the browser." },
-      { id: "fixture-sc-2", date: "", start: "08:45", end: "09:00", room: "", title: "Generate fixture PDF", description: "Export the same route through Puppeteer." },
-      { id: "fixture-sc-3", date: "", start: "09:00", end: "09:15", room: "", title: "Compare results", description: "Log spacing or color drift before moving more CSS." },
+      { id: "fixture-sc-1", date: "2026-04-07", start: "08:30", end: "09:15", room: "A101", title: "Grammatik: Perfekt", description: "Regelmäßige und unregelmäßige Verben" },
+      { id: "fixture-sc-2", date: "2026-04-07", start: "09:30", end: "10:15", room: "A101", title: "Hören & Sprechen", description: "Dialoge aus dem Alltag" },
+      { id: "fixture-sc-3", date: "2026-04-08", start: "08:30", end: "09:15", room: "B203", title: "Lesen & Verstehen", description: "" },
+      { id: "fixture-sc-4", date: "2026-04-08", start: "09:30", end: "10:15", room: "B203", title: "Schreiben: E-Mail", description: "Formelle und informelle Schreibweise" },
     ],
     ...baseVisibility,
   },

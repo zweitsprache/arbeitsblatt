@@ -349,9 +349,9 @@
 
 /* ── Schedule table ────────────────────────────────────────── */
 
-.scheduleTableShell {
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
+.scheduleShell {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   overflow: hidden;
   background: #fff;
 }
@@ -359,74 +359,73 @@
 .scheduleTable {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto !important;
 }
 
-/* Header row */
+/* Header */
 .scheduleHeaderRow {
   background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.scheduleHd {
+/* Shared vertical rhythm */
+.scheduleTh,
+.scheduleTd {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
   text-align: left;
+  color: #1e293b;
 }
 
-.scheduleHdWide {
-  text-align: left;
-  width: 100%;
-}
-
-/* Body rows */
-.scheduleBodyRow {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.scheduleBodyRow:last-child {
-  border-bottom: 0;
-}
-
-/* Cells */
-.scheduleCell {
-  white-space: nowrap;
-}
-
-.scheduleCellBold {
-  white-space: nowrap;
-  font-weight: 700;
-}
-
-.scheduleCellWide {
-  white-space: normal;
-  width: 100%;
-}
-
-/* Content inside cells */
-.scheduleTitle {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.scheduleTitleOriginal {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.scheduleTitleTranslated {
-  font-weight: 700;
-  color: #94a3b8;
-}
-
-.scheduleDesc {
+.scheduleTh {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #64748b;
 }
 
-.scheduleDescOriginal {
-  color: #0f172a;
+/*
+ * Per-column horizontal padding.
+ * Gap tokens (total visual gap between adjacent column pairs):
+ *   Full gap  0.50 rem → 0.25 rem on each side   (col 1-2 | 2-3 | 5-6 | 6-7)
+ *   Half gap  0.25 rem → 0.125 rem on each side  (col 3-4 | 4-5, time group)
+ *   Outer     0.625 rem                           (left of col 1, right of col 7)
+ */
+
+/* col 1 – weekday abbreviation */
+.schC1 { padding-left: 0.625rem; padding-right: 0.25rem;  width: 1%; white-space: nowrap; }
+/* col 2 – date */
+.schC2 { padding-left: 0.25rem;  padding-right: 0.25rem;  width: 1%; white-space: nowrap; }
+/* col 3 – start time */
+.schC3 { padding-left: 0.25rem;  padding-right: 0.125rem; width: 1%; white-space: nowrap; }
+/* col 4 – dash separator */
+.schC4 { padding-left: 0.125rem; padding-right: 0.125rem; width: 1%; white-space: nowrap; color: #94a3b8; }
+/* col 5 – end time */
+.schC5 { padding-left: 0.125rem; padding-right: 0.25rem;  width: 1%; white-space: nowrap; }
+/* col 6 – room */
+.schC6 { padding-left: 0.25rem;  padding-right: 0.25rem;  width: 1%; white-space: nowrap; }
+/* col 7 – content (fills remaining width) */
+.schC7 { padding-left: 0.25rem;  padding-right: 0.625rem; width: 100%; }
+
+/* Body rows */
+.scheduleBodyRow {
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.scheduleDescTranslated {
-  color: #94a3b8;
+.scheduleBodyRow:last-child {
+  border-bottom: none;
 }
+
+/* Modifiers */
+.schBold { font-weight: 700; }
+
+/* Content cell internals */
+.schTitle           { font-weight: 700; }
+.schTitleOriginal   { font-weight: 700; }
+.schTitleTranslated { font-weight: 700; color: #94a3b8; }
+.schDescText        { color: #64748b;   margin-top: 0.1em; }
+.schDescOriginal    { color: #0f172a;   margin-top: 0.1em; }
+.schDescTranslated  { color: #94a3b8;   margin-top: 0.1em; }
 
 .accordionToggle {
   display: inline-flex;
