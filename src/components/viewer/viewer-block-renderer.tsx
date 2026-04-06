@@ -4234,24 +4234,33 @@ function ScheduleView({
           </tr>
         </thead>
         <tbody>
-          {[
-            { wd: "DI", dt: "07.04.2026", start: "08:30", end: "09:15", room: "A101", title: "Grammatik: Perfekt", desc: "Regelmäßige Verben" },
-            { wd: "FR", dt: "10.04.2026", start: "13:00", end: "14:30", room: "B203", title: "Hören & Sprechen", desc: "" },
-            { wd: "MI", dt: "22.04.2026", start: "09:30", end: "10:15", room: "A101", title: "Schreiben: E-Mail", desc: "Formelle Schreibweise" },
-          ].map((row, i, arr) => (
-            <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-              <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap", fontWeight: 700 }}>{row.wd}</td>
-              <td style={{ padding: "6px 4px", whiteSpace: "nowrap", fontWeight: 700 }}>{row.dt}</td>
-              <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>{row.start}</td>
-              <td style={{ padding: "6px 2px", whiteSpace: "nowrap", color: "#94a3b8" }}>–</td>
-              <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>{row.end}</td>
-              <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>{row.room}</td>
-              <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>
-                <div style={{ fontWeight: 700 }}>{row.title}</div>
-                {row.desc && <div style={{ color: "#64748b", marginTop: "2px" }}>{row.desc}</div>}
-              </td>
-            </tr>
-          ))}
+          <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+            <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
+          </tr>
+          <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+            <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
+          </tr>
+          <tr>
+            <td style={{ padding: "6px 4px 6px 10px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px 6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px 6px 2px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>&nbsp;</td>
+            <td style={{ padding: "6px 10px 6px 4px", width: "100%" }}>&nbsp;</td>
+          </tr>
         </tbody>
       </table>
       {/* ── END STATIC PROTOTYPE ── */}
