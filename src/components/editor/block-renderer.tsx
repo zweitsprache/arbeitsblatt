@@ -4346,9 +4346,9 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   const showRoom = block.showRoom ?? false;
   const showHeader = block.showHeader ?? false;
 
-  const weekdayColStyle: React.CSSProperties = { width: "3ch" };
+  const weekdayColStyle: React.CSSProperties = { width: "2.8ch" };
   const dateColStyle: React.CSSProperties = { width: "10ch" };
-  const timeColStyle: React.CSSProperties = { width: "14ch" };
+  const timeColStyle: React.CSSProperties = { width: "13ch" };
   const autoColStyle: React.CSSProperties = { width: "1%" };
 
   return (
@@ -4380,9 +4380,9 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
             const { weekday, formatted } = formatScheduleDate(item.date ?? "");
             return (
               <tr key={item.id} className="border-b align-baseline">
-                {showDate && <td className="py-1.5 px-2 text-base font-semibold whitespace-nowrap">{weekday || "-"}</td>}
-                {showDate && <td className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap">{formatted || "-"}</td>}
-                <td className="py-1.5 px-2 text-base tabular-nums whitespace-nowrap">{item.start} – {item.end}</td>
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold whitespace-nowrap" style={{ width: "2.8ch" }}>{weekday || "-"}</td>}
+                {showDate && <td className="py-1.5 px-2 text-base font-semibold tabular-nums whitespace-nowrap" style={{ width: "10ch" }}>{formatted || "-"}</td>}
+                <td className="py-1.5 px-2 text-base tabular-nums whitespace-nowrap" style={{ width: "13ch" }}>{item.start} – {item.end}</td>
                 {showRoom && <td className="py-1.5 px-2 text-base whitespace-nowrap">{item.room ?? ""}</td>}
                 <td className="py-1.5 px-2 text-base">
                   <span className="font-semibold">{item.title}</span>
