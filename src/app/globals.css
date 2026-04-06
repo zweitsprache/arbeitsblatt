@@ -483,9 +483,9 @@
   display: table-header-group;
 }
 
-.print-worksheet-root .print-table thead > tr > td,
-.print-worksheet-root .print-table tbody > tr > td,
-.print-worksheet-root .print-table tfoot > tr > td {
+.print-worksheet-root .print-table > thead > tr > td,
+.print-worksheet-root .print-table > tbody > tr > td,
+.print-worksheet-root .print-table > tfoot > tr > td {
   padding: 0;
   width: 100%;
 }
@@ -874,9 +874,9 @@
     display: table-header-group;
   }
 
-  .print-table thead > tr > td,
-  .print-table tbody > tr > td,
-  .print-table tfoot > tr > td {
+  .print-table > thead > tr > td,
+  .print-table > tbody > tr > td,
+  .print-table > tfoot > tr > td {
     padding: 0;
     width: 100%;
   }
