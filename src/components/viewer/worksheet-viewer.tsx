@@ -350,6 +350,7 @@ export function WorksheetViewer({
                           key={block.id}
                           data-block-id={block.id}
                           className={`worksheet-block worksheet-block-${block.type}`}
+                          {...(block.type === "heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual) } : {})}
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
@@ -399,6 +400,7 @@ export function WorksheetViewer({
                   key={block.id}
                   data-block-id={block.id}
                   className={`worksheet-block worksheet-block-${block.type} ${worksheetId ? 'group/block relative' : ''}`}
+                  {...(block.type === "heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual) } : {})}
                 >
                   <ViewerBlockRenderer
                     block={block}

@@ -444,8 +444,9 @@
   page-break-inside: avoid;
 }
 
-/* Headings should never be orphaned at bottom of page */
-.worksheet-block-heading,
+/* Keep subheadings with the following block, but allow top-level titles to flow normally.
+   Chromium can otherwise push an h1 to the next page when it tries to keep it with a large following block. */
+.worksheet-block-heading:not([data-heading-level="1"]),
 .worksheet-block-numbered-label {
   break-after: avoid;
   page-break-after: avoid;
