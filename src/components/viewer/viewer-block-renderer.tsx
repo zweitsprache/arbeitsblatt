@@ -4173,6 +4173,18 @@ function AudioView({ block }: { block: AudioBlock }) {
 }
 
 // ─── Schedule View ───────────────────────────────────────────
+const WEEKDAY_DE_VIEWER = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"] as const;
+
+function formatScheduleDateViewer(dateStr: string): { weekday: string; formatted: string } {
+  if (!dateStr) return { weekday: "", formatted: "" };
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return { weekday: "", formatted: "" };
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return { weekday: WEEKDAY_DE_VIEWER[d.getDay()], formatted: `${dd}.${mm}.${yyyy}` };
+}
+
 function ScheduleView({
   block,
   originalBlock,
@@ -4189,6 +4201,10 @@ function ScheduleView({
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
   const bodyStyle: React.CSSProperties = { fontFamily: resolvedBodyFont };
+
+  const showDate = block.showDate ?? false;
+  const showRoom = block.showRoom ?? false;
+  const showHeader = block.showHeader ?? false;
 
   const renderScheduleText = (
     title: string,
@@ -4209,35 +4225,54 @@ function ScheduleView({
   return (
     <div className="space-y-2" style={isNonLatin ? bodyStyle : undefined}>
       <div className={s.scheduleCard}>
-        {block.items.map((item) => (
-          <div key={item.id} className={s.scheduleRow}>
-            <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
-            {(() => {
-              const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
-              const showBilingualItem =
-                !!block.bilingual &&
-                !!originalItem &&
-                (originalItem.title !== item.title || originalItem.description !== item.description);
-
-              if (!showBilingualItem || !originalItem) {
-                return renderScheduleText(item.title, item.description);
-              }
-
-              return (
-                <div className="flex-1">
-                  <div className="font-bold text-slate-900">{originalItem.title}</div>
-                  <div className="font-bold text-slate-400">{item.title}</div>
-                  {originalItem.description && (
-                    <div className="text-slate-900">{originalItem.description}</div>
-                  )}
-                  {item.description && (
-                    <div className="text-slate-400">{item.description}</div>
-                  )}
-                </div>
-              );
-            })()}
+        {showHeader && (
+          <div className={`${s.scheduleRow} ${s.scheduleHeader}`}>
+            {showDate && <span className="tabular-nums whitespace-nowrap shrink-0" style={{ minWidth: "7.5rem" }}>Datum</span>}
+            <span className="tabular-nums whitespace-nowrap shrink-0">Zeit</span>
+            {showRoom && <span className="whitespace-nowrap shrink-0" style={{ minWidth: "4.5rem" }}>Raum</span>}
+            <span className="flex-1">Inhalt</span>
           </div>
-        ))}
+        )}
+        {block.items.map((item) => {
+          const { weekday, formatted } = formatScheduleDateViewer(item.date ?? "");
+          return (
+            <div key={item.id} className={s.scheduleRow}>
+              {showDate && (
+                <span className="tabular-nums whitespace-nowrap shrink-0" style={{ minWidth: "7.5rem" }}>
+                  {weekday && <span className="font-bold">{weekday}</span>}{weekday && formatted && " "}{formatted}
+                </span>
+              )}
+              <span className="tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
+              {showRoom && (
+                <span className="whitespace-nowrap shrink-0" style={{ minWidth: "4.5rem" }}>{item.room ?? ""}</span>
+              )}
+              {(() => {
+                const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
+                const showBilingualItem =
+                  !!block.bilingual &&
+                  !!originalItem &&
+                  (originalItem.title !== item.title || originalItem.description !== item.description);
+
+                if (!showBilingualItem || !originalItem) {
+                  return renderScheduleText(item.title, item.description);
+                }
+
+                return (
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">{originalItem.title}</div>
+                    <div className="font-bold text-slate-400">{item.title}</div>
+                    {originalItem.description && (
+                      <div className="text-slate-900">{originalItem.description}</div>
+                    )}
+                    {item.description && (
+                      <div className="text-slate-400">{item.description}</div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

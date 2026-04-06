@@ -4329,24 +4329,59 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
 }
 
 // ─── Schedule block ──────────────────────────────────────────
+const WEEKDAY_DE = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"] as const;
+
+function formatScheduleDate(dateStr: string): { weekday: string; formatted: string } {
+  if (!dateStr) return { weekday: "", formatted: "" };
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return { weekday: "", formatted: "" };
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return { weekday: WEEKDAY_DE[d.getDay()], formatted: `${dd}.${mm}.${yyyy}` };
+}
+
 function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
+  const showDate = block.showDate ?? false;
+  const showRoom = block.showRoom ?? false;
+  const showHeader = block.showHeader ?? false;
+
   return (
     <div className="space-y-3">
       <div className="space-y-0 border-t">
-        {block.items.map((item) => (
-          <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
-            <span className="text-base tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
-            <span className="text-base flex-1">
-              <span className="font-semibold">{item.title}</span>
-              {item.description && (
-                <>
-                  <br />
-                  <span className="text-muted-foreground">{item.description}</span>
-                </>
-              )}
-            </span>
+        {showHeader && (
+          <div className="flex items-baseline gap-4 py-1.5 border-b bg-slate-50 font-semibold text-xs uppercase tracking-wider text-slate-500">
+            {showDate && <span className="tabular-nums whitespace-nowrap shrink-0 w-[130px]">Datum</span>}
+            <span className="tabular-nums whitespace-nowrap shrink-0">Zeit</span>
+            {showRoom && <span className="whitespace-nowrap shrink-0 w-[80px]">Raum</span>}
+            <span className="flex-1">Inhalt</span>
           </div>
-        ))}
+        )}
+        {block.items.map((item) => {
+          const { weekday, formatted } = formatScheduleDate(item.date);
+          return (
+            <div key={item.id} className="flex items-baseline gap-4 py-1.5 border-b">
+              {showDate && (
+                <span className="text-base tabular-nums whitespace-nowrap shrink-0 w-[130px]">
+                  {weekday && <span className="font-semibold">{weekday}</span>}{weekday && formatted && " "}{formatted}
+                </span>
+              )}
+              <span className="text-base tabular-nums whitespace-nowrap shrink-0">{item.start} – {item.end}</span>
+              {showRoom && (
+                <span className="text-base whitespace-nowrap shrink-0 w-[80px]">{item.room}</span>
+              )}
+              <span className="text-base flex-1">
+                <span className="font-semibold">{item.title}</span>
+                {item.description && (
+                  <>
+                    <br />
+                    <span className="text-muted-foreground">{item.description}</span>
+                  </>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

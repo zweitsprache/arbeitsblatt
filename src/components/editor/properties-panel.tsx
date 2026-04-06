@@ -5897,8 +5897,10 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
       ...block.items,
       {
         id: `s${Date.now()}`,
+        date: last?.date || "",
         start: last?.end || "09:00",
         end: "",
+        room: last?.room || "",
         title: "",
         description: "",
       },
@@ -5937,12 +5939,41 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
           onCheckedChange={(checked) => update({ bilingual: checked })}
         />
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showDate")}</Label>
+        <Switch
+          checked={block.showDate ?? false}
+          onCheckedChange={(checked) => update({ showDate: checked })}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showRoom")}</Label>
+        <Switch
+          checked={block.showRoom ?? false}
+          onCheckedChange={(checked) => update({ showRoom: checked })}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showHeader")}</Label>
+        <Switch
+          checked={block.showHeader ?? false}
+          onCheckedChange={(checked) => update({ showHeader: checked })}
+        />
+      </div>
       <Separator />
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("scheduleItems")}</Label>
         {block.items.map((item, i) => (
           <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
             <div className="flex items-center gap-1">
+              {(block.showDate ?? false) && (
+                <Input
+                  type="date"
+                  value={item.date ?? ""}
+                  onChange={(e) => updateItem(i, { date: e.target.value })}
+                  className="h-8 text-xs w-[130px]"
+                />
+              )}
               <Input
                 type="time"
                 value={item.start}
@@ -5984,6 +6015,16 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
                 <Trash2 className="h-3 w-3" />
               </Button>
             </div>
+            {(block.showRoom ?? false) && (
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${i}.room`}
+                baseValue={item.room ?? ""}
+                onBaseChange={(v) => updateItem(i, { room: v })}
+                className="h-8 text-xs"
+                placeholder={t("scheduleRoom")}
+              />
+            )}
             <ChInput
               blockId={block.id}
               fieldPath={`items.${i}.title`}

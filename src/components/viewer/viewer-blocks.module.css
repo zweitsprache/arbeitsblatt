@@ -366,6 +366,15 @@
   border-bottom: 0;
 }
 
+.scheduleHeader {
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
 .accordionToggle {
   display: inline-flex;
 }

@@ -657,8 +657,10 @@ export interface AudioBlock extends BlockBase {
 // ─── Schedule block ──────────────────────────────────────────
 export interface ScheduleItem {
   id: string;
+  date: string;  // YYYY-MM-DD
   start: string; // HH:mm
   end: string;   // HH:mm
+  room: string;
   title: string;
   description: string;
 }
@@ -667,6 +669,9 @@ export interface ScheduleBlock extends BlockBase {
   type: "schedule";
   items: ScheduleItem[];
   bilingual?: boolean;
+  showDate?: boolean;
+  showRoom?: boolean;
+  showHeader?: boolean;
 }
 
 // ─── AI Prompt block ─────────────────────────────────────────
@@ -2028,10 +2033,13 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   defaultData: {
     type: "schedule",
     bilingual: false,
+    showDate: false,
+    showRoom: false,
+    showHeader: false,
     items: [
-      { id: "s1", start: "08:00", end: "09:30", title: "Titel 1", description: "" },
-      { id: "s2", start: "09:45", end: "11:15", title: "Titel 2", description: "" },
-      { id: "s3", start: "11:30", end: "13:00", title: "Titel 3", description: "" },
+      { id: "s1", date: "", start: "08:00", end: "09:30", room: "", title: "Titel 1", description: "" },
+      { id: "s2", date: "", start: "09:45", end: "11:15", room: "", title: "Titel 2", description: "" },
+      { id: "s3", date: "", start: "11:30", end: "13:00", room: "", title: "Titel 3", description: "" },
     ],
     visibility: "both",
   },
