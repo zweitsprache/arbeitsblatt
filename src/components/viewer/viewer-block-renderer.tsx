@@ -4206,16 +4206,35 @@ function ScheduleView({
   const showRoom = block.showRoom ?? false;
   const showHeader = block.showHeader ?? false;
 
+  const thStyle: React.CSSProperties = {
+    textAlign: "left",
+    padding: "0.5rem 0.75rem",
+    whiteSpace: "nowrap",
+    fontWeight: 600,
+    fontSize: "0.75rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "#64748b",
+    borderBottom: "1px solid #e5e7eb",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "0.5rem 0.75rem",
+    verticalAlign: "baseline",
+    whiteSpace: "nowrap",
+    borderBottom: "1px solid #e5e7eb",
+  };
+
   return (
     <div style={isNonLatin ? bodyStyle : undefined}>
       <table className={s.scheduleTable}>
         {showHeader && (
           <thead>
             <tr className={s.scheduleHeaderRow}>
-              {showDate && <th className={s.scheduleHd} colSpan={2}>Datum</th>}
-              <th className={s.scheduleHd}>Zeit</th>
-              {showRoom && <th className={s.scheduleHd}>Raum</th>}
-              <th className={s.scheduleHdWide}>Inhalt</th>
+              {showDate && <th className={s.scheduleHd} style={thStyle} colSpan={2}>Datum</th>}
+              <th className={s.scheduleHd} style={thStyle}>Zeit</th>
+              {showRoom && <th className={s.scheduleHd} style={thStyle}>Raum</th>}
+              <th className={s.scheduleHdWide} style={{ ...thStyle, width: "100%" }}>Inhalt</th>
             </tr>
           </thead>
         )}
@@ -4230,11 +4249,11 @@ function ScheduleView({
 
             return (
               <tr key={item.id} className={s.scheduleBodyRow}>
-                {showDate && <td className={s.scheduleCellBold}>{weekday}</td>}
-                {showDate && <td className={s.scheduleCellBold}>{formatted}</td>}
-                <td className={s.scheduleCell}>{item.start}&nbsp;–&nbsp;{item.end}</td>
-                {showRoom && <td className={s.scheduleCell}>{item.room ?? ""}</td>}
-                <td className={s.scheduleCellWide}>
+                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{weekday}</td>}
+                {showDate && <td className={s.scheduleCellBold} style={{ ...tdStyle, fontWeight: 700 }}>{formatted}</td>}
+                <td className={s.scheduleCell} style={tdStyle}>{item.start}&nbsp;–&nbsp;{item.end}</td>
+                {showRoom && <td className={s.scheduleCell} style={tdStyle}>{item.room ?? ""}</td>}
+                <td className={s.scheduleCellWide} style={{ ...tdStyle, width: "100%", whiteSpace: "normal" }}>
                   {bilingual && originalItem ? (
                     <>
                       <div className={s.scheduleTitleOriginal}>{originalItem.title}</div>
