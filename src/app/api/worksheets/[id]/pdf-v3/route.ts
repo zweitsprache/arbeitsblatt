@@ -146,6 +146,9 @@ export async function POST(
       document.querySelectorAll(".var-total-pages").forEach((el) => {
         el.textContent = String(total);
       });
+      document.querySelectorAll<HTMLElement>(".page-number-fragment").forEach((el) => {
+        el.style.display = total === 1 ? "none" : "";
+      });
     }, totalPages);
 
     const mergedPdf = await PDFDocument.create();

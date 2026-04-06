@@ -208,8 +208,12 @@ export function WorksheetViewer({
       .replace(/\{worksheet_uuid\}/g, (worksheetId || "").toUpperCase());
     if (mode === "print") {
       result = result
-        .replace(/\{current_page\}/g, '<span class="var-current-page"></span>')
-        .replace(/\{no_of_pages\}/g, '<span class="var-total-pages"></span>');
+        .replace(
+          /\{current_page\}\s*\/\s*\{no_of_pages\}/g,
+          '<span class="page-number-fragment"><span class="var-current-page"></span> / <span class="var-total-pages"></span></span>'
+        )
+        .replace(/\{current_page\}/g, '<span class="page-number-fragment"><span class="var-current-page"></span></span>')
+        .replace(/\{no_of_pages\}/g, '<span class="page-number-fragment"><span class="var-total-pages"></span></span>');
     } else {
       result = result
         .replace(/\{current_page\}/g, '')
