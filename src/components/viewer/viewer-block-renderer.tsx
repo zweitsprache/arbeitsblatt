@@ -4302,6 +4302,9 @@ function StaticScheduleTable({
             const { weekday, formatted } = formatScheduleCellDate(item.date);
             const showBilingualTitle = bilingual && !!originalItem && originalItem.title !== item.title;
             const showBilingualDescription = bilingual && !!originalItem && originalItem.description !== item.description;
+            const bilingualPairStyle = {
+              lineHeight: "1.1rem",
+            } satisfies React.CSSProperties;
             const translatedTextStyle = {
               color: "rgba(15, 23, 42, 0.72)",
               fontWeight: 400,
@@ -4318,18 +4321,18 @@ function StaticScheduleTable({
                 {showRoom && <td style={rowCellStyle}>{item.room}</td>}
                 <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
                   {showBilingualTitle ? (
-                    <>
+                    <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
                       <div style={{ fontWeight: 700 }}>{originalItem.title}</div>
                       <div style={translatedTextStyle}>{item.title}</div>
-                    </>
+                    </div>
                   ) : (
                     <div style={{ fontWeight: 700 }}>{item.title}</div>
                   )}
                   {showBilingualDescription ? (
-                    <>
+                    <div style={bilingualPairStyle}>
                       {originalItem.description ? <div>{originalItem.description}</div> : null}
                       {item.description ? <div style={translatedTextStyle}>{item.description}</div> : null}
-                    </>
+                    </div>
                   ) : item.description ? (
                     <div>{item.description}</div>
                   ) : null}
