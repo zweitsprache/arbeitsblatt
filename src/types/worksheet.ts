@@ -710,8 +710,6 @@ export interface AiPromptBlock extends BlockBase {
 // ─── AI Tool block ───────────────────────────────────────────
 export interface AiToolBlock extends BlockBase {
   type: "ai-tool";
-  toolId: string;           // references AiTool.id
-  toolSlug: string;         // for viewer fetching
   toolKey: string;          // references code-owned AI tool registry entry
   toolTitle: string;        // display name
   toolDescription: string;  // display description
@@ -2004,8 +2002,6 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   translations: { de: { label: "KI-Tool", description: "Formularbasierter KI-Agent mit benutzerdefinierten Feldern" } },
   defaultData: {
     type: "ai-tool",
-    toolId: "",
-    toolSlug: "",
     toolKey: "",
     toolTitle: "",
     toolDescription: "",

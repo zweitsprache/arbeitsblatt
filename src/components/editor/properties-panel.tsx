@@ -5824,8 +5824,6 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
     const tool = tools.find((t) => t.toolKey === toolKey);
     if (tool) {
       update({
-        toolId: "",
-        toolSlug: "",
         toolKey: tool.toolKey,
         toolTitle: tool.title,
         toolDescription: tool.description || "",

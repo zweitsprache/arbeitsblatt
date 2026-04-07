@@ -18,8 +18,6 @@ export default async function AiToolStandalonePage({
   const block: AiToolBlock = {
     id: `standalone-${tool.toolKey}`,
     type: "ai-tool",
-    toolId: "",
-    toolSlug: tool.toolKey,
     toolKey: tool.toolKey,
     toolTitle: tool.title,
     toolDescription: tool.description,

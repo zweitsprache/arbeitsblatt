@@ -104,26 +104,6 @@ model Presentation {
   @@index([userId])
 }
 
-model AiTool {
-  id             String   @id @default(cuid())
-  title          String   @default("Untitled AI Tool")
-  slug           String   @unique
-  description    String?
-  fields         Json     @default("[]") // Array of AiToolField definitions
-  promptTemplate String   @default("") // Prompt template with {{variable}} placeholders
-  settings       Json     @default("{}") // AiToolSettings (model, maxTokens, temperature)
-  published      Boolean  @default(false)
-  thumbnail      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  folderId       String?
-  userId         String?
-
-  @@index([slug])
-  @@index([folderId])
-  @@index([userId])
-}
-
 enum AiToolRunStatus {
   ACTIVE
   COMPLETED
@@ -326,7 +306,7 @@ model ProjectContent {
   id          String      @id @default(cuid())
   projectId   String
   contentType ContentType
-  contentId   String // references Worksheet.id, EBook.id, Course.id, or AiTool.id
+  contentId   String // references Worksheet.id, EBook.id, Course.id, Presentation.id, or AI tool registry key
   createdAt   DateTime    @default(now())
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
