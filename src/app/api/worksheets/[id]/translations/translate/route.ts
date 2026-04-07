@@ -29,6 +29,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 const MAX_CHUNK_JSON_BYTES = 12000;
 const MAX_CHUNK_KEYS = 80;
 const MAX_SPECIAL_INSTRUCTIONS = 50;
+const CHUNK_TRANSLATION_CONCURRENCY = 3;
 
 type TranslationMap = Record<string, string>;
 type TranslationEntries = Array<[string, string]>;
@@ -308,6 +309,27 @@ async function translateChunkWithFallback(
   }
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 /**
  * Translate worksheet content to target languages using Claude.
  *
@@ -455,23 +477,35 @@ export async function POST(
         `[translate] ${langCode}: translating ${pendingEntries.length} keys in ${chunks.length} chunk(s)`
       );
 
-      for (const [chunkIndex, chunkEntries] of chunks.entries()) {
-        const parsedChunk = await translateChunkWithFallback(
-          chunkEntries,
-          langCode,
-          langName,
-          `chunk ${chunkIndex + 1}/${chunks.length}`
-        );
+      const parsedChunks = await mapWithConcurrency(
+        chunks,
+        CHUNK_TRANSLATION_CONCURRENCY,
+        async (chunkEntries, chunkIndex) => {
+          const parsedChunk = await translateChunkWithFallback(
+            chunkEntries,
+            langCode,
+            langName,
+            `chunk ${chunkIndex + 1}/${chunks.length}`
+          );
 
+          if (Object.keys(parsedChunk).length === 0) {
+            console.warn(`[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: No valid translations after fallback`);
+          } else {
+            console.log(
+              `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: parsed ${Object.keys(parsedChunk).length} keys`
+            );
+          }
+
+          return parsedChunk;
+        }
+      );
+
+      for (const parsedChunk of parsedChunks) {
         if (Object.keys(parsedChunk).length === 0) {
-          console.warn(`[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: No valid translations after fallback`);
           continue;
         }
 
         Object.assign(mergedChunkTranslations, parsedChunk);
-        console.log(
-          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: parsed ${Object.keys(parsedChunk).length} keys`
-        );
       }
 
       if (Object.keys(mergedChunkTranslations).length > 0) {
