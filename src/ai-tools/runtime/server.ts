@@ -1,4 +1,5 @@
 import {
+  AiToolContextMode,
   AiToolCard,
   AiToolCardKind,
   AiToolMessageRecord,
@@ -129,6 +130,20 @@ export function serializeAiToolMessage(message: StoredMessage): AiToolMessageRec
   };
 }
 
+export function serializeRunContext(context: unknown): AiToolRunRecord["context"] {
+  const rawContext =
+    context && typeof context === "object" ? (context as Record<string, unknown>) : {};
+  const mode = rawContext.mode;
+
+  return {
+    ...(rawContext as Omit<AiToolRunRecord["context"], "mode">),
+    mode:
+      mode === "standalone" || mode === "worksheet" || mode === "lesson"
+        ? (mode as AiToolContextMode)
+        : "standalone",
+  };
+}
+
 export function serializeAiToolRun(run: StoredRun): AiToolRunRecord {
   return {
     id: run.id,
@@ -138,7 +153,7 @@ export function serializeAiToolRun(run: StoredRun): AiToolRunRecord {
     projectId: run.projectId ?? undefined,
     worksheetId: run.worksheetId ?? undefined,
     worksheetBlockId: run.worksheetBlockId ?? undefined,
-    context: ((run.context as Record<string, unknown> | null) ?? {}) as AiToolRunRecord["context"],
+    context: serializeRunContext(run.context),
     state: ((run.state as Record<string, unknown> | null) ?? {}) as Record<string, unknown>,
     finalResult: (run.finalResult as Record<string, unknown> | null) ?? null,
     createdAt: run.createdAt.toISOString(),

@@ -4,7 +4,12 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, Loader2, RotateCcw, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AiToolPublicMetadata, AiToolRunRecord } from "@/ai-tools/types";
+import {
+  AiToolMessageRecord,
+  AiToolMessageRole,
+  AiToolPublicMetadata,
+  AiToolRunRecord,
+} from "@/ai-tools/types";
 import { AiToolBlock } from "@/types/worksheet";
 
 interface ToolWorkflowShellProps {
@@ -254,15 +259,26 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
               setRun((prev) => {
                 if (!prev) return prev;
 
-                const optimisticMessages = (payload.messages || []).map((message, index) => ({
-                  id: `optimistic-${prev.id}-${Date.now()}-${index}`,
-                  runId: prev.id,
-                  role: message.kind === "user-text" || message.kind === "answer-card" ? "user" : "assistant",
-                  kind: message.kind,
-                  payload: message.payload,
-                  sequence: (prev.messages?.at(-1)?.sequence ?? -1) + index + 1,
-                  createdAt: new Date().toISOString(),
-                }));
+                const optimisticMessages: AiToolMessageRecord[] = (payload.messages || []).map(
+                  (message, index) => {
+                    const role: AiToolMessageRole =
+                      message.kind === "user-text" || message.kind === "answer-card"
+                        ? "user"
+                        : message.kind === "system-status"
+                          ? "system"
+                          : "assistant";
+
+                    return {
+                      id: `optimistic-${prev.id}-${Date.now()}-${index}`,
+                      runId: prev.id,
+                      role,
+                      kind: message.kind,
+                      payload: message.payload,
+                      sequence: (prev.messages?.at(-1)?.sequence ?? -1) + index + 1,
+                      createdAt: new Date().toISOString(),
+                    };
+                  }
+                );
 
                 return {
                   ...prev,
@@ -280,14 +296,16 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                 const lastMessage = nextMessages[nextMessages.length - 1];
                 if (!lastMessage || lastMessage.kind !== "result-card") return prev;
 
+                const currentText =
+                  "text" in lastMessage.payload && typeof lastMessage.payload.text === "string"
+                    ? lastMessage.payload.text
+                    : "";
+
                 nextMessages[nextMessages.length - 1] = {
                   ...lastMessage,
                   payload: {
                     ...lastMessage.payload,
-                    text:
-                      typeof lastMessage.payload.text === "string"
-                        ? lastMessage.payload.text + payload.text
-                        : payload.text,
+                    text: currentText + payload.text,
                   },
                 };
 
@@ -386,6 +404,46 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           <div className="space-y-3">
             {(run.messages || []).map((message) => {
               const isUser = message.role === "user";
+              const textPayload =
+                "text" in message.payload && typeof message.payload.text === "string"
+                  ? message.payload.text
+                  : null;
+              const questionPayload =
+                "question" in message.payload && typeof message.payload.question === "string"
+                  ? message.payload.question
+                  : null;
+              const helperTextPayload =
+                "helperText" in message.payload && typeof message.payload.helperText === "string"
+                  ? message.payload.helperText
+                  : null;
+              const answerPayload =
+                "answer" in message.payload && typeof message.payload.answer === "string"
+                  ? message.payload.answer
+                  : null;
+              const labelPayload =
+                "label" in message.payload && typeof message.payload.label === "string"
+                  ? message.payload.label
+                  : null;
+              const reviewItemsPayload =
+                "items" in message.payload && Array.isArray(message.payload.items)
+                  ? message.payload.items
+                  : null;
+              const titlePayload =
+                "title" in message.payload && typeof message.payload.title === "string"
+                  ? message.payload.title
+                  : null;
+              const markdownPayload =
+                "markdown" in message.payload && typeof message.payload.markdown === "boolean"
+                  ? message.payload.markdown
+                  : false;
+              const errorPayload =
+                "message" in message.payload && typeof message.payload.message === "string"
+                  ? message.payload.message
+                  : null;
+              const statusPayload =
+                "status" in message.payload && typeof message.payload.status === "string"
+                  ? message.payload.status
+                  : null;
 
               return (
                 <div
@@ -399,37 +457,37 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                         : "max-w-[88%] rounded-md px-3.5 py-3 text-[15px] leading-relaxed shadow-sm bg-[rgba(245,245,244,0.9)] text-slate-800"
                     }
                   >
-                    {message.kind === "assistant-text" && typeof message.payload.text === "string" ? (
-                      <MarkdownText text={message.payload.text} />
+                    {message.kind === "assistant-text" && textPayload ? (
+                      <MarkdownText text={textPayload} />
                     ) : null}
 
-                    {message.kind === "user-text" && typeof message.payload.text === "string" ? (
-                      <span>{message.payload.text}</span>
+                    {message.kind === "user-text" && textPayload ? (
+                      <span>{textPayload}</span>
                     ) : null}
 
-                    {message.kind === "question-card" && typeof message.payload.question === "string" ? (
+                    {message.kind === "question-card" && questionPayload ? (
                       <div className="space-y-1">
-                        <p className="font-medium">{message.payload.question}</p>
-                        {typeof message.payload.helperText === "string" && (
-                          <p className="text-sm text-muted-foreground">{message.payload.helperText}</p>
+                        <p className="font-medium">{questionPayload}</p>
+                        {helperTextPayload && (
+                          <p className="text-sm text-muted-foreground">{helperTextPayload}</p>
                         )}
                       </div>
                     ) : null}
 
-                    {message.kind === "answer-card" && typeof message.payload.answer === "string" ? (
+                    {message.kind === "answer-card" && answerPayload ? (
                       <div className="space-y-1">
-                        {typeof message.payload.label === "string" && (
-                          <p className="text-xs uppercase tracking-wide opacity-70">{message.payload.label}</p>
+                        {labelPayload && (
+                          <p className="text-xs uppercase tracking-wide opacity-70">{labelPayload}</p>
                         )}
-                        <p>{message.payload.answer}</p>
+                        <p>{answerPayload}</p>
                       </div>
                     ) : null}
 
-                    {message.kind === "review-card" && Array.isArray(message.payload.items) ? (
+                    {message.kind === "review-card" && reviewItemsPayload ? (
                       <div className="space-y-2">
-                        <p className="font-medium">{String(message.payload.title || "")}</p>
+                        <p className="font-medium">{String(titlePayload || "")}</p>
                         <div className="space-y-1.5">
-                          {message.payload.items.map((item, index) => (
+                          {reviewItemsPayload.map((item, index) => (
                             <div key={`${message.id}-${index}`} className="rounded-sm border border-slate-200 bg-white/70 px-3 py-2 text-sm">
                               <div className="font-medium">{String(item.label)}</div>
                               <div className="text-muted-foreground whitespace-pre-wrap">{String(item.value)}</div>
@@ -439,26 +497,26 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                       </div>
                     ) : null}
 
-                    {message.kind === "result-card" && typeof message.payload.text === "string" ? (
+                    {message.kind === "result-card" && textPayload ? (
                       <div className="space-y-2">
-                        {typeof message.payload.title === "string" && message.payload.title && (
-                          <p className="font-medium">{message.payload.title}</p>
+                        {titlePayload && (
+                          <p className="font-medium">{titlePayload}</p>
                         )}
-                        {message.payload.markdown ? (
-                          <MarkdownText text={message.payload.text} />
+                        {markdownPayload ? (
+                          <MarkdownText text={textPayload} />
                         ) : (
-                          <div className="whitespace-pre-wrap">{message.payload.text}</div>
+                          <div className="whitespace-pre-wrap">{textPayload}</div>
                         )}
                       </div>
                     ) : null}
 
-                    {message.kind === "error-card" && typeof message.payload.message === "string" ? (
-                      <div className="text-red-700">{message.payload.message}</div>
+                    {message.kind === "error-card" && errorPayload ? (
+                      <div className="text-red-700">{errorPayload}</div>
                     ) : null}
 
-                    {message.kind === "system-status" && typeof message.payload.status === "string" ? (
+                    {message.kind === "system-status" && statusPayload ? (
                       <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {message.payload.label || message.payload.status}
+                        {labelPayload || statusPayload}
                       </div>
                     ) : null}
                   </div>

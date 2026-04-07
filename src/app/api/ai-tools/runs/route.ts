@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getAiToolDefinition } from "@/ai-tools/registry";
 import { createStoredMessageData, serializeAiToolRun } from "@/ai-tools/runtime/server";
 import { AiToolStartRequest } from "@/ai-tools/types";
@@ -85,8 +86,8 @@ export async function POST(req: NextRequest) {
           projectId: body.context.projectId ?? null,
           worksheetId: body.context.worksheetId ?? null,
           worksheetBlockId: body.context.worksheetBlockId ?? null,
-          context: body.context,
-          state: result.state ?? {},
+          context: body.context as unknown as Prisma.InputJsonValue,
+          state: (result.state ?? {}) as Prisma.InputJsonValue,
         },
       });
 

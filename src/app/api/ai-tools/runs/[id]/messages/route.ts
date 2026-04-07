@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getAiToolDefinition } from "@/ai-tools/registry";
 import {
   createStoredMessageData,
+  serializeRunContext,
   serializeAiToolRun,
   toPrismaRunStatus,
 } from "@/ai-tools/runtime/server";
-import { AiToolReplyRequest } from "@/ai-tools/types";
+import { AiToolCard, AiToolReplyRequest } from "@/ai-tools/types";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
 
@@ -52,7 +54,7 @@ export async function POST(
       {
         id: run.id,
         toolKey: run.toolKey,
-        context: run.context as Record<string, unknown>,
+        context: serializeRunContext(run.context),
         state: (run.state as Record<string, unknown> | null) ?? {},
         status: "active",
       },
@@ -66,7 +68,7 @@ export async function POST(
       }
     );
 
-    const outgoingCards = [];
+    const outgoingCards: AiToolCard[] = [];
     if (body.input?.trim()) {
       outgoingCards.push({
         kind: "user-text" as const,
@@ -78,6 +80,11 @@ export async function POST(
     outgoingCards.push(...result.messages);
 
     const lastSequence = run.messages.at(-1)?.sequence ?? -1;
+    const nextState = ((result.state ?? run.state ?? {}) as Record<string, unknown>) as Prisma.InputJsonValue;
+    const nextFinalResult =
+      result.finalResult === null
+        ? Prisma.JsonNull
+        : ((result.finalResult ?? run.finalResult) as Prisma.InputJsonValue | undefined);
 
     const updatedRun = await prisma.$transaction(async (tx) => {
       if (outgoingCards.length > 0) {
@@ -95,9 +102,9 @@ export async function POST(
       await tx.aiToolRun.update({
         where: { id: run.id },
         data: {
-          state: result.state ?? run.state,
+          state: nextState,
           status: toPrismaRunStatus(result.status ?? "active"),
-          finalResult: result.finalResult ?? run.finalResult,
+          finalResult: nextFinalResult,
           finishedAt:
             result.status === "completed" || result.status === "error"
               ? new Date()
