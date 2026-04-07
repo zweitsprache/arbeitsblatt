@@ -191,22 +191,34 @@ function SidebarModuleSection({
   return (
     <button
       onClick={() => onSelectModule(mod.id)}
-      className="mb-3 w-full rounded-md border p-3 text-left transition-colors"
+      className="group relative mb-1 w-full overflow-hidden rounded-sm px-5 py-4 text-left transition-colors"
       style={{
-        borderColor: tk.borderLine,
-        backgroundColor: isCurrentModule ? "rgba(255,255,255,0.96)" : "#ffffff",
+        backgroundColor: isCurrentModule ? tk.activeBg : "transparent",
       }}
     >
-      <div className="flex items-start gap-3">
+      <span
+        className="absolute bottom-3 left-0 top-3 w-[3px] rounded-full transition-opacity"
+        style={{
+          backgroundColor: moduleTitleColor,
+          opacity: isCurrentModule ? 1 : 0,
+        }}
+      />
+      <span
+        className="absolute bottom-0 left-5 right-0 h-px"
+        style={{ backgroundColor: tk.divider }}
+      />
+      <div className="pr-8">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-normal leading-none" style={{ color: tk.textFaint }}>
             {moduleNumber}
           </p>
-          <p className="text-cv-xs font-semibold leading-snug" style={{ color: moduleTitleColor }}>
+          <p
+            className="mt-2 text-sm font-semibold leading-tight transition-colors"
+            style={{ color: isCurrentModule ? moduleTitleColor : tk.text }}
+          >
             {mod.shortTitle || mod.title || "Untitled Module"}
           </p>
         </div>
-        <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0" style={{ color: tk.chevron }} />
       </div>
     </button>
   );
@@ -261,10 +273,15 @@ function SidebarNav({
 
   return (
     <SidebarThemeContext.Provider value={tk}>
-    <div className="flex flex-col h-full relative overflow-hidden"
-      style={{ fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont }}
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      style={{
+        fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont,
+        background: `linear-gradient(180deg, ${tk.bg} 0%, rgba(255,255,255,0.72) 100%)`,
+      }}
     >
-      <div className="flex-1 overflow-y-auto pt-5 px-5 pb-6 sidebar-scroll">
+      <div className="border-b px-5 py-4" style={{ borderColor: tk.divider }} />
+      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
             key={mod.id}
@@ -469,7 +486,6 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] uppercase text-muted-foreground/80">Lesson workspace</p>
           <p className="text-sm text-foreground truncate">{title}</p>
         </div>
         {/* Language switcher */}
@@ -493,7 +509,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             desktopSidebarOpen ? "w-[340px]" : "w-0"
           )}>
             <aside className={cn(
-              "flex flex-col w-[340px] h-full rounded-lg border bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300",
+              "flex flex-col w-[340px] h-full rounded-lg border bg-[rgba(248,247,243,0.95)] shadow-[0_18px_50px_rgba(15,23,42,0.04)] overflow-hidden transition-all duration-300",
               desktopSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}>
               <SidebarNav
