@@ -14,6 +14,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   tr: "Türkçe",
   ar: "العربية",
   pl: "Polski",
+  ru: "Русский",
 };
 
 /** Map language codes to flag SVG filenames in /public/flags/ */
@@ -28,6 +29,7 @@ const LANGUAGE_FLAG_CODES: Record<string, string> = {
   tr: "tr",
   ar: "sa",
   pl: "pl",
+  ru: "ru",
 };
 
 interface WorksheetLanguageSwitcherProps {

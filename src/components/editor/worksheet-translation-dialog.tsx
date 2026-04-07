@@ -36,6 +36,7 @@ const AVAILABLE_LANGUAGES: { code: string; label: string; flagCode: string }[] =
   { code: "tr", label: "Türkçe", flagCode: "tr" },
   { code: "pl", label: "Polski", flagCode: "pl" },
   { code: "ar", label: "العربية", flagCode: "sa" },
+  { code: "ru", label: "Русский", flagCode: "ru" },
 ];
 
 const LANGUAGE_LABELS: Record<string, string> = Object.fromEntries(
