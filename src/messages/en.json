@@ -225,18 +225,18 @@
     "yes": "Yes"
   },
   "aiToolDashboard": {
-    "createFirstTool": "Create your first AI tool to get started.",
-    "createTool": "New AI Tool",
-    "deleteTool": "Delete AI Tool",
-    "deleteToolConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
-    "fieldCount": "{count, plural, =0 {No fields} =1 {1 field} other {# fields}}",
+    "authRequired": "Please log in to view AI tools.",
+    "availableInWorksheets": "Worksheets",
+    "browseAvailableTools": "Browse the coded tool registry available in the app.",
+    "loadFailed": "Failed to load AI tools.",
     "noSearchResults": "No AI tools found",
-    "noTools": "No AI tools yet",
+    "noTools": "No AI tools available",
     "searchPlaceholder": "Search AI tools…",
-    "searching": "Searching…",
-    "subtitle": "Build form-based AI agents for your worksheets and lessons",
+    "standalone": "Standalone",
+    "subtitle": "Browse the coded AI tool registry for worksheet and conversation workflows",
     "title": "AI Tools",
-    "tryDifferentSearch": "Try a different search term."
+    "tryDifferentSearch": "Try a different search term.",
+    "workflowTool": "Workflow tool"
   },
   "aiTrueFalse": {
     "applyToBlock": "Apply to block",
@@ -1134,7 +1134,7 @@
     "aiToolDescriptionOverride": "Description Override",
     "aiToolDescriptionPlaceholder": "Override the tool description…",
     "aiToolLoading": "Loading tools…",
-    "aiToolNoTools": "No published AI tools found. Create one first.",
+    "aiToolNoTools": "No AI tools are available.",
     "aiToolSelect": "AI Tool",
     "aiToolSelectPlaceholder": "Select an AI tool…",
     "aiToolTitleOverride": "Title Override",
@@ -1543,11 +1543,15 @@
     "originalLabel": "Original",
     "translationLabel": "Translation",
     "aiToolClear": "Clear",
+    "aiToolInputPlaceholder": "Describe what you want the tool to work on…",
     "aiToolLoginRequired": "Please log in to use this AI tool.",
+    "aiToolNewRun": "New run",
     "aiToolNotConfigured": "This AI tool is not configured.",
     "aiToolNotFound": "AI tool not found or not published.",
+    "aiToolReplyPlaceholder": "Type your reply…",
     "aiToolResult": "AI Result",
     "aiToolSelectOption": "Select an option…",
+    "aiToolStart": "Start",
     "aiToolSubmit": "Submit",
     "tryAgain": "Try again"
   }

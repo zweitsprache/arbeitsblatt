@@ -225,18 +225,18 @@
     "yes": "Ja"
   },
   "aiToolDashboard": {
-    "createFirstTool": "Erstelle dein erstes KI-Tool, um loszulegen.",
-    "createTool": "Neues KI-Tool",
-    "deleteTool": "KI-Tool löschen",
-    "deleteToolConfirm": "Bist du sicher, dass du \"{title}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "fieldCount": "{count, plural, =0 {Keine Felder} =1 {1 Feld} other {# Felder}}",
+    "authRequired": "Bitte melde dich an, um KI-Tools zu sehen.",
+    "availableInWorksheets": "Arbeitsblätter",
+    "browseAvailableTools": "Durchsuche die im Code hinterlegte Tool-Registry der App.",
+    "loadFailed": "KI-Tools konnten nicht geladen werden.",
     "noSearchResults": "Keine KI-Tools gefunden",
-    "noTools": "Noch keine KI-Tools",
+    "noTools": "Keine KI-Tools verfügbar",
     "searchPlaceholder": "KI-Tools suchen…",
-    "searching": "Suche…",
-    "subtitle": "Erstelle formularbasierte KI-Agenten für deine Arbeitsblätter und Lektionen",
+    "standalone": "Eigenständig",
+    "subtitle": "Durchsuche die im Code hinterlegte KI-Tool-Registry für Arbeitsblatt- und Dialog-Workflows",
     "title": "KI-Tools",
-    "tryDifferentSearch": "Versuche einen anderen Suchbegriff."
+    "tryDifferentSearch": "Versuche einen anderen Suchbegriff.",
+    "workflowTool": "Workflow-Tool"
   },
   "aiTrueFalse": {
     "applyToBlock": "Auf Block anwenden",
@@ -1134,7 +1134,7 @@
     "aiToolDescriptionOverride": "Beschreibung überschreiben",
     "aiToolDescriptionPlaceholder": "Tool-Beschreibung überschreiben…",
     "aiToolLoading": "Tools laden…",
-    "aiToolNoTools": "Keine veröffentlichten KI-Tools gefunden. Erstelle zuerst eines.",
+    "aiToolNoTools": "Keine KI-Tools verfügbar.",
     "aiToolSelect": "KI-Tool",
     "aiToolSelectPlaceholder": "KI-Tool auswählen…",
     "aiToolTitleOverride": "Titel überschreiben",
@@ -1543,11 +1543,15 @@
     "originalLabel": "Original",
     "translationLabel": "Übersetzung",
     "aiToolClear": "Zurücksetzen",
+    "aiToolInputPlaceholder": "Beschreibe, woran das Tool arbeiten soll…",
     "aiToolLoginRequired": "Bitte melde dich an, um dieses KI-Tool zu verwenden.",
+    "aiToolNewRun": "Neuer Durchlauf",
     "aiToolNotConfigured": "Dieses KI-Tool ist nicht konfiguriert.",
     "aiToolNotFound": "KI-Tool nicht gefunden oder nicht veröffentlicht.",
+    "aiToolReplyPlaceholder": "Gib deine Antwort ein…",
     "aiToolResult": "KI-Ergebnis",
     "aiToolSelectOption": "Option auswählen…",
+    "aiToolStart": "Starten",
     "aiToolSubmit": "Absenden",
     "tryAgain": "Nochmal versuchen"
   }

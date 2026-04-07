@@ -1,190 +1,91 @@
 "use client";
 
-import { useTranslations, useFormatter } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Plus,
   Bot,
-  Clock,
   Search,
-  MoreVertical,
-  Pencil,
-  Trash2,
-  Copy,
   Loader2,
-  FormInput,
+  Blocks,
+  Workflow,
 } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
-import { authFetch } from "@/lib/auth-fetch";
+import React, { useEffect, useMemo, useState } from "react";
 
 interface AiToolItem {
-  id: string;
+  toolKey: string;
   title: string;
-  slug: string;
-  description: string | null;
-  fields: unknown[];
-  published: boolean;
-  createdAt: string;
-  updatedAt: string;
+  description: string;
+  category: string;
+  supportsStandalone: boolean;
+  supportsWorksheetEmbedding: boolean;
+  contextModes: string[];
 }
 
 export function AiToolDashboard() {
   const t = useTranslations("aiToolDashboard");
-  const tc = useTranslations("common");
-  const format = useFormatter();
-  const router = useRouter();
   const [tools, setTools] = useState<AiToolItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<AiToolItem[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingTool, setDeletingTool] = useState<AiToolItem | null>(null);
-
-  const loadTools = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch("/api/ai-tools");
-      if (res.ok) {
-        const data = await res.json();
-        setTools(data);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTools();
-  }, [loadTools]);
+    let cancelled = false;
 
-  // Search
-  useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setSearchLoading(true);
+    async function loadRegistryTools() {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await authFetch(`/api/ai-tools?search=${encodeURIComponent(search)}`);
-        if (res.ok) {
-          setSearchResults(await res.json());
+        const res = await fetch("/api/ai-tools/registry", { credentials: "include" });
+
+        if (res.status === 401) {
+          throw new Error(t("authRequired"));
         }
-      } catch {
-        // ignore
+
+        if (res.ok) {
+          const data = (await res.json()) as AiToolItem[];
+          if (!cancelled) setTools(data);
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : t("loadFailed"));
+        }
       } finally {
-        setSearchLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const handleCreate = async () => {
-    if (creating) return;
-    setCreating(true);
-    try {
-      const res = await authFetch("/api/ai-tools", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Untitled AI Tool" }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        router.push(`/ai-tools/${data.id}`);
-      } else {
-        const text = await res.text();
-        console.error("Failed to create AI tool:", res.status, text);
-      }
-    } catch (error) {
-      console.error("Failed to create AI tool:", error);
-    } finally {
-      setCreating(false);
     }
-  };
 
-  const handleDelete = async () => {
-    if (!deletingTool) return;
-    try {
-      const res = await authFetch(`/api/ai-tools/${deletingTool.id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setTools((prev) => prev.filter((t) => t.id !== deletingTool.id));
-      }
-    } catch {
-      // ignore
-    } finally {
-      setDeleteDialogOpen(false);
-      setDeletingTool(null);
-    }
-  };
+    loadRegistryTools();
 
-  const handleDuplicate = async (tool: AiToolItem) => {
-    try {
-      // Fetch full tool data first
-      const getRes = await authFetch(`/api/ai-tools/${tool.id}`);
-      if (!getRes.ok) return;
-      const fullTool = await getRes.json();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
-      const res = await authFetch("/api/ai-tools", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: `${fullTool.title} (copy)`,
-          description: fullTool.description,
-          fields: fullTool.fields,
-          promptTemplate: fullTool.promptTemplate,
-          settings: fullTool.settings,
-        }),
-      });
-      if (res.ok) {
-        loadTools();
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const displayedTools = searchResults ?? tools;
+  const displayedTools = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return tools;
+    return tools.filter((tool) =>
+      [tool.title, tool.description, tool.category, tool.toolKey]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [search, tools]);
 
   return (
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">{t("title")}</h1>
             <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
           </div>
-          <Button onClick={handleCreate} disabled={creating}>
-            {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-            {t("createTool")}
-          </Button>
         </div>
 
-        {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -195,14 +96,18 @@ export function AiToolDashboard() {
           />
         </div>
 
-        {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Empty state */}
+        {error && !loading && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
         {!loading && displayedTools.length === 0 && (
           <div className="text-center py-12">
             <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -210,65 +115,24 @@ export function AiToolDashboard() {
               {search ? t("noSearchResults") : t("noTools")}
             </h3>
             <p className="text-muted-foreground text-sm mb-4">
-              {search ? t("tryDifferentSearch") : t("createFirstTool")}
+              {search ? t("tryDifferentSearch") : t("browseAvailableTools")}
             </p>
-            {!search && (
-              <Button onClick={handleCreate} disabled={creating}>
-                {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                {t("createTool")}
-              </Button>
-            )}
           </div>
         )}
 
-        {/* Search loading */}
-        {searchLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {t("searching")}
-          </div>
-        )}
-
-        {/* Tool grid */}
         {!loading && displayedTools.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayedTools.map((tool) => (
-              <Card key={tool.id} className="group hover:shadow-md transition-shadow">
+              <Card key={tool.toolKey} className="group hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <Link href={`/ai-tools/${tool.id}`} className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate hover:text-violet-600 transition-colors">
-                        {tool.title}
-                      </CardTitle>
-                    </Link>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/ai-tools/${tool.id}`)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          {tc("edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicate(tool)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          {tc("duplicate")}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => {
-                            setDeletingTool(tool);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {tc("delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-base truncate">{tool.title}</CardTitle>
+                      <p className="mt-1 text-xs font-mono text-muted-foreground">{tool.toolKey}</p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wide">
+                      {tool.category}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -277,18 +141,25 @@ export function AiToolDashboard() {
                       {tool.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <FormInput className="h-3.5 w-3.5" />
-                      {t("fieldCount", { count: Array.isArray(tool.fields) ? tool.fields.length : 0 })}
+                      <Workflow className="h-3.5 w-3.5" />
+                      {t("workflowTool")}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {format.relativeTime(new Date(tool.updatedAt))}
-                    </div>
-                    <Badge variant={tool.published ? "default" : "secondary"} className="ml-auto text-[10px]">
-                      {tool.published ? tc("published") : tc("draft")}
-                    </Badge>
+
+                    {tool.supportsWorksheetEmbedding && (
+                      <div className="flex items-center gap-1">
+                        <Blocks className="h-3.5 w-3.5" />
+                        {t("availableInWorksheets")}
+                      </div>
+                    )}
+
+                    {tool.supportsStandalone && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {t("standalone")}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -296,26 +167,6 @@ export function AiToolDashboard() {
           </div>
         )}
       </div>
-
-      {/* Delete dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("deleteTool")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteToolConfirm", { title: deletingTool?.title || "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {tc("cancel")}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {tc("delete")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

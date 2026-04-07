@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { getAiToolPublicMetadata } from "@/ai-tools/registry";
 
 // GET /api/admin/content/search?q=...&type=... — search all content for assignment picker
 export async function GET(req: NextRequest) {
@@ -59,12 +60,22 @@ export async function GET(req: NextRequest) {
   }
 
   if (!type || type === "AI_TOOL") {
-    const aiTools = await prisma.aiTool.findMany({
-      where: titleFilter,
-      select: { id: true, title: true, slug: true, published: true },
-      orderBy: { updatedAt: "desc" },
-      take: 20,
-    });
+    const query = q.trim().toLowerCase();
+    const aiTools = getAiToolPublicMetadata()
+      .filter((tool) => {
+        if (!query) return true;
+        return [tool.toolKey, tool.title, tool.description, tool.category]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      })
+      .slice(0, 20)
+      .map((tool) => ({
+        id: tool.toolKey,
+        title: tool.title,
+        slug: tool.toolKey,
+        published: true,
+      }));
     results.push(
       ...aiTools.map((a) => ({ ...a, contentType: "AI_TOOL" as const }))
     );

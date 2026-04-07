@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { getAiToolDefinition } from "@/ai-tools/registry";
 
 // GET /api/admin/projects/[id] — get project with client + assigned contents
 export async function GET(
@@ -70,14 +71,11 @@ export async function GET(
           break;
         }
         case "AI_TOOL": {
-          const a = await prisma.aiTool.findUnique({
-            where: { id: pc.contentId },
-            select: { title: true, slug: true, published: true },
-          });
-          if (a) {
-            title = a.title;
-            slug = a.slug;
-            published = a.published;
+          const tool = getAiToolDefinition(pc.contentId);
+          if (tool) {
+            title = tool.title;
+            slug = tool.toolKey;
+            published = true;
           }
           break;
         }

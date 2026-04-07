@@ -712,8 +712,10 @@ export interface AiToolBlock extends BlockBase {
   type: "ai-tool";
   toolId: string;           // references AiTool.id
   toolSlug: string;         // for viewer fetching
+  toolKey: string;          // references code-owned AI tool registry entry
   toolTitle: string;        // display name
   toolDescription: string;  // display description
+  latestRunId?: string;     // current session run id for workflow tools
 }
 
 // ─── Linked Blocks block ─────────────────────────────────────
@@ -2004,8 +2006,10 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     type: "ai-tool",
     toolId: "",
     toolSlug: "",
+    toolKey: "",
     toolTitle: "",
     toolDescription: "",
+    latestRunId: "",
     visibility: "online",
   },
 },

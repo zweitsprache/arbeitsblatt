@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { ContentType as ContentTypeEnum } from "@prisma/client";
+import { getAiToolDefinition } from "@/ai-tools/registry";
 
 const VALID_CONTENT_TYPES: ContentTypeEnum[] = [
   "WORKSHEET",
@@ -62,11 +63,12 @@ export async function GET(
           break;
         }
         case "AI_TOOL": {
-          const a = await prisma.aiTool.findUnique({
-            where: { id: pc.contentId },
-            select: { title: true, slug: true, published: true },
-          });
-          if (a) ({ title, slug, published } = a);
+          const tool = getAiToolDefinition(pc.contentId);
+          if (tool) {
+            title = tool.title;
+            slug = tool.toolKey;
+            published = true;
+          }
           break;
         }
       }
@@ -102,6 +104,16 @@ export async function POST(
     return NextResponse.json(
       { error: "contentId is required" },
       { status: 400 }
+    );
+  }
+
+  if (
+    body.contentType === "AI_TOOL" &&
+    !getAiToolDefinition(body.contentId)
+  ) {
+    return NextResponse.json(
+      { error: "AI tool not found" },
+      { status: 404 }
     );
   }
 

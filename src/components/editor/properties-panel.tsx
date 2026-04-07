@@ -5804,7 +5804,7 @@ function AiPromptProps({ block }: { block: AiPromptBlock }) {
 function AiToolProps({ block }: { block: AiToolBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
-  const [tools, setTools] = React.useState<{ id: string; title: string; slug: string; description: string | null; fields: unknown[] }[]>([]);
+  const [tools, setTools] = React.useState<{ toolKey: string; title: string; description: string; category: string }[]>([]);
   const [loading, setLoading] = React.useState(false);
 
   const update = (updates: Partial<AiToolBlock>) =>
@@ -5813,21 +5813,23 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
   // Fetch published tools
   React.useEffect(() => {
     setLoading(true);
-    fetch("/api/ai-tools?published=true", { credentials: "include" })
+    fetch("/api/ai-tools/registry", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setTools(Array.isArray(data) ? data : []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSelectTool = (toolId: string) => {
-    const tool = tools.find((t) => t.id === toolId);
+  const handleSelectTool = (toolKey: string) => {
+    const tool = tools.find((t) => t.toolKey === toolKey);
     if (tool) {
       update({
-        toolId: tool.id,
-        toolSlug: tool.slug,
+        toolId: "",
+        toolSlug: "",
+        toolKey: tool.toolKey,
         toolTitle: tool.title,
         toolDescription: tool.description || "",
+        latestRunId: "",
       });
     }
   };
@@ -5846,13 +5848,13 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
         ) : tools.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("aiToolNoTools")}</p>
         ) : (
-          <Select value={block.toolId || ""} onValueChange={handleSelectTool}>
+          <Select value={block.toolKey || ""} onValueChange={handleSelectTool}>
             <SelectTrigger>
               <SelectValue placeholder={t("aiToolSelectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {tools.map((tool) => (
-                <SelectItem key={tool.id} value={tool.id}>
+                <SelectItem key={tool.toolKey} value={tool.toolKey}>
                   <div className="flex items-center gap-2">
                     <Bot className="h-3.5 w-3.5 text-violet-500" />
                     {tool.title}
@@ -5864,7 +5866,7 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
         )}
       </div>
 
-      {block.toolId && (
+      {block.toolKey && (
         <>
           <Separator />
           <div>

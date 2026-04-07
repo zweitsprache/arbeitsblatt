@@ -4873,7 +4873,7 @@ function AiToolRenderer({ block }: { block: AiToolBlock }) {
         {t("aiToolLabel")}
       </div>
 
-      {block.toolId ? (
+      {block.toolKey ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-slate-700">
@@ -4884,7 +4884,7 @@ function AiToolRenderer({ block }: { block: AiToolBlock }) {
             <p className="text-xs text-muted-foreground">{block.toolDescription}</p>
           )}
           <div className="text-[10px] text-muted-foreground bg-slate-100 rounded px-2 py-1 inline-block font-mono">
-            ID: {block.toolId}
+            Key: {block.toolKey}
           </div>
         </div>
       ) : (

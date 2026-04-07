@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { ContentType, ClientBrandSettings } from "@/types/project";
 import { ProjectHeader } from "@/components/layout/project-header";
+import { getAiToolDefinition } from "@/ai-tools/registry";
 
 const CONTENT_TYPE_ICONS: Record<
   ContentType,
@@ -108,14 +109,11 @@ export default async function ProjectHomePage({
         break;
       }
       case "AI_TOOL": {
-        const a = await prisma.aiTool.findUnique({
-          where: { id: pc.contentId },
-          select: { title: true, slug: true, published: true },
-        });
-        if (a && a.published) {
-          title = a.title;
-          slug = a.slug;
-          published = a.published;
+        const tool = getAiToolDefinition(pc.contentId);
+        if (tool) {
+          title = tool.title;
+          slug = tool.toolKey;
+          published = true;
         }
         break;
       }
