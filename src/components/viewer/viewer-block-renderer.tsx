@@ -4299,10 +4299,10 @@ function WebsiteView({
           return (
             <article
               key={item.id}
-              className="website-item flex min-h-[8rem] gap-4 rounded-sm border border-slate-200 bg-white p-4"
+              className="website-item flex min-h-[8rem] items-start gap-4 rounded-sm border border-slate-200 bg-white p-4"
               style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
             >
-              <div className="w-40 shrink-0 overflow-hidden rounded-sm border border-slate-200 bg-slate-50 aspect-video">
+              <div className="aspect-video w-40 shrink-0 self-start overflow-hidden rounded-[4px] border border-slate-200 bg-slate-50">
                 {item.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
