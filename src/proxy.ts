@@ -6,7 +6,7 @@ const intlMiddleware = createMiddleware(routing);
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || "localhost:3000";
 
-export default function middleware(req: NextRequest) {
+export default function proxy(req: NextRequest) {
   const hostname = req.headers.get("host") || "";
 
   // Strip port for comparison
@@ -40,9 +40,7 @@ export default function middleware(req: NextRequest) {
     const locales = routing.locales as readonly string[];
     const hasLocale = pathParts.length > 0 && locales.includes(pathParts[0]);
     const locale = hasLocale ? pathParts[0] : routing.defaultLocale;
-    const restPath = hasLocale
-      ? "/" + pathParts.slice(1).join("/")
-      : url.pathname;
+    const restPath = hasLocale ? "/" + pathParts.slice(1).join("/") : url.pathname;
 
     // Rewrite to project-viewer route group
     url.pathname = `/${locale}/project-viewer${restPath === "/" ? "" : restPath}`;
@@ -52,7 +50,7 @@ export default function middleware(req: NextRequest) {
     });
   }
 
-  // Default: i18n middleware for the main app
+  // Default: i18n proxy for the main app
   return intlMiddleware(req);
 }
 
