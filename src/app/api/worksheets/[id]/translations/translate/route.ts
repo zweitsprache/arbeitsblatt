@@ -165,6 +165,149 @@ function parseTranslationResponse(
   }
 }
 
+function splitEntries(entries: TranslationEntries): [TranslationEntries, TranslationEntries] {
+  const midpoint = Math.ceil(entries.length / 2);
+  return [entries.slice(0, midpoint), entries.slice(midpoint)];
+}
+
+async function requestChunkTranslation(
+  chunkEntries: TranslationEntries,
+  langCode: string,
+  langName: string,
+  chunkLabel: string
+): Promise<TranslationMap | null> {
+  const chunkMap = Object.fromEntries(chunkEntries);
+  const chunkJson = JSON.stringify(chunkMap, null, 2);
+  const systemPrompt = buildSystemPrompt(
+    langName,
+    langCode,
+    buildSpecialInstructions(chunkEntries)
+  );
+
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 16000,
+    messages: [
+      {
+        role: "user",
+        content: `Translate the following ${chunkEntries.length} strings into ${langName}:\n\n${chunkJson}`,
+      },
+    ],
+    system: systemPrompt,
+  });
+
+  console.log(
+    `[translate] ${langCode} ${chunkLabel}: stop_reason=${message.stop_reason}, content_blocks=${message.content.length}`
+  );
+
+  const textBlock = message.content.find((content) => content.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    console.warn(`[translate] ${langCode} ${chunkLabel}: No text block in AI response`);
+    return null;
+  }
+
+  console.log(
+    `[translate] ${langCode} ${chunkLabel}: response length=${textBlock.text.length}, first 200 chars: ${textBlock.text.slice(0, 200)}`
+  );
+
+  return parseTranslationResponse(textBlock.text, message.stop_reason, langCode, 0);
+}
+
+async function translateChunkWithFallback(
+  chunkEntries: TranslationEntries,
+  langCode: string,
+  langName: string,
+  chunkLabel: string
+): Promise<TranslationMap> {
+  const expectedKeys = new Set(chunkEntries.map(([key]) => key));
+
+  try {
+    const parsedChunk = await requestChunkTranslation(
+      chunkEntries,
+      langCode,
+      langName,
+      chunkLabel
+    );
+
+    if (!parsedChunk || Object.keys(parsedChunk).length === 0) {
+      if (chunkEntries.length === 1) {
+        console.warn(`[translate] ${langCode} ${chunkLabel}: No valid translation for single key`);
+        return {};
+      }
+
+      const [leftEntries, rightEntries] = splitEntries(chunkEntries);
+      console.warn(
+        `[translate] ${langCode} ${chunkLabel}: Invalid chunk response, retrying in halves (${leftEntries.length} + ${rightEntries.length})`
+      );
+
+      const [leftTranslations, rightTranslations] = await Promise.all([
+        translateChunkWithFallback(leftEntries, langCode, langName, `${chunkLabel}.a`),
+        translateChunkWithFallback(rightEntries, langCode, langName, `${chunkLabel}.b`),
+      ]);
+
+      return { ...leftTranslations, ...rightTranslations };
+    }
+
+    const acceptedTranslations: TranslationMap = {};
+    for (const [key, value] of Object.entries(parsedChunk)) {
+      if (expectedKeys.has(key)) {
+        acceptedTranslations[key] = value;
+      }
+    }
+
+    const missingEntries = chunkEntries.filter(([key]) => !(key in acceptedTranslations));
+    const unexpectedKeys = Object.keys(parsedChunk).filter((key) => !expectedKeys.has(key));
+
+    if (unexpectedKeys.length > 0) {
+      console.warn(
+        `[translate] ${langCode} ${chunkLabel}: Ignored ${unexpectedKeys.length} unexpected key(s)`
+      );
+    }
+
+    if (missingEntries.length === 0) {
+      return acceptedTranslations;
+    }
+
+    if (chunkEntries.length === 1) {
+      console.warn(`[translate] ${langCode} ${chunkLabel}: Missing translation for single key`);
+      return acceptedTranslations;
+    }
+
+    console.warn(
+      `[translate] ${langCode} ${chunkLabel}: Missing ${missingEntries.length}/${chunkEntries.length} key(s), retrying smaller subset(s)`
+    );
+
+    const recoveredTranslations = await translateChunkWithFallback(
+      missingEntries,
+      langCode,
+      langName,
+      `${chunkLabel}.missing`
+    );
+
+    return { ...acceptedTranslations, ...recoveredTranslations };
+  } catch (error) {
+    if (chunkEntries.length === 1) {
+      console.error(
+        `[translate] ${langCode} ${chunkLabel}: Single-key translation failed:`,
+        error instanceof Error ? error.message : error
+      );
+      return {};
+    }
+
+    const [leftEntries, rightEntries] = splitEntries(chunkEntries);
+    console.warn(
+      `[translate] ${langCode} ${chunkLabel}: Chunk request failed, retrying in halves (${leftEntries.length} + ${rightEntries.length})`
+    );
+
+    const [leftTranslations, rightTranslations] = await Promise.all([
+      translateChunkWithFallback(leftEntries, langCode, langName, `${chunkLabel}.a`),
+      translateChunkWithFallback(rightEntries, langCode, langName, `${chunkLabel}.b`),
+    ]);
+
+    return { ...leftTranslations, ...rightTranslations };
+  }
+}
+
 /**
  * Translate worksheet content to target languages using Claude.
  *
@@ -313,53 +456,15 @@ export async function POST(
       );
 
       for (const [chunkIndex, chunkEntries] of chunks.entries()) {
-        const chunkMap = Object.fromEntries(chunkEntries);
-        const chunkJson = JSON.stringify(chunkMap, null, 2);
-        const systemPrompt = buildSystemPrompt(
+        const parsedChunk = await translateChunkWithFallback(
+          chunkEntries,
+          langCode,
           langName,
-          langCode,
-          buildSpecialInstructions(chunkEntries)
+          `chunk ${chunkIndex + 1}/${chunks.length}`
         );
 
-        const message = await client.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          messages: [
-            {
-              role: "user",
-              content: `Translate the following ${chunkEntries.length} strings into ${langName}:\n\n${chunkJson}`,
-            },
-          ],
-          system: systemPrompt,
-        });
-
-        console.log(
-          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: stop_reason=${message.stop_reason}, content_blocks=${message.content.length}`
-        );
-
-        const textBlock = message.content.find((content) => content.type === "text");
-        if (!textBlock || textBlock.type !== "text") {
-          console.warn(
-            `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: No text block in AI response`
-          );
-          continue;
-        }
-
-        console.log(
-          `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: response length=${textBlock.text.length}, first 200 chars: ${textBlock.text.slice(0, 200)}`
-        );
-
-        const parsedChunk = parseTranslationResponse(
-          textBlock.text,
-          message.stop_reason,
-          langCode,
-          chunkIndex
-        );
-
-        if (!parsedChunk || Object.keys(parsedChunk).length === 0) {
-          console.warn(
-            `[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: Parsed OK but empty object`
-          );
+        if (Object.keys(parsedChunk).length === 0) {
+          console.warn(`[translate] ${langCode} chunk ${chunkIndex + 1}/${chunks.length}: No valid translations after fallback`);
           continue;
         }
 
