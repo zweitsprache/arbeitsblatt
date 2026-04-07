@@ -110,6 +110,28 @@ function renderHandwriting(text: string): React.ReactNode {
   });
 }
 
+function hashPreviewKey(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function getDeterministicPreviewOrder<T>(
+  items: T[],
+  getKey: (item: T, index: number) => string
+): T[] {
+  return items
+    .map((item, index) => ({
+      item,
+      index,
+      weight: hashPreviewKey(getKey(item, index)),
+    }))
+    .sort((left, right) => left.weight - right.weight || left.index - right.index)
+    .map(({ item }) => item);
+}
+
 // ─── Locale-aware inline editing ────────────────────────────
 
 /**
@@ -667,9 +689,10 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
-            {block.items
-              .filter(item => item.text)
-              .sort(() => Math.random() - 0.5)
+            {getDeterministicPreviewOrder(
+              block.items.filter(item => item.text),
+              (item, index) => `${item.id}:${item.text}:${index}`
+            )
               .map((item) => (
                 <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
                   {item.text}
@@ -869,9 +892,10 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
-            {block.items
-              .filter(item => item.caption)
-              .sort(() => Math.random() - 0.5)
+            {getDeterministicPreviewOrder(
+              block.items.filter(item => item.caption),
+              (item, index) => `${item.id}:${item.caption}:${index}`
+            )
               .map((item) => (
                 <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-xs">
                   {item.caption}
@@ -1394,8 +1418,10 @@ function FillInBlankItemsRenderer({
 
 // ─── Matching ────────────────────────────────────────────────
 function MatchingRenderer({ block }: { block: MatchingBlock }) {
-  // Shuffle right column for display
-  const shuffledRight = [...block.pairs].sort(() => Math.random() - 0.5);
+  const shuffledRight = getDeterministicPreviewOrder(
+    block.pairs,
+    (pair, index) => `${pair.id}:${pair.right}:${index}`
+  );
 
   return (
     <div className="space-y-3">
@@ -1454,8 +1480,10 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
-            {[...wordBankItems]
-              .sort(() => Math.random() - 0.5)
+            {getDeterministicPreviewOrder(
+              wordBankItems,
+              (text, index) => `${text}:${index}`
+            )
               .map((text, i) => (
                 <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
                   {text}
@@ -3627,8 +3655,10 @@ function DialogueRenderer({
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
           <div className="flex flex-wrap gap-2">
-            {[...gapAnswers]
-              .sort(() => Math.random() - 0.5)
+            {getDeterministicPreviewOrder(
+              gapAnswers,
+              (text, index) => `${text}:${index}`
+            )
               .map((text, i) => (
                 <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
                   {text}
