@@ -30,6 +30,16 @@ interface ToolWorkflowShellProps {
   block: AiToolBlock;
 }
 
+interface ChoiceOption {
+  label: string;
+  value: string;
+}
+
+interface StoredRequirementAnswerView {
+  requirementId: string;
+  answer: string;
+}
+
 function MarkdownText({ text }: { text: string }) {
   return (
     <ReactMarkdown
@@ -87,9 +97,20 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           )
         : [];
 
+    const choiceStyle =
+      "choiceStyle" in payload && payload.choiceStyle === "buttons"
+        ? "buttons"
+        : "dropdown";
+    const submitMode =
+      "submitMode" in payload && payload.submitMode === "immediate"
+        ? "immediate"
+        : "manual";
+
     return {
       inputType: inputType === "select" || inputType === "text" ? inputType : "textarea",
       options,
+      choiceStyle,
+      submitMode,
       variableName:
         "variableName" in payload && typeof payload.variableName === "string"
           ? payload.variableName
@@ -97,11 +118,190 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
     };
   }, [run]);
 
+  const storedRequirementAnswers = React.useMemo(() => {
+    const rawAnswers = run?.state?.answers;
+    if (!Array.isArray(rawAnswers)) return [] as StoredRequirementAnswerView[];
+
+    return rawAnswers
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const item = entry as Record<string, unknown>;
+        if (typeof item.requirementId !== "string" || typeof item.answer !== "string") {
+          return null;
+        }
+
+        return {
+          requirementId: item.requirementId,
+          answer: item.answer,
+        };
+      })
+      .filter((item): item is StoredRequirementAnswerView => item !== null);
+  }, [run?.state]);
+
   const isBewerbungsbrief = block.toolKey === "bewerbungsbrief";
 
-  const canStartRun = isBewerbungsbrief
-    ? Boolean(startNativeLanguage && startJobAd.trim())
-    : true;
+  const canStartRun = isBewerbungsbrief ? Boolean(startNativeLanguage && startJobAd.trim()) : true;
+
+  const submitReply = async (overrideInput?: string) => {
+    if (!run || submitting || run.status !== "active") return;
+
+    const input = (overrideInput ?? replyInput).trim();
+    if (!input) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    const shouldStream = run.state.step === "waiting_for_follow_up";
+
+    try {
+      if (shouldStream) {
+        const res = await fetch(`/api/ai-tools/runs/${run.id}/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            input,
+            expectedSequence: run.messages?.at(-1)?.sequence,
+          }),
+        });
+
+        if (res.status === 401) {
+          setError(t("aiToolLoginRequired"));
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          throw new Error(body.error || `HTTP ${res.status}`);
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No stream reader available");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const line = part
+              .split("\n")
+              .find((segment) => segment.startsWith("data: "));
+            if (!line) continue;
+
+            const payload = JSON.parse(line.slice(6)) as
+              | { type: "ack"; messages: AiToolRunRecord["messages"] }
+              | { type: "delta"; text: string }
+              | { type: "done"; run: AiToolRunRecord }
+              | { type: "error"; error: string };
+
+            if (payload.type === "ack") {
+              setRun((prev) => {
+                if (!prev) return prev;
+
+                const optimisticMessages: AiToolMessageRecord[] = (payload.messages || []).map(
+                  (message, index) => {
+                    const role: AiToolMessageRole =
+                      message.kind === "user-text" || message.kind === "answer-card"
+                        ? "user"
+                        : message.kind === "system-status"
+                          ? "system"
+                          : "assistant";
+
+                    return {
+                      id: `optimistic-${prev.id}-${Date.now()}-${index}`,
+                      runId: prev.id,
+                      role,
+                      kind: message.kind,
+                      payload: message.payload,
+                      sequence: (prev.messages?.at(-1)?.sequence ?? -1) + index + 1,
+                      createdAt: new Date().toISOString(),
+                    };
+                  }
+                );
+
+                return {
+                  ...prev,
+                  messages: [...(prev.messages || []), ...optimisticMessages],
+                };
+              });
+              setReplyInput("");
+            }
+
+            if (payload.type === "delta") {
+              setRun((prev) => {
+                if (!prev?.messages?.length) return prev;
+
+                const nextMessages = [...prev.messages];
+                const lastMessage = nextMessages[nextMessages.length - 1];
+                if (!lastMessage || lastMessage.kind !== "result-card") return prev;
+
+                const currentText =
+                  "text" in lastMessage.payload && typeof lastMessage.payload.text === "string"
+                    ? lastMessage.payload.text
+                    : "";
+
+                nextMessages[nextMessages.length - 1] = {
+                  ...lastMessage,
+                  payload: {
+                    ...lastMessage.payload,
+                    text: currentText + payload.text,
+                  },
+                };
+
+                return {
+                  ...prev,
+                  messages: nextMessages,
+                };
+              });
+            }
+
+            if (payload.type === "done") {
+              setRun(payload.run);
+            }
+
+            if (payload.type === "error") {
+              throw new Error(payload.error);
+            }
+          }
+        }
+      } else {
+        const res = await fetch(`/api/ai-tools/runs/${run.id}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            input,
+            expectedSequence: run.messages?.at(-1)?.sequence,
+          }),
+        });
+
+        if (res.status === 401) {
+          setError(t("aiToolLoginRequired"));
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          throw new Error(body.error || `HTTP ${res.status}`);
+        }
+
+        const data = (await res.json()) as AiToolRunRecord;
+        setRun(data);
+        setReplyInput("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("tryAgain"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!activeQuestion) return;
@@ -282,161 +482,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
   };
 
   const sendReply = async () => {
-    if (!run || !replyInput.trim() || submitting || run.status !== "active") return;
-    setSubmitting(true);
-    setError(null);
-
-    const input = replyInput.trim();
-    const shouldStream = run.state.step === "waiting_for_follow_up";
-
-    try {
-      if (shouldStream) {
-        const res = await fetch(`/api/ai-tools/runs/${run.id}/stream`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            input,
-            expectedSequence: run.messages?.at(-1)?.sequence,
-          }),
-        });
-
-        if (res.status === 401) {
-          setError(t("aiToolLoginRequired"));
-          return;
-        }
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-          throw new Error(body.error || `HTTP ${res.status}`);
-        }
-
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No stream reader available");
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-
-          for (const part of parts) {
-            const line = part
-              .split("\n")
-              .find((segment) => segment.startsWith("data: "));
-            if (!line) continue;
-
-            const payload = JSON.parse(line.slice(6)) as
-              | { type: "ack"; messages: AiToolRunRecord["messages"] }
-              | { type: "delta"; text: string }
-              | { type: "done"; run: AiToolRunRecord }
-              | { type: "error"; error: string };
-
-            if (payload.type === "ack") {
-              setRun((prev) => {
-                if (!prev) return prev;
-
-                const optimisticMessages: AiToolMessageRecord[] = (payload.messages || []).map(
-                  (message, index) => {
-                    const role: AiToolMessageRole =
-                      message.kind === "user-text" || message.kind === "answer-card"
-                        ? "user"
-                        : message.kind === "system-status"
-                          ? "system"
-                          : "assistant";
-
-                    return {
-                      id: `optimistic-${prev.id}-${Date.now()}-${index}`,
-                      runId: prev.id,
-                      role,
-                      kind: message.kind,
-                      payload: message.payload,
-                      sequence: (prev.messages?.at(-1)?.sequence ?? -1) + index + 1,
-                      createdAt: new Date().toISOString(),
-                    };
-                  }
-                );
-
-                return {
-                  ...prev,
-                  messages: [...(prev.messages || []), ...optimisticMessages],
-                };
-              });
-              setReplyInput("");
-            }
-
-            if (payload.type === "delta") {
-              setRun((prev) => {
-                if (!prev?.messages?.length) return prev;
-
-                const nextMessages = [...prev.messages];
-                const lastMessage = nextMessages[nextMessages.length - 1];
-                if (!lastMessage || lastMessage.kind !== "result-card") return prev;
-
-                const currentText =
-                  "text" in lastMessage.payload && typeof lastMessage.payload.text === "string"
-                    ? lastMessage.payload.text
-                    : "";
-
-                nextMessages[nextMessages.length - 1] = {
-                  ...lastMessage,
-                  payload: {
-                    ...lastMessage.payload,
-                    text: currentText + payload.text,
-                  },
-                };
-
-                return {
-                  ...prev,
-                  messages: nextMessages,
-                };
-              });
-            }
-
-            if (payload.type === "done") {
-              setRun(payload.run);
-            }
-
-            if (payload.type === "error") {
-              throw new Error(payload.error);
-            }
-          }
-        }
-      } else {
-        const res = await fetch(`/api/ai-tools/runs/${run.id}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            input,
-            expectedSequence: run.messages?.at(-1)?.sequence,
-          }),
-        });
-
-        if (res.status === 401) {
-          setError(t("aiToolLoginRequired"));
-          return;
-        }
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-          throw new Error(body.error || `HTTP ${res.status}`);
-        }
-
-        const data = (await res.json()) as AiToolRunRecord;
-        setRun(data);
-        setReplyInput("");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("tryAgain"));
-    } finally {
-      setSubmitting(false);
-    }
+    await submitReply();
   };
 
   const resetRun = () => {
@@ -496,6 +542,34 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                 "question" in message.payload && typeof message.payload.question === "string"
                   ? message.payload.question
                   : null;
+              const optionsPayload =
+                "options" in message.payload && Array.isArray(message.payload.options)
+                  ? message.payload.options.filter(
+                      (option): option is ChoiceOption =>
+                        !!option &&
+                        typeof option === "object" &&
+                        "label" in option &&
+                        typeof option.label === "string" &&
+                        "value" in option &&
+                        typeof option.value === "string"
+                    )
+                  : [];
+              const choiceStylePayload =
+                "choiceStyle" in message.payload && message.payload.choiceStyle === "buttons"
+                  ? "buttons"
+                  : "dropdown";
+              const selectedValuePayload =
+                "selectedValue" in message.payload && typeof message.payload.selectedValue === "string"
+                  ? message.payload.selectedValue
+                  : null;
+              const selectedLabelPayload =
+                "selectedLabel" in message.payload && typeof message.payload.selectedLabel === "string"
+                  ? message.payload.selectedLabel
+                  : null;
+              const variableNamePayload =
+                "variableName" in message.payload && typeof message.payload.variableName === "string"
+                  ? message.payload.variableName
+                  : null;
               const helperTextPayload =
                 "helperText" in message.payload && typeof message.payload.helperText === "string"
                   ? message.payload.helperText
@@ -529,6 +603,25 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                   ? message.payload.status
                   : null;
 
+              const storedRequirementAnswer = variableNamePayload?.startsWith("requirement_")
+                ? storedRequirementAnswers.find(
+                    (entry) => `requirement_${entry.requirementId}` === variableNamePayload
+                  )
+                : undefined;
+
+              const resolvedSelectedValue = storedRequirementAnswer?.answer || selectedValuePayload;
+              const resolvedSelectedLabel =
+                selectedLabelPayload ||
+                optionsPayload.find((option) => option.value === resolvedSelectedValue)?.label ||
+                null;
+              const isInteractiveChoiceCard =
+                message.kind === "question-card" &&
+                choiceStylePayload === "buttons" &&
+                optionsPayload.length > 0 &&
+                run.status === "active" &&
+                run.messages?.[run.messages.length - 1]?.id === message.id &&
+                !resolvedSelectedValue;
+
               return (
                 <div
                   key={message.id}
@@ -550,11 +643,46 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                     ) : null}
 
                     {message.kind === "question-card" && questionPayload ? (
-                      <div className="space-y-1">
+                      <div className="space-y-3">
                         <p className="font-medium">{questionPayload}</p>
                         {helperTextPayload && (
                           <p className="text-sm text-muted-foreground">{helperTextPayload}</p>
                         )}
+
+                        {choiceStylePayload === "buttons" && optionsPayload.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {optionsPayload.map((option) => {
+                              const isSelected = resolvedSelectedValue === option.value;
+
+                              return (
+                                <button
+                                  key={`${message.id}-${option.value}`}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!isInteractiveChoiceCard) return;
+                                    void submitReply(option.value);
+                                  }}
+                                  disabled={!isInteractiveChoiceCard || submitting}
+                                  className={
+                                    isSelected
+                                      ? "rounded-sm border border-violet-600 bg-violet-600 px-3 py-1.5 text-sm font-medium text-white"
+                                      : "rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:opacity-100 disabled:cursor-default"
+                                  }
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {!isInteractiveChoiceCard && resolvedSelectedLabel ? (
+                          <div className="pt-1">
+                            <span className="inline-flex rounded-sm border border-violet-200 bg-violet-50 px-2.5 py-1 text-sm font-medium text-violet-700">
+                              {resolvedSelectedLabel}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -623,7 +751,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
             </button>
           </div>
 
-          {run.status === "active" && (
+          {run.status === "active" && !(activeQuestion?.inputType === "select" && activeQuestion.choiceStyle === "buttons") && (
             <div className="flex items-end gap-2">
               {activeQuestion?.inputType === "select" ? (
                 <select

@@ -50,6 +50,10 @@ export interface QuestionCard
     helperText?: string;
     inputType?: "text" | "textarea" | "select";
     options?: Array<{ label: string; value: string }>;
+    choiceStyle?: "dropdown" | "buttons";
+    submitMode?: "manual" | "immediate";
+    selectedValue?: string;
+    selectedLabel?: string;
     variableName?: string;
   }> {
   kind: "question-card";

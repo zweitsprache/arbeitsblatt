@@ -239,6 +239,8 @@ function buildRequirementQuestion(requirement: RequirementQuestion, languageCode
       question: `${requirement.questionDe} / ${requirement.questionNative}`,
       helperText: requirement.label,
       inputType: "select" as const,
+      choiceStyle: "buttons" as const,
+      submitMode: "immediate" as const,
       options: getYesNoOptions(languageCode),
       variableName: `requirement_${requirement.id}`,
     },
@@ -550,14 +552,6 @@ export const bewerbungsbriefTool: AiToolDefinition = {
             requirementIndex: nextRequirementIndex,
           },
           messages: [
-            {
-              kind: "answer-card",
-              payload: {
-                label: currentRequirement.label,
-                answer: getAnswerLabel(nativeLanguage || "en", normalizedAnswer),
-                variableName: currentRequirement.id,
-              },
-            },
             buildRequirementQuestion(nextRequirement, nativeLanguage || "en"),
           ],
         };
@@ -578,14 +572,6 @@ export const bewerbungsbriefTool: AiToolDefinition = {
           answers: nextAnswers,
         },
         messages: [
-          {
-            kind: "answer-card",
-            payload: {
-              label: currentRequirement.label,
-              answer: getAnswerLabel(nativeLanguage || "en", normalizedAnswer),
-              variableName: currentRequirement.id,
-            },
-          },
           {
             kind: "review-card",
             payload: {
