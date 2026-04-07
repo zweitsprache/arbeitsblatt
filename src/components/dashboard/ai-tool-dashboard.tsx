@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -123,46 +124,83 @@ export function AiToolDashboard() {
         {!loading && displayedTools.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayedTools.map((tool) => (
-              <Card key={tool.toolKey} className="group hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-base truncate">{tool.title}</CardTitle>
-                      <p className="mt-1 text-xs font-mono text-muted-foreground">{tool.toolKey}</p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wide">
-                      {tool.category}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {tool.description && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {tool.description}
-                    </p>
-                  )}
+              tool.supportsStandalone ? (
+                <Link
+                  key={tool.toolKey}
+                  href={`/ai-tool/${tool.toolKey}`}
+                  className="block"
+                >
+                  <Card className="group h-full cursor-pointer hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-base truncate group-hover:text-violet-600 transition-colors">
+                            {tool.title}
+                          </CardTitle>
+                          <p className="mt-1 text-xs font-mono text-muted-foreground">{tool.toolKey}</p>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wide">
+                          {tool.category}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {tool.description && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          {tool.description}
+                        </p>
+                      )}
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Workflow className="h-3.5 w-3.5" />
-                      {t("workflowTool")}
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Workflow className="h-3.5 w-3.5" />
+                          {t("workflowTool")}
+                        </div>
 
-                    {tool.supportsWorksheetEmbedding && (
+                        {tool.supportsWorksheetEmbedding && (
+                          <div className="flex items-center gap-1">
+                            <Blocks className="h-3.5 w-3.5" />
+                            {t("availableInWorksheets")}
+                          </div>
+                        )}
+
+                        <Badge variant="secondary" className="text-[10px]">
+                          {t("standalone")}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ) : (
+                <Card key={tool.toolKey} className="group h-full hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base truncate">{tool.title}</CardTitle>
+                        <p className="mt-1 text-xs font-mono text-muted-foreground">{tool.toolKey}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wide">
+                        {tool.category}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {tool.description && (
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {tool.description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Blocks className="h-3.5 w-3.5" />
                         {t("availableInWorksheets")}
                       </div>
-                    )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
 
-                    {tool.supportsStandalone && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {t("standalone")}
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
             ))}
           </div>
         )}
