@@ -562,10 +562,6 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                 "selectedValue" in message.payload && typeof message.payload.selectedValue === "string"
                   ? message.payload.selectedValue
                   : null;
-              const selectedLabelPayload =
-                "selectedLabel" in message.payload && typeof message.payload.selectedLabel === "string"
-                  ? message.payload.selectedLabel
-                  : null;
               const variableNamePayload =
                 "variableName" in message.payload && typeof message.payload.variableName === "string"
                   ? message.payload.variableName
@@ -609,18 +605,14 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                   )
                 : undefined;
 
-              const resolvedSelectedValue = storedRequirementAnswer?.answer || selectedValuePayload;
-              const resolvedSelectedLabel =
-                selectedLabelPayload ||
-                optionsPayload.find((option) => option.value === resolvedSelectedValue)?.label ||
-                null;
               const isInteractiveChoiceCard =
                 message.kind === "question-card" &&
                 choiceStylePayload === "buttons" &&
                 optionsPayload.length > 0 &&
                 run.status === "active" &&
                 run.messages?.[run.messages.length - 1]?.id === message.id &&
-                !resolvedSelectedValue;
+                !storedRequirementAnswer &&
+                !selectedValuePayload;
 
               return (
                 <div
@@ -650,11 +642,9 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                         )}
 
                         {choiceStylePayload === "buttons" && optionsPayload.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {optionsPayload.map((option) => {
-                              const isSelected = resolvedSelectedValue === option.value;
-
-                              return (
+                          isInteractiveChoiceCard ? (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {optionsPayload.map((option) => (
                                 <button
                                   key={`${message.id}-${option.value}`}
                                   type="button"
@@ -662,26 +652,14 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                                     if (!isInteractiveChoiceCard) return;
                                     void submitReply(option.value);
                                   }}
-                                  disabled={!isInteractiveChoiceCard || submitting}
-                                  className={
-                                    isSelected
-                                      ? "rounded-sm border border-violet-600 bg-violet-600 px-3 py-1.5 text-sm font-medium text-white"
-                                      : "rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:opacity-100 disabled:cursor-default"
-                                  }
+                                  disabled={submitting}
+                                  className="rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {option.label}
                                 </button>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-
-                        {!isInteractiveChoiceCard && resolvedSelectedLabel ? (
-                          <div className="pt-1">
-                            <span className="inline-flex rounded-sm border border-violet-200 bg-violet-50 px-2.5 py-1 text-sm font-medium text-violet-700">
-                              {resolvedSelectedLabel}
-                            </span>
-                          </div>
+                              ))}
+                            </div>
+                          ) : null
                         ) : null}
                       </div>
                     ) : null}

@@ -236,8 +236,8 @@ function buildRequirementQuestion(requirement: RequirementQuestion, languageCode
   return {
     kind: "question-card" as const,
     payload: {
-      question: `${requirement.questionDe} / ${requirement.questionNative}`,
-      helperText: requirement.label,
+      question: requirement.questionDe,
+      helperText: requirement.questionNative,
       inputType: "select" as const,
       choiceStyle: "buttons" as const,
       submitMode: "immediate" as const,
@@ -286,29 +286,6 @@ export const bewerbungsbriefTool: AiToolDefinition = {
           answers: [],
         },
         messages: [
-          {
-            kind: "answer-card",
-            payload: {
-              label: "Erstsprache",
-              answer: selectedLanguage.label,
-              variableName: "native_language",
-            },
-          },
-          {
-            kind: "answer-card",
-            payload: {
-              label: "Stellenanzeige",
-              answer: initialJobAd,
-              variableName: "job_ad",
-            },
-          },
-          {
-            kind: "assistant-text",
-            payload: {
-              text: `Ich habe ${extractedRequirements.length} Muss-Kriterien aus der Anzeige extrahiert. Ich frage sie jetzt einzeln ab.`,
-              markdown: false,
-            },
-          },
           buildRequirementQuestion(extractedRequirements[0], selectedLanguage.value),
         ],
       };
@@ -418,21 +395,6 @@ export const bewerbungsbriefTool: AiToolDefinition = {
             answers: [],
           },
           messages: [
-            {
-              kind: "answer-card",
-              payload: {
-                label: "Erstsprache",
-                answer: selectedLanguage.label,
-                variableName: "native_language",
-              },
-            },
-            {
-              kind: "assistant-text",
-              payload: {
-                text: `Ich habe ${extractedRequirements.length} Muss-Kriterien aus der Anzeige extrahiert. Ich frage sie jetzt einzeln ab.`,
-                markdown: false,
-              },
-            },
             buildRequirementQuestion(extractedRequirements[0], selectedLanguage.value),
           ],
         };
@@ -479,21 +441,6 @@ export const bewerbungsbriefTool: AiToolDefinition = {
           answers: [],
         },
         messages: [
-          {
-            kind: "answer-card",
-            payload: {
-              label: "Stellenanzeige",
-              answer: input,
-              variableName: "job_ad",
-            },
-          },
-          {
-            kind: "assistant-text",
-            payload: {
-              text: `Ich habe ${extractedRequirements.length} Muss-Kriterien aus der Anzeige extrahiert. Ich frage sie jetzt einzeln ab.`,
-              markdown: false,
-            },
-          },
           buildRequirementQuestion(extractedRequirements[0], nativeLanguage || "en"),
         ],
       };
