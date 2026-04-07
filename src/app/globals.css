@@ -459,12 +459,22 @@
   page-break-inside: avoid;
 }
 
-/* Keep subheadings with the following block, but allow top-level titles to flow normally.
-   Chromium can otherwise push an h1 to the next page when it tries to keep it with a large following block. */
-.worksheet-block-heading:not([data-heading-level="1"]),
+/* Headings should stay with the following block in print output. */
+.worksheet-block-heading,
 .worksheet-block-numbered-label {
   break-after: avoid;
   page-break-after: avoid;
+}
+
+/* Website block title must stay with the first card. */
+.worksheet-block-website .website-title {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.worksheet-block-website .website-item:first-child {
+  break-before: avoid;
+  page-break-before: avoid;
 }
 
 /* Interactive blocks must stay together */

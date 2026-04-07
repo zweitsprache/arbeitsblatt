@@ -4278,7 +4278,7 @@ function WebsiteView({
   return (
     <div className="space-y-4">
       {block.title.trim() ? (
-        <HeadingTag className={sizes[block.level]} style={headingStyle}>
+        <HeadingTag className={`website-title ${sizes[block.level]}`} style={headingStyle}>
           {block.title}
         </HeadingTag>
       ) : null}
