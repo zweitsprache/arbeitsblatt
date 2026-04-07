@@ -148,6 +148,7 @@ export interface AiToolStartRequest {
   toolKey: string;
   context: AiToolRunContext;
   initialInput?: string;
+  initialData?: Record<string, unknown>;
   blockOverrides?: {
     title?: string;
     description?: string;

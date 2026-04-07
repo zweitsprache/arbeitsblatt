@@ -1,7 +1,8 @@
 import { AiToolDefinition, AiToolPublicMetadata } from "@/ai-tools/types";
+import { bewerbungsbriefTool } from "@/ai-tools/tools/bewerbungsbrief";
 import { dialogueCardsTool } from "@/ai-tools/tools/dialogue-cards";
 
-const AI_TOOL_REGISTRY: AiToolDefinition[] = [dialogueCardsTool];
+const AI_TOOL_REGISTRY: AiToolDefinition[] = [bewerbungsbriefTool, dialogueCardsTool];
 
 export function getAiToolRegistry(): AiToolDefinition[] {
   return AI_TOOL_REGISTRY;

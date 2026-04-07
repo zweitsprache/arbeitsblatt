@@ -12,6 +12,20 @@ import {
 } from "@/ai-tools/types";
 import { AiToolBlock } from "@/types/worksheet";
 
+const BEWERBUNGSBRIEF_LANGUAGE_OPTIONS = [
+  { value: "de", label: "Deutsch" },
+  { value: "en", label: "English" },
+  { value: "uk", label: "Ukrainisch / Ukrainian" },
+  { value: "fr", label: "Franzosisch / French" },
+  { value: "es", label: "Spanisch / Spanish" },
+  { value: "it", label: "Italienisch / Italian" },
+  { value: "pt", label: "Portugiesisch / Portuguese" },
+  { value: "tr", label: "Turkisch / Turkish" },
+  { value: "ar", label: "Arabisch / Arabic" },
+  { value: "pl", label: "Polnisch / Polish" },
+  { value: "ru", label: "Russisch / Russian" },
+] as const;
+
 interface ToolWorkflowShellProps {
   block: AiToolBlock;
 }
@@ -38,12 +52,72 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
   const [toolMeta, setToolMeta] = React.useState<AiToolPublicMetadata | null>(null);
   const [run, setRun] = React.useState<AiToolRunRecord | null>(null);
   const [initialInput, setInitialInput] = React.useState("");
+  const [startNativeLanguage, setStartNativeLanguage] = React.useState("");
+  const [startJobAd, setStartJobAd] = React.useState("");
   const [replyInput, setReplyInput] = React.useState("");
   const [loadingMeta, setLoadingMeta] = React.useState(true);
   const [loadingRun, setLoadingRun] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [resumeDisabled, setResumeDisabled] = React.useState(false);
+
+  const activeQuestion = React.useMemo(() => {
+    if (!run?.messages?.length || run.status !== "active") return null;
+
+    const lastMessage = run.messages[run.messages.length - 1];
+    if (lastMessage.kind !== "question-card") return null;
+
+    const payload = lastMessage.payload;
+    if (!("question" in payload) || typeof payload.question !== "string") return null;
+
+    const inputType =
+      "inputType" in payload && typeof payload.inputType === "string"
+        ? payload.inputType
+        : "textarea";
+    const options =
+      "options" in payload && Array.isArray(payload.options)
+        ? payload.options.filter(
+            (option): option is { label: string; value: string } =>
+              !!option &&
+              typeof option === "object" &&
+              "label" in option &&
+              typeof option.label === "string" &&
+              "value" in option &&
+              typeof option.value === "string"
+          )
+        : [];
+
+    return {
+      inputType: inputType === "select" || inputType === "text" ? inputType : "textarea",
+      options,
+      variableName:
+        "variableName" in payload && typeof payload.variableName === "string"
+          ? payload.variableName
+          : undefined,
+    };
+  }, [run]);
+
+  const isBewerbungsbrief = block.toolKey === "bewerbungsbrief";
+
+  const canStartRun = isBewerbungsbrief
+    ? Boolean(startNativeLanguage && startJobAd.trim())
+    : true;
+
+  React.useEffect(() => {
+    if (!activeQuestion) return;
+
+    if (activeQuestion.inputType === "select") {
+      const isValidOption = activeQuestion.options.some((option) => option.value === replyInput);
+      if (!isValidOption) {
+        setReplyInput("");
+      }
+      return;
+    }
+
+    if (replyInput && activeQuestion.inputType !== "select") {
+      return;
+    }
+  }, [activeQuestion, replyInput]);
 
   const contextMode = React.useMemo(
     () => (block.id.startsWith("standalone-") ? "standalone" : "worksheet"),
@@ -170,7 +244,13 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
             mode: contextMode,
             worksheetBlockId: contextMode === "worksheet" ? block.id : undefined,
           },
-          initialInput: initialInput.trim() || undefined,
+          initialInput: isBewerbungsbrief ? undefined : initialInput.trim() || undefined,
+          initialData: isBewerbungsbrief
+            ? {
+                nativeLanguage: startNativeLanguage || undefined,
+                jobAd: startJobAd.trim() || undefined,
+              }
+            : undefined,
           blockOverrides: {
             title: block.toolTitle || undefined,
             description: block.toolDescription || undefined,
@@ -191,6 +271,8 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
       const data = (await res.json()) as AiToolRunRecord;
       setRun(data);
       setInitialInput("");
+      setStartNativeLanguage("");
+      setStartJobAd("");
       setReplyInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("tryAgain"));
@@ -361,6 +443,8 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
     setResumeDisabled(true);
     setRun(null);
     setInitialInput("");
+    setStartNativeLanguage("");
+    setStartJobAd("");
     setReplyInput("");
     setError(null);
   };
@@ -541,12 +625,37 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
 
           {run.status === "active" && (
             <div className="flex items-end gap-2">
-              <textarea
-                value={replyInput}
-                onChange={(e) => setReplyInput(e.target.value)}
-                placeholder={t("aiToolReplyPlaceholder")}
-                className="w-full min-h-[88px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
-              />
+              {activeQuestion?.inputType === "select" ? (
+                <select
+                  value={replyInput}
+                  onChange={(e) => setReplyInput(e.target.value)}
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                >
+                  <option value="" disabled>
+                    {t("aiToolReplyPlaceholder")}
+                  </option>
+                  {activeQuestion.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : activeQuestion?.inputType === "text" ? (
+                <input
+                  type="text"
+                  value={replyInput}
+                  onChange={(e) => setReplyInput(e.target.value)}
+                  placeholder={t("aiToolReplyPlaceholder")}
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              ) : (
+                <textarea
+                  value={replyInput}
+                  onChange={(e) => setReplyInput(e.target.value)}
+                  placeholder={t("aiToolReplyPlaceholder")}
+                  className="w-full min-h-[88px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              )}
               <button
                 type="button"
                 onClick={sendReply}
@@ -561,17 +670,46 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
         </>
       ) : (
         <div className="space-y-3">
-          <textarea
-            value={initialInput}
-            onChange={(e) => setInitialInput(e.target.value)}
-            placeholder={t("aiToolInputPlaceholder")}
-            className="w-full min-h-[120px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
-          />
+          {isBewerbungsbrief ? (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Erstsprache</label>
+                <select
+                  value={startNativeLanguage}
+                  onChange={(e) => setStartNativeLanguage(e.target.value)}
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                >
+                  <option value="">Sprache auswahlen</option>
+                  {BEWERBUNGSBRIEF_LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Stellenanzeige</label>
+                <textarea
+                  value={startJobAd}
+                  onChange={(e) => setStartJobAd(e.target.value)}
+                  placeholder="Paste the full job ad here."
+                  className="w-full min-h-[180px] rounded-sm border border-slate-200 bg-white p-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              </div>
+            </>
+          ) : (
+            <textarea
+              value={initialInput}
+              onChange={(e) => setInitialInput(e.target.value)}
+              placeholder={t("aiToolInputPlaceholder")}
+              className="w-full min-h-[120px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+            />
+          )}
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={createRun}
-              disabled={submitting}
+              disabled={submitting || !canStartRun}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
