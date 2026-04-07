@@ -69,7 +69,7 @@ export async function POST(
     );
 
     const outgoingCards: AiToolCard[] = [];
-    if (body.input?.trim()) {
+    if (body.input?.trim() && !body.suppressUserMessage) {
       outgoingCards.push({
         kind: "user-text" as const,
         payload: {

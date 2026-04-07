@@ -161,6 +161,7 @@ export interface AiToolStartRequest {
 
 export interface AiToolReplyRequest {
   input?: string;
+  suppressUserMessage?: boolean;
   action?: {
     type: string;
     payload?: Record<string, unknown>;

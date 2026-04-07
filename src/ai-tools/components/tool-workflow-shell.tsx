@@ -142,7 +142,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
 
   const canStartRun = isBewerbungsbrief ? Boolean(startNativeLanguage && startJobAd.trim()) : true;
 
-  const submitReply = async (overrideInput?: string) => {
+  const submitReply = async (overrideInput?: string, suppressUserMessage = false) => {
     if (!run || submitting || run.status !== "active") return;
 
     const input = (overrideInput ?? replyInput).trim();
@@ -278,6 +278,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           credentials: "include",
           body: JSON.stringify({
             input,
+            suppressUserMessage,
             expectedSequence: run.messages?.at(-1)?.sequence,
           }),
         });
@@ -650,7 +651,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                                   type="button"
                                   onClick={() => {
                                     if (!isInteractiveChoiceCard) return;
-                                    void submitReply(option.value);
+                                    void submitReply(option.value, true);
                                   }}
                                   disabled={submitting}
                                   className="rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
