@@ -378,7 +378,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
     let cancelled = false;
 
     async function loadLatestRun() {
-      if (!block.toolKey || !toolMeta || resumeDisabled) return;
+      if (!block.toolKey || !toolMeta || resumeDisabled || contextMode === "standalone") return;
 
       setLoadingRun(true);
       try {
