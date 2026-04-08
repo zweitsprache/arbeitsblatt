@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAiToolDefinition } from "@/ai-tools/registry";
+import { getAiToolBrandProfileId, resolveAiToolBrandProfile } from "@/ai-tools/runtime/brand-context";
 import { createStoredMessageData, serializeAiToolRun } from "@/ai-tools/runtime/server";
 import { AiToolStartRequest } from "@/ai-tools/types";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
   const runId = req.nextUrl.searchParams.get("runId");
   const worksheetBlockId = req.nextUrl.searchParams.get("worksheetBlockId");
   const mode = req.nextUrl.searchParams.get("mode");
+  const brandProfileId = req.nextUrl.searchParams.get("brandProfileId");
 
   if (!toolKey && !runId) {
     return NextResponse.json(
@@ -34,6 +36,18 @@ export async function GET(req: NextRequest) {
               path: ["mode"],
               equals: mode,
             },
+          }
+        : {}),
+      ...(brandProfileId
+        ? {
+            AND: [
+              {
+                context: {
+                  path: ["metadata", "brandProfileId"],
+                  equals: brandProfileId,
+                },
+              },
+            ],
           }
         : {}),
     },
@@ -75,6 +89,8 @@ export async function POST(req: NextRequest) {
     const result = await tool.createRun(body, {
       locale: body.context.locale,
       userId: authResult.userId,
+      brandProfileId: getAiToolBrandProfileId(body.context),
+      brandProfile: await resolveAiToolBrandProfile(body.context),
     });
 
     const createdRun = await prisma.$transaction(async (tx) => {

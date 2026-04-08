@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getBrandPromptContext } from "@/ai-tools/runtime/brand-context";
 import {
+  AiToolBrandProfile,
   AiToolCreateRunResult,
   AiToolDefinition,
   AiToolHandlerContext,
@@ -81,8 +83,13 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
-async function generateFollowUpQuestion(sourceInput: string, locale?: string): Promise<FollowUpQuestionPayload> {
+async function generateFollowUpQuestion(
+  sourceInput: string,
+  locale?: string,
+  brandProfile?: AiToolBrandProfile
+): Promise<FollowUpQuestionPayload> {
   const responseLanguage = getResponseLanguage(locale);
+  const brandContext = getBrandPromptContext(brandProfile);
   const system = `You design exactly one high-leverage follow-up question for an AI workflow.
 
 Your job:
@@ -91,6 +98,8 @@ Your job:
 - The question must collect missing constraints such as audience, tone, level, output format, or instructional goal.
 - Keep it concise and specific.
 - Respond in ${responseLanguage}.
+- If a brand profile is provided, use it as style guidance for tone, audience fit, and wording.
+- Do not expose raw brand metadata unless it is genuinely relevant to the user-facing question.
 
 Return valid JSON only with this exact shape:
 {
@@ -98,7 +107,7 @@ Return valid JSON only with this exact shape:
   "helperText": "..."
 }`;
 
-  const prompt = `Original input:\n\n${sourceInput}`;
+  const prompt = `${brandContext ? `${brandContext}\n\n` : ""}Original input:\n\n${sourceInput}`;
   const text = await generateText(system, prompt);
   const parsed = extractJsonObject(text);
 
@@ -121,8 +130,14 @@ Return valid JSON only with this exact shape:
   };
 }
 
-async function generateFinalResult(sourceInput: string, followUpAnswer: string, locale?: string) {
+async function generateFinalResult(
+  sourceInput: string,
+  followUpAnswer: string,
+  locale?: string,
+  brandProfile?: AiToolBrandProfile
+) {
   const responseLanguage = getResponseLanguage(locale);
+  const brandContext = getBrandPromptContext(brandProfile);
   const system = `You are an educational AI workflow tool.
 
 Your task:
@@ -130,14 +145,22 @@ Your task:
 - Be concrete, useful, and well-structured.
 - Do not describe the workflow; just deliver the result.
 - Use light Markdown for readability.
-- Respond in ${responseLanguage}.`;
+- Respond in ${responseLanguage}.
+- If a brand profile is provided, align the tone, framing, and wording with that brand where helpful.
+- Do not mention hidden brand settings, fonts, or colors unless the task explicitly calls for them.`;
 
-  const prompt = `Original input:\n\n${sourceInput}\n\nFollow-up instruction:\n\n${followUpAnswer}`;
+  const prompt = `${brandContext ? `${brandContext}\n\n` : ""}Original input:\n\n${sourceInput}\n\nFollow-up instruction:\n\n${followUpAnswer}`;
   return generateText(system, prompt);
 }
 
-function getFinalResultPrompt(sourceInput: string, followUpAnswer: string, locale?: string) {
+function getFinalResultPrompt(
+  sourceInput: string,
+  followUpAnswer: string,
+  locale?: string,
+  brandProfile?: AiToolBrandProfile
+) {
   const responseLanguage = getResponseLanguage(locale);
+  const brandContext = getBrandPromptContext(brandProfile);
   return {
     system: `You are an educational AI workflow tool.
 
@@ -146,8 +169,10 @@ Your task:
 - Be concrete, useful, and well-structured.
 - Do not describe the workflow; just deliver the result.
 - Use light Markdown for readability.
-- Respond in ${responseLanguage}.`,
-    prompt: `Original input:\n\n${sourceInput}\n\nFollow-up instruction:\n\n${followUpAnswer}`,
+- Respond in ${responseLanguage}.
+- If a brand profile is provided, align the tone, framing, and wording with that brand where helpful.
+- Do not mention hidden brand settings, fonts, or colors unless the task explicitly calls for them.`,
+    prompt: `${brandContext ? `${brandContext}\n\n` : ""}Original input:\n\n${sourceInput}\n\nFollow-up instruction:\n\n${followUpAnswer}`,
   };
 }
 
@@ -212,7 +237,11 @@ export const dialogueCardsTool: AiToolDefinition = {
     const initialInput = request.initialInput?.trim();
 
     if (initialInput) {
-      const followUp = await generateFollowUpQuestion(initialInput, handlerContext.locale);
+      const followUp = await generateFollowUpQuestion(
+        initialInput,
+        handlerContext.locale,
+        handlerContext.brandProfile
+      );
 
       return {
         state: {
@@ -283,7 +312,11 @@ export const dialogueCardsTool: AiToolDefinition = {
     }
 
     if (step === "waiting_for_source_input") {
-      const followUp = await generateFollowUpQuestion(input, handlerContext.locale);
+      const followUp = await generateFollowUpQuestion(
+        input,
+        handlerContext.locale,
+        handlerContext.brandProfile
+      );
 
       return {
         state: {
@@ -314,7 +347,12 @@ export const dialogueCardsTool: AiToolDefinition = {
       };
     }
 
-    const finalText = await generateFinalResult(sourceInput, input, handlerContext.locale);
+    const finalText = await generateFinalResult(
+      sourceInput,
+      input,
+      handlerContext.locale,
+      handlerContext.brandProfile
+    );
 
     return {
       state: {
@@ -382,7 +420,12 @@ export const dialogueCardsTool: AiToolDefinition = {
       );
     }
 
-    const { system, prompt } = getFinalResultPrompt(sourceInput, input, handlerContext.locale);
+    const { system, prompt } = getFinalResultPrompt(
+      sourceInput,
+      input,
+      handlerContext.locale,
+      handlerContext.brandProfile
+    );
 
     return {
       state: {

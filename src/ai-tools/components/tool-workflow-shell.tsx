@@ -3,6 +3,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, Loader2, RotateCcw, Send } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AiToolMessageRecord,
@@ -38,17 +39,14 @@ interface ChoiceOption {
 interface StoredRequirementAnswerView {
   requirementId: string;
   answer: string;
+  description: string | undefined;
 }
 
-function BewerbungsbriefBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[rgba(28,25,23,0.12)] bg-white/90 px-4 py-3 shadow-[0_10px_30px_rgba(28,25,23,0.05)]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.9)]">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-medium text-[rgba(28,25,23,0.92)]">{value}</div>
-    </div>
-  );
+interface ActiveAiToolBrand {
+  id: string;
+  name: string;
+  primaryColor: string;
+  accentColor?: string;
 }
 
 function MarkdownText({ text }: { text: string }) {
@@ -70,6 +68,7 @@ function MarkdownText({ text }: { text: string }) {
 
 export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
   const t = useTranslations("viewer");
+  const searchParams = useSearchParams();
   const [toolMeta, setToolMeta] = React.useState<AiToolPublicMetadata | null>(null);
   const [run, setRun] = React.useState<AiToolRunRecord | null>(null);
   const [initialInput, setInitialInput] = React.useState("");
@@ -81,6 +80,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [resumeDisabled, setResumeDisabled] = React.useState(false);
+  const [activeBrand, setActiveBrand] = React.useState<ActiveAiToolBrand | null>(null);
 
   const activeQuestion = React.useMemo(() => {
     if (!run?.messages?.length || run.status !== "active") return null;
@@ -116,12 +116,22 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
       "submitMode" in payload && payload.submitMode === "immediate"
         ? "immediate"
         : "manual";
+    const sectionLabel =
+      "sectionLabel" in payload && typeof payload.sectionLabel === "string"
+        ? payload.sectionLabel
+        : undefined;
+    const placeholder =
+      "placeholder" in payload && typeof payload.placeholder === "string"
+        ? payload.placeholder
+        : undefined;
 
     return {
       inputType: inputType === "select" || inputType === "text" ? inputType : "textarea",
       options,
       choiceStyle,
       submitMode,
+      sectionLabel,
+      placeholder,
       variableName:
         "variableName" in payload && typeof payload.variableName === "string"
           ? payload.variableName
@@ -144,20 +154,89 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
         return {
           requirementId: item.requirementId,
           answer: item.answer,
+          description: typeof item.description === "string" ? item.description : undefined,
         };
       })
       .filter((item): item is StoredRequirementAnswerView => item !== null);
   }, [run?.state]);
 
   const isBewerbungsbrief = block.toolKey === "bewerbungsbrief";
+  const brandProfileId = React.useMemo(() => {
+    const value = searchParams.get("brand")?.trim();
+    return value || undefined;
+  }, [searchParams]);
+  const primaryButtonStyle = React.useMemo(() => {
+    const buttonColor = activeBrand?.accentColor || activeBrand?.primaryColor;
+    if (!buttonColor) return undefined;
+
+    return {
+      background: buttonColor,
+      boxShadow: `0 14px 28px ${buttonColor}40`,
+    } as React.CSSProperties;
+  }, [activeBrand]);
 
   const canStartRun = isBewerbungsbrief ? Boolean(startNativeLanguage && startJobAd.trim()) : true;
+  const visibleMessages = React.useMemo(() => {
+    if (!run?.messages?.length) return [] as AiToolMessageRecord[];
 
-  const bewerbungsbriefQuestionMessages = React.useMemo(() => {
-    if (!isBewerbungsbrief || !run?.messages) return [];
+    if (run.status !== "active") {
+      return run.messages;
+    }
 
-    return run.messages.filter((message) => message.kind === "question-card");
-  }, [isBewerbungsbrief, run?.messages]);
+    const lastMessage = run.messages[run.messages.length - 1];
+    if (lastMessage?.kind !== "question-card") {
+      return run.messages;
+    }
+
+    return run.messages.filter((message) => message.id !== lastMessage.id);
+  }, [run]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadBrandProfile() {
+      if (!brandProfileId) {
+        setActiveBrand(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/brands/${brandProfileId}`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          if (!cancelled) setActiveBrand(null);
+          return;
+        }
+
+        const data = (await res.json()) as Record<string, unknown>;
+        if (cancelled) return;
+
+        setActiveBrand(
+          typeof data.id === "string" &&
+            typeof data.name === "string" &&
+            typeof data.primaryColor === "string"
+            ? {
+                id: data.id,
+                name: data.name,
+                primaryColor: data.primaryColor,
+                        accentColor:
+                          typeof data.accentColor === "string" ? data.accentColor : undefined,
+              }
+            : null
+        );
+      } catch {
+        if (!cancelled) setActiveBrand(null);
+      }
+    }
+
+    void loadBrandProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [brandProfileId]);
 
   const bewerbungsbriefActiveQuestion = React.useMemo(() => {
     if (!isBewerbungsbrief || !run?.messages?.length || run.status !== "active") return null;
@@ -172,8 +251,16 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
 
     const rawRequirements = Array.isArray(run.state.requirements) ? run.state.requirements : [];
     const total = rawRequirements.length;
-    const completed = storedRequirementAnswers.length;
-    const current = total > 0 ? Math.min(completed + 1, total) : 0;
+    const completed = storedRequirementAnswers.filter(
+      (answer) => answer.answer === "no" || Boolean(answer.description?.trim())
+    ).length;
+    const step = typeof run.state.step === "string" ? run.state.step : "";
+    const current =
+      total > 0
+        ? step === "waiting_for_requirement_description"
+          ? Math.min(completed + 1, total)
+          : Math.min(completed + 1, total)
+        : 0;
 
     return {
       total,
@@ -181,19 +268,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
       current,
       percent: total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0,
     };
-  }, [isBewerbungsbrief, run, storedRequirementAnswers.length]);
-
-  const bewerbungsbriefNativeLanguage =
-    typeof run?.state.nativeLanguage === "string"
-      ? BEWERBUNGSBRIEF_LANGUAGE_OPTIONS.find((option) => option.value === run.state.nativeLanguage)?.label || run.state.nativeLanguage
-      : startNativeLanguage
-        ? BEWERBUNGSBRIEF_LANGUAGE_OPTIONS.find((option) => option.value === startNativeLanguage)?.label || startNativeLanguage
-        : "";
-
-  const bewerbungsbriefJobAd =
-    typeof run?.state.jobAd === "string" && run.state.jobAd.trim()
-      ? run.state.jobAd.trim()
-      : startJobAd.trim();
+  }, [isBewerbungsbrief, run, storedRequirementAnswers]);
 
   const submitReply = async (overrideInput?: string, suppressUserMessage = false) => {
     if (!run || submitting || run.status !== "active") return;
@@ -450,6 +525,10 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           params.set("worksheetBlockId", block.id);
         }
 
+        if (brandProfileId) {
+          params.set("brandProfileId", brandProfileId);
+        }
+
         const res = await fetch(`/api/ai-tools/runs?${params.toString()}`, {
           credentials: "include",
         });
@@ -481,7 +560,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
     return () => {
       cancelled = true;
     };
-  }, [block.id, block.latestRunId, block.toolKey, contextMode, resumeDisabled, t, toolMeta]);
+  }, [block.id, block.latestRunId, block.toolKey, brandProfileId, contextMode, resumeDisabled, t, toolMeta]);
 
   const createRun = async () => {
     if (!block.toolKey || submitting) return;
@@ -499,6 +578,9 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           context: {
             mode: contextMode,
             worksheetBlockId: contextMode === "worksheet" ? block.id : undefined,
+            metadata: {
+              brandProfileId,
+            },
           },
           initialInput: isBewerbungsbrief ? undefined : initialInput.trim() || undefined,
           initialData: isBewerbungsbrief
@@ -561,7 +643,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
 
   if (!block.toolKey || !toolMeta) {
     return (
-      <div className="text-sm text-muted-foreground text-center py-4">
+      <div className="text-cv-sm text-muted-foreground text-center py-4">
         {error || t("aiToolNotConfigured")}
       </div>
     );
@@ -583,6 +665,14 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
       activeQuestionPayload && typeof activeQuestionPayload.helperText === "string"
         ? activeQuestionPayload.helperText
         : null;
+    const activeQuestionSection =
+      activeQuestionPayload && typeof activeQuestionPayload.sectionLabel === "string"
+        ? activeQuestionPayload.sectionLabel
+        : null;
+    const activeQuestionPlaceholder =
+      activeQuestionPayload && typeof activeQuestionPayload.placeholder === "string"
+        ? activeQuestionPayload.placeholder
+        : undefined;
     const activeOptions =
       activeQuestionPayload && Array.isArray(activeQuestionPayload.options)
         ? activeQuestionPayload.options.filter(
@@ -597,50 +687,43 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
         : [];
 
     return (
-      <div className="relative overflow-hidden rounded-[28px] border border-[rgba(168,162,158,0.24)] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,245,239,0.96))] shadow-[0_28px_80px_rgba(28,25,23,0.08)]">
-        <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(234,179,8,0.18),transparent_58%),radial-gradient(circle_at_top_right,rgba(124,58,237,0.14),transparent_46%)]" />
-        <div className="relative space-y-8 p-6 sm:p-8">
+      <div className="rounded-lg border border-slate-200 bg-white">
+        <div className="space-y-6 p-6 sm:p-8">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.14)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(109,40,217,0.88)]">
+            <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
               <Bot className="h-3.5 w-3.5" />
               Bewerbungsbrief
             </div>
             <div className="max-w-2xl space-y-3">
-              <h1 className="font-serif text-3xl leading-tight text-[rgba(28,25,23,0.95)] sm:text-[2.45rem]">
+              <h1 className="text-cv-2xl font-semibold leading-tight text-slate-900">
                 Schreiben Sie Ihren Bewerbungsbrief Schritt fur Schritt.
               </h1>
-              <p className="max-w-xl text-sm leading-6 text-[rgba(87,83,78,0.92)] sm:text-[15px]">
-                Beginnen Sie mit Ihrer Erstsprache und der Stellenanzeige. Danach gehen wir die Muss-Kriterien einzeln in einer ruhigen, dialogischen Formularansicht durch.
-              </p>
             </div>
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-cv-sm text-red-700">
               {error}
             </div>
           )}
 
           {!run ? (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="rounded-[24px] border border-[rgba(168,162,158,0.28)] bg-white/88 p-5 shadow-[0_18px_50px_rgba(28,25,23,0.06)] sm:p-6">
+            <div className="max-w-3xl">
+              <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
                 <div className="mb-5 space-y-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     Start
                   </div>
-                  <h2 className="text-xl font-semibold text-[rgba(28,25,23,0.94)]">Ihre Ausgangsdaten</h2>
-                  <p className="text-sm leading-6 text-[rgba(87,83,78,0.9)]">
-                    Geben Sie zuerst Ihre Erstsprache und die komplette Stellenanzeige ein. Direkt danach startet die Fragenfolge.
-                  </p>
+                  <h2 className="text-cv-lg font-semibold text-slate-900">Ihre Ausgangsdaten</h2>
                 </div>
 
                 <div className="space-y-5">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-[rgba(41,37,36,0.9)]">Erstsprache</label>
+                    <label className="text-cv-sm font-medium text-slate-700">Erstsprache</label>
                     <select
                       value={startNativeLanguage}
                       onChange={(e) => setStartNativeLanguage(e.target.value)}
-                      className="w-full rounded-2xl border border-[rgba(168,162,158,0.35)] bg-[rgba(250,250,249,0.96)] px-4 py-3 text-sm text-[rgba(28,25,23,0.9)] shadow-sm outline-none transition focus:border-[rgba(124,58,237,0.4)] focus:ring-4 focus:ring-[rgba(167,139,250,0.18)]"
+                      className="w-full rounded-sm border border-slate-200 bg-white px-4 py-3 text-cv-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                     >
                       <option value="">Sprache auswahlen</option>
                       {BEWERBUNGSBRIEF_LANGUAGE_OPTIONS.map((option) => (
@@ -652,106 +735,123 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-[rgba(41,37,36,0.9)]">Stellenanzeige</label>
+                    <label className="text-cv-sm font-medium text-slate-700">Stellenanzeige</label>
                     <textarea
                       value={startJobAd}
                       onChange={(e) => setStartJobAd(e.target.value)}
                       placeholder="Fugen Sie hier die komplette Stellenanzeige ein."
-                      className="min-h-[240px] w-full rounded-2xl border border-[rgba(168,162,158,0.35)] bg-[rgba(250,250,249,0.96)] px-4 py-3 text-sm leading-6 text-[rgba(28,25,23,0.92)] shadow-sm outline-none transition focus:border-[rgba(124,58,237,0.4)] focus:ring-4 focus:ring-[rgba(167,139,250,0.18)]"
+                      className="min-h-[240px] w-full rounded-sm border border-slate-200 bg-white px-4 py-3 text-cv-sm leading-7 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 border-t border-[rgba(168,162,158,0.2)] pt-4">
-                    <p className="text-sm text-[rgba(120,113,108,0.95)]">Die Fragen erscheinen direkt nacheinander.</p>
+                  <div className="border-t border-slate-200 pt-4">
                     <button
                       type="button"
                       onClick={createRun}
                       disabled={submitting || !canStartRun}
-                      className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#7c3aed,#9333ea)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(124,58,237,0.28)] transition hover:translate-y-[-1px] hover:shadow-[0_18px_34px_rgba(124,58,237,0.34)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-slate-900 px-4 py-2 text-cv-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      style={primaryButtonStyle}
                     >
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      Fragen starten
+                      Starten
                     </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-[rgba(168,162,158,0.22)] bg-[rgba(255,255,255,0.72)] p-5 backdrop-blur-sm">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
-                    Ablauf
-                  </div>
-                  <div className="mt-4 space-y-3 text-sm text-[rgba(68,64,60,0.92)]">
-                    <p>1. Sprache und Stellenanzeige erfassen</p>
-                    <p>2. Muss-Kriterien automatisch extrahieren</p>
-                    <p>3. Ja/Nein-Fragen nacheinander beantworten</p>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="space-y-5">
-                {bewerbungsbriefProgress ? (
-                  <div className="rounded-[24px] border border-[rgba(168,162,158,0.24)] bg-white/88 p-5 shadow-[0_18px_50px_rgba(28,25,23,0.06)]">
-                    <div className="flex items-end justify-between gap-4">
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
-                          Fortschritt
-                        </div>
-                        <div className="mt-2 text-lg font-semibold text-[rgba(28,25,23,0.94)]">
-                          {run.status === "completed"
-                            ? "Fragen abgeschlossen"
-                            : `Frage ${bewerbungsbriefProgress.current} von ${bewerbungsbriefProgress.total || 1}`}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={resetRun}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(168,162,158,0.3)] bg-white px-3 py-2 text-sm text-[rgba(87,83,78,0.95)] transition hover:bg-[rgba(245,245,244,0.9)]"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Neu starten
-                      </button>
-                    </div>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-[rgba(231,229,228,0.95)]">
-                      <div
-                        className="h-full rounded-full bg-[linear-gradient(90deg,#f59e0b,#7c3aed)] transition-all duration-300"
-                        style={{ width: `${run.status === "completed" ? 100 : bewerbungsbriefProgress.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
+            <div className="max-w-3xl space-y-5">
                 {run.status === "active" && activeQuestionText ? (
-                  <div className="rounded-[28px] border border-[rgba(168,162,158,0.26)] bg-white/92 p-6 shadow-[0_22px_60px_rgba(28,25,23,0.07)] sm:p-7">
-                    <div className="space-y-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
-                        Aktuelle Frage
+                  <div className="rounded-sm border border-slate-300 bg-white p-6 sm:p-7">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            Aktuelle Frage
+                          </div>
+                          {activeQuestionSection ? (
+                            <div className="inline-flex w-fit rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                              {activeQuestionSection}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {bewerbungsbriefProgress ? (
+                            <div className="text-right">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                Fortschritt
+                              </div>
+                              <div className="mt-1 text-cv-sm font-medium text-slate-700">
+                                {`${bewerbungsbriefProgress.current} / ${bewerbungsbriefProgress.total || 1}`}
+                              </div>
+                            </div>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={resetRun}
+                            className="inline-flex items-center gap-1.5 rounded-sm border border-slate-200 bg-white px-3 py-2 text-cv-sm text-slate-600 transition hover:bg-slate-50"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Neu starten
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-[1.15rem] font-semibold leading-8 text-[rgba(28,25,23,0.95)]">
-                        {activeQuestionText}
+
+                      <div className="space-y-3 border-t border-slate-200 pt-5">
+                        <div className="text-cv-xl font-semibold leading-9 text-slate-950">
+                          {activeQuestionText}
+                        </div>
+                        {activeQuestionTranslation ? (
+                          <div className="max-w-2xl text-cv-sm leading-7 text-slate-600">
+                            {activeQuestionTranslation}
+                          </div>
+                        ) : null}
                       </div>
-                      {activeQuestionTranslation ? (
-                        <div className="text-[15px] leading-7 text-[rgba(87,83,78,0.92)]">
-                          {activeQuestionTranslation}
+
+                      {bewerbungsbriefProgress ? (
+                        <div className="h-1.5 overflow-hidden rounded-sm bg-slate-100">
+                          <div
+                            className="h-full rounded-sm bg-slate-900 transition-all duration-300"
+                            style={{ width: `${bewerbungsbriefProgress.percent}%`, background: activeBrand?.accentColor || activeBrand?.primaryColor || undefined }}
+                          />
                         </div>
                       ) : null}
                     </div>
 
                     {activeOptions.length > 0 ? (
-                      <div className="mt-6 flex flex-wrap gap-3">
+                      <div className="mt-8 grid gap-3 sm:grid-cols-2">
                         {activeOptions.map((option) => (
                           <button
                             key={`bewerbungsbrief-active-${option.value}`}
                             type="button"
                             onClick={() => void submitReply(option.value, true)}
                             disabled={submitting}
-                            className="rounded-full border border-[rgba(168,162,158,0.32)] bg-[rgba(250,250,249,0.96)] px-5 py-3 text-sm font-semibold text-[rgba(41,37,36,0.94)] shadow-sm transition hover:border-[rgba(124,58,237,0.32)] hover:bg-white hover:text-[rgba(109,40,217,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-sm border border-slate-300 bg-white px-4 py-3 text-left text-cv-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {option.label}
                           </button>
                         ))}
+                      </div>
+                    ) : activeQuestion?.inputType === "textarea" ? (
+                      <div className="mt-6 space-y-3">
+                        <textarea
+                          value={replyInput}
+                          onChange={(e) => setReplyInput(e.target.value)}
+                          placeholder={activeQuestionPlaceholder || t("aiToolReplyPlaceholder")}
+                          className="min-h-[170px] w-full rounded-sm border border-slate-200 bg-white px-4 py-3 text-cv-sm leading-7 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={sendReply}
+                            disabled={submitting || !replyInput.trim()}
+                            className="inline-flex items-center gap-2 rounded-sm bg-slate-900 px-4 py-2 text-cv-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            style={primaryButtonStyle}
+                          >
+                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            Weiter
+                          </button>
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -776,90 +876,29 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                       return (
                         <div
                           key={message.id}
-                          className="rounded-[24px] border border-[rgba(168,162,158,0.24)] bg-white/90 p-5 shadow-[0_18px_50px_rgba(28,25,23,0.06)]"
+                          className="rounded-sm border border-slate-200 bg-white p-5"
                         >
                           {titlePayload ? (
-                            <div className="mb-3 text-lg font-semibold text-[rgba(28,25,23,0.95)]">{titlePayload}</div>
+                            <div className="mb-3 text-cv-lg font-semibold text-slate-900">{titlePayload}</div>
                           ) : null}
                           {message.kind === "review-card" && reviewItemsPayload ? (
                             <div className="space-y-3">
                               {reviewItemsPayload.map((item, index) => (
-                                <div key={`${message.id}-${index}`} className="rounded-2xl border border-[rgba(231,229,228,0.95)] bg-[rgba(250,250,249,0.9)] px-4 py-3">
-                                  <div className="text-sm font-semibold text-[rgba(41,37,36,0.95)]">{String(item.label)}</div>
-                                  <div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[rgba(87,83,78,0.92)]">{String(item.value)}</div>
+                                <div key={`${message.id}-${index}`} className="rounded-sm border border-slate-200 bg-slate-50 px-4 py-3">
+                                  <div className="text-cv-sm font-semibold text-slate-900">{String(item.label)}</div>
+                                  <div className="mt-1 whitespace-pre-wrap text-cv-sm leading-7 text-slate-600">{String(item.value)}</div>
                                 </div>
                               ))}
                             </div>
                           ) : null}
                           {message.kind === "result-card" && textPayload ? (
-                            <div className="whitespace-pre-wrap text-sm leading-6 text-[rgba(68,64,60,0.95)]">{textPayload}</div>
+                            <div className="whitespace-pre-wrap text-cv-sm leading-7 text-slate-700">{textPayload}</div>
                           ) : null}
                         </div>
                       );
                     })}
                   </div>
                 ) : null}
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-[rgba(168,162,158,0.22)] bg-[rgba(255,255,255,0.72)] p-5 backdrop-blur-sm">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
-                    Kontext
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {bewerbungsbriefNativeLanguage ? (
-                      <BewerbungsbriefBadge label="Erstsprache" value={bewerbungsbriefNativeLanguage} />
-                    ) : null}
-                    {bewerbungsbriefJobAd ? (
-                      <div className="rounded-2xl border border-[rgba(28,25,23,0.12)] bg-white/90 px-4 py-3 shadow-[0_10px_30px_rgba(28,25,23,0.05)]">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.9)]">
-                          Stellenanzeige
-                        </div>
-                        <div className="mt-2 max-h-[240px] overflow-auto whitespace-pre-wrap text-sm leading-6 text-[rgba(87,83,78,0.92)]">
-                          {bewerbungsbriefJobAd}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {bewerbungsbriefQuestionMessages.length > 0 ? (
-                  <div className="rounded-[24px] border border-[rgba(168,162,158,0.22)] bg-[rgba(255,255,255,0.72)] p-5 backdrop-blur-sm">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(120,113,108,0.95)]">
-                      Verlauf
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {bewerbungsbriefQuestionMessages.map((message, index) => {
-                        const payload = message.payload;
-                        const question = "question" in payload && typeof payload.question === "string" ? payload.question : "";
-                        const variableName = "variableName" in payload && typeof payload.variableName === "string" ? payload.variableName : "";
-                        const answer = variableName.startsWith("requirement_")
-                          ? storedRequirementAnswers.find((entry) => `requirement_${entry.requirementId}` === variableName)?.answer
-                          : undefined;
-                        const isCurrent = bewerbungsbriefActiveQuestion?.id === message.id;
-
-                        return (
-                          <div
-                            key={message.id}
-                            className={
-                              isCurrent
-                                ? "rounded-2xl border border-[rgba(124,58,237,0.2)] bg-[rgba(245,243,255,0.9)] px-4 py-3"
-                                : "rounded-2xl border border-[rgba(231,229,228,0.95)] bg-[rgba(250,250,249,0.9)] px-4 py-3"
-                            }
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="text-sm leading-6 text-[rgba(41,37,36,0.92)]">{question}</div>
-                              <div className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(120,113,108,0.95)]">
-                                {answer ? "Erledigt" : isCurrent ? "Aktiv" : `Frage ${index + 1}`}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
           )}
         </div>
@@ -868,24 +907,54 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 text-violet-500" />
-        <h3 className="text-base font-semibold">{title}</h3>
+        <Bot className="h-4 w-4 text-slate-500" />
+        <h3 className="text-cv-sm font-semibold">{title}</h3>
       </div>
 
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {description && <p className="text-cv-sm text-muted-foreground">{description}</p>}
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-sm p-3">
+        <div className="text-cv-sm text-red-600 bg-red-50 border border-red-200 rounded-sm p-3">
           {error}
         </div>
       )}
 
       {run ? (
         <>
+          {run.status === "active" && activeQuestion && (
+            <div className="rounded-sm border border-slate-300 bg-white p-4 sm:p-5">
+              <div className="space-y-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Aktuelle Frage
+                </div>
+                {"sectionLabel" in (run.messages?.[run.messages.length - 1]?.payload || {}) &&
+                typeof (run.messages?.[run.messages.length - 1]?.payload as Record<string, unknown>).sectionLabel === "string" ? (
+                  <div className="inline-flex w-fit rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    {String((run.messages?.[run.messages.length - 1]?.payload as Record<string, unknown>).sectionLabel)}
+                  </div>
+                ) : null}
+                {run.messages?.[run.messages.length - 1]?.kind === "question-card" &&
+                "question" in (run.messages[run.messages.length - 1]?.payload || {}) &&
+                typeof (run.messages[run.messages.length - 1]?.payload as Record<string, unknown>).question === "string" ? (
+                  <div className="text-cv-lg font-semibold leading-8 text-slate-950">
+                    {String((run.messages[run.messages.length - 1]?.payload as Record<string, unknown>).question)}
+                  </div>
+                ) : null}
+                {run.messages?.[run.messages.length - 1]?.kind === "question-card" &&
+                "helperText" in (run.messages[run.messages.length - 1]?.payload || {}) &&
+                typeof (run.messages[run.messages.length - 1]?.payload as Record<string, unknown>).helperText === "string" ? (
+                  <p className="text-cv-sm text-muted-foreground">
+                    {String((run.messages[run.messages.length - 1]?.payload as Record<string, unknown>).helperText)}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
-            {(run.messages || []).map((message) => {
+            {visibleMessages.map((message) => {
               const isUser = message.role === "user";
               const textPayload =
                 "text" in message.payload && typeof message.payload.text === "string"
@@ -975,9 +1044,10 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                   <div
                     className={
                       isUser
-                        ? "max-w-[85%] rounded-md px-3.5 py-3 text-[15px] leading-relaxed shadow-sm bg-violet-600 text-white"
-                        : "max-w-[88%] rounded-md px-3.5 py-3 text-[15px] leading-relaxed shadow-sm bg-[rgba(245,245,244,0.9)] text-slate-800"
+                        ? "max-w-[85%] rounded-sm px-3.5 py-3 text-[15px] leading-relaxed bg-slate-900 text-white"
+                        : "max-w-[88%] rounded-sm border border-slate-200 px-3 py-2.5 text-[15px] leading-relaxed bg-slate-50/45 text-slate-700"
                     }
+                    style={isUser ? primaryButtonStyle : undefined}
                   >
                     {message.kind === "assistant-text" && textPayload ? (
                       <MarkdownText text={textPayload} />
@@ -991,7 +1061,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                       <div className="space-y-3">
                         <p className="font-medium">{questionPayload}</p>
                         {helperTextPayload && (
-                          <p className="text-sm text-muted-foreground">{helperTextPayload}</p>
+                          <p className="text-cv-sm text-muted-foreground">{helperTextPayload}</p>
                         )}
 
                         {choiceStylePayload === "buttons" && optionsPayload.length > 0 ? (
@@ -1006,7 +1076,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                                     void submitReply(option.value, true);
                                   }}
                                   disabled={submitting}
-                                  className="rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="rounded-sm border border-slate-200 bg-white px-3 py-1.5 text-cv-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {option.label}
                                 </button>
@@ -1031,7 +1101,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                         <p className="font-medium">{String(titlePayload || "")}</p>
                         <div className="space-y-1.5">
                           {reviewItemsPayload.map((item, index) => (
-                            <div key={`${message.id}-${index}`} className="rounded-sm border border-slate-200 bg-white/70 px-3 py-2 text-sm">
+                            <div key={`${message.id}-${index}`} className="rounded-sm border border-slate-200 bg-white/70 px-3 py-2 text-cv-sm">
                               <div className="font-medium">{String(item.label)}</div>
                               <div className="text-muted-foreground whitespace-pre-wrap">{String(item.value)}</div>
                             </div>
@@ -1075,7 +1145,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
             <button
               type="button"
               onClick={resetRun}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-slate-200 text-slate-600 text-cv-sm hover:bg-slate-50 transition-colors"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               {t("aiToolNewRun")}
@@ -1088,7 +1158,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                 <select
                   value={replyInput}
                   onChange={(e) => setReplyInput(e.target.value)}
-                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-cv-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
                 >
                   <option value="" disabled>
                     {t("aiToolReplyPlaceholder")}
@@ -1105,21 +1175,22 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                   value={replyInput}
                   onChange={(e) => setReplyInput(e.target.value)}
                   placeholder={t("aiToolReplyPlaceholder")}
-                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-cv-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
                 />
               ) : (
                 <textarea
                   value={replyInput}
                   onChange={(e) => setReplyInput(e.target.value)}
                   placeholder={t("aiToolReplyPlaceholder")}
-                  className="w-full min-h-[88px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  className="w-full min-h-[88px] p-3 rounded-sm border border-slate-200 bg-white text-cv-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
                 />
               )}
               <button
                 type="button"
                 onClick={sendReply}
                 disabled={submitting || !replyInput.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-slate-900 text-white text-cv-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={primaryButtonStyle}
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {t("aiToolSubmit")}
@@ -1132,11 +1203,11 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
           {isBewerbungsbrief ? (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Erstsprache</label>
+                <label className="text-cv-sm font-medium text-slate-700">Erstsprache</label>
                 <select
                   value={startNativeLanguage}
                   onChange={(e) => setStartNativeLanguage(e.target.value)}
-                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  className="w-full rounded-sm border border-slate-200 bg-white p-3 text-cv-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
                 >
                   <option value="">Sprache auswahlen</option>
                   {BEWERBUNGSBRIEF_LANGUAGE_OPTIONS.map((option) => (
@@ -1147,12 +1218,12 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Stellenanzeige</label>
+                <label className="text-cv-sm font-medium text-slate-700">Stellenanzeige</label>
                 <textarea
                   value={startJobAd}
                   onChange={(e) => setStartJobAd(e.target.value)}
                   placeholder="Paste the full job ad here."
-                  className="w-full min-h-[180px] rounded-sm border border-slate-200 bg-white p-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  className="w-full min-h-[180px] rounded-sm border border-slate-200 bg-white p-3 text-cv-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
                 />
               </div>
             </>
@@ -1161,7 +1232,7 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
               value={initialInput}
               onChange={(e) => setInitialInput(e.target.value)}
               placeholder={t("aiToolInputPlaceholder")}
-              className="w-full min-h-[120px] p-3 rounded-sm border border-slate-200 bg-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
+              className="w-full min-h-[120px] p-3 rounded-sm border border-slate-200 bg-white text-cv-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-300"
             />
           )}
           <div className="flex items-center gap-2">
@@ -1169,7 +1240,8 @@ export function ToolWorkflowShell({ block }: ToolWorkflowShellProps) {
               type="button"
               onClick={createRun}
               disabled={submitting || !canStartRun}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-slate-900 text-white text-cv-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={primaryButtonStyle}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {t("aiToolStart")}

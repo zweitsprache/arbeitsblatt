@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getAiToolDefinition } from "@/ai-tools/registry";
+import { getAiToolBrandProfileId, resolveAiToolBrandProfile } from "@/ai-tools/runtime/brand-context";
 import {
   createStoredMessageData,
   serializeRunContext,
@@ -69,6 +70,8 @@ export async function POST(
             ? ((run.context as Record<string, unknown>).locale as string)
             : undefined,
         userId: authResult.userId,
+        brandProfileId: getAiToolBrandProfileId(run.context),
+        brandProfile: await resolveAiToolBrandProfile(run.context),
       }
     );
 

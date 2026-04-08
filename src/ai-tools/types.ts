@@ -1,5 +1,16 @@
 export type AiToolRunStatus = "active" | "completed" | "error" | "archived";
 
+export interface AiToolBrandProfile {
+  id: string;
+  name: string;
+  slug: string;
+  organization: string;
+  teacher: string;
+  pageTitle?: string | null;
+  primaryColor: string;
+  accentColor?: string | null;
+}
+
 export type AiToolCardKind =
   | "assistant-text"
   | "user-text"
@@ -48,6 +59,8 @@ export interface QuestionCard
   extends AiToolBaseCard<{
     question: string;
     helperText?: string;
+    sectionLabel?: string;
+    placeholder?: string;
     inputType?: "text" | "textarea" | "select";
     options?: Array<{ label: string; value: string }>;
     choiceStyle?: "dropdown" | "buttons";
@@ -172,6 +185,8 @@ export interface AiToolReplyRequest {
 export interface AiToolHandlerContext {
   locale?: string;
   userId?: string;
+  brandProfileId?: string;
+  brandProfile?: AiToolBrandProfile;
 }
 
 export interface AiToolCreateRunResult {

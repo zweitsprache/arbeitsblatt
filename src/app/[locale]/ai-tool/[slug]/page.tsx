@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { getAiToolDefinition } from "@/ai-tools/registry";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { AiToolBlock } from "@/types/worksheet";
 
@@ -12,6 +11,7 @@ export default async function AiToolStandalonePage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
+  const { getAiToolDefinition } = await import("@/ai-tools/registry");
   const tool = getAiToolDefinition(slug);
   if (!tool) notFound();
 
