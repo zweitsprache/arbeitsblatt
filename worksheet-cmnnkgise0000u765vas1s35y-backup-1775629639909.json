@@ -1,0 +1,752 @@
+{
+  "worksheetId": "cmnnkgise0000u765vas1s35y",
+  "title": "FAF | Stellenportale",
+  "updatedAt": "2026-04-08T06:21:27.104Z",
+  "blocks": [
+    {
+      "id": "40376c76-86ec-4dd9-a3fc-4cfd68a6d141",
+      "type": "text",
+      "content": "<p>FAF | MODUL 3</p>",
+      "textStyle": "metadaten",
+      "visibility": "both",
+      "skipTranslation": true,
+      "bilingualDivider": false
+    },
+    {
+      "id": "162dc963-1f6f-4c59-a0fe-a3a1d484c7c3",
+      "type": "heading",
+      "level": 1,
+      "content": "Stellenportale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "267ba356-942b-44f7-950f-e0913e01524a",
+      "type": "heading",
+      "level": 2,
+      "content": "Allgemeine Portale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "198efc9f-5d8b-4998-942e-c85a0500754c",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505724222-0",
+          "url": "https://www.arbeit.swiss",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-3dPxrgbQvv2AUw3dxI8FAki2Al1KfG.png",
+          "title": "Arbeit.swiss (Job-Room)",
+          "category": "Offizielles Portal des SECO zur Arbeitsvermittlung und Umsetzung der Stellenmeldepflicht.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "SECO",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "79d3b9a5-9700-4a05-8b4f-82092491eb21",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505724222-0",
+          "url": "https://www.arbeit.swiss",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-3dPxrgbQvv2AUw3dxI8FAki2Al1KfG.png",
+          "title": "Arbeit.swiss (Job-Room)",
+          "category": "Offizielles Portal des SECO zur Arbeitsvermittlung und Umsetzung der Stellenmeldepflicht.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724223-1",
+          "url": "https://www.glassdoor.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-MGWScf0y1QkuxRGBlotJHgnq2jhL3M.png",
+          "title": "Glassdoor Schweiz",
+          "category": "Internationale Plattform mit Stellenanzeigen und anonymen Arbeitgeberbewertungen sowie Gehaltseinblicken.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724223-2",
+          "url": "https://ch.indeed.com",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-CEIKqw1DTGq8QnuRnj1aFRhPcjoFDC.png",
+          "title": "Indeed Schweiz",
+          "category": "Globaler Job-Aggregator und Metasuchmaschine mit grosser Reichweite.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724223-3",
+          "url": "https://www.jobagent.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-3-BdjzLD2trniYsMftYNd516xmkOUa6C.png",
+          "title": "jobagent.ch",
+          "category": "Schweizer Job-Suchmaschine bzw. Metasuchmaschine mit sehr breiter Reichweite und Job-Abo.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724224-4",
+          "url": "https://www.jobchannel.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-4-WcBmqGWtwQ3oPO8vKR64US7HdcQRmZ.png",
+          "title": "Jobchannel",
+          "category": "Umfassendes Netzwerk für die Stellensuche in der Schweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724225-6",
+          "url": "https://www.jobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-5-KPebLrKsAjM0reILjBTG18yTatLcNe.png",
+          "title": "jobs.ch",
+          "category": "Führende Schweizer Jobplattform für alle Branchen mit Lohnrechner und Firmenbewertungen.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724225-7",
+          "url": "https://www.jobscout24.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-6-x000QQy8JDK1bHS9atmJSOk2li1zOa.png",
+          "title": "JobScout24.ch",
+          "category": "Schweizer Stellenmarkt und Aggregator mit integriertem Bewerbermanagementsystem.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724225-8",
+          "url": "https://www.jobup.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-7-9ZX1Ch2hYleDeCby2aKAD30DBzQAjY.png",
+          "title": "jobup.ch",
+          "category": "Führende Stellenplattform für die Westschweiz (Romandie) in allen Industrien.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724225-9",
+          "url": "https://jobwinner.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-8-K13uwpvSuy9qoYCOK43tEnL9me2rh4.png",
+          "title": "jobwinner.ch",
+          "category": "Breite Schweizer Stellenplattform mit berufsgruppenorientierter Suche.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724226-10",
+          "url": "https://www.linkedin.com",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-9-NtLTGgHwQTIOi0vSplvqUAt1kPfsDJ.png",
+          "title": "LinkedIn Schweiz",
+          "category": "Grösstes Karrierenetzwerk für Active Sourcing und professionelles Networking.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724226-11",
+          "url": "https://www.monster.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-10-pt24EJFXbznsYPj1ZvZPVAWuljxKTs.png",
+          "title": "Monster Schweiz",
+          "category": "Internationale Jobbörse mit breitem Stellenangebot für den Schweizer Markt.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505724226-13",
+          "url": "https://www.xing.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-11-VrQIGTTC4dbKpvUHjlTi5c394GyUn6.png",
+          "title": "XING Schweiz",
+          "category": "Berufliches Netzwerk für den DACH-Raum mit starkem Fokus auf die Deutschschweiz.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "National – alle Branchen",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "080c9e5e-38c7-49de-94fc-d0cea7a89ed2",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504302081-0",
+          "url": "https://jobtic.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-KxyXoYTfR4mvDnyhjGEodTQY6THqv0.png",
+          "title": "jobtic.ch",
+          "category": "Französischsprachige Schweiz",
+          "description": ""
+        },
+        {
+          "id": "website-1775504302082-1",
+          "url": "https://www.myjob.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-1KSjCs0uzDVkfLvie4jrWuScVE5eY8.png",
+          "title": "myjob.ch",
+          "category": "Nordwestschweiz",
+          "description": ""
+        },
+        {
+          "id": "website-1775504302082-2",
+          "url": "https://www.ostjob.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-mIrABi1deO4y87iqHI97gPhCLpfgWa.png",
+          "title": "ostjob.ch",
+          "category": "Ostschweiz (SG, TG, AI, AR, ZH, GR)",
+          "description": ""
+        },
+        {
+          "id": "website-1775504302082-4",
+          "url": "https://www.stellen-bern.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-3-jpDTjg1aDbTNr4wZrnh8WJ32SERXQg.png",
+          "title": "stellen-bern.ch",
+          "category": "Bern, Solothurn, Thun, Biel",
+          "description": ""
+        },
+        {
+          "id": "website-1775504302082-5",
+          "url": "https://www.zentraljob.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-4-77ZAlibkyCyJ5YGFjWgzixOVb3Yj84.png",
+          "title": "zentraljob.ch",
+          "category": "Zentralschweiz (LU, ZG, SZ, UR, NW, OW)",
+          "description": ""
+        }
+      ],
+      "level": 2,
+      "title": "Regional | alle Branchen",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "6327b9e9-523a-42db-b740-6159559c7e09",
+      "type": "heading",
+      "level": 1,
+      "content": "Spezialportale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "900efcc3-fc4a-40cb-8ed4-47b0d4a574e7",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504604026-0",
+          "url": "https://www.alpha.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-3yqhMTpkDuBPK0G7MuhrEnHsf9V1qZ.png",
+          "title": "alpha.ch",
+          "category": "Spezialisiertes Jobportal für Führungskräfte und hochqualifizierte Fachspezialisten.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504604026-1",
+          "url": "https://jobs.nzz.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-BChacHutx1GxahXQnuib6NXjUDGmmp.png",
+          "title": "NZZJOBS",
+          "category": "Portal für Fach- und Führungskräfte in der Deutschschweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504604026-2",
+          "url": "https://topjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-PMbJh4KxsXu2QZbTvLZXe6KlUYvA0Z.png",
+          "title": "topjobs.ch",
+          "category": "Schweizer Stellenportal für Fach- und Führungskräfte mit Kader-Fokus.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Führungskräfte und Fachspezialisten",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "9ecce75a-c22d-40df-aec7-7ebd5f920620",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504638949-0",
+          "url": "https://www.berufsberatung.ch/dyn/show/2930",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-3pzbBlybGR5TntboAYIOOrUXFjbDQl.png",
+          "title": "berufsberatung.ch – LENA",
+          "category": "Offizieller Lehrstellennachweis mit freien Lehrstellen in der ganzen Schweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504638949-1",
+          "url": "https://www.e-chance.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-PCYtuGDUOF8x6R5ieINSfRqVhFoAsI.png",
+          "title": "e-chance.ch",
+          "category": "Lehrstellenportal für Elektrik und Gebäudeinformatik",
+          "description": ""
+        },
+        {
+          "id": "website-1775504638949-2",
+          "url": "https://www.yousty.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-fKey1LhOXgdxccxUkmnmxySGbHCzvd.png",
+          "title": "Yousty",
+          "category": "Führende Plattform für die Suche nach Lehrstellen in der Schweiz.",
+          "description": ""
+        }
+      ],
+      "level": 2,
+      "title": "Lehrstellen und Berufsbildung",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "ef947d72-0704-4ca3-96a2-e8fa1ab863ba",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504676926-0",
+          "url": "https://joinup.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-Ir4F4ubXQGG960Ys9jL3aKHxdxXtKe.png",
+          "title": "Joinup",
+          "category": "Startup-Jobplattform, getragen vom ETH Entrepreneur Club und Swisspreneur.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504676926-1",
+          "url": "https://www.startup.ch/jobs",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-s5ikiNXZu1g6S9FAzsR7mjuBRdJRca.png",
+          "title": "startup.ch Jobs",
+          "category": "Plattform für Jobs und Praktika in innovativen Startups.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504676926-2",
+          "url": "https://www.talendo.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-H90G5SnbfC5KuXVA87SXDRnNspKOa0.png",
+          "title": "talendo",
+          "category": "Job- und Karriereplattform für Studierende, Absolventen und Young Professionals.",
+          "description": ""
+        }
+      ],
+      "level": 2,
+      "title": "Studierende, Absolventen und Startups",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "a6c09c62-72ea-4c99-8309-7580b8eaebd8",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504694411-0",
+          "url": "https://www.jobs.admin.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-7kO1S8EPhUz6CQLnhrrguKzcC4P2yI.png",
+          "title": "jobs.admin.ch",
+          "category": "Offizielles Stellenportal der Schweizerischen Bundesverwaltung.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504694411-1",
+          "url": "https://www.publicjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-vOjZNyyFA6kDiUzN2jUNrPHpWT4BXX.png",
+          "title": "publicjobs.ch",
+          "category": "Zentrales Stellenportal für den öffentlichen Sektor: Bund, Kantone und Gemeinden.",
+          "description": ""
+        }
+      ],
+      "level": 2,
+      "title": "Öffentliche Verwaltung",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "f8d6ce94-4d01-401a-9355-c95daa7bdb86",
+      "type": "heading",
+      "level": 2,
+      "content": "Branchenspezifische Portale",
+      "visibility": "both"
+    },
+    {
+      "id": "82b81860-294e-4b86-96fb-f18bd55250ed",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504750660-0",
+          "url": "https://www.baujobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-fYpGVJvDzrPgsAkCdKsYtfGLz0tomu.png",
+          "title": "baujobs.ch",
+          "category": "Führende Jobbörse der Baubranche für Fachkräfte im Hoch-, Tief- und Ausbau.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Architektur und Bauwesen",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "e93d166d-367d-46f4-8bd5-76b6bae8a738",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504759123-0",
+          "url": "https://www.efinancialcareers.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-WEn9NudJfpOiaD4zOpOEIs4sj6c8UA.png",
+          "title": "eFinancialCareers CH",
+          "category": "Spezialisiert auf Fachkräfte im Finanzwesen und Bankensektor.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504759123-1",
+          "url": "https://www.financejobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-Ep24YrzNTDBJKGtVGxkZcGzzmftkT9.png",
+          "title": "financejobs.ch",
+          "category": "Spezialisiertes Portal für Fachkräfte im Schweizer Finanzsektor und Rechnungswesen.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Banken, Finanzen und Versicherungen",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "564bd270-0a61-4b2c-8190-9cf19543d674",
+      "type": "website",
+      "items": [
+        {
+          "id": "547f4322-05d1-48f4-b204-06a94b3e1d99",
+          "url": "https://www.lernwerkstatt.ch/stellenplattform/stellenangebote-bildungsfachleute",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-gJ2QF1oDhhiSe27p3gUGsaf3pTO9jW.png",
+          "title": "Lernwerkstatt",
+          "category": "Stellenportal für Erwachsenenbildung",
+          "description": "",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "website-1775504779843-0",
+          "url": "https://www.schuljobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-jJt4PHt6pYW8eEUm5Tb0RgtCB08bfD.png",
+          "title": "schuljobs.ch",
+          "category": "Grösstes Schweizer Jobportal für das Bildungswesen von Primar- bis Hochschule.",
+          "description": ""
+        },
+        {
+          "id": "ee6389bb-da87-485c-a289-661cfb839f23",
+          "url": "https://alice.ch/de/dienstleistungen/stellenmarkt/",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-ZU7uB3yXzxoeWXp8PqJ7PyVIiqBN1t.png",
+          "title": "SVEB",
+          "category": "Stellenmarkt des Schweizerischen Verbands für Weiterbildung",
+          "description": "",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 3,
+      "title": "Bildung und Unterricht",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "5681cd8a-68be-4387-8764-3b757b383131",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504788651-0",
+          "url": "https://www.cinfo.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-OeXtbFlFen5tbesdwhqmhceiMoFhf0.png",
+          "title": "cinfo.ch",
+          "category": "Zentrum für Karrieren in der internationalen Zusammenarbeit und humanitären Hilfe.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504788651-1",
+          "url": "https://www.kampajobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-kHuE0ob0FZXqjjzWVQzEyxCJCbT9M6.png",
+          "title": "Kampajobs",
+          "category": "Online-Jobbörse für Non-Profit-Organisationen, Stiftungen und Verbände.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Entwicklungszusammenarbeit und NGO/NPO",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "4f2202eb-963e-4f57-a647-aa166b2bf334",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504811741-0",
+          "url": "https://www.gastrojobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-DwXT3DKJaTyL7MDZerCB4B6wgKz9RB.png",
+          "title": "gastrojobs.ch",
+          "category": "Jobportal speziell für die Gastronomiebranche in der Schweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504811741-1",
+          "url": "https://www.hotelcareer.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-CCvD2i4XJ3ZFKHSMmCZdQHopRdl1gQ.png",
+          "title": "HotelCareer",
+          "category": "Spezialisiertes Portal für Berufe im Hotel- und Gastgewerbe.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504811741-2",
+          "url": "https://www.hoteljob.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-uKpH7Dw2hj5MLwrfCwjUkC7f47LAEE.png",
+          "title": "hoteljob.ch",
+          "category": "Stellenmarkt für Berufe im Schweizer Gastgewerbe und Tourismus.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Gastronomie und Hotellerie",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "b02b3da2-74d0-42c6-bec6-3bf92f80ba1c",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504828918-0",
+          "url": "https://www.medtalents.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-vjYLz2ZAwhjD9x2hzYdQLtryzXUIPx.png",
+          "title": "medtalents.ch",
+          "category": "Stellenangebote für Fachkräfte aus dem gesamten Gesundheitsbereich.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504828918-1",
+          "url": "https://www.praxisstellen.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-wmDqEExoMQXfbEoCTfBjmRElJlCVdf.png",
+          "title": "Praxisstellen.ch",
+          "category": "Portal für medizinisches Praxispersonal wie MPA, Arztsekretärinnen und Zahnmedizin.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504828918-2",
+          "url": "https://www.sozialinfo.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-zcLVUtSJxXGHo9g1QQzCQZrGPK4Bnr.png",
+          "title": "Sozialinfo",
+          "category": "Grösstes Stellenportal für den Sozialbereich in der Schweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504828918-3",
+          "url": "https://www.sozjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-3-fhgfNvLoCg8n3pN0fIHbqNt0laqy70.png",
+          "title": "sozjobs.ch",
+          "category": "Jobportal für Sozial- und Gesundheitsberufe, getragen von Branchenverbänden.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Gesundheit, Soziales und Sozialwesen",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "1298e7f5-36fb-4148-ae38-ffabd0d5e3b8",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504846221-0",
+          "url": "https://www.ictjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-uQi9klzm2C6Ao2mxCWFhB9OiVpuQi0.png",
+          "title": "ictjobs.ch",
+          "category": "Spezialisierte Nischenbörse für ICT-Fach- und Führungskräfte in der Schweiz.",
+          "description": ""
+        },
+        {
+          "id": "website-1775504846221-1",
+          "url": "https://www.swissdevjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-h5J597jwLj9MB2XVo7Wgdxm6Dkkgfw.png",
+          "title": "SwissDevJobs.ch",
+          "category": "Transparentes IT-Jobboard für Software-Entwickler mit Gehaltsangaben.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "ICT, Informatik und Software-Engineering",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "e6cb95a7-3fd1-4f09-90df-3fafede276f8",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504856922-0",
+          "url": "https://www.swissengineering.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-6dOcB9221G5BjIHrc53RuP2sr0RYMt.png",
+          "title": "swissengineering.ch",
+          "category": "Stellenbörse des Berufsverbands Swiss Engineering für technische Fachkräfte.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Ingenieurwesen und Technik",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "945a92fb-677f-46ac-a0bd-a6734773603b",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504871556-0",
+          "url": "https://www.medienjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-JI6hDFf31fGgqyC4gjyKvYEaev8SDI.png",
+          "title": "medienjobs.ch",
+          "category": "Jobbörse für die Medien- und Kommunikationsbranche in der Schweiz.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Kommunikation, Marketing und Medien",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "f7218c87-22ac-4f03-8b30-775e7ed6cf5a",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504881132-0",
+          "url": "https://www.agrarjobs.ch/de",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-1rU3H4Qqp5NYFieAFErU7JI8gQvTCC.png",
+          "title": "agrarjobs.ch",
+          "category": "Stellenportal für die Schweizer Landwirtschaft.",
+          "description": ""
+        },
+        {
+          "id": "981826c6-4bd1-46f1-9c8c-c1946d5e662f",
+          "url": "https://www.bauern-sg.ch/de/Dienstleistungen/Stellenportal-Landjob.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-iNJMga0v7dEwRbCOFgJFgthIHQ9Xxv.png",
+          "title": "landjobs.ch",
+          "category": "Stellen im Landwirtschaftsbereich in der Region St. Gallen",
+          "description": "",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 3,
+      "title": "Landwirtschaft",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "3c0f9380-6827-4c45-b114-1a1a97676df9",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504974634-0",
+          "url": "https://www.pharmajobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-2z8e42bFtnCjoXefimg7obdweBPDIv.png",
+          "title": "pharmajobs.ch",
+          "category": "Nischenportal für Fach- und Führungskräfte in der Pharma- und Life-Sciences-Branche.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Pharma und Life Sciences",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "9188ea93-12b1-4673-a701-8d045de981e3",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775504994998-0",
+          "url": "https://www.lawjobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-jHTwGEFYIGLfAp3NVMlnwfsmcfPR0y.png",
+          "title": "lawjobs.ch",
+          "category": "Führende Schweizer Online-Stellenbörse für juristische Berufe von Weblaw.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Recht",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "13904c91-870e-4c55-94e4-063a73545ce9",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505008055-0",
+          "url": "https://jobs.sbb.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-KKYBsX9JOO4ZH1MavUGCgXntJTgRwi.png",
+          "title": "jobs.sbb.ch",
+          "category": "Karriereportal der SBB für Stellen im öffentlichen Verkehr und Eisenbahnwesen.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Transport und Logistik",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "c24030ef-d408-4de9-bb97-8f087dfed0ca",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505024438-0",
+          "url": "https://naturschutz.ch/jobliste",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-06hq1DWDB9XPSWSJ7X3uI81sWAJvyB.png",
+          "title": "Naturschutz.ch Jobliste",
+          "category": "Nischenportal mit Jobliste für Naturschutz- und angrenzende Umweltberufe.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505024438-1",
+          "url": "https://www.umweltprofis.ch/jobs",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-0MOTFDjCl3PGP9NEV5ehZ4icHCEmFR.png",
+          "title": "Umweltprofis",
+          "category": "Branchenportal für Umwelt-Jobs in der Schweiz.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Umwelt und Naturschutz",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "c7cc1584-2f1b-4ed4-b915-f4b74c8a2190",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505037834-0",
+          "url": "https://www.jobs4sales.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-X7otmIUKl1Htz7mOqDnCeaguuW8PB4.png",
+          "title": "Jobs4Sales.ch",
+          "category": "Spezialportal exklusiv für Sales-Profis, Aussendienst und Telesales.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Verkauf und Vertrieb",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "d8866324-5164-478b-9e90-4a99fbf4e65b",
+      "type": "website",
+      "items": [
+        {
+          "id": "website-1775505146219-0",
+          "url": "https://academics.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-0-ozYGL10IGI9xgMx6tUxuCfSNH6Vyoa.png",
+          "title": "academics.ch",
+          "category": "Karriereportal für akademische Talente in Wissenschaft, Forschung und Hochschulen.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505146219-1",
+          "url": "https://www.euraxess.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-1-26tPP08LRQDqxbge0g0CJSESHM68vj.png",
+          "title": "EURAXESS Switzerland",
+          "category": "Portal für Forschende mit Stellen- und Fördermöglichkeiten.",
+          "description": ""
+        },
+        {
+          "id": "website-1775505146219-2",
+          "url": "https://www.science-jobs.ch",
+          "image": "https://qbxvt3lvtcmzepf4.public.blob.vercel-storage.com/website-2-SR46jeQit0ebzsIknlHelcuh5Ggbis.png",
+          "title": "jobs.myScience",
+          "category": "Schweizer Wissenschafts-Jobportal für Forschende, Scientists und Engineers.",
+          "description": ""
+        }
+      ],
+      "level": 3,
+      "title": "Wissenschaft, Forschung und Hochschulen",
+      "bilingual": true,
+      "visibility": "both"
+    }
+  ]
+}

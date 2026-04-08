@@ -1,0 +1,294 @@
+## National – alle Branchen
+"100000jobs.ch","https://www.100000jobs.ch/","Schweizer Jobplattform mit über 100'000 Stellenangeboten aus allen Branchen."
+"Arbeit.swiss (Job-Room)","https://www.arbeit.swiss","Offizielles Portal des SECO zur Arbeitsvermittlung und Umsetzung der Stellenmeldepflicht."
+"careerjet.ch","https://www.careerjet.ch/","Internationale Job-Suchmaschine mit Schweizer Stellenmarkt."
+"emploi-en-suisse.ch","https://emploi-en-suisse.ch/","Französischsprachiges Stellenportal mit Stellen aus der ganzen Schweiz."
+"Glassdoor Schweiz","https://www.glassdoor.ch","Internationale Plattform mit Stellenanzeigen und anonymen Arbeitgeberbewertungen sowie Gehaltseinblicken."
+"good-jobs.info","https://good-jobs.info/","Allgemeine Schweizer Stellenplattform für unterschiedlichste Berufsfelder."
+"Indeed Schweiz","https://ch.indeed.com","Globaler Job-Aggregator und Metasuchmaschine mit grosser Reichweite."
+"jobagent.ch","https://www.jobagent.ch","Schweizer Job-Suchmaschine bzw. Metasuchmaschine mit sehr breiter Reichweite und Job-Abo."
+"Jobchannel","https://www.jobchannel.ch","Umfassendes Netzwerk für die Stellensuche in der Schweiz."
+"jobeo.ch","https://www.jobeo.ch/","Schweizer Jobplattform für sämtliche Branchen."
+"jobkralle.ch","https://www.jobkralle.ch/","Meta-Suchmaschine, die Stellen verschiedenster Schweizer Portale bündelt."
+"jobrapido.com","https://de.jobrapido.com/","Internationale Jobsuchmaschine mit Stellen aus dem Schweizer Markt."
+"jobs.ch","https://www.jobs.ch","Führende Schweizer Jobplattform für alle Branchen mit Lohnrechner und Firmenbewertungen."
+"jobs-mit-gehaltsangabe.ch","https://jobs-mit-gehaltsangabe.ch/","Schweizer Stellenportal mit transparenter Lohnangabe in den Inseraten."
+"JobScout24.ch","https://www.jobscout24.ch","Schweizer Stellenmarkt und Aggregator mit integriertem Bewerbermanagementsystem."
+"jobseek.ch","https://jobseek.ch/","Schweizer Stellenportal mit breitem Branchenangebot."
+"jobsora.com","https://ch.jobsora.com/","Internationale Jobsuchmaschine mit Schweizer Stellenfokus."
+"jobup.ch","https://www.jobup.ch","Führende Stellenplattform für die Westschweiz (Romandie) in allen Industrien."
+"jobwinner.ch","https://jobwinner.ch","Breite Schweizer Stellenplattform mit berufsgruppenorientierter Suche."
+"jooble.org","https://ch.jooble.org/","Job-Aggregator mit Stellenangeboten aus zahlreichen Schweizer Quellen."
+"LinkedIn Schweiz","https://www.linkedin.com","Grösstes Karrierenetzwerk für Active Sourcing und professionelles Networking."
+"livejobs.ch","https://www.livejobs.ch/","Allgemeine Schweizer Stellenbörse mit aktuellen Vakanzen."
+"Monster Schweiz","https://www.monster.ch","Internationale Jobbörse mit breitem Stellenangebot für den Schweizer Markt."
+"offene-stellen.ch","https://www.offene-stellen.ch/","Allgemeine Schweizer Jobbörse für offene Vakanzen aller Branchen."
+"stellen-anzeiger.ch","https://www.stellen-anzeiger.ch/","Allgemeines Stellenportal für die Schweiz."
+"stellenanzeiger.ch","https://stellenanzeiger.ch/","Allgemeine Schweizer Stellenbörse mit branchenübergreifendem Angebot."
+"talent.com","https://ch.talent.com/","Internationaler Job-Aggregator (vormals neuvoo) mit grossem Schweizer Angebot."
+"workpool-jobs.ch","https://www.workpool-jobs.ch/","Breit aufgestellte Schweizer Stellenbörse für sämtliche Branchen."
+"XING Schweiz","https://www.xing.ch","Berufliches Netzwerk für den DACH-Raum mit starkem Fokus auf die Deutschschweiz."
+"zukunfts-jobs.ch","https://zukunfts-jobs.ch/","Stellenbörse mit Fokus auf zukunftsorientierte Tätigkeiten in der Schweiz."
+
+## Regional – alle Branchen
+"aargau-jobs.ch","https://aargau-jobs.ch/","Regionales Jobportal für den Kanton Aargau."
+"basel-jobs.ch","https://basel-jobs.ch/","Regionale Jobbörse für die Region Basel."
+"berner-stellen.ch","https://berner-stellen.ch/","Regionale Stellenplattform für den Kanton Bern."
+"carriera.ch","https://www.carriera.ch/","Italienischsprachiges Stellenportal für das Tessin."
+"emplois-fribourg.ch","https://emplois-fribourg.ch/","Stellenbörse für den Kanton Freiburg."
+"emplois-neuchatel.ch","https://emplois-neuchatel.ch/","Regionale Plattform für Stellen im Kanton Neuenburg."
+"emplois-vaud.ch","https://emplois-vaud.ch/","Stellenportal für den Kanton Waadt (französischsprachig)."
+"geneve-jobs.ch","https://geneve-jobs.ch/","Regionale Stellenbörse für den Kanton Genf."
+"glarus-jobs.ch","https://glarus-jobs.ch/","Regionale Stellenbörse für den Kanton Glarus."
+"graubuenden-jobs.ch","https://graubuenden-jobs.ch/","Stellenportal für den Kanton Graubünden."
+"jobtic.ch","https://jobtic.ch","Stellenportal für die französischsprachige Schweiz."
+"jura-emplois.ch","https://jura-emplois.ch/","Stellenportal für den Kanton Jura."
+"liechtensteinjobs.li","https://www.liechtensteinjobs.li/","Stellenmarkt für das Fürstentum Liechtenstein."
+"myjob.ch","https://www.myjob.ch","Stellenportal für die Nordwestschweiz."
+"ostjob.ch","https://www.ostjob.ch","Stellenportal für die Ostschweiz (SG, TG, AI, AR, ZH, GR)."
+"ostschweizer-jobs.ch","https://ostschweizer-jobs.ch/","Regionale Jobbörse für die Ostschweiz."
+"sanktgallen-jobs.ch","https://sanktgallen-jobs.ch/","Stellenportal für die Region St. Gallen."
+"solothurn-jobs.ch","https://solothurn-jobs.ch/","Regionale Stellenbörse für den Kanton Solothurn."
+"stellen-bern.ch","https://www.stellen-bern.ch","Stellenportal für die Region Bern, Solothurn, Thun und Biel."
+"suedostschweizjobs.ch","https://www.suedostschweizjobs.ch/","Regionales Jobportal für die Südostschweiz."
+"wallis-jobs.ch","https://wallis-jobs.ch/","Regionale Jobplattform für den Kanton Wallis."
+"zentraljob.ch","https://www.zentraljob.ch","Stellenportal für die Zentralschweiz (LU, ZG, SZ, UR, NW, OW)."
+"zentralschweiz-jobs.ch","https://zentralschweiz-jobs.ch/","Stellenportal für die Zentralschweiz."
+"zuercher-jobs.ch","https://zuercher-jobs.ch/","Regionales Stellenportal für den Kanton Zürich."
+
+## Führungskräfte und Fachspezialisten
+"alpha.ch","https://www.alpha.ch","Spezialisiertes Jobportal für Führungskräfte und hochqualifizierte Fachspezialisten."
+"cfo-jobs.ch","https://cfo-jobs.ch/","Spezialportal für Chief Financial Officer und Finanzleitungen."
+"managementstellen.ch","https://managementstellen.ch/","Stellenbörse für Managementpositionen."
+"NZZJOBS","https://jobs.nzz.ch","Portal für Fach- und Führungskräfte in der Deutschschweiz."
+"topjobs.ch","https://topjobs.ch","Schweizer Stellenportal für Fach- und Führungskräfte mit Kader-Fokus."
+
+## Lehrstellen und Berufsbildung
+"ausbildungs-jobs.ch","https://ausbildungs-jobs.ch/","Stellenportal mit Schwerpunkt auf Ausbildung und Berufslehre."
+"berufsberatung.ch – LENA","https://www.berufsberatung.ch/dyn/show/2930","Offizieller Lehrstellennachweis mit freien Lehrstellen in der ganzen Schweiz."
+"e-chance.ch","https://www.e-chance.ch","Lehrstellenportal für Elektrik und Gebäudeinformatik."
+"epalero.ch","https://www.epalero.ch/","Plattform für Ausbildungs- und Einstiegsmöglichkeiten."
+"gateway.one","https://junior.gateway.one/de/Home/JobOffers?ApprenticeshipType=Apprenticeship","Karriereplattform mit Lehrstellen und Junior-Einstiegspositionen."
+"lehr-stelle.ch","https://lehr-stelle.ch/","Plattform für freie Lehrstellen in der Schweiz."
+"Yousty","https://www.yousty.ch","Führende Plattform für die Suche nach Lehrstellen in der Schweiz."
+
+## Studierende, Absolventen und Startups
+"fhjobs.ch","https://fhjobs.ch/","Karriereportal für Absolvent:innen von Fachhochschulen."
+"Joinup","https://joinup.ch","Startup-Jobplattform, getragen vom ETH Entrepreneur Club und Swisspreneur."
+"jobs.uzhalumni.ch","https://jobs.uzhalumni.ch/","Stellenportal des Alumni-Netzwerks der Universität Zürich."
+"praktikanten.ch","https://praktikanten.ch/","Spezialisierte Plattform für Praktikumsstellen in der Schweiz."
+"scale-up-jobs.ch","https://scale-up-jobs.ch/","Stellenportal mit Fokus auf wachsende Schweizer Scale-up-Unternehmen."
+"semestra.ch","https://semestra.ch/","Plattform für Studierende und Absolvent:innen mit Praktika und Einstiegsstellen."
+"startup.ch Jobs","https://www.startup.ch/jobs","Plattform für Jobs und Praktika in innovativen Startups."
+"studentenjobs.ch","https://studentenjobs.ch/","Stellenbörse für Studierende und Nebenjobs."
+"studentjob.ch","https://www.studentjob.ch/","Internationales Portal für Studentenjobs mit Schweizer Angebot."
+"students.ch","https://www.students.ch/","Studierendenportal mit Stellen-, Praktikums- und Karriereangeboten."
+"talendo","https://www.talendo.ch","Job- und Karriereplattform für Studierende, Absolventen und Young Professionals."
+"traineeprogramme.ch","https://www.traineeprogramme.ch/","Übersicht über Trainee-Programme von Schweizer Unternehmen."
+
+## Quereinsteiger, Migration und ältere Arbeitnehmende
+"einwanderungs-jobs.ch","https://einwanderungs-jobs.ch/","Stellenplattform speziell für ausländische Arbeitskräfte in der Schweiz."
+"quereinsteiger-stellen.ch","https://quereinsteiger-stellen.ch/","Spezialportal für Quereinsteiger:innen in neue Berufsfelder."
+"seniorsatwork.ch","https://www.seniorsatwork.ch/","Plattform für Stellen und Einsätze für ältere Arbeitnehmende."
+
+## Teilzeit, Temporär und flexible Arbeitsmodelle
+"aushilfe-jobs.ch","https://aushilfe-jobs.ch/","Plattform für Aushilfs- und kurzfristige Einsätze in der Schweiz."
+"coople.com","https://www.coople.com/ch","Plattform für flexible, kurzfristige Einsätze und Temporärarbeit."
+"home-office-stellen.ch","https://home-office-stellen.ch/","Spezialportal für Stellen mit Möglichkeit zu Homeoffice und Remote-Arbeit."
+"mini-jobs.ch","https://www.mini-jobs.ch/","Stellenportal für kleine Pensen und Nebenbeschäftigungen."
+"nebenjobs.ch","https://www.nebenjobs.ch/","Plattform für Nebenjobs und Zusatzverdienste in der Schweiz."
+"TeilzeitKarriere.ch","https://www.teilzeitkarriere.ch/","Spezialportal für Teilzeitstellen in allen Karrierestufen."
+"temp-stellen.ch","https://temp-stellen.ch/","Plattform für temporäre Anstellungen und befristete Einsätze."
+
+## Architektur, Bauwesen und Immobilien
+"arch-forum.ch","https://www.arch-forum.ch/","Plattform für Architektur mit integriertem Stellenmarkt."
+"architekten-jobs.ch","https://architekten-jobs.ch/","Stellenbörse für Architekturberufe."
+"baujobs.ch","https://www.baujobs.ch","Führende Jobbörse der Baubranche für Fachkräfte im Hoch-, Tief- und Ausbau."
+"baukader-jobs.ch","https://baukader-jobs.ch/","Spezialportal für Kaderstellen im Bauwesen."
+"bauingenieur-jobs.ch","https://bauingenieur-jobs.ch/","Spezialportal für Bauingenieur:innen."
+"baustellenanzeiger.ch","https://baustellenanzeiger.ch/","Jobbörse für die Baubranche und baunahe Berufe."
+"emploi-batiment.ch","https://emploi-batiment.ch/","Stellenportal für die Baubranche in der Romandie."
+"immobilien-jobs.ch","https://immobilien-jobs.ch/","Spezialportal für die Immobilienbranche."
+"swiss-architects.com","https://www.swiss-architects.com/","Branchennetzwerk für Schweizer Architekturbüros mit Stellenmarkt."
+
+## Banken, Finanzen und Versicherungen
+"banken-stellen.ch","https://banken-stellen.ch/","Spezialportal für Berufe im Bankenwesen."
+"buchhalter-jobs.ch","https://buchhalter-jobs.ch/","Spezialportal für Buchhaltung und Rechnungswesen."
+"controller-job.ch","https://controller-job.ch/","Stellenplattform für Controller:innen."
+"eFinancialCareers CH","https://www.efinancialcareers.ch","Spezialisiert auf Fachkräfte im Finanzwesen und Bankensektor."
+"emploi-bancassurance.ch","https://emploi-bancassurance.ch/","Stellenportal für Banken und Versicherungen in der Romandie."
+"financejobs.ch","https://www.financejobs.ch","Spezialisiertes Portal für Fachkräfte im Schweizer Finanzsektor und Rechnungswesen."
+"finanz-job.ch","https://finanz-job.ch/","Stellenbörse für Finanzdienstleistungen."
+"treuhand-job.ch","https://treuhand-job.ch/","Spezialportal für Treuhandberufe."
+"versicherungsjobs-schweiz.ch","https://versicherungsjobs-schweiz.ch/","Stellenplattform für die Versicherungsbranche."
+
+## Beratung und Consulting
+"berater-jobs.ch","https://berater-jobs.ch/","Stellenplattform für Beratungsberufe."
+"emploi-conseil.ch","https://emploi-conseil.ch/","Plattform für Beratungsstellen in der Romandie."
+"emploi-direction.ch","https://emploi-direction.ch/","Stellenportal für Direktions- und Führungspositionen in der Romandie."
+
+## Bildung und Unterricht
+"Lernwerkstatt","https://www.lernwerkstatt.ch/stellenplattform/stellenangebote-bildungsfachleute","Stellenportal für Erwachsenenbildung."
+"schuljobs.ch","https://www.schuljobs.ch","Grösstes Schweizer Jobportal für das Bildungswesen von Primar- bis Hochschule."
+"SVEB","https://alice.ch/de/dienstleistungen/stellenmarkt/","Stellenmarkt des Schweizerischen Verbands für Weiterbildung."
+
+## Energie, Umwelt und Naturschutz
+"emplois-environnement.ch","https://emplois-environnement.ch/","Französischsprachiges Pendant für Umweltberufe in der Schweiz."
+"energie-job.ch","https://energie-job.ch/","Spezialportal für Berufe in der Energiebranche."
+"Naturschutz.ch Jobliste","https://naturschutz.ch/jobliste","Nischenportal mit Jobliste für Naturschutz- und angrenzende Umweltberufe."
+"umwelt-stellen.ch","https://umwelt-stellen.ch/","Stellenbörse für Umwelt- und Naturschutzberufe."
+"Umweltprofis","https://www.umweltprofis.ch/jobs","Branchenportal für Umwelt-Jobs in der Schweiz."
+
+## Entwicklungszusammenarbeit, NGO und NPO
+"cinfo.ch","https://www.cinfo.ch","Zentrum für Karrieren in der internationalen Zusammenarbeit und humanitären Hilfe."
+"Kampajobs","https://www.kampajobs.ch","Online-Jobbörse für Non-Profit-Organisationen, Stiftungen und Verbände."
+"npo-jobs.ch","https://npo-jobs.ch/","Stellenbörse für Non-Profit-Organisationen."
+
+## Gastronomie, Hotellerie und Tourismus
+"adsjob.com","https://www.adsjob.com/startseite.html","Spezialportal für Gastronomie- und Hotelleriestellen."
+"emploi-restauration.ch","https://emploi-restauration.ch/","Stellenportal für die Gastronomie in der Romandie."
+"gastro-express.ch","https://www.gastro-express.ch/","Plattform für schnelle Vermittlung in Gastronomie und Hotellerie."
+"gastrojobs.ch","https://www.gastrojobs.ch","Jobportal speziell für die Gastronomiebranche in der Schweiz."
+"HotelCareer","https://www.hotelcareer.ch","Spezialisiertes Portal für Berufe im Hotel- und Gastgewerbe."
+"hoteljob.ch","https://www.hoteljob.ch","Stellenmarkt für Berufe im Schweizer Gastgewerbe und Tourismus."
+"hoteljob-schweiz.de","https://hoteljob-schweiz.de/","Stellenportal für das Schweizer Hotel- und Gastgewerbe."
+"jobs-im-gastro.ch","https://jobs-im-gastro.ch/","Stellenbörse für die Gastronomiebranche."
+"reiseberater-jobs.ch","https://reiseberater-jobs.ch/","Spezialportal für Reiseberatung und Tourismus."
+"swissbaker-jobs.ch","https://www.swissbaker-jobs.ch/","Spezialportal für Berufe in Bäckerei und Konditorei."
+
+## Gesundheit, Medizin und Pflege
+"aerzte-jobs.ch","https://aerzte-jobs.ch/","Spezialportal für Ärztinnen und Ärzte."
+"dentalstellen.ch","https://www.dentalstellen.ch/","Jobbörse für zahnmedizinische Berufe."
+"emploi-infirmier.ch","https://emploi-infirmier.ch/","Spezialportal für Pflegeberufe in der Romandie."
+"emploi-medecine.ch","https://emploi-medecine.ch/","Stellenportal für Gesundheitsberufe in der Romandie."
+"hospital-jobs.ch","https://www.hospital-jobs.ch/","Stellenportal mit Fokus auf Spital- und Klinikberufe."
+"medicjobs.ch","https://www.medicjobs.ch/","Stellenbörse für medizinische Fachkräfte."
+"medtalents.ch","https://www.medtalents.ch","Stellenangebote für Fachkräfte aus dem gesamten Gesundheitsbereich."
+"mpa-jobs.ch","https://mpa-jobs.ch/","Spezialportal für Medizinische Praxisassistent:innen."
+"pflege-berufe.ch","https://pflege-berufe.ch/","Stellenbörse für Pflegeberufe in der Schweiz."
+"physioswiss.ch","https://physioswiss.ch/","Stellenmarkt des Physio Schweiz Verbands für Physiotherapie."
+"Praxisstellen.ch","https://www.praxisstellen.ch","Portal für medizinisches Praxispersonal wie MPA, Arztsekretärinnen und Zahnmedizin."
+"therapie-jobs.ch","https://therapie-jobs.ch/","Plattform für therapeutische Gesundheitsberufe."
+
+## Handwerk und Gebäudetechnik
+"automatiker-stellen.ch","https://automatiker-stellen.ch/","Jobbörse für Automatiker:innen und Automatisierungstechnik."
+"elektromonteur-job.ch","https://elektromonteur-job.ch/","Spezialportal für Elektromonteur:innen und Elektroinstallationen."
+"handwerker-job.ch","https://handwerker-job.ch/","Stellenportal für handwerkliche Berufe in der Schweiz."
+"hlk-jobs.ch","https://hlk-jobs.ch/","Jobbörse für Heizung, Lüftung und Klima (HLK)."
+"holzbau-jobs.ch","https://holzbau-jobs.ch/","Stellenbörse für Holzbau und Zimmerei."
+"metallbau-jobs.ch","https://metallbau-jobs.ch/","Stellenplattform für den Metallbau."
+"schreiner-jobs.ch","https://schreiner-jobs.ch/","Spezialportal für Schreiner:innen und Möbelbau."
+"servicetechniker-jobs.ch","https://servicetechniker-jobs.ch/","Spezialportal für Servicetechniker:innen im Aussendienst."
+"workerjobs.ch","https://www.workerjobs.ch/","Stellenbörse für handwerkliche und gewerbliche Berufe."
+
+## HR, Personalwesen und Einkauf
+"einkaufs-jobs.ch","https://einkaufs-jobs.ch/","Spezialportal für Einkauf und Beschaffung."
+"emploi-rh.ch","https://emploi-rh.ch/","Stellenplattform für HR-Berufe in der Romandie."
+"jobs-im-hr.ch","https://jobs-im-hr.ch/","Stellenbörse für Human Resources."
+
+## ICT, Informatik und Software-Engineering
+"ai-jobs-switzerland.ch","https://ai-jobs-switzerland.ch/","Spezialportal für Stellen im Bereich Künstliche Intelligenz."
+"business-analyst-jobs.ch","https://business-analyst-jobs.ch/","Spezialportal für Business Analyst:innen im IT-Umfeld."
+"crypto-jobs.ch","https://crypto-jobs.ch/","Stellenplattform für Crypto- und Blockchain-Spezialisten."
+"data-jobs.ch","https://data-jobs.ch/","Stellenbörse für Data Science, Data Engineering und Analytics."
+"emploi-it.ch","https://emploi-it.ch/","Stellenportal für IT-Berufe in der Romandie."
+"ictjobs.ch","https://www.ictjobs.ch","Spezialisierte Nischenbörse für ICT-Fach- und Führungskräfte in der Schweiz."
+"it-jobs-switzerland.ch","https://it-jobs-switzerland.ch/","Stellenportal für IT-Fachkräfte in der Schweiz."
+"it-security-jobs.ch","https://it-security-jobs.ch/","Spezialportal für IT-Security und Cybersecurity-Stellen."
+"itjobs.ch","https://www.itjobs.ch/","Allgemeine Stellenbörse für Informatikberufe."
+"java-jobs.ch","https://java-jobs.ch/","Spezialisiertes Portal für Java-Entwickler:innen."
+"software-job.ch","https://software-job.ch/","Stellenplattform für Software-Entwicklung."
+"SwissDevJobs.ch","https://www.swissdevjobs.ch","Transparentes IT-Jobboard für Software-Entwickler mit Gehaltsangaben."
+
+## Industrie, Produktion und Lebensmittel
+"emploi-production.ch","https://emploi-production.ch/","Stellenportal für Produktionsberufe in der Romandie."
+"food-job.ch","https://food-job.ch/","Stellenbörse für die Lebensmittelindustrie."
+"industrie-jobs-schweiz.ch","https://industrie-jobs-schweiz.ch/","Stellenbörse für industrielle Berufe und Produktion."
+
+## Ingenieurwesen und Technik
+"elektroingenieur-jobs.ch","https://elektroingenieur-jobs.ch/","Stellenbörse für Elektroingenieur:innen."
+"emploi-ingenieur.ch","https://emploi-ingenieur.ch/","Stellenportal für Ingenieurberufe in der Romandie."
+"ingenieur-job.ch","https://ingenieur-job.ch/","Stellenbörse für Ingenieurberufe in der Schweiz."
+"ingjobs.ch","https://ingjobs.ch/","Plattform für Ingenieurstellen aller Fachrichtungen."
+"konstrukteur-jobs.ch","https://konstrukteur-jobs.ch/","Stellenplattform für Konstrukteur:innen."
+"maschinenbau-job.ch","https://maschinenbau-job.ch/","Spezialportal für Berufe im Maschinenbau."
+"mechaniker-jobs.ch","https://mechaniker-jobs.ch/","Stellenbörse für Mechaniker:innen verschiedener Fachrichtungen."
+"polymechaniker-stellen.ch","https://polymechaniker-stellen.ch/","Spezialportal für Polymechaniker:innen."
+"swissengineering.ch","https://www.swissengineering.ch","Stellenbörse des Berufsverbands Swiss Engineering für technische Fachkräfte."
+"systemingenieur-jobs.ch","https://systemingenieur-jobs.ch/","Plattform für Systemingenieur:innen."
+"technische-jobs.ch","https://technische-jobs.ch/","Plattform für technische Stellen aller Fachrichtungen."
+
+## Kommunikation, Marketing, Medien und Design
+"designer-jobs.ch","https://designer-jobs.ch/","Stellenbörse für Design- und Gestaltungsberufe."
+"marketing-job.ch","https://marketing-job.ch/","Stellenbörse für Marketingberufe."
+"markom-jobs.ch","https://markom-jobs.ch/","Stellenplattform für Marketing und Kommunikation."
+"medienjobs.ch","https://www.medienjobs.ch","Jobbörse für die Medien- und Kommunikationsbranche in der Schweiz."
+"onlinemarketing-stellen.ch","https://onlinemarketing-stellen.ch/","Spezialportal für Online-Marketing und digitale Kommunikation."
+"persoenlich.com","https://www.persoenlich.com/stellenmarkt/","Stellenmarkt der Branchenplattform persoenlich.com für Marketing und Medien."
+"wetalents.ch","https://wetalents.net/","Plattform für kreative Stellen und Talente."
+
+## Landwirtschaft und Gartenbau
+"agrarjobs.ch","https://www.agrarjobs.ch/de","Stellenportal für die Schweizer Landwirtschaft."
+"gaertner-jobs.ch","https://gaertner-jobs.ch/","Stellenbörse für Gärtner:innen und Gartenbau."
+"landjobs.ch","https://www.bauern-sg.ch/de/Dienstleistungen/Stellenportal-Landjob.ch","Stellen im Landwirtschaftsbereich in der Region St. Gallen."
+
+## Öffentliche Verwaltung
+"emploi-administration.ch","https://emploi-administration.ch/","Stellenportal für Verwaltungsberufe in der Romandie."
+"emploi-service-public.ch","https://emploi-service-public.ch/","Stellenplattform für den öffentlichen Dienst in der Romandie."
+"gemeindestellen.ch","https://www.gemeindestellen.ch/","Spezialportal für Stellen in Schweizer Gemeinden."
+"jobs.admin.ch","https://www.jobs.admin.ch","Offizielles Stellenportal der Schweizerischen Bundesverwaltung."
+"publicjobs.ch","https://www.publicjobs.ch","Zentrales Stellenportal für den öffentlichen Sektor: Bund, Kantone und Gemeinden."
+"verwaltungs-jobs.ch","https://verwaltungs-jobs.ch/","Stellenbörse für Berufe in der öffentlichen Verwaltung."
+
+## Persönliche Dienstleistungen, Beauty und Fitness
+"beauty-job.ch","https://beauty-job.ch/","Spezialportal für Beauty- und Kosmetikberufe."
+"coiffeurjob.ch","https://coiffeurjob.ch/","Stellenbörse für Coiffure- und Schönheitsberufe."
+"jobfitness.ch","https://jobfitness.ch/","Plattform für Stellen in Fitness, Sport und Bewegung."
+"wellness-fitness-jobs.ch","https://wellness-fitness-jobs.ch/","Stellenbörse für Wellness- und Fitnessberufe."
+
+## Pharma und Life Sciences
+"biotech-jobs.ch","https://biotech-jobs.ch/","Stellenplattform für die Biotechnologie."
+"chemiker-jobs.ch","https://chemiker-jobs.ch/","Stellenbörse für Chemieberufe."
+"labor-job.ch","https://labor-job.ch/","Spezialportal für Laborberufe."
+"pharma-berufe.ch","https://pharma-berufe.ch/","Stellenbörse für Berufe in der Pharmaindustrie."
+"pharmajobs.ch","https://www.pharmajobs.ch","Nischenportal für Fach- und Führungskräfte in der Pharma- und Life-Sciences-Branche."
+
+## Recht
+"juristen-jobs.ch","https://juristen-jobs.ch/","Spezialportal für Jurist:innen und juristische Berufe."
+"lawjobs.ch","https://www.lawjobs.ch","Führende Schweizer Online-Stellenbörse für juristische Berufe von Weblaw."
+
+## Reinigung und Sicherheit
+"reinigungs-jobs.ch","https://reinigungs-jobs.ch/","Spezialportal für Reinigungsberufe."
+"sicherheits-jobs.ch","https://sicherheits-jobs.ch/","Stellenplattform für die Sicherheitsbranche."
+
+## Soziale Arbeit
+"sozialberufe.ch","https://sozialberufe.ch/","Stellenbörse für soziale Berufe in der Schweiz."
+"Sozialinfo","https://www.sozialinfo.ch","Grösstes Stellenportal für den Sozialbereich in der Schweiz."
+"sozjobs.ch","https://www.sozjobs.ch","Jobportal für Sozial- und Gesundheitsberufe, getragen von Branchenverbänden."
+
+## Transport, Logistik und Automobil
+"auto-stellen.ch","https://auto-stellen.ch/","Stellenbörse für die Automobilbranche."
+"busfahrer-jobs.ch","https://busfahrer-jobs.ch/","Spezialportal für Busfahrer:innen."
+"chauffeur-jobs.ch","https://chauffeur-jobs.ch/","Plattform für Chauffeurinnen und Chauffeure."
+"emploi-automobile.ch","https://emploi-automobile.ch/","Stellenportal für die Automobilbranche in der Romandie."
+"emploi-logistique.ch","https://emploi-logistique.ch/","Plattform für Logistikberufe in der Romandie."
+"jobs.sbb.ch","https://jobs.sbb.ch","Karriereportal der SBB für Stellen im öffentlichen Verkehr und Eisenbahnwesen."
+"logistiker-jobs.ch","https://logistiker-jobs.ch/","Spezialportal für Logistikberufe."
+"oev-jobs.ch","https://oev-jobs.ch/","Stellenportal für den öffentlichen Verkehr."
+"transport-jobs.ch","https://transport-jobs.ch/","Stellenbörse für das Transportwesen."
+
+## Verkauf, Handel und Kundendienst
+"call-center-jobs.ch","https://call-center-jobs.ch/","Stellenbörse für Call-Center- und Contact-Center-Berufe."
+"detailhandels-jobs.ch","https://detailhandels-jobs.ch/","Spezialportal für den Detailhandel."
+"emploi-commercial.ch","https://emploi-commercial.ch/","Stellenportal für Handel und Verkauf in der Romandie."
+"Jobs4Sales.ch","https://www.jobs4sales.ch","Spezialportal exklusiv für Sales-Profis, Aussendienst und Telesales."
+"kundenberater-jobs.ch","https://kundenberater-jobs.ch/","Plattform für Stellen in der Kundenberatung."
+"kv-stelle.ch","https://kv-stelle.ch/","Stellenbörse für kaufmännische Berufe."
+"verkaeufer-jobs.ch","https://verkaeufer-jobs.ch/","Stellenbörse für Verkaufsberufe."
+
+## Wissenschaft, Forschung und Hochschulen
+"academics.ch","https://academics.ch","Karriereportal für akademische Talente in Wissenschaft, Forschung und Hochschulen."
+"acad.jobs","https://www.acad.jobs/Jobs/Mathematics-Statistics/","Internationales Karriereportal für akademische Berufe inkl. Mathematik und Statistik."
+"EURAXESS Switzerland","https://www.euraxess.ch","Portal für Forschende mit Stellen- und Fördermöglichkeiten."
+"jobs.myScience","https://www.science-jobs.ch","Schweizer Wissenschafts-Jobportal für Forschende, Scientists und Engineers."
+"jobvector.ch","https://www.jobvector.ch/","Karriereportal für Naturwissenschaft, Forschung und Technik."

@@ -6164,6 +6164,22 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
     });
   };
 
+  const sortItemsByTitle = () => {
+    const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+    const sortedItems = [...block.items].sort((a, b) => {
+      const titleA = (a.title ?? "").trim();
+      const titleB = (b.title ?? "").trim();
+
+      if (!titleA && !titleB) return 0;
+      if (!titleA) return 1;
+      if (!titleB) return -1;
+
+      return collator.compare(titleA, titleB);
+    });
+
+    update({ items: sortedItems });
+  };
+
   const parseDelimitedRow = (line: string, delimiter: string) => {
     const values: string[] = [];
     let current = "";
@@ -6293,6 +6309,16 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
           onCheckedChange={(checked) => update({ skipTranslation: checked })}
         />
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={sortItemsByTitle}
+        disabled={block.items.length < 2}
+      >
+        <ArrowUpDown className="h-4 w-4 mr-2" />
+        {t("sortItemsAZ")}
+      </Button>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
@@ -6335,6 +6361,16 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
             {t("csvImportButton")}
           </Button>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mt-1"
+          onClick={sortItemsByTitle}
+          disabled={block.items.length < 2}
+        >
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          {t("sortItemsAZ")}
+        </Button>
       </div>
     </div>
   );

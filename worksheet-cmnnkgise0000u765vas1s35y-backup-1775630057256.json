@@ -1,0 +1,1162 @@
+{
+  "worksheetId": "cmnnkgise0000u765vas1s35y",
+  "title": "FAF | Stellenportale",
+  "updatedAt": "2026-04-08T06:27:19.927Z",
+  "blocks": [
+    {
+      "id": "40376c76-86ec-4dd9-a3fc-4cfd68a6d141",
+      "type": "text",
+      "content": "<p>FAF | MODUL 3</p>",
+      "textStyle": "metadaten",
+      "visibility": "both",
+      "skipTranslation": true,
+      "bilingualDivider": false
+    },
+    {
+      "id": "162dc963-1f6f-4c59-a0fe-a3a1d484c7c3",
+      "type": "heading",
+      "level": 1,
+      "content": "Stellenportale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "267ba356-942b-44f7-950f-e0913e01524a",
+      "type": "heading",
+      "level": 2,
+      "content": "Allgemeine Portale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "ed27c80d-8107-4696-95f5-d088a6b06808",
+      "type": "website",
+      "items": [
+        {
+          "id": "65c5c642-692f-4967-af9d-8599d8c8f23b",
+          "url": "https://www.100000jobs.ch/",
+          "image": "",
+          "title": "100000jobs.ch",
+          "category": "Schweizer Jobplattform mit über 100'000 Stellenangeboten aus allen Branchen.",
+          "description": "Schweizer Jobplattform mit über 100'000 Stellenangeboten aus allen Branchen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "ee530158-64ea-466e-8712-2d17edb8246e",
+          "url": "https://www.arbeit.swiss",
+          "image": "",
+          "title": "Arbeit.swiss (Job-Room)",
+          "category": "Offizielles Portal des SECO zur Arbeitsvermittlung und Umsetzung der Stellenmeldepflicht.",
+          "description": "Offizielles Portal des SECO zur Arbeitsvermittlung und Umsetzung der Stellenmeldepflicht.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "607068a7-37df-42ab-bcc1-cc31013d5593",
+          "url": "https://aushilfe-jobs.ch/",
+          "image": "",
+          "title": "aushilfe-jobs.ch",
+          "category": "Plattform für Aushilfs- und kurzfristige Einsätze in der Schweiz.",
+          "description": "Plattform für Aushilfs- und kurzfristige Einsätze in der Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "5d47c35e-e08b-4e26-920b-78246511c80a",
+          "url": "https://www.careerjet.ch/",
+          "image": "",
+          "title": "careerjet.ch",
+          "category": "Internationale Job-Suchmaschine mit Schweizer Stellenmarkt.",
+          "description": "Internationale Job-Suchmaschine mit Schweizer Stellenmarkt.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "9df4f398-d29b-499b-a059-c972e391ff4a",
+          "url": "https://www.coople.com/ch",
+          "image": "",
+          "title": "coople.com",
+          "category": "Plattform für flexible, kurzfristige Einsätze und Temporärarbeit.",
+          "description": "Plattform für flexible, kurzfristige Einsätze und Temporärarbeit.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "12634777-bcdb-4a39-be90-448f75699d49",
+          "url": "https://emploi-en-suisse.ch/",
+          "image": "",
+          "title": "emploi-en-suisse.ch",
+          "category": "Französischsprachiges Stellenportal mit Stellen aus der ganzen Schweiz.",
+          "description": "Französischsprachiges Stellenportal mit Stellen aus der ganzen Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "36808897-bd9b-42a2-8eb6-c28fdf4e353f",
+          "url": "https://www.glassdoor.ch",
+          "image": "",
+          "title": "Glassdoor Schweiz",
+          "category": "Internationale Plattform mit Stellenanzeigen und anonymen Arbeitgeberbewertungen sowie Gehaltseinblicken.",
+          "description": "Internationale Plattform mit Stellenanzeigen und anonymen Arbeitgeberbewertungen sowie Gehaltseinblicken.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "1a214fb5-f166-4d55-b2c6-e5c5c5b875cd",
+          "url": "https://good-jobs.info/",
+          "image": "",
+          "title": "good-jobs.info",
+          "category": "Allgemeine Schweizer Stellenplattform für unterschiedlichste Berufsfelder.",
+          "description": "Allgemeine Schweizer Stellenplattform für unterschiedlichste Berufsfelder.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "e9e0d80e-75c4-490c-a456-ffc8604b72e7",
+          "url": "https://home-office-stellen.ch/",
+          "image": "",
+          "title": "home-office-stellen.ch",
+          "category": "Spezialportal für Stellen mit Möglichkeit zu Homeoffice und Remote-Arbeit.",
+          "description": "Spezialportal für Stellen mit Möglichkeit zu Homeoffice und Remote-Arbeit.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "fe9b9a9a-9ff2-44ab-9e22-fdf0ce47c9c9",
+          "url": "https://ch.indeed.com",
+          "image": "",
+          "title": "Indeed Schweiz",
+          "category": "Globaler Job-Aggregator und Metasuchmaschine mit grosser Reichweite.",
+          "description": "Globaler Job-Aggregator und Metasuchmaschine mit grosser Reichweite.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "e862cb49-5a5a-4764-95a5-f02ef01db3ec",
+          "url": "https://www.jobagent.ch",
+          "image": "",
+          "title": "jobagent.ch",
+          "category": "Schweizer Job-Suchmaschine bzw. Metasuchmaschine mit sehr breiter Reichweite und Job-Abo.",
+          "description": "Schweizer Job-Suchmaschine bzw. Metasuchmaschine mit sehr breiter Reichweite und Job-Abo.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "4373f3e4-93e9-4ecf-b480-7585bd9d50d5",
+          "url": "https://www.jobchannel.ch",
+          "image": "",
+          "title": "Jobchannel",
+          "category": "Umfassendes Netzwerk für die Stellensuche in der Schweiz.",
+          "description": "Umfassendes Netzwerk für die Stellensuche in der Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "0b8f1ab6-794b-4e32-87c9-08ff5483750a",
+          "url": "https://www.jobeo.ch/",
+          "image": "",
+          "title": "jobeo.ch",
+          "category": "Schweizer Jobplattform für sämtliche Branchen.",
+          "description": "Schweizer Jobplattform für sämtliche Branchen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "21686f57-4f41-4174-9b20-22ffe4d1a7dd",
+          "url": "https://www.jobkralle.ch/",
+          "image": "",
+          "title": "jobkralle.ch",
+          "category": "Meta-Suchmaschine, die Stellen verschiedenster Schweizer Portale bündelt.",
+          "description": "Meta-Suchmaschine, die Stellen verschiedenster Schweizer Portale bündelt.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "88f37968-2694-46ef-bdc6-bfc5f86b5184",
+          "url": "https://de.jobrapido.com/",
+          "image": "",
+          "title": "jobrapido.com",
+          "category": "Internationale Jobsuchmaschine mit Stellen aus dem Schweizer Markt.",
+          "description": "Internationale Jobsuchmaschine mit Stellen aus dem Schweizer Markt.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "45ccf182-0d47-4624-b542-2d3b18a22fae",
+          "url": "https://www.jobs.ch",
+          "image": "",
+          "title": "jobs.ch",
+          "category": "Führende Schweizer Jobplattform für alle Branchen mit Lohnrechner und Firmenbewertungen.",
+          "description": "Führende Schweizer Jobplattform für alle Branchen mit Lohnrechner und Firmenbewertungen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "fd1b4d08-d701-4980-9bd2-d3f7c61ad3b2",
+          "url": "https://www.jobscout24.ch",
+          "image": "",
+          "title": "JobScout24.ch",
+          "category": "Schweizer Stellenmarkt und Aggregator mit integriertem Bewerbermanagementsystem.",
+          "description": "Schweizer Stellenmarkt und Aggregator mit integriertem Bewerbermanagementsystem.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "fef34663-9f29-4781-aa8f-73057639fe8b",
+          "url": "https://jobseek.ch/",
+          "image": "",
+          "title": "jobseek.ch",
+          "category": "Schweizer Stellenportal mit breitem Branchenangebot.",
+          "description": "Schweizer Stellenportal mit breitem Branchenangebot.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "251fbe40-570e-4a46-9da2-71cb070be408",
+          "url": "https://ch.jobsora.com/",
+          "image": "",
+          "title": "jobsora.com",
+          "category": "Internationale Jobsuchmaschine mit Schweizer Stellenfokus.",
+          "description": "Internationale Jobsuchmaschine mit Schweizer Stellenfokus.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "1328321e-0f2f-4d78-80c4-fdf7f2b4f4ed",
+          "url": "https://www.jobup.ch",
+          "image": "",
+          "title": "jobup.ch",
+          "category": "Führende Stellenplattform für die Westschweiz (Romandie) in allen Industrien.",
+          "description": "Führende Stellenplattform für die Westschweiz (Romandie) in allen Industrien.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "a020c379-3d57-40a7-a6cc-aea9bd541433",
+          "url": "https://jobwinner.ch",
+          "image": "",
+          "title": "jobwinner.ch",
+          "category": "Breite Schweizer Stellenplattform mit berufsgruppenorientierter Suche.",
+          "description": "Breite Schweizer Stellenplattform mit berufsgruppenorientierter Suche.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "b99d2c2d-176f-4801-9611-7e4d6c8b57c9",
+          "url": "https://ch.jooble.org/",
+          "image": "",
+          "title": "jooble.org",
+          "category": "Job-Aggregator mit Stellenangeboten aus zahlreichen Schweizer Quellen.",
+          "description": "Job-Aggregator mit Stellenangeboten aus zahlreichen Schweizer Quellen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "46df5755-e61f-4320-93c0-1219ec8dd5fe",
+          "url": "https://www.linkedin.com",
+          "image": "",
+          "title": "LinkedIn Schweiz",
+          "category": "Grösstes Karrierenetzwerk für Active Sourcing und professionelles Networking.",
+          "description": "Grösstes Karrierenetzwerk für Active Sourcing und professionelles Networking.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "317281ed-3ac5-4cf4-89b2-b9fccea09009",
+          "url": "https://www.livejobs.ch/",
+          "image": "",
+          "title": "livejobs.ch",
+          "category": "Allgemeine Schweizer Stellenbörse mit aktuellen Vakanzen.",
+          "description": "Allgemeine Schweizer Stellenbörse mit aktuellen Vakanzen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "302f166e-a2cd-4b60-900c-7d7ad65d38ce",
+          "url": "https://www.monster.ch",
+          "image": "",
+          "title": "Monster Schweiz",
+          "category": "Internationale Jobbörse mit breitem Stellenangebot für den Schweizer Markt.",
+          "description": "Internationale Jobbörse mit breitem Stellenangebot für den Schweizer Markt.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "d5bc9d4e-d0cb-4721-88f8-cb38d7366400",
+          "url": "https://www.offene-stellen.ch/",
+          "image": "",
+          "title": "offene-stellen.ch",
+          "category": "Allgemeine Schweizer Jobbörse für offene Vakanzen aller Branchen.",
+          "description": "Allgemeine Schweizer Jobbörse für offene Vakanzen aller Branchen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "8ce0aad9-8450-4ab0-a82f-154a0366478f",
+          "url": "https://www.stellen-anzeiger.ch/",
+          "image": "",
+          "title": "stellen-anzeiger.ch",
+          "category": "Allgemeines Stellenportal für die Schweiz.",
+          "description": "Allgemeines Stellenportal für die Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "4ed1d5a5-f5c1-4417-a0ff-349879818661",
+          "url": "https://stellenanzeiger.ch/",
+          "image": "",
+          "title": "stellenanzeiger.ch",
+          "category": "Allgemeine Schweizer Stellenbörse mit branchenübergreifendem Angebot.",
+          "description": "Allgemeine Schweizer Stellenbörse mit branchenübergreifendem Angebot.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "e85a409d-6123-4ed2-aed1-a124491e37f8",
+          "url": "https://ch.talent.com/",
+          "image": "",
+          "title": "talent.com",
+          "category": "Internationaler Job-Aggregator (vormals neuvoo) mit grossem Schweizer Angebot.",
+          "description": "Internationaler Job-Aggregator (vormals neuvoo) mit grossem Schweizer Angebot.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "45269155-4c5b-4feb-b7f9-7c5377a0c5f7",
+          "url": "https://www.workpool-jobs.ch/",
+          "image": "",
+          "title": "workpool-jobs.ch",
+          "category": "Breit aufgestellte Schweizer Stellenbörse für sämtliche Branchen.",
+          "description": "Breit aufgestellte Schweizer Stellenbörse für sämtliche Branchen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "dfe8deb9-7b88-44d0-8751-003cce759d0c",
+          "url": "https://www.xing.ch",
+          "image": "",
+          "title": "XING Schweiz",
+          "category": "Berufliches Netzwerk für den DACH-Raum mit starkem Fokus auf die Deutschschweiz.",
+          "description": "Berufliches Netzwerk für den DACH-Raum mit starkem Fokus auf die Deutschschweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "c940bc87-4a31-4af8-b730-882e65fb49f2",
+          "url": "https://zukunfts-jobs.ch/",
+          "image": "",
+          "title": "zukunfts-jobs.ch",
+          "category": "Stellenbörse mit Fokus auf zukunftsorientierte Tätigkeiten in der Schweiz.",
+          "description": "Stellenbörse mit Fokus auf zukunftsorientierte Tätigkeiten in der Schweiz.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "National – alle Branchen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "7defdf83-2adf-4d95-b1b5-c995908a8319",
+      "type": "website",
+      "items": [
+        {
+          "id": "8a7ef955-349c-4367-86be-1dfe327ab07a",
+          "url": "https://aargau-jobs.ch/",
+          "image": "",
+          "title": "aargau-jobs.ch",
+          "category": "Regionales Jobportal für den Kanton Aargau.",
+          "description": "Regionales Jobportal für den Kanton Aargau.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "1c4537bd-7d4f-41a4-9c05-b48492ea4355",
+          "url": "https://basel-jobs.ch/",
+          "image": "",
+          "title": "basel-jobs.ch",
+          "category": "Regionale Jobbörse für die Region Basel.",
+          "description": "Regionale Jobbörse für die Region Basel.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "f038cd46-9e37-4bd5-8e89-2d88a4e9808d",
+          "url": "https://berner-stellen.ch/",
+          "image": "",
+          "title": "berner-stellen.ch",
+          "category": "Regionale Stellenplattform für den Kanton Bern.",
+          "description": "Regionale Stellenplattform für den Kanton Bern.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "20eb2e20-394b-435c-912e-5b13e4349b42",
+          "url": "https://www.carriera.ch/",
+          "image": "",
+          "title": "carriera.ch",
+          "category": "Italienischsprachiges Stellenportal für das Tessin.",
+          "description": "Italienischsprachiges Stellenportal für das Tessin.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "42a07a5a-7abc-48cf-b9ca-508bc215f41f",
+          "url": "https://emplois-fribourg.ch/",
+          "image": "",
+          "title": "emplois-fribourg.ch",
+          "category": "Stellenbörse für den Kanton Freiburg.",
+          "description": "Stellenbörse für den Kanton Freiburg.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "f4658b76-6f08-413e-9a86-c4aef6c0128f",
+          "url": "https://emplois-neuchatel.ch/",
+          "image": "",
+          "title": "emplois-neuchatel.ch",
+          "category": "Regionale Plattform für Stellen im Kanton Neuenburg.",
+          "description": "Regionale Plattform für Stellen im Kanton Neuenburg.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "76e46fc2-79fa-45fd-9359-cfd36a5d1f3a",
+          "url": "https://emplois-vaud.ch/",
+          "image": "",
+          "title": "emplois-vaud.ch",
+          "category": "Stellenportal für den Kanton Waadt (französischsprachig).",
+          "description": "Stellenportal für den Kanton Waadt (französischsprachig).",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "0e9c9e5a-53ef-4a8f-99e6-39b87217d31d",
+          "url": "https://geneve-jobs.ch/",
+          "image": "",
+          "title": "geneve-jobs.ch",
+          "category": "Regionale Stellenbörse für den Kanton Genf.",
+          "description": "Regionale Stellenbörse für den Kanton Genf.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "b9b41f85-03e2-4b13-b5a9-ad89bc132abd",
+          "url": "https://glarus-jobs.ch/",
+          "image": "",
+          "title": "glarus-jobs.ch",
+          "category": "Regionale Stellenbörse für den Kanton Glarus.",
+          "description": "Regionale Stellenbörse für den Kanton Glarus.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "11809a20-ad78-4e49-a318-89465a43cdbd",
+          "url": "https://graubuenden-jobs.ch/",
+          "image": "",
+          "title": "graubuenden-jobs.ch",
+          "category": "Stellenportal für den Kanton Graubünden.",
+          "description": "Stellenportal für den Kanton Graubünden.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "4d298db3-e14b-464b-8e7f-1fdc69b1e774",
+          "url": "https://jobtic.ch",
+          "image": "",
+          "title": "jobtic.ch",
+          "category": "Französischsprachige Schweiz",
+          "description": "Französischsprachige Schweiz",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "ccf65568-2381-42d9-8fa6-5695dd320d44",
+          "url": "https://jura-emplois.ch/",
+          "image": "",
+          "title": "jura-emplois.ch",
+          "category": "Stellenportal für den Kanton Jura.",
+          "description": "Stellenportal für den Kanton Jura.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "0bc4d970-d6af-4381-8fd7-4d7291576d0c",
+          "url": "https://www.liechtensteinjobs.li/",
+          "image": "",
+          "title": "liechtensteinjobs.li",
+          "category": "Stellenmarkt für das Fürstentum Liechtenstein.",
+          "description": "Stellenmarkt für das Fürstentum Liechtenstein.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "8dab46d1-2cd7-4c5b-b7e5-cab468c1e8a4",
+          "url": "https://www.myjob.ch",
+          "image": "",
+          "title": "myjob.ch",
+          "category": "Nordwestschweiz",
+          "description": "Nordwestschweiz",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "fc662dec-3bd7-4ec8-8b86-dce258b920dc",
+          "url": "https://www.ostjob.ch",
+          "image": "",
+          "title": "ostjob.ch",
+          "category": "Ostschweiz (SG, TG, AI, AR, ZH, GR)",
+          "description": "Ostschweiz (SG, TG, AI, AR, ZH, GR)",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "c7943e8b-2c57-4243-bc78-4d36b6f2e4d6",
+          "url": "https://ostschweizer-jobs.ch/",
+          "image": "",
+          "title": "ostschweizer-jobs.ch",
+          "category": "Regionale Jobbörse für die Ostschweiz.",
+          "description": "Regionale Jobbörse für die Ostschweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "01b8a136-9832-46e4-95c1-e6b346ca8d35",
+          "url": "https://sanktgallen-jobs.ch/",
+          "image": "",
+          "title": "sanktgallen-jobs.ch",
+          "category": "Stellenportal für die Region St. Gallen.",
+          "description": "Stellenportal für die Region St. Gallen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "4768c2ba-8b28-4f50-becb-adc8ef1e2fe4",
+          "url": "https://solothurn-jobs.ch/",
+          "image": "",
+          "title": "solothurn-jobs.ch",
+          "category": "Regionale Stellenbörse für den Kanton Solothurn.",
+          "description": "Regionale Stellenbörse für den Kanton Solothurn.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "a3af47dc-4ca2-4fe2-88fa-3640cc3d66c6",
+          "url": "https://www.stellen-bern.ch",
+          "image": "",
+          "title": "stellen-bern.ch",
+          "category": "Bern, Solothurn, Thun, Biel",
+          "description": "Bern, Solothurn, Thun, Biel",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "95249140-d29b-4840-aa31-d0da6ba46eb8",
+          "url": "https://www.suedostschweizjobs.ch/",
+          "image": "",
+          "title": "suedostschweizjobs.ch",
+          "category": "Regionales Jobportal für die Südostschweiz.",
+          "description": "Regionales Jobportal für die Südostschweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "a76f7072-0577-46fe-b354-423a4be72a0b",
+          "url": "https://wallis-jobs.ch/",
+          "image": "",
+          "title": "wallis-jobs.ch",
+          "category": "Regionale Jobplattform für den Kanton Wallis.",
+          "description": "Regionale Jobplattform für den Kanton Wallis.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "7d414257-a14c-4fb0-8df5-8db57216d1b4",
+          "url": "https://www.zentraljob.ch",
+          "image": "",
+          "title": "zentraljob.ch",
+          "category": "Zentralschweiz (LU, ZG, SZ, UR, NW, OW)",
+          "description": "Zentralschweiz (LU, ZG, SZ, UR, NW, OW)",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "2c593d60-e45c-4238-b16d-97bf376b25d3",
+          "url": "https://zentralschweiz-jobs.ch/",
+          "image": "",
+          "title": "zentralschweiz-jobs.ch",
+          "category": "Stellenportal für die Zentralschweiz.",
+          "description": "Stellenportal für die Zentralschweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "6acb74ac-7e65-4706-8955-fea70cebb095",
+          "url": "https://zuercher-jobs.ch/",
+          "image": "",
+          "title": "zuercher-jobs.ch",
+          "category": "Regionales Stellenportal für den Kanton Zürich.",
+          "description": "Regionales Stellenportal für den Kanton Zürich.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Regional | alle Branchen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "1866c274-1aac-4a4d-8172-6b4d0c36cd07",
+      "type": "website",
+      "items": [
+        {
+          "id": "428b62e9-22af-4dcc-98fa-c3610edc33c7",
+          "url": "https://www.alpha.ch",
+          "image": "",
+          "title": "alpha.ch",
+          "category": "Spezialisiertes Jobportal für Führungskräfte und hochqualifizierte Fachspezialisten.",
+          "description": "Spezialisiertes Jobportal für Führungskräfte und hochqualifizierte Fachspezialisten.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "da49b270-66b4-417f-a346-b1c47cbf4418",
+          "url": "https://jobs.nzz.ch",
+          "image": "",
+          "title": "NZZJOBS",
+          "category": "Portal für Fach- und Führungskräfte in der Deutschschweiz.",
+          "description": "Portal für Fach- und Führungskräfte in der Deutschschweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "483e6df4-8a08-4334-a0de-e874600a956c",
+          "url": "https://topjobs.ch",
+          "image": "",
+          "title": "topjobs.ch",
+          "category": "Schweizer Stellenportal für Fach- und Führungskräfte mit Kader-Fokus.",
+          "description": "Schweizer Stellenportal für Fach- und Führungskräfte mit Kader-Fokus.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Führungskräfte und Fachspezialisten",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "47fe33d6-74ce-45b2-b554-16f11982c912",
+      "type": "website",
+      "items": [
+        {
+          "id": "4c847a34-1a92-41bc-99d4-00e0b233ca71",
+          "url": "https://www.berufsberatung.ch/dyn/show/2930",
+          "image": "",
+          "title": "berufsberatung.ch – LENA",
+          "category": "Offizieller Lehrstellennachweis mit freien Lehrstellen in der ganzen Schweiz.",
+          "description": "Offizieller Lehrstellennachweis mit freien Lehrstellen in der ganzen Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "5abeeb97-8493-4304-81d0-a5076514bc6f",
+          "url": "https://www.e-chance.ch",
+          "image": "",
+          "title": "e-chance.ch",
+          "category": "Lehrstellenportal für Elektrik und Gebäudeinformatik",
+          "description": "Lehrstellenportal für Elektrik und Gebäudeinformatik",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "c48ee391-ed65-4d03-9304-cd2905389510",
+          "url": "https://www.yousty.ch",
+          "image": "",
+          "title": "Yousty",
+          "category": "Führende Plattform für die Suche nach Lehrstellen in der Schweiz.",
+          "description": "Führende Plattform für die Suche nach Lehrstellen in der Schweiz.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Lehrstellen und Berufsbildung",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "cf32a1ba-e38b-4207-88ff-235643cea1cd",
+      "type": "website",
+      "items": [
+        {
+          "id": "b91f0d2a-0c4f-475c-a19d-2a92b14b1a60",
+          "url": "https://joinup.ch",
+          "image": "",
+          "title": "Joinup",
+          "category": "Startup-Jobplattform, getragen vom ETH Entrepreneur Club und Swisspreneur.",
+          "description": "Startup-Jobplattform, getragen vom ETH Entrepreneur Club und Swisspreneur.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "10da2683-6d08-4562-bd3e-c7b6f3c78c25",
+          "url": "https://www.startup.ch/jobs",
+          "image": "",
+          "title": "startup.ch Jobs",
+          "category": "Plattform für Jobs und Praktika in innovativen Startups.",
+          "description": "Plattform für Jobs und Praktika in innovativen Startups.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "e9b04bdb-abbd-4469-af5f-f2947befddcc",
+          "url": "https://www.talendo.ch",
+          "image": "",
+          "title": "talendo",
+          "category": "Job- und Karriereplattform für Studierende, Absolventen und Young Professionals.",
+          "description": "Job- und Karriereplattform für Studierende, Absolventen und Young Professionals.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Studierende, Absolventen und Startups",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "d2abcd3f-5c3f-4511-bd6a-6fdcecc05239",
+      "type": "website",
+      "items": [
+        {
+          "id": "b91f31b4-2467-40dc-969e-f2eb1562310c",
+          "url": "https://www.jobs.admin.ch",
+          "image": "",
+          "title": "jobs.admin.ch",
+          "category": "Offizielles Stellenportal der Schweizerischen Bundesverwaltung.",
+          "description": "Offizielles Stellenportal der Schweizerischen Bundesverwaltung.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "8161a0d6-22c7-4eb0-8fb8-7085a635b7d0",
+          "url": "https://www.publicjobs.ch",
+          "image": "",
+          "title": "publicjobs.ch",
+          "category": "Zentrales Stellenportal für den öffentlichen Sektor: Bund, Kantone und Gemeinden.",
+          "description": "Zentrales Stellenportal für den öffentlichen Sektor: Bund, Kantone und Gemeinden.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Öffentliche Verwaltung",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "510eef39-b37e-4400-89da-b46f27f080de",
+      "type": "website",
+      "items": [
+        {
+          "id": "8ab0aef5-1f1a-40b9-95e2-fceb5cb80286",
+          "url": "https://www.baujobs.ch",
+          "image": "",
+          "title": "baujobs.ch",
+          "category": "Führende Jobbörse der Baubranche für Fachkräfte im Hoch-, Tief- und Ausbau.",
+          "description": "Führende Jobbörse der Baubranche für Fachkräfte im Hoch-, Tief- und Ausbau.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Architektur und Bauwesen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "97239276-7ad3-45eb-ae37-5afec8e48ba2",
+      "type": "website",
+      "items": [
+        {
+          "id": "cb9356b8-24fc-4dba-baa4-87fe5874e661",
+          "url": "https://www.efinancialcareers.ch",
+          "image": "",
+          "title": "eFinancialCareers CH",
+          "category": "Spezialisiert auf Fachkräfte im Finanzwesen und Bankensektor.",
+          "description": "Spezialisiert auf Fachkräfte im Finanzwesen und Bankensektor.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "4f23aca7-928c-4475-b937-8a69b7b6589d",
+          "url": "https://www.financejobs.ch",
+          "image": "",
+          "title": "financejobs.ch",
+          "category": "Spezialisiertes Portal für Fachkräfte im Schweizer Finanzsektor und Rechnungswesen.",
+          "description": "Spezialisiertes Portal für Fachkräfte im Schweizer Finanzsektor und Rechnungswesen.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Banken, Finanzen und Versicherungen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "0b0bb490-5963-43d5-985f-37c5698ff963",
+      "type": "website",
+      "items": [
+        {
+          "id": "01f161ac-91a4-427d-bce4-02b0eab09077",
+          "url": "https://www.lernwerkstatt.ch/stellenplattform/stellenangebote-bildungsfachleute",
+          "image": "",
+          "title": "Lernwerkstatt",
+          "category": "Stellenportal für Erwachsenenbildung",
+          "description": "Stellenportal für Erwachsenenbildung",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "b3b53640-3323-4d1c-802c-05300dfe0fc0",
+          "url": "https://www.schuljobs.ch",
+          "image": "",
+          "title": "schuljobs.ch",
+          "category": "Grösstes Schweizer Jobportal für das Bildungswesen von Primar- bis Hochschule.",
+          "description": "Grösstes Schweizer Jobportal für das Bildungswesen von Primar- bis Hochschule.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "1aefc921-f729-44dd-81f7-f61db40f21fe",
+          "url": "https://alice.ch/de/dienstleistungen/stellenmarkt/",
+          "image": "",
+          "title": "SVEB",
+          "category": "Stellenmarkt des Schweizerischen Verbands für Weiterbildung",
+          "description": "Stellenmarkt des Schweizerischen Verbands für Weiterbildung",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Bildung und Unterricht",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "c134ceb4-848b-442b-886a-37ae767ae318",
+      "type": "website",
+      "items": [
+        {
+          "id": "ed889d8f-84a3-4b48-9d3d-2286f65182fa",
+          "url": "https://www.cinfo.ch",
+          "image": "",
+          "title": "cinfo.ch",
+          "category": "Zentrum für Karrieren in der internationalen Zusammenarbeit und humanitären Hilfe.",
+          "description": "Zentrum für Karrieren in der internationalen Zusammenarbeit und humanitären Hilfe.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "74572806-c89e-4e22-9c5f-49c0b27c60d4",
+          "url": "https://www.kampajobs.ch",
+          "image": "",
+          "title": "Kampajobs",
+          "category": "Online-Jobbörse für Non-Profit-Organisationen, Stiftungen und Verbände.",
+          "description": "Online-Jobbörse für Non-Profit-Organisationen, Stiftungen und Verbände.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Entwicklungszusammenarbeit und NGO/NPO",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "af69b705-e958-4824-8780-388b1f74f88f",
+      "type": "website",
+      "items": [
+        {
+          "id": "0f38774b-241e-42c6-8187-d5520dae465e",
+          "url": "https://www.gastrojobs.ch",
+          "image": "",
+          "title": "gastrojobs.ch",
+          "category": "Jobportal speziell für die Gastronomiebranche in der Schweiz.",
+          "description": "Jobportal speziell für die Gastronomiebranche in der Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "a29d347c-f62c-4a2c-b43b-575a8929837d",
+          "url": "https://www.hotelcareer.ch",
+          "image": "",
+          "title": "HotelCareer",
+          "category": "Spezialisiertes Portal für Berufe im Hotel- und Gastgewerbe.",
+          "description": "Spezialisiertes Portal für Berufe im Hotel- und Gastgewerbe.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "368554e4-6188-43f2-840f-ae30522a4fa1",
+          "url": "https://www.hoteljob.ch",
+          "image": "",
+          "title": "hoteljob.ch",
+          "category": "Stellenmarkt für Berufe im Schweizer Gastgewerbe und Tourismus.",
+          "description": "Stellenmarkt für Berufe im Schweizer Gastgewerbe und Tourismus.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Gastronomie und Hotellerie",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "22ba3bc3-56ff-4bce-aa0e-e963b4da9e76",
+      "type": "website",
+      "items": [
+        {
+          "id": "a65d7e9d-bc06-4cde-9f47-649ca01acb0d",
+          "url": "https://www.medtalents.ch",
+          "image": "",
+          "title": "medtalents.ch",
+          "category": "Stellenangebote für Fachkräfte aus dem gesamten Gesundheitsbereich.",
+          "description": "Stellenangebote für Fachkräfte aus dem gesamten Gesundheitsbereich.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "f060f9a5-7455-41f8-8833-ef741031efd5",
+          "url": "https://www.praxisstellen.ch",
+          "image": "",
+          "title": "Praxisstellen.ch",
+          "category": "Portal für medizinisches Praxispersonal wie MPA, Arztsekretärinnen und Zahnmedizin.",
+          "description": "Portal für medizinisches Praxispersonal wie MPA, Arztsekretärinnen und Zahnmedizin.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "c8c47419-ec39-49da-8e62-c3044dcbb19a",
+          "url": "https://www.sozialinfo.ch",
+          "image": "",
+          "title": "Sozialinfo",
+          "category": "Grösstes Stellenportal für den Sozialbereich in der Schweiz.",
+          "description": "Grösstes Stellenportal für den Sozialbereich in der Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "f3099133-9b27-413b-8642-735c40fba5ed",
+          "url": "https://www.sozjobs.ch",
+          "image": "",
+          "title": "sozjobs.ch",
+          "category": "Jobportal für Sozial- und Gesundheitsberufe, getragen von Branchenverbänden.",
+          "description": "Jobportal für Sozial- und Gesundheitsberufe, getragen von Branchenverbänden.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Gesundheit, Soziales und Sozialwesen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "b394b6ed-8e72-49df-864e-4b7b081ce398",
+      "type": "website",
+      "items": [
+        {
+          "id": "ac34e9c7-c70e-482d-9d78-5dc87cdda283",
+          "url": "https://www.ictjobs.ch",
+          "image": "",
+          "title": "ictjobs.ch",
+          "category": "Spezialisierte Nischenbörse für ICT-Fach- und Führungskräfte in der Schweiz.",
+          "description": "Spezialisierte Nischenbörse für ICT-Fach- und Führungskräfte in der Schweiz.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "5e342777-0b8d-4058-be14-0a3428d609e8",
+          "url": "https://www.swissdevjobs.ch",
+          "image": "",
+          "title": "SwissDevJobs.ch",
+          "category": "Transparentes IT-Jobboard für Software-Entwickler mit Gehaltsangaben.",
+          "description": "Transparentes IT-Jobboard für Software-Entwickler mit Gehaltsangaben.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "ICT, Informatik und Software-Engineering",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "84f3dd7d-3237-4c52-9a32-5618a0904b8a",
+      "type": "website",
+      "items": [
+        {
+          "id": "6b74f035-5a52-46e5-88d5-88787ba2b9a3",
+          "url": "https://www.swissengineering.ch",
+          "image": "",
+          "title": "swissengineering.ch",
+          "category": "Stellenbörse des Berufsverbands Swiss Engineering für technische Fachkräfte.",
+          "description": "Stellenbörse des Berufsverbands Swiss Engineering für technische Fachkräfte.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Ingenieurwesen und Technik",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "3b6f96ac-6fb9-44bd-aa41-655993c052a6",
+      "type": "website",
+      "items": [
+        {
+          "id": "1d195363-3cfa-4e41-ba43-2ed6064fb109",
+          "url": "https://www.medienjobs.ch",
+          "image": "",
+          "title": "medienjobs.ch",
+          "category": "Jobbörse für die Medien- und Kommunikationsbranche in der Schweiz.",
+          "description": "Jobbörse für die Medien- und Kommunikationsbranche in der Schweiz.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Kommunikation, Marketing und Medien",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "76d152d0-43d3-4bb7-80ff-27d91a805a27",
+      "type": "website",
+      "items": [
+        {
+          "id": "19f3dbcd-c190-4d45-bfd3-9d61eb5efca2",
+          "url": "https://www.agrarjobs.ch/de",
+          "image": "",
+          "title": "agrarjobs.ch",
+          "category": "Stellenportal für die Schweizer Landwirtschaft.",
+          "description": "Stellenportal für die Schweizer Landwirtschaft.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "e83ddb27-ba20-484b-8422-92d8093a9dee",
+          "url": "https://www.bauern-sg.ch/de/Dienstleistungen/Stellenportal-Landjob.ch",
+          "image": "",
+          "title": "landjobs.ch",
+          "category": "Stellen im Landwirtschaftsbereich in der Region St. Gallen",
+          "description": "Stellen im Landwirtschaftsbereich in der Region St. Gallen",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Landwirtschaft",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "589beac6-27c7-4d75-bb63-b6966085a219",
+      "type": "website",
+      "items": [
+        {
+          "id": "7cfc33a4-54e7-4fb7-aa47-57deeb7ebf89",
+          "url": "https://www.pharmajobs.ch",
+          "image": "",
+          "title": "pharmajobs.ch",
+          "category": "Nischenportal für Fach- und Führungskräfte in der Pharma- und Life-Sciences-Branche.",
+          "description": "Nischenportal für Fach- und Führungskräfte in der Pharma- und Life-Sciences-Branche.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Pharma und Life Sciences",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "213b8d58-1612-442e-95b7-fc95f4b01faf",
+      "type": "website",
+      "items": [
+        {
+          "id": "8c4563e4-1044-489e-801b-68c34d4f2270",
+          "url": "https://www.lawjobs.ch",
+          "image": "",
+          "title": "lawjobs.ch",
+          "category": "Führende Schweizer Online-Stellenbörse für juristische Berufe von Weblaw.",
+          "description": "Führende Schweizer Online-Stellenbörse für juristische Berufe von Weblaw.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Recht",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "e7299d3f-3849-4023-b907-5cb578a5e3be",
+      "type": "website",
+      "items": [
+        {
+          "id": "0acee4cb-7f3f-4614-94b9-38fd19f94e7c",
+          "url": "https://jobs.sbb.ch",
+          "image": "",
+          "title": "jobs.sbb.ch",
+          "category": "Karriereportal der SBB für Stellen im öffentlichen Verkehr und Eisenbahnwesen.",
+          "description": "Karriereportal der SBB für Stellen im öffentlichen Verkehr und Eisenbahnwesen.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Transport und Logistik",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "2033c0ab-b25f-43bb-a9ca-fc36dbf59557",
+      "type": "website",
+      "items": [
+        {
+          "id": "a8fe33f6-09dc-41ae-b17d-28eb18e03528",
+          "url": "https://naturschutz.ch/jobliste",
+          "image": "",
+          "title": "Naturschutz.ch Jobliste",
+          "category": "Nischenportal mit Jobliste für Naturschutz- und angrenzende Umweltberufe.",
+          "description": "Nischenportal mit Jobliste für Naturschutz- und angrenzende Umweltberufe.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "b2a6c21d-cf34-4abc-b848-fceae16de9d9",
+          "url": "https://www.umweltprofis.ch/jobs",
+          "image": "",
+          "title": "Umweltprofis",
+          "category": "Branchenportal für Umwelt-Jobs in der Schweiz.",
+          "description": "Branchenportal für Umwelt-Jobs in der Schweiz.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Umwelt und Naturschutz",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "540be74f-daa0-47d6-9d4b-504d4ee6bf83",
+      "type": "website",
+      "items": [
+        {
+          "id": "c5811570-4964-4f2d-9d29-680f61380975",
+          "url": "https://www.jobs4sales.ch",
+          "image": "",
+          "title": "Jobs4Sales.ch",
+          "category": "Spezialportal exklusiv für Sales-Profis, Aussendienst und Telesales.",
+          "description": "Spezialportal exklusiv für Sales-Profis, Aussendienst und Telesales.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Verkauf und Vertrieb",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "8680aa2c-b6bd-4620-a587-c74261eb428f",
+      "type": "website",
+      "items": [
+        {
+          "id": "0f8709f2-157e-4e90-91bb-92914687b1e3",
+          "url": "https://academics.ch",
+          "image": "",
+          "title": "academics.ch",
+          "category": "Karriereportal für akademische Talente in Wissenschaft, Forschung und Hochschulen.",
+          "description": "Karriereportal für akademische Talente in Wissenschaft, Forschung und Hochschulen.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "1fd067ed-4c8b-40c2-a7e7-1fc091ca85d4",
+          "url": "https://www.euraxess.ch",
+          "image": "",
+          "title": "EURAXESS Switzerland",
+          "category": "Portal für Forschende mit Stellen- und Fördermöglichkeiten.",
+          "description": "Portal für Forschende mit Stellen- und Fördermöglichkeiten.",
+          "pageBreakAfter": false
+        },
+        {
+          "id": "19f77a14-78bd-42b2-bfcd-36d7d350d4c9",
+          "url": "https://www.science-jobs.ch",
+          "image": "",
+          "title": "jobs.myScience",
+          "category": "Schweizer Wissenschafts-Jobportal für Forschende, Scientists und Engineers.",
+          "description": "Schweizer Wissenschafts-Jobportal für Forschende, Scientists und Engineers.",
+          "pageBreakAfter": false
+        }
+      ],
+      "level": 2,
+      "title": "Wissenschaft, Forschung und Hochschulen",
+      "bilingual": false,
+      "visibility": "both",
+      "skipTranslation": false
+    },
+    {
+      "id": "6327b9e9-523a-42db-b740-6159559c7e09",
+      "type": "heading",
+      "level": 1,
+      "content": "Spezialportale",
+      "bilingual": true,
+      "visibility": "both"
+    },
+    {
+      "id": "f8d6ce94-4d01-401a-9355-c95daa7bdb86",
+      "type": "heading",
+      "level": 2,
+      "content": "Branchenspezifische Portale",
+      "visibility": "both"
+    }
+  ]
+}

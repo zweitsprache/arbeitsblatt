@@ -684,6 +684,7 @@ export interface WebsiteItem {
   category: string;
   description: string;
   image?: string;
+  aggregator?: boolean;
   pageBreakAfter?: boolean;
 }
 
@@ -2090,6 +2091,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         category: "Category",
         description: "Short description",
         image: "",
+        aggregator: false,
         pageBreakAfter: false,
       },
       {
@@ -2099,6 +2101,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         category: "Category",
         description: "Another short description",
         image: "",
+        aggregator: false,
         pageBreakAfter: false,
       },
     ],

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
   HeadingBlock,
@@ -4378,6 +4378,7 @@ function AudioRenderer({ block }: { block: AudioBlock }) {
 function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   const { dispatch, state } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
+  const locale = useLocale();
   const t = useTranslations("properties");
   const { upload } = useUpload();
   const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
@@ -4386,6 +4387,12 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   const [cropOpen, setCropOpen] = React.useState(false);
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const [cropIndex, setCropIndex] = React.useState<number | null>(null);
+  const [capturingIndex, setCapturingIndex] = React.useState<number | null>(null);
+  const [blockedPreview, setBlockedPreview] = React.useState<{
+    index: number;
+    objectUrl: string;
+    blob: Blob;
+  } | null>(null);
 
   const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
   const headingSizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
@@ -4424,6 +4431,78 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   const openBrowser = (index: number) => {
     setBrowserIndex(index);
     setBrowserOpen(true);
+  };
+
+  const captureWebsitePreview = async (index: number) => {
+    const rawUrl = block.items[index]?.url || "";
+    const normalizedUrl = normalizeExternalUrl(rawUrl);
+    if (!normalizedUrl) return;
+
+    setCapturingIndex(index);
+    try {
+      const response = await authFetch("/api/website-screenshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: normalizedUrl }),
+      });
+
+      if (!response.ok) {
+        let message = "Failed to capture website preview";
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // Ignore parse errors and keep fallback message.
+        }
+        throw new Error(message);
+      }
+
+      const isBlocked = response.headers.get("x-screenshot-blocked") === "1";
+      const blob = await response.blob();
+
+      if (isBlocked) {
+        // Show the captured preview and let the user decide whether to insert it.
+        const objectUrl = URL.createObjectURL(blob);
+        setBlockedPreview({ index, objectUrl, blob });
+        return;
+      }
+
+      const file = new File([blob], `website-preview-${Date.now()}.png`, {
+        type: "image/png",
+      });
+      const uploadResult = await upload(file);
+      updateItem(index, { image: uploadResult.url });
+    } catch (error) {
+      console.error("Website preview capture failed:", error);
+      alert(t("websitePreviewCaptureFailed"));
+    } finally {
+      setCapturingIndex(null);
+    }
+  };
+
+  const confirmBlockedPreview = async () => {
+    if (!blockedPreview) return;
+    const { index, objectUrl, blob } = blockedPreview;
+    setBlockedPreview(null);
+    setCapturingIndex(index);
+    try {
+      const file = new File([blob], `website-preview-${Date.now()}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateItem(index, { image: uploadResult.url });
+    } catch (error) {
+      console.error("Website preview upload failed:", error);
+      alert(t("websitePreviewCaptureFailed"));
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      setCapturingIndex(null);
+    }
+  };
+
+  const dismissBlockedPreview = () => {
+    if (blockedPreview) {
+      URL.revokeObjectURL(blockedPreview.objectUrl);
+      setBlockedPreview(null);
+    }
   };
 
   const handleFileSelected = (file: File, index: number) => {
@@ -4466,6 +4545,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
         category: "",
         description: "",
         image: "",
+        aggregator: false,
         pageBreakAfter: false,
       },
     ]);
@@ -4485,6 +4565,8 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
   };
 
   const getBodyValue = (item: WebsiteBlock["items"][number]) => item.category || item.description || "";
+
+  const pageBreakLabel = locale === "de" ? "Seitenumbruch" : "Page break";
 
   const updateBodyField = (index: number, value: string) => {
     localeUpdate(block.id, `items.${index}.category`, value, () => {
@@ -4507,7 +4589,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
           return (
             <div
               key={item.id}
-              className="group relative rounded-sm border border-slate-200 bg-white p-3"
+              className={`group relative rounded-sm border bg-white p-3 ${item.aggregator ? "border-dashed border-slate-400" : "border-slate-200"}`}
               style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
             >
               <div className="flex items-start gap-3">
@@ -4551,6 +4633,19 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                         <Upload className="mr-1 h-3.5 w-3.5" />
                         {t("mediaBrowser")}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => captureWebsitePreview(index)}
+                        disabled={!href || capturingIndex === index}
+                        className="flex h-7 w-full items-center justify-center rounded-sm border border-slate-200 bg-white px-2 text-[11px] text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {capturingIndex === index ? (
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Monitor className="mr-1 h-3.5 w-3.5" />
+                        )}
+                        {capturingIndex === index ? t("websiteCapturingPreview") : t("websiteCapturePreview")}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -4590,6 +4685,15 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                     placeholder={t("websiteCategory")}
                     className="min-h-[72px] w-full resize-y rounded-sm border border-slate-200 bg-white px-2 py-2 text-sm font-normal normal-case tracking-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
                   />
+
+                  <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={item.aggregator ?? false}
+                      onChange={(e) => updateItem(index, { aggregator: e.target.checked })}
+                    />
+                    <span>{t("websiteAggregator")}</span>
+                  </label>
                 </div>
               </div>
 
@@ -4598,7 +4702,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                   type="button"
                   onClick={() => updateItem(index, { pageBreakAfter: !(item.pageBreakAfter ?? false) })}
                   className={`text-slate-400 hover:text-slate-700 ${item.pageBreakAfter ? "text-slate-700" : ""}`}
-                  title={t("pageBreak")}
+                  title={pageBreakLabel}
                 >
                   <Printer className="h-3.5 w-3.5" />
                 </button>
@@ -4628,7 +4732,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                 </button>
               </div>
               {item.pageBreakAfter ? (
-                <div className="mt-2 text-[11px] text-muted-foreground">{t("pageBreak")}</div>
+                <div className="mt-2 text-[11px] text-muted-foreground">{pageBreakLabel}</div>
               ) : null}
             </div>
           );
@@ -4671,8 +4775,44 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
         }}
         onCropComplete={handleCropComplete}
         title={t("cropImage")}
-        aspect={1}
+        aspect={16 / 9}
       />
+
+      {/* Blocked-site preview confirmation dialog */}
+      {blockedPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="px-4 pt-4 pb-2">
+              <p className="font-semibold text-sm">{t("websiteBlockedTitle")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("websiteBlockedDescription")}</p>
+            </div>
+            <div className="px-4 pb-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={blockedPreview.objectUrl}
+                alt="Captured preview"
+                className="w-full rounded border border-border aspect-video object-cover"
+              />
+            </div>
+            <div className="flex justify-end gap-2 px-4 pb-4">
+              <button
+                type="button"
+                onClick={dismissBlockedPreview}
+                className="px-3 py-1.5 text-sm rounded border border-border hover:bg-muted transition-colors"
+              >
+                {t("websiteBlockedDiscard")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmBlockedPreview()}
+                className="px-3 py-1.5 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                {t("websiteBlockedInsert")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

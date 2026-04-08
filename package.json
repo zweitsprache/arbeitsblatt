@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "WATCHPACK_POLLING=true WATCHPACK_POLLING_INTERVAL=500 next dev --webpack",
     "dev:next": "next dev --webpack",
     "dev:webpack": "next dev --webpack",
     "dev:turbo": "next dev --turbopack",
