@@ -4595,7 +4595,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
               <div className="flex items-start gap-3">
                 <div className="w-40 shrink-0">
                   {item.image ? (
-                    <div className="relative aspect-video overflow-hidden rounded-[4px] border border-slate-200 bg-slate-50">
+                    <div className="relative aspect-video overflow-hidden rounded-[2px] border border-slate-200 bg-slate-50">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
                       <button
@@ -4608,7 +4608,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-[4px] border border-dashed border-slate-300 bg-slate-50 text-center transition-colors hover:border-slate-400 hover:bg-slate-100">
+                      <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-[2px] border border-dashed border-slate-300 bg-slate-50 text-center transition-colors hover:border-slate-400 hover:bg-slate-100">
                         <input
                           type="file"
                           accept="image/*"

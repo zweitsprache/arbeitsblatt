@@ -4338,7 +4338,7 @@ function WebsiteView({
               className={`website-item flex min-h-[8rem] items-start gap-4 rounded-sm border bg-white p-4 ${item.aggregator ? "border-dashed border-slate-400" : "border-slate-200"}`}
               style={item.pageBreakAfter ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
             >
-              <div className="aspect-video w-40 shrink-0 self-start overflow-hidden rounded-[4px] border border-slate-200 bg-slate-50">
+              <div className="aspect-video w-40 shrink-0 self-start overflow-hidden rounded-[2px] border border-slate-200 bg-slate-50">
                 {item.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.image} alt={item.title || "Website image"} className="h-full w-full object-cover" />
