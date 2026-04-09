@@ -176,52 +176,116 @@ function SidebarModuleSection({
   moduleIndex,
   brand,
   currentModuleId,
+  state,
   onSelectModule,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   mod: CourseModule;
   moduleIndex: number;
   brand?: Brand;
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
+  state: "default" | "expanded" | "compressed";
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   const tk = useSidebarTheme();
-  const moduleNumber = String(getModuleNumber(moduleIndex));
+  const num = String(moduleIndex + 1).padStart(2, "0");
   const isCurrentModule = currentModuleId === mod.id;
   const moduleTitleColor = BRAND_FONTS[brand || "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
+  const active = state === "expanded" || isCurrentModule;
 
   return (
     <button
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onClick={() => onSelectModule(mod.id)}
-      className="group relative mb-1 w-full overflow-hidden rounded-sm px-5 py-4 text-left transition-colors"
+      className="px-2.5 py-1.5 text-left overflow-hidden"
       style={{
-        backgroundColor: isCurrentModule ? tk.activeBg : "transparent",
+        flexGrow: state === "expanded" ? 3.2 : state === "compressed" ? 0.55 : 1,
+        flexShrink: 1,
+        flexBasis: "0px",
+        height: 36,
+        transition: "flex-grow 0.24s cubic-bezier(0.4,0,0.2,1), border-color 0.15s, background-color 0.15s",
+        borderRadius: 4,
+        backgroundColor: isCurrentModule ? "#f0efed" : state === "expanded" ? "#f5f4f2" : "#f8f8f7",
+        border: `1.75px solid ${active ? moduleTitleColor : (isCurrentModule ? "#f0efed" : "#f8f8f7")}`,
+        minWidth: 0,
       }}
     >
-      <span
-        className="absolute bottom-3 left-0 top-3 w-[3px] rounded-full transition-opacity"
-        style={{
-          backgroundColor: moduleTitleColor,
-          opacity: isCurrentModule ? 1 : 0,
-        }}
-      />
-      <span
-        className="absolute bottom-0 left-5 right-0 h-px"
-        style={{ backgroundColor: tk.divider }}
-      />
-      <div className="pr-8">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-normal leading-none" style={{ color: tk.textFaint }}>
-            {moduleNumber}
-          </p>
-          <p
-            className="mt-2 text-sm font-semibold leading-tight transition-colors"
-            style={{ color: isCurrentModule ? moduleTitleColor : tk.text }}
-          >
-            {mod.shortTitle || mod.title || "Untitled Module"}
-          </p>
-        </div>
+      <div className="flex items-center gap-1.5 overflow-hidden h-full">
+        <span
+          className="shrink-0 text-lg font-black leading-none tracking-tight"
+          style={{ color: active ? moduleTitleColor : tk.textFaint }}
+        >
+          {num}
+        </span>
+        <span
+          className="text-[11px] font-semibold leading-none"
+          style={{
+            color: tk.text,
+            opacity: state === "expanded" ? 1 : 0,
+            transform: state === "expanded" ? "translateX(0)" : "translateX(-6px)",
+            transition: "opacity 0.15s ease 0.07s, transform 0.18s ease 0.07s",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {mod.shortTitle || mod.title || "Untitled"}
+        </span>
       </div>
     </button>
+  );
+}
+
+function ModulePair({
+  left,
+  leftIndex,
+  right,
+  rightIndex,
+  brand,
+  currentModuleId,
+  onSelectModule,
+}: {
+  left: CourseModule;
+  leftIndex: number;
+  right?: CourseModule;
+  rightIndex?: number;
+  brand?: Brand;
+  currentModuleId: string | null;
+  onSelectModule: (moduleId: string) => void;
+}) {
+  const [hoveredSide, setHoveredSide] = useState<"left" | "right" | null>(null);
+
+  return (
+    <div className="flex gap-2">
+      <SidebarModuleSection
+        mod={left}
+        moduleIndex={leftIndex}
+        brand={brand}
+        currentModuleId={currentModuleId}
+        state={hoveredSide === "left" ? "expanded" : hoveredSide === "right" ? "compressed" : "default"}
+        onSelectModule={onSelectModule}
+        onMouseEnter={() => setHoveredSide("left")}
+        onMouseLeave={() => setHoveredSide(null)}
+      />
+      {right !== undefined && rightIndex !== undefined ? (
+        <SidebarModuleSection
+          mod={right}
+          moduleIndex={rightIndex}
+          brand={brand}
+          currentModuleId={currentModuleId}
+          state={hoveredSide === "right" ? "expanded" : hoveredSide === "left" ? "compressed" : "default"}
+          onSelectModule={onSelectModule}
+          onMouseEnter={() => setHoveredSide("right")}
+          onMouseLeave={() => setHoveredSide(null)}
+        />
+      ) : (
+        <div style={{ flexGrow: 1 }} />
+      )}
+    </div>
   );
 }
 
@@ -288,17 +352,21 @@ function SidebarNav({
         backgroundColor: "#ffffff",
       }}
     >
-      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3 sidebar-scroll">
-        {structure.map((mod, i) => (
-          <SidebarModuleSection
-            key={mod.id}
-            mod={mod}
-            moduleIndex={i}
-            brand={brand}
-            currentModuleId={currentModuleId}
-            onSelectModule={onSelectModule}
-          />
-        ))}
+      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 sidebar-scroll">
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: Math.ceil(structure.length / 2) }, (_, pi) => (
+            <ModulePair
+              key={structure[pi * 2].id}
+              left={structure[pi * 2]}
+              leftIndex={pi * 2}
+              right={structure[pi * 2 + 1]}
+              rightIndex={structure[pi * 2 + 1] !== undefined ? pi * 2 + 1 : undefined}
+              brand={brand}
+              currentModuleId={currentModuleId}
+              onSelectModule={onSelectModule}
+            />
+          ))}
+        </div>
       </div>
 
       <style>{`
