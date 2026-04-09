@@ -21,6 +21,7 @@ export async function POST(
   const showSolutions = req.nextUrl.searchParams.get("solutions") === "1";
   const showBoth = req.nextUrl.searchParams.get("both") === "1";
   const lang = req.nextUrl.searchParams.get("lang"); // translation language code, e.g. "en"
+  const shouldOptimizeImages = req.nextUrl.searchParams.get("optimizeImages") !== "0";
   const maxImageEdge = Math.min(
     Math.max(Number(req.nextUrl.searchParams.get("imgMaxEdge") || "1600"), 800),
     2400,
@@ -62,8 +63,6 @@ export async function POST(
     contentType: string;
     body: Buffer;
   };
-
-  const optimizedImageCache = new Map<string, Promise<OptimizedImageResult | null>>();
 
   const optimizeImageForPrint = async (url: string): Promise<OptimizedImageResult | null> => {
     if (!url || url.startsWith("data:") || url.startsWith("blob:")) {
@@ -131,6 +130,7 @@ export async function POST(
   const installImageOptimizationInterceptor = async (
     page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
   ) => {
+    const optimizedImageCache = new Map<string, Promise<OptimizedImageResult | null>>();
     await page.setRequestInterception(true);
 
     page.on("request", async (request) => {
@@ -310,125 +310,162 @@ export async function POST(
     };
 
     const browser = await launchBrowser();
+    const createPage = async (enableImageOptimization: boolean) => {
+      const page = await browser.newPage();
+      if (enableImageOptimization) {
+        await installImageOptimizationInterceptor(page);
+      }
+      return page;
+    };
 
-    const page = await browser.newPage();
-    await installImageOptimizationInterceptor(page);
+    const generatePdfBytes = async (
+      page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
+    ): Promise<Uint8Array> => {
+      let finalPdfBytes: Uint8Array;
 
-    let finalPdfBytes: Uint8Array;
+      if (showBoth) {
+        // Generate worksheet + solutions as a single PDF, each with independent page numbering
+        const worksheetUrl = buildPrintUrl(false);
+        const solutionsUrl = buildPrintUrl(true);
 
-    if (showBoth) {
-      // Generate worksheet + solutions as a single PDF, each with independent page numbering
-      const worksheetUrl = buildPrintUrl(false);
-      const solutionsUrl = buildPrintUrl(true);
+        console.log(`[PDF v3] Generating BOTH for: ${worksheetUrl} + ${solutionsUrl}`);
 
-      console.log(`[PDF v3] Generating BOTH for: ${worksheetUrl} + ${solutionsUrl}`);
+        const worksheetBytes = await renderPrintUrl(page, worksheetUrl);
+        const solutionsBytes = await renderPrintUrl(page, solutionsUrl);
 
-      const worksheetBytes = await renderPrintUrl(page, worksheetUrl);
-      const solutionsBytes = await renderPrintUrl(page, solutionsUrl);
+        // Merge into a single PDF
+        const combinedPdf = await PDFDocument.create();
+        const wsPdf = await PDFDocument.load(worksheetBytes);
+        const solPdf = await PDFDocument.load(solutionsBytes);
 
-      // Merge into a single PDF
-      const combinedPdf = await PDFDocument.create();
-      const wsPdf = await PDFDocument.load(worksheetBytes);
-      const solPdf = await PDFDocument.load(solutionsBytes);
+        const wsPages = await combinedPdf.copyPages(wsPdf, wsPdf.getPageIndices());
+        wsPages.forEach((p) => combinedPdf.addPage(p));
 
-      const wsPages = await combinedPdf.copyPages(wsPdf, wsPdf.getPageIndices());
-      wsPages.forEach((p) => combinedPdf.addPage(p));
+        const solPages = await combinedPdf.copyPages(solPdf, solPdf.getPageIndices());
+        solPages.forEach((p) => combinedPdf.addPage(p));
 
-      const solPages = await combinedPdf.copyPages(solPdf, solPdf.getPageIndices());
-      solPages.forEach((p) => combinedPdf.addPage(p));
-
-      finalPdfBytes = await combinedPdf.save();
-      console.log(`[PDF v3] Combined PDF: ${wsPdf.getPageCount()} worksheet + ${solPdf.getPageCount()} solution pages`);
-    } else {
-      const printUrl = buildPrintUrl(showSolutions);
-      console.log(`[PDF v3] Generating PDF for: ${printUrl} (locale=${locale || "DE"}, solutions=${showSolutions})`);
-      finalPdfBytes = await renderPrintUrl(page, printUrl);
-    }
-
-    // For preview mode: rasterize each page, blur the bottom-right triangle, reassemble
-    if (isPreview) {
-      console.log(`[PDF v3] Applying preview blur...`);
-
-      const sourcePdf = await PDFDocument.load(finalPdfBytes);
-      const pageCount = sourcePdf.getPageCount();
-      const previewPdf = await PDFDocument.create();
-
-      const firstPage = sourcePdf.getPage(0);
-      const { width: pdfW, height: pdfH } = firstPage.getSize();
-
-      const viewportW = 794;
-      const viewportH = Math.round(viewportW * (pdfH / pdfW));
-      const deviceScale = 2;
-
-      await page.setViewport({ width: viewportW, height: viewportH, deviceScaleFactor: deviceScale });
-
-      // Navigate to the print page fresh for screenshot (use worksheet version for preview)
-      const previewUrl = buildPrintUrl(false);
-      await page.goto(previewUrl, { waitUntil: "networkidle0", timeout: 60000 });
-      await page.evaluateHandle("document.fonts.ready");
-      await new Promise((r) => setTimeout(r, 500));
-
-      // Hide Next.js dev overlays
-      await page.evaluate(() => {
-        document.querySelectorAll('nextjs-portal, [id^="__next-build"], [id^="__nextjs"]').forEach((el) => el.remove());
-        const style = document.createElement("style");
-        style.textContent =
-          "nextjs-portal, [data-nextjs-dialog-overlay], [data-nextjs-toast] { display: none !important; }";
-        document.head.appendChild(style);
-      });
-
-      // Take a full-page screenshot of the entire scrollable content
-      const fullScreenshot = await page.screenshot({ type: "png", fullPage: true });
-
-      const fullMeta = await sharp(fullScreenshot).metadata();
-      const fullW = fullMeta.width!;
-      const fullH = fullMeta.height!;
-
-      console.log(`[PDF v3] Screenshot: ${fullW}x${fullH}, pages=${pageCount}`);
-
-      const pagePixelH = Math.round(fullH / pageCount);
-      const mmToPx = fullW / 210;
-      const triangleTopOffset = Math.round(30 * mmToPx);
-      const blurRadius = 14;
-
-      for (let i = 0; i < pageCount; i++) {
-        const pageTop = i * pagePixelH;
-        const extractH = Math.min(pagePixelH, fullH - pageTop);
-        if (extractH <= 0) continue;
-
-        const pageImg = await sharp(fullScreenshot)
-          .extract({ left: 0, top: pageTop, width: fullW, height: extractH })
-          .toBuffer();
-
-        const blurredImg = await sharp(pageImg).blur(blurRadius).toBuffer();
-
-        const maskSvg = Buffer.from(
-          `<svg width="${fullW}" height="${extractH}" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="${fullW},${triangleTopOffset} 0,${extractH} ${fullW},${extractH}" fill="white"/>
-          </svg>`,
-        );
-        const maskPng = await sharp(maskSvg).png().toBuffer();
-
-        const maskedBlur = await sharp(blurredImg)
-          .composite([{ input: maskPng, blend: "dest-in" }])
-          .png()
-          .toBuffer();
-
-        const composited = await sharp(pageImg)
-          .composite([{ input: maskedBlur, blend: "over" }])
-          .png()
-          .toBuffer();
-
-        const pngEmbed = await previewPdf.embedPng(composited);
-        const pdfPage = previewPdf.addPage([pdfW, pdfH]);
-        pdfPage.drawImage(pngEmbed, { x: 0, y: 0, width: pdfW, height: pdfH });
+        finalPdfBytes = await combinedPdf.save();
+        console.log(`[PDF v3] Combined PDF: ${wsPdf.getPageCount()} worksheet + ${solPdf.getPageCount()} solution pages`);
+      } else {
+        const printUrl = buildPrintUrl(showSolutions);
+        console.log(`[PDF v3] Generating PDF for: ${printUrl} (locale=${locale || "DE"}, solutions=${showSolutions})`);
+        finalPdfBytes = await renderPrintUrl(page, printUrl);
       }
 
-      finalPdfBytes = await previewPdf.save();
-      console.log(`[PDF v3] Preview PDF: ${pageCount} rasterized pages`);
-    }
+      // For preview mode: rasterize each page, blur the bottom-right triangle, reassemble
+      if (isPreview) {
+        console.log(`[PDF v3] Applying preview blur...`);
 
-    await browser.close();
+        const sourcePdf = await PDFDocument.load(finalPdfBytes);
+        const pageCount = sourcePdf.getPageCount();
+        const previewPdf = await PDFDocument.create();
+
+        const firstPage = sourcePdf.getPage(0);
+        const { width: pdfW, height: pdfH } = firstPage.getSize();
+
+        const viewportW = 794;
+        const viewportH = Math.round(viewportW * (pdfH / pdfW));
+        const deviceScale = 2;
+
+        await page.setViewport({ width: viewportW, height: viewportH, deviceScaleFactor: deviceScale });
+
+        // Navigate to the print page fresh for screenshot (use worksheet version for preview)
+        const previewUrl = buildPrintUrl(false);
+        await page.goto(previewUrl, { waitUntil: "networkidle0", timeout: 60000 });
+        await page.evaluateHandle("document.fonts.ready");
+        await new Promise((r) => setTimeout(r, 500));
+
+        // Hide Next.js dev overlays
+        await page.evaluate(() => {
+          document.querySelectorAll('nextjs-portal, [id^="__next-build"], [id^="__nextjs"]').forEach((el) => el.remove());
+          const style = document.createElement("style");
+          style.textContent =
+            "nextjs-portal, [data-nextjs-dialog-overlay], [data-nextjs-toast] { display: none !important; }";
+          document.head.appendChild(style);
+        });
+
+        // Take a full-page screenshot of the entire scrollable content
+        const fullScreenshot = await page.screenshot({ type: "png", fullPage: true });
+
+        const fullMeta = await sharp(fullScreenshot).metadata();
+        const fullW = fullMeta.width!;
+        const fullH = fullMeta.height!;
+
+        console.log(`[PDF v3] Screenshot: ${fullW}x${fullH}, pages=${pageCount}`);
+
+        const pagePixelH = Math.round(fullH / pageCount);
+        const mmToPx = fullW / 210;
+        const triangleTopOffset = Math.round(30 * mmToPx);
+        const blurRadius = 14;
+
+        for (let i = 0; i < pageCount; i++) {
+          const pageTop = i * pagePixelH;
+          const extractH = Math.min(pagePixelH, fullH - pageTop);
+          if (extractH <= 0) continue;
+
+          const pageImg = await sharp(fullScreenshot)
+            .extract({ left: 0, top: pageTop, width: fullW, height: extractH })
+            .toBuffer();
+
+          const blurredImg = await sharp(pageImg).blur(blurRadius).toBuffer();
+
+          const maskSvg = Buffer.from(
+            `<svg width="${fullW}" height="${extractH}" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="${fullW},${triangleTopOffset} 0,${extractH} ${fullW},${extractH}" fill="white"/>
+            </svg>`,
+          );
+          const maskPng = await sharp(maskSvg).png().toBuffer();
+
+          const maskedBlur = await sharp(blurredImg)
+            .composite([{ input: maskPng, blend: "dest-in" }])
+            .png()
+            .toBuffer();
+
+          const composited = await sharp(pageImg)
+            .composite([{ input: maskedBlur, blend: "over" }])
+            .png()
+            .toBuffer();
+
+          const pngEmbed = await previewPdf.embedPng(composited);
+          const pdfPage = previewPdf.addPage([pdfW, pdfH]);
+          pdfPage.drawImage(pngEmbed, { x: 0, y: 0, width: pdfW, height: pdfH });
+        }
+
+        finalPdfBytes = await previewPdf.save();
+        console.log(`[PDF v3] Preview PDF: ${pageCount} rasterized pages`);
+      }
+
+      return finalPdfBytes;
+    };
+
+    let page = await createPage(shouldOptimizeImages);
+    let optimizationEnabled = shouldOptimizeImages;
+    let finalPdfBytes: Uint8Array;
+
+    try {
+      finalPdfBytes = await generatePdfBytes(page);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const canRetryWithoutOptimization =
+        optimizationEnabled && /Page\.printToPDF|Printing failed/i.test(message);
+
+      if (!canRetryWithoutOptimization) {
+        throw error;
+      }
+
+      console.warn(
+        "[PDF v3] printToPDF failed with image optimization enabled; retrying without interception.",
+        message,
+      );
+
+      await page.close().catch(() => {});
+      optimizationEnabled = false;
+      page = await createPage(false);
+      finalPdfBytes = await generatePdfBytes(page);
+    } finally {
+      await page.close().catch(() => {});
+      await browser.close().catch(() => {});
+    }
 
     console.log(`[PDF v3] Generated ${finalPdfBytes.length} bytes`);
 
