@@ -4303,6 +4303,9 @@ function WebsiteView({
     fontWeight: resolvedHeadingWeight,
     color: primaryColor,
   };
+  const originalTitle = originalBlock?.title?.trim() || "";
+  const translatedTitle = block.title.trim();
+  const showBilingualTitle = !!block.bilingual && !!originalTitle && originalTitle !== translatedTitle;
 
   const normalizeExternalUrl = (url: string) => {
     const trimmed = url.trim();
@@ -4313,9 +4316,19 @@ function WebsiteView({
 
   return (
     <div className="space-y-4">
-      {block.title.trim() ? (
+      {translatedTitle ? (
         <HeadingTag className={`website-title ${sizes[block.level]}`} style={headingStyle}>
-          {block.title}
+          {showBilingualTitle ? (
+            <>
+              <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>
+                {originalTitle}
+              </span>
+              <span style={{ fontWeight: 400 }}> | </span>
+              <span style={{ fontWeight: 400 }}>{translatedTitle}</span>
+            </>
+          ) : (
+            translatedTitle
+          )}
         </HeadingTag>
       ) : null}
 
