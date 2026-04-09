@@ -4377,12 +4377,12 @@ function WebsiteView({
                 )}
                 {body ? (
                   showBilingualDescription ? (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-900">
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal text-slate-900" style={{ lineHeight: "1.35rem" }}>
                       {originalBody ? <div>{originalBody}</div> : null}
                       {body ? <div style={translatedTextStyle}>{body}</div> : null}
                     </div>
                   ) : (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal leading-6 text-slate-900">
+                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal text-slate-900" style={{ lineHeight: "1.35rem" }}>
                       {body}
                     </div>
                   )
