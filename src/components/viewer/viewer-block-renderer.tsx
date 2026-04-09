@@ -4335,10 +4335,7 @@ function WebsiteView({
       <div className="website-items space-y-3">
         {block.items.map((item) => {
           const href = normalizeExternalUrl(item.url);
-          const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
           const body = item.category || item.description || "";
-          const originalBody = originalItem ? (originalItem.category || originalItem.description || "") : "";
-          const showBilingualDescription = !!block.bilingual && !!originalItem && originalBody !== body;
           const translatedTextStyle = {
             color: "rgba(15, 23, 42, 0.72)",
             fontWeight: 400,
@@ -4376,16 +4373,9 @@ function WebsiteView({
                   <div className="font-bold text-slate-900">{item.title}</div>
                 )}
                 {body ? (
-                  showBilingualDescription ? (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal text-slate-900" style={{ lineHeight: "1.35rem" }}>
-                      {originalBody ? <div>{originalBody}</div> : null}
-                      {body ? <div style={translatedTextStyle}>{body}</div> : null}
-                    </div>
-                  ) : (
-                    <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal text-slate-900" style={{ lineHeight: "1.35rem" }}>
-                      {body}
-                    </div>
-                  )
+                  <div className="mt-2 whitespace-pre-line text-sm font-normal normal-case tracking-normal text-slate-900" style={{ lineHeight: "1.35rem", ...translatedTextStyle }}>
+                    {body}
+                  </div>
                 ) : null}
               </div>
             </article>
