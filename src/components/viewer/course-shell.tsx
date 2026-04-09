@@ -7,6 +7,7 @@ import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
 import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
+import { filterBlocksByDisplay } from "@/lib/block-visibility";
 import {
   ChevronRight,
   ChevronLeft,
@@ -228,26 +229,33 @@ function SearchPanel({
   value,
   onChange,
   className,
+  variant = "default",
 }: {
   value: string;
   onChange: (query: string) => void;
   className?: string;
+  variant?: "default" | "flush";
 }) {
+  const isFlush = variant === "flush";
+
   return (
     <div className={cn("border bg-white/92 shadow-[0_14px_36px_rgba(15,23,42,0.05)]", className)}>
-      <div className="relative px-4 py-3">
-        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+      <div className={cn("relative", !isFlush && "px-4 py-3")}>
+        <Search className={cn("absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground", isFlush ? "left-3" : "left-7")} />
         <input
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Suchen…"
-          className="w-full rounded-md border bg-white py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors"
+          className={cn(
+            "w-full rounded-md bg-white py-2.5 pl-9 pr-9 text-cv-xs outline-none transition-colors",
+            isFlush ? "border-0" : "border"
+          )}
         />
         {value && (
           <button
             onClick={() => onChange("")}
-            className="absolute right-7 top-1/2 -translate-y-1/2"
+            className={cn("absolute top-1/2 -translate-y-1/2", isFlush ? "right-3" : "right-7")}
           >
             <X className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
@@ -268,8 +276,8 @@ function SidebarNav({
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
 }) {
-  const { brand, sidebarTheme } = useCourse();
-  const tk = getSidebarTokens(sidebarTheme, brand as Brand);
+  const { brand } = useCourse();
+  const tk = getSidebarTokens("light", brand as Brand);
 
   return (
     <SidebarThemeContext.Provider value={tk}>
@@ -277,10 +285,9 @@ function SidebarNav({
       className="flex h-full flex-col overflow-hidden"
       style={{
         fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont,
-        background: `linear-gradient(180deg, ${tk.bg} 0%, rgba(255,255,255,0.72) 100%)`,
+        backgroundColor: "#ffffff",
       }}
     >
-      <div className="border-b px-5 py-4" style={{ borderColor: tk.divider }} />
       <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3 sidebar-scroll">
         {structure.map((mod, i) => (
           <SidebarModuleSection
@@ -347,10 +354,11 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       }
       return [block];
     });
+    const visibleBlocks = filterBlocksByDisplay(resolvedBlocks, "course");
 
     return {
       title: lesson.title || "Untitled Lesson",
-      context: extractBlocksText(resolvedBlocks, worksheets),
+      context: extractBlocksText(visibleBlocks, worksheets),
     };
   }, [pathname, structure, worksheets]);
 
@@ -377,7 +385,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             }
             return [block];
           });
-          const fullText = extractBlocksText(resolvedBlocks, worksheets);
+          const visibleBlocks = filterBlocksByDisplay(resolvedBlocks, "course");
+          const fullText = extractBlocksText(visibleBlocks, worksheets);
           const idx = fullText.toLowerCase().indexOf(q);
           if (idx !== -1) {
             const start = Math.max(0, idx - 40);
@@ -566,56 +575,64 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             <div className="h-full flex flex-col">
               {/* Breadcrumb path */}
               {searchResults ? (
-                <div className="flex items-center gap-2 px-6 lg:px-8 py-5 text-sm text-muted-foreground border-b shrink-0 bg-[rgba(250,250,249,0.8)]" style={{ fontFamily: brandFonts.bodyFont }}>
-                  <button onClick={() => { setSearchQuery(""); router.push(`/${locale}/course/${slug}`); }} className="font-medium hover:text-foreground/80 transition-colors">
-                    Start
-                  </button>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  <span className="font-medium text-foreground">Suchresultate</span>
+                <div className="text-sm text-muted-foreground shrink-0 bg-white lg:mr-[30px]" style={{ fontFamily: brandFonts.bodyFont }}>
+                  <div className="max-w-5xl mx-auto w-full px-6 sm:px-10 lg:px-16">
+                    <div className="pt-8 pb-5 flex items-center gap-2 border-b">
+                      <button onClick={() => { setSearchQuery(""); router.push(`/${locale}/course/${slug}`); }} className="font-medium hover:text-foreground/80 transition-colors">
+                        Start
+                      </button>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                      <span className="font-medium text-foreground">Suchresultate</span>
+                    </div>
+                  </div>
                 </div>
               ) : breadcrumb && (
-                <div className="flex items-center gap-2 px-6 lg:px-8 py-5 text-sm text-muted-foreground border-b shrink-0 bg-[rgba(250,250,249,0.8)]" style={{ fontFamily: brandFonts.bodyFont }}>
-                  {breadcrumb.isOverview ? (
-                    <span className="font-medium text-foreground">Start</span>
-                  ) : (
-                    <button onClick={() => router.push(`/${locale}/course/${slug}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                      Start
-                    </button>
-                  )}
-                  {breadcrumb.mod && (
-                    <>
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                      {!breadcrumb.topic ? (
-                        <span className="font-medium text-foreground">{breadcrumb.mod.title}</span>
+                <div className="text-sm text-muted-foreground shrink-0 bg-white lg:mr-[30px]" style={{ fontFamily: brandFonts.bodyFont }}>
+                  <div className="max-w-5xl mx-auto w-full px-6 sm:px-10 lg:px-16">
+                    <div className="pt-8 pb-5 flex items-center gap-2 border-b">
+                      {breadcrumb.isOverview ? (
+                        <span className="font-medium text-foreground">Start</span>
                       ) : (
-                        <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                          {breadcrumb.mod.title}
+                        <button onClick={() => router.push(`/${locale}/course/${slug}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                          Start
                         </button>
                       )}
-                    </>
-                  )}
-                  {breadcrumb.topic && (
-                    <>
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                      {!breadcrumb.lesson ? (
-                        <span className="font-medium text-foreground">{breadcrumb.topic.title}</span>
-                      ) : (
-                        <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
-                          {breadcrumb.topic.title}
-                        </button>
+                      {breadcrumb.mod && (
+                        <>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                          {!breadcrumb.topic ? (
+                            <span className="font-medium text-foreground">{breadcrumb.mod.title}</span>
+                          ) : (
+                            <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                              {breadcrumb.mod.title}
+                            </button>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                  {breadcrumb.lesson && (
-                    <>
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                      <span className="font-medium text-foreground">{breadcrumb.lesson.title}</span>
-                    </>
-                  )}
+                      {breadcrumb.topic && (
+                        <>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                          {!breadcrumb.lesson ? (
+                            <span className="font-medium text-foreground">{breadcrumb.topic.title}</span>
+                          ) : (
+                            <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                              {breadcrumb.topic.title}
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {breadcrumb.lesson && (
+                        <>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                          <span className="font-medium text-foreground">{breadcrumb.lesson.title}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               <div className="flex-1 min-h-0 flex">
-                <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content">
+                <div className="flex-1 min-w-0 overflow-y-auto content-scroll course-content lg:mr-[30px]">
                   {searchResults ? (
                     <div className="p-6 lg:p-8" style={{ fontFamily: brandFonts.bodyFont }}>
                       <p className="text-sm text-muted-foreground mb-4">
@@ -665,7 +682,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="hidden lg:flex shrink-0 min-h-0 h-full flex-col gap-4">
-            <SearchPanel value={searchQuery} onChange={setSearchQuery} className="shrink-0 rounded-lg" />
+            <SearchPanel value={searchQuery} onChange={setSearchQuery} variant="flush" className="shrink-0 rounded-lg" />
             <div className="min-h-0 flex-1">
               <CourseChatSidebar
                 open={chatSidebarOpen}

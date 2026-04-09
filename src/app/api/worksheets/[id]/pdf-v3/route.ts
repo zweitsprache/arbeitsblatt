@@ -21,6 +21,14 @@ export async function POST(
   const showSolutions = req.nextUrl.searchParams.get("solutions") === "1";
   const showBoth = req.nextUrl.searchParams.get("both") === "1";
   const lang = req.nextUrl.searchParams.get("lang"); // translation language code, e.g. "en"
+  const maxImageEdge = Math.min(
+    Math.max(Number(req.nextUrl.searchParams.get("imgMaxEdge") || "1600"), 800),
+    2400,
+  );
+  const imageQuality = Math.min(
+    Math.max(Number(req.nextUrl.searchParams.get("imgQuality") || "76"), 55),
+    90,
+  );
 
   const worksheet = await prisma.worksheet.findFirst({
     where: { id, userId } as Parameters<typeof prisma.worksheet.findFirst>[0] extends { where?: infer W } ? W : never,
@@ -47,6 +55,128 @@ export async function POST(
     printBackground: true,
     displayHeaderFooter: false,
     preferCSSPageSize: false,
+  };
+
+  type OptimizedImageResult = {
+    status: number;
+    contentType: string;
+    body: Buffer;
+  };
+
+  const optimizedImageCache = new Map<string, Promise<OptimizedImageResult | null>>();
+
+  const optimizeImageForPrint = async (url: string): Promise<OptimizedImageResult | null> => {
+    if (!url || url.startsWith("data:") || url.startsWith("blob:")) {
+      return null;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return null;
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      return null;
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/")) {
+      return null;
+    }
+
+    const originalBuffer = Buffer.from(await res.arrayBuffer());
+    if (originalBuffer.length === 0) {
+      return null;
+    }
+
+    // Keep tiny images unchanged to avoid unnecessary quality loss.
+    if (originalBuffer.length < 120 * 1024) {
+      return {
+        status: 200,
+        contentType,
+        body: originalBuffer,
+      };
+    }
+
+    const optimized = await sharp(originalBuffer)
+      .rotate()
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .resize({ width: maxImageEdge, height: maxImageEdge, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: imageQuality, mozjpeg: true, progressive: true })
+      .toBuffer();
+
+    // If recompression does not help, keep original bytes.
+    if (optimized.length >= originalBuffer.length * 0.98) {
+      return {
+        status: 200,
+        contentType,
+        body: originalBuffer,
+      };
+    }
+
+    return {
+      status: 200,
+      contentType: "image/jpeg",
+      body: optimized,
+    };
+  };
+
+  const installImageOptimizationInterceptor = async (
+    page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
+  ) => {
+    await page.setRequestInterception(true);
+
+    page.on("request", async (request) => {
+      try {
+        if (request.resourceType() !== "image") {
+          await request.continue();
+          return;
+        }
+
+        const url = request.url();
+        if (url.startsWith("data:") || url.startsWith("blob:")) {
+          await request.continue();
+          return;
+        }
+
+        let optimizedPromise = optimizedImageCache.get(url);
+        if (!optimizedPromise) {
+          optimizedPromise = optimizeImageForPrint(url).catch((err) => {
+            console.warn("[PDF v3] Image optimization failed for", url, err instanceof Error ? err.message : err);
+            return null;
+          });
+          optimizedImageCache.set(url, optimizedPromise);
+        }
+
+        const optimized = await optimizedPromise;
+        if (!optimized) {
+          await request.continue();
+          return;
+        }
+
+        await request.respond({
+          status: optimized.status,
+          contentType: optimized.contentType,
+          body: optimized.body,
+          headers: {
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        });
+      } catch {
+        try {
+          await request.continue();
+        } catch {
+          // Request may already be handled.
+        }
+      }
+    });
   };
 
   /**
@@ -182,6 +312,7 @@ export async function POST(
     const browser = await launchBrowser();
 
     const page = await browser.newPage();
+    await installImageOptimizationInterceptor(page);
 
     let finalPdfBytes: Uint8Array;
 

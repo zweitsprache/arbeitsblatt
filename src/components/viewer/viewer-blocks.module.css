@@ -112,10 +112,10 @@
 
 .exampleBox {
   border: 1px dashed var(--block-color);
-  border-radius: 4px;
+  border-radius: var(--example-radius, 4px);
   background: #fff;
   color: var(--block-color);
-  padding: 0.75rem 1rem;
+  padding: var(--example-padding, 0.75rem 1rem);
 }
 
 .exampleSplit {
@@ -126,12 +126,12 @@
 
 .exampleSplitIcon {
   flex-shrink: 0;
-  width: 2.5rem;
+  width: var(--example-icon-width, 2.5rem);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  border-radius: 4px 0 0 4px;
+  border-radius: var(--example-radius, 4px) 0 0 var(--example-radius, 4px);
 }
 
 .exampleSplitBody {
@@ -139,7 +139,7 @@
   min-width: 0;
   border: 1px dashed currentColor;
   border-left: 0;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--example-radius, 4px) var(--example-radius, 4px) 0;
   padding: 0.5rem 0.75rem 0.5rem 1.5rem;
   background: #fff;
 }

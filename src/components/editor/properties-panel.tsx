@@ -78,11 +78,12 @@ import {
   WebsiteBlock,
   TableBlock,
   TableStyle,
+  BlockDisplayOn,
   BlockVisibility,
   TextBlockStyle,
   ImageBlockStyle,
 } from "@/types/worksheet";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -6609,6 +6610,19 @@ export function PropertiesPanel() {
     (b) => b.id === state.selectedBlockId
   );
 
+  const legacyVisibility: BlockVisibility = selectedBlock?.visibility ?? "both";
+  const displayOn: BlockDisplayOn = {
+    course: selectedBlock?.displayOn?.course ?? true,
+    worksheetOnline:
+      selectedBlock?.displayOn?.worksheetOnline ??
+      (legacyVisibility === "both" ||
+      legacyVisibility === "online"),
+    worksheetPrint:
+      selectedBlock?.displayOn?.worksheetPrint ??
+      (legacyVisibility === "both" ||
+      legacyVisibility === "print"),
+  };
+
   if (!selectedBlock) {
     return (
       <div className="w-80 pt-8 pb-8">
@@ -6618,6 +6632,14 @@ export function PropertiesPanel() {
       </div>
     );
   }
+
+  const updateDisplayOn = (next: BlockDisplayOn) => {
+    if (!next.course && !next.worksheetOnline && !next.worksheetPrint) return;
+    dispatch({
+      type: "SET_BLOCK_DISPLAY_ON",
+      payload: { id: selectedBlock.id, displayOn: next },
+    });
+  };
 
   const renderBlockProps = () => {
     switch (selectedBlock.type) {
@@ -6733,19 +6755,34 @@ export function PropertiesPanel() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => {
-                      const v = selectedBlock.visibility;
-                      const showPrint = v === "both" || v === "print";
-                      const showOnline = v === "both" || v === "online";
-                      // Toggle print: if currently shown, hide it (unless it would hide both)
-                      if (showPrint) {
-                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showOnline ? "online" : "both" } });
-                      } else {
-                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showOnline ? "both" : "print" } });
-                      }
-                    }}
+                    onClick={() =>
+                      updateDisplayOn({
+                        ...displayOn,
+                        course: !displayOn.course,
+                      })
+                    }
                     className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
-                      ${selectedBlock.visibility === "both" || selectedBlock.visibility === "print"
+                      ${displayOn.course
+                        ? "bg-white text-slate-700 border-slate-300"
+                        : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Course</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateDisplayOn({
+                        ...displayOn,
+                        worksheetPrint: !displayOn.worksheetPrint,
+                      })
+                    }
+                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
+                      ${displayOn.worksheetPrint
                         ? "bg-white text-slate-700 border-slate-300"
                         : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
                   >
@@ -6758,19 +6795,14 @@ export function PropertiesPanel() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => {
-                      const v = selectedBlock.visibility;
-                      const showPrint = v === "both" || v === "print";
-                      const showOnline = v === "both" || v === "online";
-                      // Toggle online: if currently shown, hide it (unless it would hide both)
-                      if (showOnline) {
-                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showPrint ? "print" : "both" } });
-                      } else {
-                        dispatch({ type: "SET_BLOCK_VISIBILITY", payload: { id: selectedBlock.id, visibility: showPrint ? "both" : "online" } });
-                      }
-                    }}
+                    onClick={() =>
+                      updateDisplayOn({
+                        ...displayOn,
+                        worksheetOnline: !displayOn.worksheetOnline,
+                      })
+                    }
                     className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
-                      ${selectedBlock.visibility === "both" || selectedBlock.visibility === "online"
+                      ${displayOn.worksheetOnline
                         ? "bg-white text-slate-700 border-slate-300"
                         : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
                   >

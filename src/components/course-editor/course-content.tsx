@@ -17,6 +17,7 @@ import {
   X,
   BookOpen,
   Link2,
+  Download,
 } from "lucide-react";
 import {
   DndContext,
@@ -59,20 +60,94 @@ interface WorksheetItem {
   updatedAt: string;
 }
 
+function cloneBlockWithNewIds(block: WorksheetBlock): WorksheetBlock {
+  const clone = JSON.parse(JSON.stringify(block)) as WorksheetBlock;
+
+  const reid = (value: WorksheetBlock): WorksheetBlock => {
+    const next = { ...value, id: uuidv4() } as WorksheetBlock;
+
+    if (next.type === "columns") {
+      return {
+        ...next,
+        children: next.children.map((col) => col.map(reid)),
+      } as WorksheetBlock;
+    }
+
+    if (next.type === "accordion") {
+      return {
+        ...next,
+        items: next.items.map((item) => ({
+          ...item,
+          children: item.children.map(reid),
+        })),
+      } as WorksheetBlock;
+    }
+
+    return next;
+  };
+
+  return reid(clone);
+}
+
+function splitBlocksByPageBreak(blocks: WorksheetBlock[]): WorksheetBlock[][] {
+  const parts: WorksheetBlock[][] = [];
+  let current: WorksheetBlock[] = [];
+
+  for (const block of blocks) {
+    if (block.type === "page-break") {
+      if (current.length > 0) {
+        parts.push(current);
+        current = [];
+      }
+      continue;
+    }
+    current.push(block);
+  }
+
+  if (current.length > 0) {
+    parts.push(current);
+  }
+
+  return parts.length > 0 ? parts : [blocks];
+}
+
 function WorksheetPickerDialog({
   open,
   onOpenChange,
-  onSelect,
+  onLink,
+  onImport,
+  allowSplitAcrossLessons,
+  remainingLessonsCount,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (worksheet: WorksheetItem) => void;
+  onLink: (worksheet: WorksheetItem) => void;
+  onImport: (
+    worksheet: WorksheetItem,
+    blocks: WorksheetBlock[],
+    options: { splitAcrossLessons: boolean }
+  ) => void;
+  allowSplitAcrossLessons?: boolean;
+  remainingLessonsCount?: number;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("course");
   const [worksheets, setWorksheets] = useState<WorksheetItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [importWorksheet, setImportWorksheet] = useState<WorksheetItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [splitAcrossLessons, setSplitAcrossLessons] = useState(false);
+
+  const worksheetBlocks = Array.isArray(importWorksheet?.blocks)
+    ? (importWorksheet?.blocks as WorksheetBlock[])
+    : [];
+
+  const getBlockSelectionKey = useCallback((block: WorksheetBlock, index: number) => {
+    return typeof block.id === "string" && block.id.length > 0
+      ? block.id
+      : `${index}-${block.type}`;
+  }, []);
 
   const fetchWorksheets = useCallback(async (q = "") => {
     setLoading(true);
@@ -99,57 +174,219 @@ function WorksheetPickerDialog({
     return () => clearTimeout(timer);
   }, [search, open, fetchWorksheets]);
 
+  useEffect(() => {
+    if (open) return;
+    setImportWorksheet(null);
+    setSelectedIds(new Set());
+    setSplitAcrossLessons(false);
+    setSearch("");
+  }, [open]);
+
+  const startImport = useCallback(
+    (worksheet: WorksheetItem) => {
+      const blocks = Array.isArray(worksheet.blocks)
+        ? (worksheet.blocks as WorksheetBlock[])
+        : [];
+      const allIds = blocks.map((block, index) => getBlockSelectionKey(block, index));
+      setImportWorksheet(worksheet);
+      setSelectedIds(new Set(allIds));
+    },
+    [getBlockSelectionKey]
+  );
+
+  const toggleSelectedId = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const confirmImport = useCallback(() => {
+    if (!importWorksheet) return;
+    const blocks = worksheetBlocks.filter((block, index) =>
+      selectedIds.has(getBlockSelectionKey(block, index))
+    );
+    if (blocks.length === 0) return;
+    onImport(importWorksheet, blocks, { splitAcrossLessons: allowSplitAcrossLessons ? splitAcrossLessons : false });
+    onOpenChange(false);
+  }, [getBlockSelectionKey, importWorksheet, onImport, onOpenChange, selectedIds, splitAcrossLessons, worksheetBlocks]);
+
+  const selectedBlocksForImport = worksheetBlocks.filter((block, index) =>
+    selectedIds.has(getBlockSelectionKey(block, index))
+  );
+
+  const splitPartsCount = splitBlocksByPageBreak(selectedBlocksForImport).length;
+  const showSplitOverflowHint = Boolean(
+    allowSplitAcrossLessons &&
+    splitAcrossLessons &&
+    (remainingLessonsCount ?? 0) > 0 &&
+    splitPartsCount > (remainingLessonsCount ?? 0)
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl max-h-[80vh] overflow-hidden flex flex-col min-h-0">
         <DialogHeader>
-          <DialogTitle>{t("selectWorksheet")}</DialogTitle>
+          <DialogTitle>
+            {importWorksheet ? t("importWorksheetBlocks") : t("selectWorksheet")}
+          </DialogTitle>
         </DialogHeader>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={`${tc("search")}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {search && (
-            <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded"
-              onClick={() => setSearch("")}
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          )}
-        </div>
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">{tc("loading")}</div>
-          ) : worksheets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">{t("noWorksheetsFound")}</div>
-          ) : (
-            <div className="space-y-2 py-2">
-              {worksheets.map((ws) => (
-                <div
-                  key={ws.id}
-                  className="flex items-center gap-3 p-3 rounded-sm border transition-all cursor-pointer hover:bg-muted"
-                  onClick={() => onSelect(ws)}
-                >
-                  <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{ws.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {Array.isArray(ws.blocks) ? `${ws.blocks.length} blocks` : "Empty"}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Link2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+        {importWorksheet ? (
+          <div className="flex flex-1 min-h-0 flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setImportWorksheet(null)}
+              >
+                {tc("back")}
+              </Button>
+              <p className="text-sm text-muted-foreground truncate">
+                {importWorksheet.title}
+              </p>
             </div>
-          )}
-        </ScrollArea>
+            {allowSplitAcrossLessons && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={splitAcrossLessons}
+                  onChange={(e) => setSplitAcrossLessons(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                {t("importSplitAcrossLessons")}
+              </label>
+            )}
+            {showSplitOverflowHint && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1">
+                {t("importSplitOverflowHint", {
+                  parts: splitPartsCount,
+                  lessons: remainingLessonsCount ?? 0,
+                })}
+              </p>
+            )}
+            <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+              {worksheetBlocks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{tc("empty")}</div>
+              ) : (
+                <div className="space-y-2 py-2">
+                  {worksheetBlocks.map((block, index) => {
+                    const selectionId = getBlockSelectionKey(block, index);
+                    const isSelected = selectedIds.has(selectionId);
+                    return (
+                      <button
+                        key={selectionId}
+                        type="button"
+                        className={`w-full flex items-center gap-3 p-3 rounded-sm border text-left transition-colors ${
+                          isSelected ? "bg-muted" : "hover:bg-muted/60"
+                        }`}
+                        onClick={() => toggleSelectedId(selectionId)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectedId(selectionId)}
+                          className="h-4 w-4"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{`#${index + 1} - ${block.type}`}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+            <div className="flex items-center justify-between gap-3 pt-2 border-t shrink-0">
+              <p className="text-xs text-muted-foreground">
+                {t("importSelectedCount", {
+                  selected: selectedIds.size,
+                  total: worksheetBlocks.length,
+                })}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={confirmImport}
+                disabled={selectedIds.size === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t("importSelectedBlocks")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 min-h-0 flex-col gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={`${tc("search")}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {search && (
+                <button
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded"
+                  onClick={() => setSearch("")}
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+            <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">{tc("loading")}</div>
+              ) : worksheets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t("noWorksheetsFound")}</div>
+              ) : (
+                <div className="space-y-2 py-2">
+                  {worksheets.map((ws) => (
+                    <div
+                      key={ws.id}
+                      className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 rounded-sm border transition-all hover:bg-muted"
+                    >
+                      <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{ws.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {Array.isArray(ws.blocks)
+                            ? t("importBlockCount", { count: ws.blocks.length })
+                            : tc("empty")}
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-auto sm:ml-auto grid grid-cols-1 gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full whitespace-nowrap"
+                          aria-label={t("linkWorksheet")}
+                          onClick={() => onLink(ws)}
+                        >
+                          <Link2 className="h-4 w-4 mr-2" />
+                          <span>{t("linkWorksheet")}</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full whitespace-nowrap"
+                          aria-label={t("importButton")}
+                          onClick={() => startImport(ws)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          <span>{t("importButton")}</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -344,6 +581,19 @@ function ModuleEditorInner() {
     [editorDispatch]
   );
 
+  const importWorksheetBlocks = useCallback(
+    (_worksheet: WorksheetItem, blocks: WorksheetBlock[]) => {
+      for (const block of blocks) {
+        editorDispatch({
+          type: "ADD_BLOCK",
+          payload: { block: cloneBlockWithNewIds(block) },
+        });
+      }
+      setSelectorOpen(false);
+    },
+    [editorDispatch]
+  );
+
   // Drag overlay
   const activeBlock = activeId ? editorState.blocks.find((b) => b.id === activeId) : null;
   const activeLibType = activeId?.startsWith("library-") ? activeId.replace("library-", "") : null;
@@ -401,7 +651,8 @@ function ModuleEditorInner() {
       <WorksheetPickerDialog
         open={selectorOpen}
         onOpenChange={setSelectorOpen}
-        onSelect={addLinkedBlocks}
+        onLink={addLinkedBlocks}
+        onImport={importWorksheetBlocks}
       />
     </DndContext>
   );
@@ -599,6 +850,19 @@ function TopicEditorInner() {
     [editorDispatch]
   );
 
+  const importWorksheetBlocks = useCallback(
+    (_worksheet: WorksheetItem, blocks: WorksheetBlock[]) => {
+      for (const block of blocks) {
+        editorDispatch({
+          type: "ADD_BLOCK",
+          payload: { block: cloneBlockWithNewIds(block) },
+        });
+      }
+      setSelectorOpen(false);
+    },
+    [editorDispatch]
+  );
+
   // Drag overlay
   const activeBlock = activeId ? editorState.blocks.find((b) => b.id === activeId) : null;
   const activeLibType = activeId?.startsWith("library-") ? activeId.replace("library-", "") : null;
@@ -658,7 +922,8 @@ function TopicEditorInner() {
       <WorksheetPickerDialog
         open={selectorOpen}
         onOpenChange={setSelectorOpen}
-        onSelect={addLinkedBlocks}
+        onLink={addLinkedBlocks}
+        onImport={importWorksheetBlocks}
       />
     </DndContext>
   );
@@ -681,6 +946,13 @@ function LessonEditorInner() {
   const selectedLesson = getSelectedLesson();
   const selectedModule = getSelectedModule();
   const selectedTopic = getSelectedTopic();
+  const selectedLessonIndex = selectedTopic && selectedLesson
+    ? selectedTopic.lessons.findIndex((lesson) => lesson.id === selectedLesson.id)
+    : -1;
+  const remainingLessonsCount =
+    selectedTopic && selectedLessonIndex >= 0
+      ? selectedTopic.lessons.length - selectedLessonIndex
+      : 0;
 
   const dndId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -859,6 +1131,93 @@ function LessonEditorInner() {
     [editorDispatch]
   );
 
+  const importWorksheetBlocks = useCallback(
+    (_worksheet: WorksheetItem, blocks: WorksheetBlock[], options: { splitAcrossLessons: boolean }) => {
+      if (!options.splitAcrossLessons) {
+        for (const block of blocks) {
+          editorDispatch({
+            type: "ADD_BLOCK",
+            payload: { block: cloneBlockWithNewIds(block) },
+          });
+        }
+        setSelectorOpen(false);
+        return;
+      }
+
+      if (!selectedTopic || !selectedLesson || !courseState.selectedModuleId || !courseState.selectedTopicId || !courseState.selectedLessonId) {
+        for (const block of blocks) {
+          editorDispatch({
+            type: "ADD_BLOCK",
+            payload: { block: cloneBlockWithNewIds(block) },
+          });
+        }
+        setSelectorOpen(false);
+        return;
+      }
+
+      const lessonIndex = selectedTopic.lessons.findIndex((lesson) => lesson.id === selectedLesson.id);
+      if (lessonIndex === -1) {
+        for (const block of blocks) {
+          editorDispatch({
+            type: "ADD_BLOCK",
+            payload: { block: cloneBlockWithNewIds(block) },
+          });
+        }
+        setSelectorOpen(false);
+        return;
+      }
+
+      const parts = splitBlocksByPageBreak(blocks).map((part) => part.map(cloneBlockWithNewIds));
+      if (parts.length === 0) {
+        setSelectorOpen(false);
+        return;
+      }
+      const moduleId = courseState.selectedModuleId;
+      const topicId = courseState.selectedTopicId;
+
+      syncingRef.current = true;
+      try {
+        parts.forEach((part, offset) => {
+          const targetIndex = Math.min(lessonIndex + offset, selectedTopic.lessons.length - 1);
+          const targetLesson = selectedTopic.lessons[targetIndex];
+          const mergedBlocks = [...(targetLesson.blocks ?? []), ...part];
+
+          courseDispatch({
+            type: "SET_LESSON_BLOCKS",
+            payload: {
+              moduleId,
+              topicId,
+              lessonId: targetLesson.id,
+              blocks: mergedBlocks,
+            },
+          });
+
+          if (targetLesson.id === selectedLesson.id) {
+            prevBlocksJsonRef.current = JSON.stringify(mergedBlocks);
+            editorDispatch({
+              type: "LOAD_WORKSHEET",
+              payload: {
+                id: selectedLesson.id,
+                title: selectedLesson.title,
+                slug: "",
+                blocks: mergedBlocks,
+                settings: { ...DEFAULT_SETTINGS, brand: courseState.settings.brand || "edoomio" },
+                published: false,
+              },
+            });
+          }
+        });
+      } finally {
+        requestAnimationFrame(() => {
+          syncingRef.current = false;
+        });
+      }
+
+      setSelectorOpen(false);
+    },
+    [courseDispatch, courseState.selectedModuleId, courseState.selectedTopicId, courseState.selectedLessonId, courseState.settings.brand, editorDispatch, selectedLesson, selectedTopic]
+  );
+
   // Drag overlay
   const activeBlock = activeId ? editorState.blocks.find((b) => b.id === activeId) : null;
   const activeLibType = activeId?.startsWith("library-") ? activeId.replace("library-", "") : null;
@@ -920,7 +1279,10 @@ function LessonEditorInner() {
       <WorksheetPickerDialog
         open={selectorOpen}
         onOpenChange={setSelectorOpen}
-        onSelect={addLinkedBlocks}
+        onLink={addLinkedBlocks}
+        onImport={importWorksheetBlocks}
+        allowSplitAcrossLessons
+        remainingLessonsCount={remainingLessonsCount}
       />
     </DndContext>
   );

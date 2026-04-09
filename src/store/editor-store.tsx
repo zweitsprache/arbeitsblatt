@@ -10,6 +10,7 @@ import {
   BlockType,
   BLOCK_LIBRARY,
   DEFAULT_SETTINGS,
+  BlockDisplayOn,
   BlockVisibility,
   ChOverrides,
   BrandProfile,
@@ -67,6 +68,7 @@ type EditorAction =
   | { type: "SET_VIEW_MODE"; payload: ViewMode }
   | { type: "UPDATE_SETTINGS"; payload: Partial<WorksheetSettings> }
   | { type: "SET_BLOCK_VISIBILITY"; payload: { id: string; visibility: BlockVisibility } }
+  | { type: "SET_BLOCK_DISPLAY_ON"; payload: { id: string; displayOn: BlockDisplayOn } }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "MARK_SAVED" }
   | { type: "SET_PUBLISHED"; payload: boolean }
@@ -308,6 +310,30 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
             ? { ...b, visibility: action.payload.visibility } as WorksheetBlock
             : b
         ),
+        isDirty: true,
+      };
+
+    case "SET_BLOCK_DISPLAY_ON":
+      return {
+        ...state,
+        blocks: deepMapBlocks(state.blocks, (b) => {
+          if (b.id !== action.payload.id) return b;
+
+          const { worksheetOnline, worksheetPrint } = action.payload.displayOn;
+          const nextVisibility = worksheetOnline && worksheetPrint
+            ? "both"
+            : worksheetPrint
+              ? "print"
+              : worksheetOnline
+                ? "online"
+                : (b.visibility ?? "both");
+
+          return {
+            ...b,
+            displayOn: action.payload.displayOn,
+            visibility: nextVisibility,
+          } as WorksheetBlock;
+        }),
         isDirty: true,
       };
 

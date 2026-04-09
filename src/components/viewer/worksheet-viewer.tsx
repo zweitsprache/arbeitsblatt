@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { filterBlocksByDisplay } from "@/lib/block-visibility";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
@@ -77,9 +78,10 @@ export function WorksheetViewer({
     return map;
   }, [blocks, isTranslated, externalOriginalBlockMap]);
 
-  // Filter blocks based on mode visibility (use displayBlocks)
-  const visibleBlocks = displayBlocks.filter(
-    (b) => b.visibility === "both" || b.visibility === mode
+  // Filter blocks based on display target (mode-aware + legacy visibility compatibility)
+  const visibleBlocks = filterBlocksByDisplay(
+    displayBlocks,
+    mode === "print" ? "worksheetPrint" : "worksheetOnline",
   );
 
   const pageWidth = settings.pageSize === "a4" ? 794 : 816;

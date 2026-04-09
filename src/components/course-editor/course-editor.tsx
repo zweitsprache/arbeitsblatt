@@ -1,14 +1,20 @@
 "use client";
 
 import React, { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CourseProvider, useCourse } from "@/store/course-store";
 import { CourseTreeSidebar } from "./course-tree-sidebar";
 import { CourseContent } from "./course-content";
-import { CourseSettingsPanel } from "./course-settings-panel";
 import { CourseToolbar } from "./course-toolbar";
 import { CourseStructureManager } from "./course-structure-manager";
 import { CourseDocument } from "@/types/course";
+
+// Dynamic import to avoid Radix Select SSR hydration mismatch (aria-controls IDs)
+const CourseSettingsPanel = dynamic(
+  () => import("./course-settings-panel").then((m) => m.CourseSettingsPanel),
+  { ssr: false },
+);
 
 function EditorInner({
   initialData,

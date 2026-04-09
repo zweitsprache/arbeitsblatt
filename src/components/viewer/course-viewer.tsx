@@ -15,6 +15,7 @@ import {
 } from "@/types/course";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { cn } from "@/lib/utils";
+import { filterBlocksByDisplay } from "@/lib/block-visibility";
 import {
   ChevronRight,
   ChevronLeft,
@@ -580,7 +581,9 @@ export function CourseViewer({
     return blocks;
   }, [currentFlat, worksheets]);
 
-  const hasContent = resolvedBlocks.length > 0;
+  const visibleBlocks = useMemo(() => filterBlocksByDisplay(resolvedBlocks, "course"), [resolvedBlocks]);
+
+  const hasContent = visibleBlocks.length > 0;
 
   // Mark lesson as visited when selected
   useEffect(() => {
@@ -757,7 +760,7 @@ export function CourseViewer({
               ) : currentFlat && hasContent ? (
                 <LessonContent
                   currentFlat={currentFlat}
-                  blocks={resolvedBlocks}
+                  blocks={visibleBlocks}
                   prevLesson={prevLesson}
                   nextLesson={nextLesson}
                   onSelectLesson={handleSelectLesson}
@@ -804,32 +807,31 @@ function CourseOverview({
     <div className="py-8 lg:py-12 px-4 sm:px-6">
       <div className="overflow-hidden">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 sm:px-8 py-8 sm:py-10">
+        <div className="bg-primary px-6 sm:px-8 py-8 sm:py-10">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-sm bg-primary/15 flex items-center justify-center shrink-0">
-              <GraduationCap className="h-7 w-7 text-primary" />
+            <div className="h-12 w-12 rounded-sm bg-white/20 flex items-center justify-center shrink-0">
+              <GraduationCap className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-cv-3xl font-bold tracking-tight">{title}</h1>
+              <h1 className="text-cv-3xl font-bold tracking-tight text-white">{title}</h1>
               {description && (
-                <p className="text-muted-foreground mt-2 text-cv-base leading-relaxed">
+                <p className="text-white/75 mt-2 text-cv-base leading-relaxed">
                   {description}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                {languageLevel && <Badge variant="secondary">{languageLevel}</Badge>}
-                <Badge variant="outline">
-                  {structure.length} {structure.length === 1 ? "Module" : "Modules"}
-                </Badge>
-                <Badge variant="outline">
-                  {flatLessons.length} {flatLessons.length === 1 ? "Lesson" : "Lessons"}
-                </Badge>
-              </div>
+              {languageLevel && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">{languageLevel}</Badge>
+                </div>
+              )}
             </div>
           </div>
           {firstUnvisited && (
             <div className="mt-6">
-              <Button onClick={() => onSelectLesson(firstUnvisited.lesson.id)} className="gap-2">
+              <Button
+                onClick={() => onSelectLesson(firstUnvisited.lesson.id)}
+                className="gap-2 bg-white text-primary hover:bg-white/90"
+              >
                 {visitedLessons.size > 0 ? "Continue learning" : "Start course"}
                 <ArrowRight className="h-4 w-4" />
               </Button>

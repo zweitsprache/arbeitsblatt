@@ -1,6 +1,12 @@
 // ─── Visibility ──────────────────────────────────────────────
 export type BlockVisibility = "both" | "print" | "online";
 
+export interface BlockDisplayOn {
+  course?: boolean;
+  worksheetOnline?: boolean;
+  worksheetPrint?: boolean;
+}
+
 // ─── View mode ───────────────────────────────────────────────
 export type ViewMode = "print" | "online";
 
@@ -61,6 +67,7 @@ export interface BlockBase {
   id: string;
   type: BlockType;
   visibility: BlockVisibility;
+  displayOn?: BlockDisplayOn;
 }
 
 // ─── Heading block ───────────────────────────────────────────

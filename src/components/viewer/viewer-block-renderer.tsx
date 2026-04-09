@@ -71,7 +71,7 @@ function getBrandFonts(brand: string) {
 }
 
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
-const NUMBER_BADGE_CLASS = "inline-flex h-5 w-5 min-w-5 items-center justify-center rounded-[3px] bg-slate-100 text-slate-700 ring-1 ring-slate-300 font-bold leading-none text-cv-micro";
+const NUMBER_BADGE_CLASS = "flex h-5 w-5 min-w-5 items-center justify-center rounded-[3px] bg-slate-100 text-slate-700 ring-1 ring-slate-100 font-bold leading-none text-cv-micro";
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 
@@ -333,7 +333,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -553,12 +553,29 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
 
   if (isLernziel) {
     const showStacked = isBilingual && originalBlock;
+    const isOnline = mode === "online";
     return (
-      <div className="flex gap-0 font-semibold border-2 rounded-sm overflow-hidden" style={{ borderColor: primaryColor, backgroundColor: `${primaryColor}10`, color: primaryColor }}>
-        <div className="shrink-0 w-10 flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
-          <Flag className="h-5 w-5" style={{ color: "#ffffff" }} />
+      <div
+        className={isOnline ? "flex gap-0 font-semibold border rounded-[5px] overflow-hidden" : "flex gap-0 font-semibold border rounded-sm overflow-hidden"}
+        style={{
+          borderColor: primaryColor,
+          color: primaryColor,
+          ...(isOnline ? {} : { backgroundColor: `${primaryColor}10` }),
+        }}
+      >
+        <div
+          className={isOnline ? "shrink-0 w-8 flex items-center justify-center" : "shrink-0 w-10 flex items-center justify-center"}
+          style={{ backgroundColor: primaryColor }}
+        >
+          <Flag className={isOnline ? "h-4 w-4" : "h-5 w-5"} style={{ color: "#ffffff" }} />
         </div>
-        <div className="flex-1 min-w-0 px-3 py-2" style={baseTextStyle}>
+        <div
+          className="flex-1 min-w-0 px-6 py-2"
+          style={{
+            ...baseTextStyle,
+            ...(isOnline ? {} : { backgroundColor: colorWithAlpha(primaryColor, 0.08) }),
+          }}
+        >
           {imageEl}
           {showStacked ? (
             <div>
@@ -690,7 +707,13 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
       <div>
         <div
           className={s.exampleBox}
-          style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}
+          style={{
+            "--block-color": borderTextColor,
+            "--example-radius": mode === "online" ? "5px" : "4px",
+            "--example-padding": mode === "online" ? "0.5rem 1rem" : "0.75rem 1rem",
+            fontFamily: resolvedBodyFont,
+            ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+          } as React.CSSProperties}
         >
           {imageEl}
           {wrapBilingual(block.content, originalBlock?.content)}
@@ -708,7 +731,13 @@ function TextView({ block, originalBlock, bodyFont, originalBodyFont, bodyFontSi
     <div>
       <div
         className={`${s.exampleSplit} ${isExampleStandard ? s.exampleSplitStandard : s.exampleSplitImproved}`}
-        style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}
+        style={{
+          "--block-color": borderTextColor,
+          "--example-radius": mode === "online" ? "5px" : "4px",
+          "--example-icon-width": mode === "online" ? "2rem" : "2.5rem",
+          fontFamily: resolvedBodyFont,
+          ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+        } as React.CSSProperties}
       >
         <div className={s.exampleSplitIcon} aria-hidden="true">
           {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
@@ -2203,12 +2232,10 @@ function TrueFalseMatrixView({
 
             return (
               <div key={stmt.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
-                <div className="flex flex-1 items-center gap-3">
-                    <span className={NUMBER_BADGE_CLASS}>
-                    {String(stmtIndex + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
-                </div>
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(stmtIndex + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                 <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
@@ -4146,7 +4173,9 @@ function AccordionView({
 }
 
 // ─── Audio View ──────────────────────────────────────────────
-function AudioView({ block }: { block: AudioBlock }) {
+function AudioView({ block, accentColor, primaryColor, mode }: { block: AudioBlock; accentColor?: string | null; primaryColor: string; mode: ViewMode }) {
+  const color = accentColor || primaryColor;
+  const isOnline = mode === "online";
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const rafRef = React.useRef<number>(0);
@@ -4205,28 +4234,34 @@ function AudioView({ block }: { block: AudioBlock }) {
   if (!block.src) return null;
 
   return (
-    <div className="h-[47px] flex items-center pl-2 pr-4 border border-slate-200 rounded-lg">
+    <div className={isOnline ? "h-[45px] flex items-stretch rounded-[5px] overflow-hidden" : "h-[43px] flex items-stretch rounded-sm overflow-hidden"} style={{ borderTop: `1px solid ${color}`, borderRight: `1px solid ${color}`, borderBottom: `1px solid ${color}`, borderLeft: 'none' }}>
       <audio ref={audioRef} src={block.src} preload="auto" muted={muted} />
-      <div className="flex items-center gap-4 w-full">
-        <button type="button" onClick={toggle} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+      <div className="shrink-0 w-8 flex items-stretch">
+        <button type="button" onClick={toggle} className="flex h-full w-full items-center justify-center text-white transition-colors" style={{ backgroundColor: color }}>
           {playing ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
           )}
         </button>
-        {block.title && <span className="text-sm font-medium text-slate-700 shrink-0 max-w-[120px] truncate">{block.title}</span>}
+      </div>
+      <div className="flex items-center gap-4 w-full px-4">
+        {block.title && (
+          <div className="shrink-0 px-6">
+            <span className="text-sm font-medium max-w-[120px] truncate block" style={{ color: color }}>{block.title}</span>
+          </div>
+        )}
         <div
           ref={trackRef}
           onClick={handleTrackClick}
           className="flex-1 h-[6px] rounded-full cursor-pointer"
-          style={{ background: `linear-gradient(to right, #334155 ${pct}%, #e2e8f0 ${pct}%)` }}
+          style={{ background: `linear-gradient(to right, ${color} ${pct}%, ${color}22 ${pct}%)` }}
         />
-        <span className="text-xs tabular-nums text-slate-500 shrink-0">{fmt(time)} / {fmt(dur)}</span>
-        <button type="button" onClick={toggleSpeed} className={`shrink-0 p-1 rounded transition-colors ${slow ? 'text-slate-700' : 'text-slate-400 hover:text-slate-600'}`}>
+        <span className="text-xs tabular-nums shrink-0" style={{ color: color }}>{fmt(time)} / {fmt(dur)}</span>
+        <button type="button" onClick={toggleSpeed} className="shrink-0 p-1 rounded transition-colors" style={{ color: color, opacity: slow ? 1 : 0.35 }}>
           {slow ? <ChevronsDown size={16} /> : <ChevronsUp size={16} />}
         </button>
-        <button type="button" onClick={() => setMuted(!muted)} className="text-slate-500 hover:text-slate-700 transition-colors">
+        <button type="button" onClick={() => setMuted(!muted)} className="transition-colors" style={{ color: color, opacity: muted ? 1 : 0.6 }}>
           {muted ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
           ) : (
@@ -4735,7 +4770,7 @@ export function ViewerBlockRenderer({
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -5029,7 +5064,7 @@ export function ViewerBlockRenderer({
     case "table":
       return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} />;
     case "audio":
-      return <AudioView block={block as AudioBlock} />;
+      return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":
       return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":

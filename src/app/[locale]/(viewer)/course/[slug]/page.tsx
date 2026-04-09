@@ -1,145 +1,121 @@
 "use client";
 
 import { useCourse } from "@/components/viewer/course-context";
-import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   BookOpen,
-  Layers,
-  FileText,
+  File,
   ArrowRight,
-  GraduationCap,
   ToyBrick,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
-import { moduleNumber } from "@/types/course";
+import { BRAND_FONTS } from "@/types/worksheet";
+import { CoursePageNav } from "@/components/viewer/course-page-nav";
 
 export default function CourseOverviewPage() {
-  const { title, description, languageLevel, structure } = useCourse();
+  const { title, description, languageLevel, structure, brand } = useCourse();
   const { locale, slug } = useParams<{ locale: string; slug: string }>();
-  const router = useRouter();
 
-  const totalTopics = structure.reduce((s, m) => s + m.topics.length, 0);
-  const totalLessons = structure.reduce(
-    (s, m) => s + m.topics.reduce((t, tp) => t + tp.lessons.length, 0),
-    0
-  );
+  const primaryColor = BRAND_FONTS[brand ?? "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
+  const firstModule = structure[0] ?? null;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-10 lg:py-14">
+    <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 pt-6 pb-10 lg:pt-8 lg:pb-14">
         {/* Hero */}
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-14 w-14 rounded-sm bg-primary/10 flex items-center justify-center shrink-0">
-              <BookOpen className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-4">
+            <div className="shrink-0 w-[5.5rem] flex items-center">
+              <div
+                className="h-[4.5rem] w-[4.5rem] rounded-sm flex items-center justify-center"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <BookOpen className="h-10 w-10 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold">
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: primaryColor }}>
                 {title}
               </h1>
               {description && (
-                <p className="text-muted-foreground mt-2 text-base leading-relaxed max-w-2xl">
+                <p className="mt-2 text-base leading-relaxed max-w-2xl">
                   {description}
                 </p>
               )}
+              {languageLevel && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <Badge variant="secondary" className="text-xs">
+                    {languageLevel}
+                  </Badge>
+                </div>
+              )}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-4">
-            {languageLevel && (
-              <Badge variant="secondary" className="text-xs">
-                {languageLevel}
-              </Badge>
-            )}
-            <Badge variant="outline" className="text-xs">
-              {structure.length} {structure.length === 1 ? "Module" : "Modules"}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {totalTopics} {totalTopics === 1 ? "Topic" : "Topics"}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {totalLessons} {totalLessons === 1 ? "Lesson" : "Lessons"}
-            </Badge>
           </div>
         </div>
 
-        {/* Module card grid */}
-        <h2 className="text-lg font-semibold mb-4">Modules</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {structure.map((mod, i) => {
-            const lessonCount = mod.topics.reduce(
-              (s, t) => s + t.lessons.length,
-              0
-            );
-
-            return (
-              <button
-                key={mod.id}
-                onClick={() =>
-                  router.push(`/${locale}/course/${slug}/${mod.id}`)
-                }
-                className="group text-left rounded-sm overflow-hidden hover:shadow-md transition-all"
-                style={{ backgroundColor: "#ECF3F9" }}
+        {/* TOC */}
+        <div className="space-y-0">
+          {structure.map((mod, i) => (
+            <div key={mod.id} className="py-5">
+              {/* Module row */}
+              <Link
+                href={`/${locale}/course/${slug}/${mod.id}`}
+                className="group flex items-center gap-4 w-full text-left"
               >
-                {mod.image ? (
-                  <div className="relative w-full overflow-hidden">
-                    <img
-                      src={mod.image}
-                      alt=""
-                      className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-sm backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shrink-0">
-                          {mod.icon ? (
-                            <DynamicLucideIcon name={mod.icon} className="h-5 w-5 text-white" />
-                          ) : (
-                            <ToyBrick className="h-5 w-5 text-white" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base text-white drop-shadow-md truncate">
-                            <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
-                          </h3>
-                          <div className="flex items-center gap-3 mt-1.5 text-xs text-white/80">
-                            <span className="flex items-center gap-1">
-                              <FileText className="h-3.5 w-3.5" />
-                              {lessonCount}{" "}
-                              {lessonCount === 1 ? "Lesson" : "Lessons"}
-                            </span>
-                          </div>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
-                      </div>
+                <span
+                  className="shrink-0 h-8 w-8 rounded-sm flex items-center justify-center text-white"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {mod.icon ? (
+                    <DynamicLucideIcon name={mod.icon} className="h-4 w-4 text-white" />
+                  ) : (
+                    <ToyBrick className="h-4 w-4 text-white" />
+                  )}
+                </span>
+                {/* Number */}
+                <span className="shrink-0 w-10 text-xl font-bold tabular-nums text-center">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                {/* Title */}
+                <span className="flex-1 font-bold text-xl truncate">
+                  {mod.title || "Untitled Module"}
+                </span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </Link>
+
+              {/* Topics + lessons */}
+              {mod.topics.length > 0 && (
+                <div className="mt-3 ml-[4.25rem] border-l border-border pl-9 space-y-3">
+                  {mod.topics.map((topic) => (
+                    <div key={topic.id}>
+                      <Link
+                        href={`/${locale}/course/${slug}/${mod.id}/${topic.id}`}
+                        className="group/topic flex w-full items-center gap-1 text-lg font-semibold mb-1.5"
+                      >
+                        <span className="flex-1 truncate">{topic.title}</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover/topic:opacity-100 shrink-0" />
+                      </Link>
+                      <ul className="border-y border-border/60 divide-y divide-border/60">
+                        {topic.lessons.map((lesson) => (
+                          <li key={lesson.id}>
+                            <Link
+                              href={`/${locale}/course/${slug}/${mod.id}/${topic.id}/${lesson.id}`}
+                              className="group/lesson flex w-full items-center gap-2 py-1.5 text-lg"
+                            >
+                              <File className="h-4 w-4 shrink-0" style={{ color: primaryColor }} />
+                              <span className="flex-1 truncate">{lesson.title || "Untitled Lesson"}</span>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover/lesson:opacity-100 shrink-0" />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-5">
-                    <div className="flex items-start gap-3">
-                      {mod.icon ? (
-                        <DynamicLucideIcon name={mod.icon} className="h-8 w-8 text-primary shrink-0" />
-                      ) : (
-                        <ToyBrick className="h-8 w-8 text-primary shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base group-hover:text-primary transition-colors truncate">
-                          <span className="font-extrabold">{moduleNumber(i)}</span>{" "}<span className="font-semibold">{mod.title || "Untitled Module"}</span>
-                        </h3>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3.5 w-3.5" />
-                            {lessonCount}{" "}
-                            {lessonCount === 1 ? "Lesson" : "Lessons"}
-                          </span>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
-                    </div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {structure.length === 0 && (
@@ -148,6 +124,13 @@ export default function CourseOverviewPage() {
             <p className="text-sm">No modules in this course yet.</p>
           </div>
         )}
+
+        <CoursePageNav
+          next={firstModule ? {
+            href: `/${locale}/course/${slug}/${firstModule.id}`,
+            title: firstModule.title || "Untitled Module",
+          } : null}
+        />
     </div>
   );
 }

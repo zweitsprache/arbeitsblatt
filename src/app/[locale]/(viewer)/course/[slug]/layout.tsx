@@ -30,6 +30,15 @@ export default async function CourseLayout({
     notFound();
   }
 
+  // Load brand profile for accentColor — by linked ID first, then by brand slug
+  let accentColor: string | null = null;
+  const brandProfileId = (course as { brandProfileId?: string | null }).brandProfileId;
+  const brandSlug = ((course.settings as { brand?: string } | null)?.brand) ?? "edoomio";
+  const bp = brandProfileId
+    ? await prisma.brandProfile.findUnique({ where: { id: brandProfileId }, select: { accentColor: true } })
+    : await prisma.brandProfile.findFirst({ where: { slug: brandSlug }, select: { accentColor: true } });
+  accentColor = bp?.accentColor ?? null;
+
   const structure = normalizeCourseStructure(
     course.structure as unknown as CourseModule[]
   );
@@ -94,6 +103,7 @@ export default async function CourseLayout({
         languageLevel: settings.languageLevel,
         image: settings.image,
         brand: settings.brand || "edoomio",
+        accentColor,
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
         coverSettings,

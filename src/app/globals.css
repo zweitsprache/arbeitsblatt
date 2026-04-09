@@ -306,7 +306,7 @@
 }
 
 .tiptap ul {
-  --li-icon-top: calc(0.16rem + 0.7em);
+  --li-icon-top: calc(0.4rem + 0.7em);
   list-style-type: none;
   padding-left: 1.5rem;
   margin-top: 0.25rem;
@@ -348,8 +348,8 @@
   margin-top: 0;
   margin-bottom: 0;
   line-height: 1.35em;
-  padding-top: 0.16rem;
-  padding-bottom: 0.16rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 .course-content li p {

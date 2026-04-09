@@ -22,6 +22,7 @@ export interface CourseContextInitial {
   languageLevel?: string;
   image?: string | null;
   brand: Brand;
+  accentColor?: string | null;
   sidebarTheme: SidebarTheme;
   structure: CourseModule[];
   coverSettings: CourseCoverSettings;
