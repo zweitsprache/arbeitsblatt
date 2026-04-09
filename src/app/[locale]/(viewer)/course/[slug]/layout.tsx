@@ -10,7 +10,13 @@ import {
   collectLinkedWorksheetIds,
   normalizeCourseStructure,
 } from "@/types/course";
-import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
+import {
+  WorksheetBlock,
+  WorksheetSettings,
+  DEFAULT_SETTINGS,
+  BrandProfile,
+  getStaticBrandProfile,
+} from "@/types/worksheet";
 import { CourseProvider } from "@/components/viewer/course-context";
 import { CourseShell } from "@/components/viewer/course-shell";
 
@@ -33,9 +39,12 @@ export default async function CourseLayout({
   // Load brand profile for course viewer styling — by linked ID first, then by brand slug
   const brandProfileId = (course as { brandProfileId?: string | null }).brandProfileId;
   const brandSlug = ((course.settings as { brand?: string } | null)?.brand) ?? "edoomio";
-  const brandProfile = brandProfileId
+  const dbBrandProfile = brandProfileId
     ? await prisma.brandProfile.findUnique({ where: { id: brandProfileId }, include: { subProfiles: { orderBy: { name: "asc" } } } })
     : await prisma.brandProfile.findFirst({ where: { slug: brandSlug }, include: { subProfiles: { orderBy: { name: "asc" } } } });
+  const brandProfile: BrandProfile = dbBrandProfile
+    ? (dbBrandProfile as unknown as BrandProfile)
+    : getStaticBrandProfile(brandSlug);
   const accentColor = brandProfile?.accentColor ?? null;
 
   const structure = normalizeCourseStructure(
