@@ -38,6 +38,19 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const worksheetSettings =
+    worksheet.settings && typeof worksheet.settings === "object"
+      ? (worksheet.settings as Record<string, unknown>)
+      : {};
+  const requestedOrientation = req.nextUrl.searchParams.get("orientation");
+  const orientation =
+    requestedOrientation === "landscape" || requestedOrientation === "portrait"
+      ? requestedOrientation
+      : worksheetSettings.orientation === "landscape"
+        ? "landscape"
+        : "portrait";
+  const isLandscapePdf = orientation === "landscape";
+
   // Check if preview mode is requested
   let isPreview = false;
   try {
@@ -49,8 +62,11 @@ export async function POST(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+  // Set explicit page dimensions so Chromium generates true landscape pages.
+  // Relying on @page + CSS variables is unreliable in PDF mode.
   const pdfOptions = {
-    format: "A4" as const,
+    width: isLandscapePdf ? "297mm" : "210mm",
+    height: isLandscapePdf ? "210mm" : "297mm",
     landscape: false,
     margin: { top: 0, right: 0, bottom: 0, left: 0 } as const,
     printBackground: true,
@@ -180,6 +196,53 @@ export async function POST(
   };
 
   /**
+   * Navigate to a print URL with a timeout-safe fallback.
+   * networkidle0 can hang when long-lived requests are present, so we retry with domcontentloaded.
+   */
+  const navigateForPdf = async (
+    page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
+    url: string,
+  ) => {
+    try {
+      await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/navigation timeout/i.test(message)) {
+        throw error;
+      }
+
+      console.warn(
+        `[PDF v3] networkidle0 timeout, retrying with domcontentloaded: ${url}`,
+      );
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
+
+    await Promise.race([
+      page.evaluateHandle("document.fonts.ready"),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
+
+    await Promise.race([
+      page.evaluate(() =>
+        Promise.all(
+          Array.from(document.images)
+            .filter((img) => !img.complete)
+            .map(
+              (img) =>
+                new Promise((resolve) => {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                }),
+            ),
+        ),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  };
+
+  /**
    * Render a single print URL to PDF bytes using a Puppeteer page.
    * Handles page variable injection ({current_page} / {no_of_pages}).
    */
@@ -187,9 +250,7 @@ export async function POST(
     page: Awaited<ReturnType<Awaited<ReturnType<typeof puppeteerCore.launch>>["newPage"]>>,
     printUrl: string,
   ): Promise<Uint8Array> {
-    await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 60000 });
-    await page.evaluateHandle("document.fonts.ready");
-    await new Promise((r) => setTimeout(r, 500));
+    await navigateForPdf(page, printUrl);
 
     const hasPageVars = await page.evaluate(() => {
       return document.querySelectorAll(".var-current-page, .var-total-pages").length > 0;
@@ -371,9 +432,7 @@ export async function POST(
 
         // Navigate to the print page fresh for screenshot (use worksheet version for preview)
         const previewUrl = buildPrintUrl(false);
-        await page.goto(previewUrl, { waitUntil: "networkidle0", timeout: 60000 });
-        await page.evaluateHandle("document.fonts.ready");
-        await new Promise((r) => setTimeout(r, 500));
+        await navigateForPdf(page, previewUrl);
 
         // Hide Next.js dev overlays
         await page.evaluate(() => {
@@ -394,7 +453,8 @@ export async function POST(
         console.log(`[PDF v3] Screenshot: ${fullW}x${fullH}, pages=${pageCount}`);
 
         const pagePixelH = Math.round(fullH / pageCount);
-        const mmToPx = fullW / 210;
+        const pageWidthMm = isLandscapePdf ? 297 : 210;
+        const mmToPx = fullW / pageWidthMm;
         const triangleTopOffset = Math.round(30 * mmToPx);
         const blurRadius = 14;
 

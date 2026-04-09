@@ -6596,6 +6596,33 @@ function TableProps({ block }: { block: TableBlock }) {
             placeholder={t("tableCaptionPlaceholder")}
           />
         </div>
+
+        {/* First Row as Example */}
+        <div className="flex items-center justify-between mt-3">
+          <Label className="text-xs">{t("tableFirstRowAsExample")}</Label>
+          <Switch
+            checked={block.firstRowAsExample ?? false}
+            onCheckedChange={(v) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { firstRowAsExample: v } },
+              })
+            }
+          />
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <Label className="text-xs">{t("skipTranslation")}</Label>
+          <Switch
+            checked={block.skipTranslation ?? false}
+            onCheckedChange={(v) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { skipTranslation: v } },
+              })
+            }
+          />
+        </div>
       </div>
     </div>
   );

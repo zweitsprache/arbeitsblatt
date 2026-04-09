@@ -464,12 +464,14 @@ function forEachBlockTranslationField(
     }
 
     case "table": {
-      add("content", () => block.content, (v) => {
-        block.content = v;
-      });
-      add("caption", () => block.caption, (v) => {
-        if (block.caption !== undefined) block.caption = v;
-      });
+      if (!block.skipTranslation) {
+        add("content", () => block.content, (v) => {
+          block.content = v;
+        });
+        add("caption", () => block.caption, (v) => {
+          if (block.caption !== undefined) block.caption = v;
+        });
+      }
       break;
     }
 

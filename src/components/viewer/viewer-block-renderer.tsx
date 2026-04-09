@@ -4691,7 +4691,9 @@ function TableView({ block, originalBlock }: { block: TableBlock; originalBlock?
   }
 
   return (
-    <div className={`table-block table-style-${block.tableStyle ?? "default"}`}>
+    <div className={`table-block table-style-${block.tableStyle ?? "default"} ${
+      block.firstRowAsExample ? "table-first-row-example" : ""
+    }`}>
       <div
         className="tiptap-table-view"
         dangerouslySetInnerHTML={{ __html: html }}

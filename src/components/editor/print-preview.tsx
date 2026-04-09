@@ -140,6 +140,7 @@ export function PrintPreview({
   const handleResetZoom = () => setZoom(140);
 
   const noWorksheet = !state.worksheetId;
+  const previewPageWidth = state.settings.orientation === "landscape" ? 1123 : 794;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,7 +239,10 @@ export function PrintPreview({
                 </div>
               )}
               {iframeSrc && (
-                <div className="mx-auto overflow-hidden" style={{ width: `${794 * zoom / 100}px`, maxWidth: "100%" }}>
+                <div
+                  className="mx-auto overflow-hidden"
+                  style={{ width: `${previewPageWidth * zoom / 100}px`, maxWidth: "100%" }}
+                >
                   <iframe
                     src={iframeSrc}
                     className="border-0"
@@ -247,7 +251,7 @@ export function PrintPreview({
                     style={{
                       transform: `scale(${zoom / 100})`,
                       transformOrigin: "top left",
-                      width: 794,
+                      width: previewPageWidth,
                       height: 5000,
                     }}
                   />

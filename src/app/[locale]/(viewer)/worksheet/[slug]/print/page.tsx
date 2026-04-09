@@ -56,6 +56,11 @@ export default async function PrintWorksheetPage({
     ...rawSettings,
     brandSettings: resolvedBrandSettings,
   };
+  const effectiveOrientation = settings.orientation === "landscape" ? "landscape" : "portrait";
+  const pageSizeCss =
+    effectiveOrientation === "landscape"
+      ? "297mm 210mm"
+      : "210mm 297mm";
 
   let title = worksheet.title;
 
@@ -87,16 +92,19 @@ export default async function PrintWorksheetPage({
     : undefined;
 
   return (
-    <WorksheetViewer
-      title={title}
-      blocks={blocks}
-      settings={isCH ? replaceEszett(settings) : settings}
-      mode="print"
-      worksheetId={worksheet.id}
-      showSolutions={showSolutions}
-      initialLocale={lang ?? "de"}
-      originalBlockMap={originalBlockMap}
-      brandProfile={brandProfile}
-    />
+    <>
+      <style>{`@page { size: ${pageSizeCss}; margin: 0; }`}</style>
+      <WorksheetViewer
+        title={title}
+        blocks={blocks}
+        settings={isCH ? replaceEszett(settings) : settings}
+        mode="print"
+        worksheetId={worksheet.id}
+        showSolutions={showSolutions}
+        initialLocale={lang ?? "de"}
+        originalBlockMap={originalBlockMap}
+        brandProfile={brandProfile}
+      />
+    </>
   );
 }

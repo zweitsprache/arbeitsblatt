@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@neondatabase/auth/ui/tailwind";
+@import url("https://fonts.googleapis.com/css2?family=Shadows+Into+Light+Two&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -417,7 +418,6 @@
 
 @page {
   margin: 0;
-  size: A4;
 }
 
 /* Block-level page break control */
@@ -504,9 +504,19 @@
 }
 
 /* Print page preview (screen) shares core print layout so margins/logo are accurate */
+.print-worksheet-root {
+  --page-width: 210mm;
+  --page-height: 297mm;
+}
+
+.print-worksheet-root.print-landscape {
+  --page-width: 297mm;
+  --page-height: 210mm;
+}
+
 .print-worksheet-root .print-table {
-  width: 210mm;
-  min-height: 297mm;
+  width: var(--page-width, 210mm);
+  min-height: var(--page-height, 297mm);
   margin: 0 auto;
   border-collapse: collapse;
   table-layout: fixed;
@@ -564,7 +574,7 @@
 
 .print-worksheet-root .print-footer-content {
   height: var(--print-tfoot-height, 25mm);
-  padding: 0 15mm 8mm 20mm;
+  padding: 0 15mm 8mm 15mm;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
@@ -587,7 +597,7 @@
 }
 
 .print-worksheet-root .print-body-content {
-  padding: 0 20mm 0 25mm;
+  padding: 0 20mm 0 20mm;
 }
 
 /* Keep preview typography aligned with PDF output.
@@ -958,7 +968,7 @@
 
   .print-footer-content {
     height: var(--print-tfoot-height, 25mm);
-    padding: 0 15mm 8mm 20mm;
+    padding: 0 15mm 8mm 15mm;
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;
@@ -974,7 +984,7 @@
   }
 
   .print-body-content {
-    padding: 0 20mm 0 25mm;
+    padding: 0 20mm 0 20mm;
     font-size: var(--print-body-size);
     font-family: var(--print-body-font);
   }
@@ -1112,6 +1122,24 @@
   border-bottom: 2px solid #cbd5e1;
   background-color: transparent;
   font-weight: 700;
+}
+
+/* Empty rows — ensure consistent height with single-line text rows */
+.table-block td > p,
+.table-block th > p {
+  min-height: 1.5em;
+}
+
+/* First data row as example — blue handwriting style.
+   Case A: row 1 already has <td> → style row 1.
+   Case B: row 1 is header-like (<th>) in <tbody> → style row 2. */
+.table-block.table-first-row-example tbody tr:first-child > td,
+.table-block.table-first-row-example tbody tr:first-child > td p,
+.table-block.table-first-row-example tbody tr:nth-child(2) > td,
+.table-block.table-first-row-example tbody tr:nth-child(2) > td p {
+  color: #3b82f6;
+  font-family: "Shadows Into Light Two", var(--font-handwriting), cursive !important;
+  font-weight: 400;
 }
 
 /* ── Editor-specific: Selected cells ─────────────────────── */

@@ -84,7 +84,10 @@ export function WorksheetViewer({
     mode === "print" ? "worksheetPrint" : "worksheetOnline",
   );
 
-  const pageWidth = settings.pageSize === "a4" ? 794 : 816;
+  const isLandscape = settings.orientation === "landscape";
+  const pageWidth = settings.pageSize === "a4"
+    ? (isLandscape ? 1123 : 794)
+    : (isLandscape ? 1056 : 816);
 
   // Resolve brand profile: prefer prop, then static fallback, then apply per-worksheet overrides
   const resolvedProfile = applyBrandOverrides(
@@ -202,12 +205,16 @@ export function WorksheetViewer({
   const replaceVariables = (html: string): string => {
     const now = new Date();
     const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const langSuffix =
+      mode === "print" && contentLocale !== "de"
+        ? ` | ${contentLocale.toUpperCase()}`
+        : "";
     let result = html
       .replace(/\{current_date\}/g, dateStr)
       .replace(/\{current_year\}/g, String(now.getFullYear()))
       .replace(/\{organization\}/g, brandSettings.organization || "")
       .replace(/\{teacher\}/g, brandSettings.teacher || "")
-      .replace(/\{worksheet_uuid\}/g, (worksheetId || "").toUpperCase());
+      .replace(/\{worksheet_uuid\}/g, `${(worksheetId || "").toUpperCase()}${langSuffix}`);
     if (mode === "print") {
       result = result
         .replace(
@@ -238,7 +245,7 @@ export function WorksheetViewer({
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
-  const printBottomReservePx = Math.max(settings.margins.bottom || 0, 113);
+  const printBottomReservePx = Math.max(settings.margins.bottom || 0, 95);
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
@@ -272,7 +279,10 @@ export function WorksheetViewer({
   } as React.CSSProperties;
 
   return (
-    <div className={`min-h-screen ${mode === "print" ? "bg-white print-worksheet-root print-skin-final" : "bg-muted/30"}`} style={viewerCssVars}>
+    <div
+      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"}` : "bg-muted/30"}`}
+      style={viewerCssVars}
+    >
       {fontStylesheetUrls.map((href) => (
         <link key={href} rel="stylesheet" href={href} />
       ))}

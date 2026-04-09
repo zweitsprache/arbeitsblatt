@@ -120,6 +120,7 @@ export function EditorToolbar() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ locale });
+      params.set("orientation", state.settings.orientation || "portrait");
       if (outputMode === "solutions") params.set("solutions", "1");
       if (outputMode === "both") params.set("both", "1");
       if (pdfLang && pdfLang !== "de") params.set("lang", pdfLang);
@@ -297,6 +298,12 @@ export function EditorToolbar() {
         {state.isDirty && (
           <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
             {tc("unsaved")}
+          </Badge>
+        )}
+
+        {state.settings.orientation === "landscape" && (
+          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+            {t("landscapeMode")}
           </Badge>
         )}
 
@@ -705,6 +712,26 @@ export function EditorToolbar() {
             <DialogTitle>{t("brandSettings")} – {state.brandProfile.name || state.settings.brand || "edoomio"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium">{t("pdfOrientation")}</Label>
+              <Select
+                value={state.settings.orientation || "portrait"}
+                onValueChange={(value) =>
+                  dispatch({
+                    type: "UPDATE_SETTINGS",
+                    payload: { orientation: value as "portrait" | "landscape" },
+                  })
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="portrait">{t("pdfOrientationPortrait")}</SelectItem>
+                  <SelectItem value="landscape">{t("pdfOrientationLandscape")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-sm font-medium">{t("brandLogo")}</Label>
               <Input

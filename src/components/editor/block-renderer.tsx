@@ -5073,7 +5073,9 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
 
   return (
     <div
-      className={`table-block table-style-${block.tableStyle ?? "default"}`}
+      className={`table-block table-style-${block.tableStyle ?? "default"} ${
+        block.firstRowAsExample ? "table-first-row-example" : ""
+      }`}
     >
       <TableEditor
         content={block.content}

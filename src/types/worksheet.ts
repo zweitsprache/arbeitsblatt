@@ -175,6 +175,8 @@ export interface TableBlock extends BlockBase {
   caption?: string;
   columnWidths?: number[];
   bilingual?: boolean;
+  firstRowAsExample?: boolean;
+  skipTranslation?: boolean;
 }
 
 export const BRAND_ICON_LOGOS: Record<string, string> = {
