@@ -4305,7 +4305,8 @@ function WebsiteView({
   };
   const originalTitle = originalBlock?.title?.trim() || "";
   const translatedTitle = block.title.trim();
-  const showBilingualTitle = !!block.bilingual && !!originalTitle && originalTitle !== translatedTitle;
+  const bilingualOriginalTitle = originalTitle || translatedTitle;
+  const showBilingualTitle = !!block.bilingual && !!translatedTitle;
 
   const normalizeExternalUrl = (url: string) => {
     const trimmed = url.trim();
@@ -4321,7 +4322,7 @@ function WebsiteView({
           {showBilingualTitle ? (
             <>
               <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>
-                {originalTitle}
+                {bilingualOriginalTitle}
               </span>
               <span style={{ fontWeight: 400 }}> | </span>
               <span style={{ fontWeight: 400 }}>{translatedTitle}</span>
