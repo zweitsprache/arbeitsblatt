@@ -1430,6 +1430,8 @@
   },
   "projectHome": {
     "availableContent": "Available Content",
+    "availableProjects": "Available Projects",
+    "browseProject": "Open project",
     "contentType": {
       "AI_TOOL": "AI Tool",
       "COURSE": "Course",
@@ -1437,7 +1439,8 @@
       "WORKSHEET": "Worksheet"
     },
     "heroSubtitle": "Welcome! Explore the available courses and learning materials.",
-    "noContent": "No content available yet."
+    "noContent": "No content available yet.",
+    "noProjects": "No projects available yet."
   },
   "sidebar": {
     "account": "Account",

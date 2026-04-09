@@ -24,14 +24,14 @@ export default function proxy(req: NextRequest) {
     subdomain = hostWithoutPort.replace(`.${baseWithoutPort}`, "");
   }
 
-  // If subdomain detected (and not www), inject project slug header
+  // If subdomain detected (and not www), inject client slug header
   // and rewrite to the project viewer routes
   const RESERVED_SUBDOMAINS = ["www"];
   // Local development should not rewrite based on subdomain heuristics.
   // This avoids local-only 404s when opening non-standard localhost hosts.
   if (!isLocalBaseDomain && subdomain && !RESERVED_SUBDOMAINS.includes(subdomain)) {
     const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-project-slug", subdomain);
+    requestHeaders.set("x-client-slug", subdomain);
 
     const url = req.nextUrl.clone();
 

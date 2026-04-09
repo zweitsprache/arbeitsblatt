@@ -5,9 +5,8 @@ import { isAdmin } from "@/lib/auth/is-admin";
 import { launchBrowser } from "@/lib/puppeteer";
 
 function getBaseUrl() {
-  return process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_BASE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 }
 
 async function hideDevOverlays(

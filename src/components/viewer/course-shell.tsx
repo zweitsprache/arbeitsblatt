@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import { useRouter, usePathname, useParams } from "next/navigation";
-import { CourseModule, SidebarTheme, moduleNumber as getModuleNumber } from "@/types/course";
-import { Brand, BRAND_FONTS, DEFAULT_BRAND_SETTINGS } from "@/types/worksheet";
+import { useRouter, usePathname } from "next/navigation";
+import { CourseModule, SidebarTheme } from "@/types/course";
+import { Brand, BRAND_FONTS, BrandFonts, DEFAULT_BRAND_SETTINGS, getStaticBrandProfile } from "@/types/worksheet";
 import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
@@ -167,6 +167,20 @@ function getSidebarTokens(theme: SidebarTheme, brand?: Brand): SidebarTokens {
 const SidebarThemeContext = React.createContext<SidebarTokens>(DARK_TOKENS);
 function useSidebarTheme() { return React.useContext(SidebarThemeContext); }
 
+function nonEmpty(value?: string | null, fallback?: string) {
+  const normalized = value?.trim();
+  return normalized || fallback || "";
+}
+
+function normalizeWeight(value: unknown, fallback: number) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
 // ─── Types ───────────────────────────────────────────────────
 
 // ─── Sidebar Module Section ──────────────────────────────────
@@ -174,7 +188,7 @@ function useSidebarTheme() { return React.useContext(SidebarThemeContext); }
 function SidebarModuleSection({
   mod,
   moduleIndex,
-  brand,
+  moduleTitleColor,
   currentModuleId,
   state,
   onSelectModule,
@@ -183,7 +197,7 @@ function SidebarModuleSection({
 }: {
   mod: CourseModule;
   moduleIndex: number;
-  brand?: Brand;
+  moduleTitleColor: string;
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
   state: "default" | "expanded" | "compressed";
@@ -193,7 +207,6 @@ function SidebarModuleSection({
   const tk = useSidebarTheme();
   const num = String(moduleIndex + 1).padStart(2, "0");
   const isCurrentModule = currentModuleId === mod.id;
-  const moduleTitleColor = BRAND_FONTS[brand || "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
   const active = state === "expanded" || isCurrentModule;
 
   return (
@@ -245,7 +258,7 @@ function ModulePair({
   leftIndex,
   right,
   rightIndex,
-  brand,
+  moduleTitleColor,
   currentModuleId,
   onSelectModule,
 }: {
@@ -253,7 +266,7 @@ function ModulePair({
   leftIndex: number;
   right?: CourseModule;
   rightIndex?: number;
-  brand?: Brand;
+  moduleTitleColor: string;
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
 }) {
@@ -264,7 +277,7 @@ function ModulePair({
       <SidebarModuleSection
         mod={left}
         moduleIndex={leftIndex}
-        brand={brand}
+        moduleTitleColor={moduleTitleColor}
         currentModuleId={currentModuleId}
         state={hoveredSide === "left" ? "expanded" : hoveredSide === "right" ? "compressed" : "default"}
         onSelectModule={onSelectModule}
@@ -275,7 +288,7 @@ function ModulePair({
         <SidebarModuleSection
           mod={right}
           moduleIndex={rightIndex}
-          brand={brand}
+          moduleTitleColor={moduleTitleColor}
           currentModuleId={currentModuleId}
           state={hoveredSide === "right" ? "expanded" : hoveredSide === "left" ? "compressed" : "default"}
           onSelectModule={onSelectModule}
@@ -335,10 +348,14 @@ function SidebarNav({
   structure,
   currentModuleId,
   onSelectModule,
+  bodyFont,
+  moduleTitleColor,
 }: {
   structure: CourseModule[];
   currentModuleId: string | null;
   onSelectModule: (moduleId: string) => void;
+  bodyFont: string;
+  moduleTitleColor: string;
 }) {
   const { brand } = useCourse();
   const tk = getSidebarTokens("light", brand as Brand);
@@ -348,7 +365,7 @@ function SidebarNav({
     <div
       className="flex h-full flex-col overflow-hidden"
       style={{
-        fontFamily: BRAND_FONTS[brand || "edoomio"].bodyFont,
+        fontFamily: bodyFont,
         backgroundColor: "#ffffff",
       }}
     >
@@ -361,7 +378,7 @@ function SidebarNav({
               leftIndex={pi * 2}
               right={structure[pi * 2 + 1]}
               rightIndex={structure[pi * 2 + 1] !== undefined ? pi * 2 + 1 : undefined}
-              brand={brand}
+              moduleTitleColor={moduleTitleColor}
               currentModuleId={currentModuleId}
               onSelectModule={onSelectModule}
             />
@@ -383,12 +400,35 @@ function SidebarNav({
 // ─── Course Shell (layout wrapper) ──────────────────────────
 
 export function CourseShell({ children }: { children: React.ReactNode }) {
-  const { title, structure, slug, brand, worksheets } = useCourse();
+  const { title, structure, brand, brandProfile, viewerBasePath, worksheets } = useCourse();
   const router = useRouter();
   const pathname = usePathname();
-  const { locale } = useParams<{ locale: string }>();
+  const basePathSegments = useMemo(
+    () => viewerBasePath.split("/").filter(Boolean),
+    [viewerBasePath]
+  );
+  const basePathSegmentCount = basePathSegments.length;
 
-  const brandFonts = BRAND_FONTS[brand || "edoomio"];
+  const brandKey = brand || "edoomio";
+  const staticBrandFonts = BRAND_FONTS[brandKey] ?? BRAND_FONTS.edoomio;
+  const resolvedBrandProfile = brandProfile ?? getStaticBrandProfile(brandKey);
+  const brandFonts: BrandFonts = {
+    bodyFont: nonEmpty(resolvedBrandProfile.bodyFont, staticBrandFonts.bodyFont),
+    headlineFont: nonEmpty(resolvedBrandProfile.headlineFont, staticBrandFonts.headlineFont),
+    headlineWeight: normalizeWeight(resolvedBrandProfile.headlineWeight, staticBrandFonts.headlineWeight || 700),
+    subHeadlineFont: nonEmpty(resolvedBrandProfile.subHeadlineFont, staticBrandFonts.subHeadlineFont),
+    subHeadlineWeight: normalizeWeight(resolvedBrandProfile.subHeadlineWeight, staticBrandFonts.subHeadlineWeight || 700),
+    headerFooterFont: nonEmpty(resolvedBrandProfile.headerFooterFont, staticBrandFonts.headerFooterFont),
+    googleFontsUrl: nonEmpty(resolvedBrandProfile.googleFontsUrl, staticBrandFonts.googleFontsUrl),
+    primaryColor: resolvedBrandProfile.primaryColor || staticBrandFonts.primaryColor,
+  };
+  const brandLogo = nonEmpty(
+    resolvedBrandProfile.logo,
+    nonEmpty(
+      resolvedBrandProfile.iconLogo,
+      DEFAULT_BRAND_SETTINGS[brandKey]?.logo || DEFAULT_BRAND_SETTINGS.edoomio.logo,
+    ),
+  );
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
@@ -397,17 +437,17 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
 
   const currentModuleId = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
-    if (segments.length >= 4) return segments[3];
+    if (segments.length > basePathSegmentCount) return segments[basePathSegmentCount];
     return null;
-  }, [pathname]);
+  }, [basePathSegmentCount, pathname]);
 
   // Resolve current lesson content for AI chat
   const currentLessonData = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
-    if (segments.length < 6) return null;
-    const moduleId = segments[3];
-    const topicId = segments[4];
-    const lessonId = segments[5];
+    if (segments.length < basePathSegmentCount + 3) return null;
+    const moduleId = segments[basePathSegmentCount];
+    const topicId = segments[basePathSegmentCount + 1];
+    const lessonId = segments[basePathSegmentCount + 2];
     const mod = structure.find((m) => m.id === moduleId);
     if (!mod) return null;
     const topic = mod.topics.find((t) => t.id === topicId);
@@ -428,7 +468,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       title: lesson.title || "Untitled Lesson",
       context: extractBlocksText(visibleBlocks, worksheets),
     };
-  }, [pathname, structure, worksheets]);
+  }, [basePathSegmentCount, pathname, structure, worksheets]);
 
   // ─── Full-text search across all lessons ──────────────────
   const searchResults = useMemo(() => {
@@ -483,33 +523,32 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
     (moduleId: string, topicId: string, lessonId: string) => {
       setSearchQuery("");
       setMobileNavOpen(false);
-      router.push(`/${locale}/course/${slug}/${moduleId}/${topicId}/${lessonId}`);
+      router.push(`${viewerBasePath}/${moduleId}/${topicId}/${lessonId}`);
     },
-    [router, locale, slug]
+    [router, viewerBasePath]
   );
 
   const handleSelectModule = useCallback(
     (moduleId: string) => {
       setMobileNavOpen(false);
-      router.push(`/${locale}/course/${slug}/${moduleId}`);
+      router.push(`${viewerBasePath}/${moduleId}`);
     },
-    [router, locale, slug]
+    [router, viewerBasePath]
   );
 
   // Determine breadcrumb from URL
   const breadcrumb = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
-    // segments: [locale, "course", slug, moduleId?, topicId?, lessonId?]
-    if (segments.length < 3) return null;
-    const isOverview = segments.length === 3;
-    const moduleId = segments[3] ?? null;
-    const topicId = segments.length >= 5 ? segments[4] : null;
-    const lessonId = segments.length >= 6 ? segments[5] : null;
+    if (segments.length < basePathSegmentCount) return null;
+    const isOverview = segments.length === basePathSegmentCount;
+    const moduleId = segments[basePathSegmentCount] ?? null;
+    const topicId = segments.length >= basePathSegmentCount + 2 ? segments[basePathSegmentCount + 1] : null;
+    const lessonId = segments.length >= basePathSegmentCount + 3 ? segments[basePathSegmentCount + 2] : null;
     const mod = moduleId ? structure.find((m) => m.id === moduleId) : null;
     const topic = mod && topicId ? mod.topics.find((t) => t.id === topicId) : null;
     const lesson = topic && lessonId ? topic.lessons.find((l) => l.id === lessonId) : null;
     return { isOverview, mod: mod ?? null, topic: topic ?? null, lesson: lesson ?? null };
-  }, [pathname, structure]);
+  }, [basePathSegmentCount, pathname, structure]);
 
   return (
     <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-[linear-gradient(180deg,rgba(250,250,249,1)_0%,rgba(245,245,244,1)_100%)]">
@@ -543,6 +582,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
             structure={structure}
             currentModuleId={currentModuleId}
             onSelectModule={handleSelectModule}
+            bodyFont={brandFonts.bodyFont}
+            moduleTitleColor={brandFonts.primaryColor}
           />
         </SheetContent>
       </Sheet>
@@ -552,7 +593,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       <div className="hidden lg:flex items-center gap-3 px-6 2xl:px-8 py-4 text-cv-xs text-muted-foreground shrink-0 bg-white/80 backdrop-blur border-b" style={{ fontFamily: brandFonts.bodyFont }}>
         {/* Brand logo */}
         <img
-          src={DEFAULT_BRAND_SETTINGS[brand].logo}
+          src={brandLogo}
           alt=""
           className="h-7 w-auto mr-1"
         />
@@ -593,6 +634,8 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 structure={structure}
                 currentModuleId={currentModuleId}
                 onSelectModule={handleSelectModule}
+                bodyFont={brandFonts.bodyFont}
+                moduleTitleColor={brandFonts.primaryColor}
               />
             </aside>
             <button
@@ -646,7 +689,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                 <div className="text-sm text-muted-foreground shrink-0 bg-white lg:mr-[30px]" style={{ fontFamily: brandFonts.bodyFont }}>
                   <div className="max-w-5xl mx-auto w-full px-6 sm:px-10 lg:px-16">
                     <div className="pt-8 pb-5 flex items-center gap-2 border-b">
-                      <button onClick={() => { setSearchQuery(""); router.push(`/${locale}/course/${slug}`); }} className="font-medium hover:text-foreground/80 transition-colors">
+                      <button onClick={() => { setSearchQuery(""); router.push(viewerBasePath); }} className="font-medium hover:text-foreground/80 transition-colors">
                         Start
                       </button>
                       <ChevronRight className="h-3.5 w-3.5 shrink-0" />
@@ -661,7 +704,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                       {breadcrumb.isOverview ? (
                         <span className="font-medium text-foreground">Start</span>
                       ) : (
-                        <button onClick={() => router.push(`/${locale}/course/${slug}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                        <button onClick={() => router.push(viewerBasePath)} className="font-medium hover:text-foreground/80 transition-colors">
                           Start
                         </button>
                       )}
@@ -671,7 +714,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                           {!breadcrumb.topic ? (
                             <span className="font-medium text-foreground">{breadcrumb.mod.title}</span>
                           ) : (
-                            <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                            <button onClick={() => router.push(`${viewerBasePath}/${breadcrumb.mod!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
                               {breadcrumb.mod.title}
                             </button>
                           )}
@@ -683,7 +726,7 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
                           {!breadcrumb.lesson ? (
                             <span className="font-medium text-foreground">{breadcrumb.topic.title}</span>
                           ) : (
-                            <button onClick={() => router.push(`/${locale}/course/${slug}/${breadcrumb.mod!.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
+                            <button onClick={() => router.push(`${viewerBasePath}/${breadcrumb.mod!.id}/${breadcrumb.topic!.id}`)} className="font-medium hover:text-foreground/80 transition-colors">
                               {breadcrumb.topic.title}
                             </button>
                           )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { normalizeClientSubdomain } from "@/lib/client-subdomain";
 
 // GET /api/admin/clients/[id] — get client with projects
 export async function GET(
@@ -44,9 +45,23 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const normalizedSlug =
+    body.slug !== undefined ? normalizeClientSubdomain(String(body.slug)) : undefined;
+
+  if (body.slug !== undefined && !normalizedSlug) {
+    return NextResponse.json({ error: "slug is required" }, { status: 400 });
+  }
+
+  if (normalizedSlug && normalizedSlug !== existing.slug) {
+    const slugOwner = await prisma.client.findUnique({ where: { slug: normalizedSlug } });
+    if (slugOwner && slugOwner.id !== id) {
+      return NextResponse.json({ error: "slug already in use" }, { status: 409 });
+    }
+  }
+
   const data: Record<string, unknown> = {};
   if (body.name !== undefined) data.name = body.name;
-  if (body.slug !== undefined) data.slug = body.slug;
+  if (normalizedSlug !== undefined) data.slug = normalizedSlug;
   if (body.brandSettings !== undefined) data.brandSettings = body.brandSettings;
 
   const client = await prisma.client.update({ where: { id }, data });

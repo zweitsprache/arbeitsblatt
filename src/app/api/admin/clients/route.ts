@@ -3,6 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { DEFAULT_BRAND_SETTINGS } from "@/types/project";
+import {
+  buildClientSubdomainCandidate,
+  normalizeClientSubdomain,
+} from "@/lib/client-subdomain";
+
+async function createUniqueClientSlug(baseValue: string) {
+  const baseSlug = normalizeClientSubdomain(baseValue) || `client-${nanoid(6).toLowerCase()}`;
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (await prisma.client.findUnique({ where: { slug } })) {
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+
+  return slug;
+}
 
 // GET /api/admin/clients — list all clients with project count
 export async function GET() {
@@ -30,7 +48,10 @@ export async function POST(req: NextRequest) {
   if (result instanceof NextResponse) return result;
 
   const body = await req.json();
-  const slug = nanoid(10);
+  const requestedSlug = typeof body.slug === "string" ? body.slug : "";
+  const slug = await createUniqueClientSlug(
+    requestedSlug || buildClientSubdomainCandidate(body.name || "")
+  );
 
   const client = await prisma.client.create({
     data: {

@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, FolderKanban, Save } from "lucide-react";
 import type { Client, ClientBrandSettings } from "@/types/project";
 
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || "edoox.cloud";
+
 export function ClientDetailView({ clientId }: { clientId: string }) {
   const t = useTranslations("admin");
   const [client, setClient] = useState<Client | null>(null);
@@ -114,12 +116,15 @@ export function ClientDetailView({ clientId }: { clientId: string }) {
             />
           </div>
           <div>
-            <Label>{t("slug")}</Label>
+            <Label>{t("subdomain")}</Label>
             <Input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               className="mt-1"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {(slug.trim() || "client")}.{BASE_DOMAIN}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -220,7 +225,7 @@ export function ClientDetailView({ clientId }: { clientId: string }) {
                     <div>
                       <p className="font-medium">{project.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {project.slug}
+                        /project/{project.slug}
                         {project._count &&
                           ` · ${t("contentCount", { count: project._count.contents })}`}
                       </p>

@@ -10,9 +10,15 @@ import { CoursePageNav } from "@/components/viewer/course-page-nav";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 
 export default function LessonPage() {
-  const { structure, slug, worksheets, id: courseId, brand, accentColor } = useCourse();
-  const { locale, moduleId, topicId, lessonId } = useParams<{
-    locale: string;
+  const {
+    structure,
+    worksheets,
+    id: courseId,
+    brand,
+    accentColor,
+    viewerBasePath,
+  } = useCourse();
+  const { moduleId, topicId, lessonId } = useParams<{
     slug: string;
     moduleId: string;
     topicId: string;
@@ -57,23 +63,23 @@ export default function LessonPage() {
   const nextModule = moduleIndex < structure.length - 1 ? structure[moduleIndex + 1] : null;
   const prevNav = prevLesson
     ? {
-        href: `/${locale}/course/${slug}/${moduleId}/${topicId}/${prevLesson.id}`,
+        href: `${viewerBasePath}/${moduleId}/${topicId}/${prevLesson.id}`,
         title: prevLesson.title || "Untitled Lesson",
       }
     : null;
   const nextNav = nextLesson
     ? {
-        href: `/${locale}/course/${slug}/${moduleId}/${topicId}/${nextLesson.id}`,
+        href: `${viewerBasePath}/${moduleId}/${topicId}/${nextLesson.id}`,
         title: nextLesson.title || "Untitled Lesson",
       }
     : nextTopic
       ? {
-          href: `/${locale}/course/${slug}/${moduleId}/${nextTopic.id}`,
+          href: `${viewerBasePath}/${moduleId}/${nextTopic.id}`,
           title: nextTopic.title || "Untitled Topic",
         }
       : nextModule
         ? {
-            href: `/${locale}/course/${slug}/${nextModule.id}`,
+            href: `${viewerBasePath}/${nextModule.id}`,
             title: nextModule.title || "Untitled Module",
           }
         : null;

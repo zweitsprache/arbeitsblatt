@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { CourseModule, CourseCoverSettings, CourseSettings, SidebarTheme } from "@/types/course";
-import { WorksheetBlock, WorksheetSettings, Brand } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, Brand, BrandProfile } from "@/types/worksheet";
 import { applyTranslations } from "@/lib/course-translation";
 
 export interface WorksheetData {
@@ -17,11 +17,13 @@ export interface WorksheetData {
 export interface CourseContextInitial {
   id: string;
   slug: string;
+  viewerBasePath: string;
   title: string;
   description?: string;
   languageLevel?: string;
   image?: string | null;
   brand: Brand;
+  brandProfile?: BrandProfile | null;
   accentColor?: string | null;
   sidebarTheme: SidebarTheme;
   structure: CourseModule[];
@@ -112,7 +114,7 @@ export function CourseProvider({
       availableLocales,
       setContentLocale,
     };
-  }, [value, contentLocale, availableLocales]);
+  }, [value, contentLocale, availableLocales, setContentLocale]);
 
   return (
     <CourseContext.Provider value={resolved}>{children}</CourseContext.Provider>

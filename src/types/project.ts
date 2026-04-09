@@ -23,6 +23,7 @@ export const DEFAULT_BRAND_SETTINGS: ClientBrandSettings = {};
 export interface Client {
   id: string;
   name: string;
+  /** Public client subdomain, e.g. client.edoox.cloud */
   slug: string;
   /** @deprecated Use brandProfile instead */
   brandSettings: ClientBrandSettings;
@@ -39,8 +40,10 @@ export interface Client {
 export interface Project {
   id: string;
   name: string;
+  /** Public project path segment under a client host */
   slug: string;
   clientId: string;
+  /** @deprecated Project-level domains are no longer used for routing */
   domain?: string | null;
   settings: Record<string, unknown>;
   createdAt: string;

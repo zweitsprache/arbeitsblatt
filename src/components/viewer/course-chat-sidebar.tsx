@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useCourse } from "./course-context";
-import { BRAND_FONTS } from "@/types/worksheet";
+import { BRAND_FONTS, getStaticBrandProfile } from "@/types/worksheet";
 import { authFetch } from "@/lib/auth-fetch";
 import {
   Send,
@@ -191,8 +191,15 @@ export function CourseChatSidebar({
   lessonTitle,
 }: CourseChatSidebarProps) {
   const t = useTranslations("courseChat");
-  const { brand, title: courseTitle, contentLocale } = useCourse();
-  const brandFonts = BRAND_FONTS[brand || "edoomio"];
+  const { brand, brandProfile, title: courseTitle, contentLocale } = useCourse();
+  const brandKey = brand || "edoomio";
+  const staticBrandFonts = BRAND_FONTS[brandKey] ?? BRAND_FONTS.edoomio;
+  const resolvedBrandProfile = brandProfile ?? getStaticBrandProfile(brandKey);
+  const brandFonts = {
+    ...staticBrandFonts,
+    bodyFont: resolvedBrandProfile.bodyFont?.trim() || staticBrandFonts.bodyFont,
+    googleFontsUrl: resolvedBrandProfile.googleFontsUrl?.trim() || staticBrandFonts.googleFontsUrl,
+  };
 
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);

@@ -29,12 +29,15 @@ import {
 } from "lucide-react";
 import type { Client } from "@/types/project";
 
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || "edoox.cloud";
+
 export function ClientsDashboard() {
   const t = useTranslations("admin");
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newSlug, setNewSlug] = useState("");
   const [creating, setCreating] = useState(false);
 
   const fetchClients = useCallback(async () => {
@@ -64,10 +67,14 @@ export function ClientsDashboard() {
       const res = await authFetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify({
+          name: newName.trim(),
+          slug: newSlug.trim() || undefined,
+        }),
       });
       if (res.ok) {
         setNewName("");
+        setNewSlug("");
         setShowNewDialog(false);
         fetchClients();
       }
@@ -147,7 +154,7 @@ export function ClientsDashboard() {
                           {client.name}
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                          {client.slug}
+                          {client.slug}.{BASE_DOMAIN}
                         </p>
                       </div>
                     </div>
@@ -205,6 +212,17 @@ export function ClientsDashboard() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                 autoFocus
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t("subdomain")}</label>
+              <Input
+                value={newSlug}
+                onChange={(e) => setNewSlug(e.target.value)}
+                placeholder={t("subdomain")}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {(newSlug.trim() || "client")}.{BASE_DOMAIN}
+              </p>
             </div>
             <div className="flex justify-end gap-2">
               <Button

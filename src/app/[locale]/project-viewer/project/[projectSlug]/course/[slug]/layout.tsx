@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -10,40 +11,53 @@ import {
   collectLinkedWorksheetIds,
   normalizeCourseStructure,
 } from "@/types/course";
-import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
+import {
+  WorksheetBlock,
+  WorksheetSettings,
+  DEFAULT_SETTINGS,
+} from "@/types/worksheet";
 import { CourseProvider } from "@/components/viewer/course-context";
 import { CourseShell } from "@/components/viewer/course-shell";
 
-export default async function CourseLayout({
+export default async function ProjectCourseLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; projectSlug: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { locale, projectSlug, slug } = await params;
   setRequestLocale(locale);
 
+  const headersList = await headers();
+  const clientSlug = headersList.get("x-client-slug");
+  if (!clientSlug) notFound();
+
+  const project = await prisma.project.findFirst({
+    where: { slug: projectSlug, client: { slug: clientSlug } },
+    include: { client: true },
+  });
+  if (!project) notFound();
+
   const course = await prisma.course.findUnique({ where: { slug } });
+  if (!course) notFound();
 
-  if (!course) {
-    notFound();
-  }
-
-  // Load brand profile for course viewer styling — by linked ID first, then by brand slug
-  const brandProfileId = (course as { brandProfileId?: string | null }).brandProfileId;
-  const brandSlug = ((course.settings as { brand?: string } | null)?.brand) ?? "edoomio";
-  const brandProfile = brandProfileId
-    ? await prisma.brandProfile.findUnique({ where: { id: brandProfileId }, include: { subProfiles: { orderBy: { name: "asc" } } } })
-    : await prisma.brandProfile.findFirst({ where: { slug: brandSlug }, include: { subProfiles: { orderBy: { name: "asc" } } } });
-  const accentColor = brandProfile?.accentColor ?? null;
+  const assignment = await prisma.projectContent.findUnique({
+    where: {
+      projectId_contentType_contentId: {
+        projectId: project.id,
+        contentType: "COURSE",
+        contentId: course.id,
+      },
+    },
+  });
+  if (!assignment) notFound();
 
   const structure = normalizeCourseStructure(
     course.structure as unknown as CourseModule[]
   );
 
   const linkedWorksheetIds = collectLinkedWorksheetIds(structure);
-
   const worksheetsData =
     linkedWorksheetIds.length > 0
       ? await prisma.worksheet.findMany({
@@ -51,13 +65,16 @@ export default async function CourseLayout({
         })
       : [];
 
-  const worksheets: Record<string, {
-    id: string;
-    title: string;
-    slug: string;
-    blocks: WorksheetBlock[];
-    settings: WorksheetSettings;
-  }> = {};
+  const worksheets: Record<
+    string,
+    {
+      id: string;
+      title: string;
+      slug: string;
+      blocks: WorksheetBlock[];
+      settings: WorksheetSettings;
+    }
+  > = {};
 
   for (const ws of worksheetsData) {
     worksheets[ws.id] = {
@@ -77,14 +94,18 @@ export default async function CourseLayout({
     ...(course.settings as unknown as Partial<CourseSettings>),
   };
 
+  const brandProfileId = (course as { brandProfileId?: string | null }).brandProfileId;
+  const brandSlug = ((course.settings as { brand?: string } | null)?.brand) ?? "edoomio";
+  const brandProfile = brandProfileId
+    ? await prisma.brandProfile.findUnique({ where: { id: brandProfileId }, include: { subProfiles: { orderBy: { name: "asc" } } } })
+    : await prisma.brandProfile.findFirst({ where: { slug: brandSlug }, include: { subProfiles: { orderBy: { name: "asc" } } } });
+
   const coverSettings: CourseCoverSettings = {
     ...DEFAULT_COURSE_COVER_SETTINGS,
     ...(course.coverSettings as unknown as Partial<CourseCoverSettings>),
   };
 
-  // Load translation strings (if any exist)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawTranslations = (course as any).translations as unknown;
+  const rawTranslations = (course as { translations?: unknown }).translations;
   const translations: Record<string, Record<string, string>> | undefined =
     rawTranslations &&
     typeof rawTranslations === "object" &&
@@ -97,14 +118,13 @@ export default async function CourseLayout({
       value={{
         id: course.id,
         slug,
-        viewerBasePath: `/${locale}/course/${slug}`,
+        viewerBasePath: `/${locale}/project/${project.slug}/course/${slug}`,
         title: course.title,
         description: settings.description,
         languageLevel: settings.languageLevel,
         image: settings.image,
         brand: settings.brand || "edoomio",
         brandProfile,
-        accentColor,
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
         coverSettings,

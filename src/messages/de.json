@@ -1430,6 +1430,8 @@
   },
   "projectHome": {
     "availableContent": "Verfügbare Inhalte",
+    "availableProjects": "Verfügbare Projekte",
+    "browseProject": "Projekt öffnen",
     "contentType": {
       "AI_TOOL": "KI-Tool",
       "COURSE": "Kurs",
@@ -1437,7 +1439,8 @@
       "WORKSHEET": "Arbeitsblatt"
     },
     "heroSubtitle": "Willkommen! Entdecken Sie die verfügbaren Kurse und Lernmaterialien.",
-    "noContent": "Noch keine Inhalte verfügbar."
+    "noContent": "Noch keine Inhalte verfügbar.",
+    "noProjects": "Noch keine Projekte verfügbar."
   },
   "sidebar": {
     "account": "Konto",

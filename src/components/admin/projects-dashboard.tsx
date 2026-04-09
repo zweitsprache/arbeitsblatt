@@ -33,10 +33,11 @@ import {
   Pencil,
   Trash2,
   Building2,
-  Globe,
   FileText,
 } from "lucide-react";
 import type { Project, Client } from "@/types/project";
+
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || "edoox.cloud";
 
 export function ProjectsDashboard() {
   const t = useTranslations("admin");
@@ -172,7 +173,7 @@ export function ProjectsDashboard() {
                           {project.name}
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                          {project.slug}
+                          /project/{project.slug}
                         </p>
                       </div>
                     </div>
@@ -180,13 +181,7 @@ export function ProjectsDashboard() {
                       {project.client && (
                         <span className="flex items-center gap-1">
                           <Building2 className="h-3.5 w-3.5" />
-                          {project.client.name}
-                        </span>
-                      )}
-                      {project.domain && (
-                        <span className="flex items-center gap-1">
-                          <Globe className="h-3.5 w-3.5" />
-                          {project.domain}
+                          {project.client.slug}.{BASE_DOMAIN}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
@@ -252,7 +247,7 @@ export function ProjectsDashboard() {
                 placeholder={t("subdomain")}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {newSlug.trim() || "project"}.domain.com
+                /project/{newSlug.trim() || "project"}
               </p>
             </div>
             <div>

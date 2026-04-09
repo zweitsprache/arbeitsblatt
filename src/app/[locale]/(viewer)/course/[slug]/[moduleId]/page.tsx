@@ -19,10 +19,16 @@ import { CoursePageNav } from "@/components/viewer/course-page-nav";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 
 export default function ModulePage() {
-  const { title, structure, brand, worksheets, id: courseId, accentColor } = useCourse();
-  const { locale, slug, moduleId } = useParams<{
-    locale: string;
-    slug: string;
+  const {
+    title,
+    structure,
+    brand,
+    worksheets,
+    id: courseId,
+    accentColor,
+    viewerBasePath,
+  } = useCourse();
+  const { moduleId } = useParams<{
     moduleId: string;
   }>();
 
@@ -87,7 +93,7 @@ export default function ModulePage() {
             <div key={topic.id} className="py-5">
               {/* Topic row */}
               <Link
-                href={`/${locale}/course/${slug}/${moduleId}/${topic.id}`}
+                href={`${viewerBasePath}/${moduleId}/${topic.id}`}
                 className="group flex items-center gap-4 w-full text-left"
               >
                 <span
@@ -115,7 +121,7 @@ export default function ModulePage() {
                     {topic.lessons.map((lesson) => (
                       <li key={lesson.id}>
                         <Link
-                          href={`/${locale}/course/${slug}/${moduleId}/${topic.id}/${lesson.id}`}
+                          href={`${viewerBasePath}/${moduleId}/${topic.id}/${lesson.id}`}
                           className="group/lesson flex w-full items-center gap-2 py-1.5 text-lg"
                         >
                           <File className="h-4 w-4 shrink-0" style={{ color: primaryColor }} />
@@ -140,11 +146,11 @@ export default function ModulePage() {
 
         <CoursePageNav
           prev={{
-            href: `/${locale}/course/${slug}`,
+            href: viewerBasePath,
             title: title || "Untitled Course",
           }}
           next={firstTopic ? {
-            href: `/${locale}/course/${slug}/${moduleId}/${firstTopic.id}`,
+            href: `${viewerBasePath}/${moduleId}/${firstTopic.id}`,
             title: firstTopic.title || "Untitled Topic",
           } : null}
         />

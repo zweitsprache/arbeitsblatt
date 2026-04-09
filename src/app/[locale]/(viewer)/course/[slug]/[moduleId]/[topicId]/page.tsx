@@ -8,10 +8,8 @@ import { BRAND_FONTS } from "@/types/worksheet";
 import { CoursePageNav } from "@/components/viewer/course-page-nav";
 
 export default function TopicPage() {
-  const { structure, brand } = useCourse();
-  const { locale, slug, moduleId, topicId } = useParams<{
-    locale: string;
-    slug: string;
+  const { structure, brand, viewerBasePath } = useCourse();
+  const { moduleId, topicId } = useParams<{
     moduleId: string;
     topicId: string;
   }>();
@@ -39,7 +37,7 @@ export default function TopicPage() {
         {topic.lessons.map((lesson, i) => (
           <Link
             key={lesson.id}
-            href={`/${locale}/course/${slug}/${moduleId}/${topicId}/${lesson.id}`}
+            href={`${viewerBasePath}/${moduleId}/${topicId}/${lesson.id}`}
             className="group border-t border-border bg-background p-5 transition-colors hover:bg-muted/30 sm:rounded-sm sm:border"
           >
             <div className="flex items-start gap-3">
@@ -67,11 +65,11 @@ export default function TopicPage() {
 
       <CoursePageNav
         prev={{
-          href: `/${locale}/course/${slug}/${moduleId}`,
+          href: `${viewerBasePath}/${moduleId}`,
           title: mod.title || "Untitled Module",
         }}
         next={firstLesson ? {
-          href: `/${locale}/course/${slug}/${moduleId}/${topicId}/${firstLesson.id}`,
+          href: `${viewerBasePath}/${moduleId}/${topicId}/${firstLesson.id}`,
           title: firstLesson.title || "Untitled Lesson",
         } : null}
       />

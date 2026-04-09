@@ -9,23 +9,21 @@ export default async function ProjectViewerLayout({
   children: React.ReactNode;
 }) {
   const headersList = await headers();
-  const projectSlug = headersList.get("x-project-slug");
+  const clientSlug = headersList.get("x-client-slug");
 
-  if (!projectSlug) {
+  if (!clientSlug) {
     notFound();
   }
 
-  // Load project + client brand settings
-  const project = await prisma.project.findUnique({
-    where: { slug: projectSlug },
-    include: { client: true },
+  const client = await prisma.client.findUnique({
+    where: { slug: clientSlug },
   });
 
-  if (!project) {
+  if (!client) {
     notFound();
   }
 
-  const brand = (project.client.brandSettings || {}) as ClientBrandSettings;
+  const brand = (client.brandSettings || {}) as ClientBrandSettings;
 
   return (
     <>

@@ -35,6 +35,8 @@ import type {
   ContentType,
 } from "@/types/project";
 
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || "edoox.cloud";
+
 const CONTENT_TYPE_ICONS: Record<
   ContentType,
   React.ComponentType<{ className?: string }>
@@ -76,7 +78,6 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [clientId, setClientId] = useState("");
-  const [domain, setDomain] = useState("");
 
   // Content search
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,7 +98,6 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         setName(data.name);
         setSlug(data.slug);
         setClientId(data.clientId);
-        setDomain(data.domain || "");
         setContents(data.contents || []);
       }
       if (clientRes.ok) {
@@ -118,7 +118,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
       const res = await authFetch(`/api/admin/projects/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, clientId, domain: domain || null }),
+        body: JSON.stringify({ name, slug, clientId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -221,6 +221,8 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
     );
   }
 
+  const selectedClient = clients.find((client) => client.id === clientId) || project.client;
+
   return (
     <div className="px-6 py-10 overflow-y-auto flex-1 max-w-3xl">
       {/* Back link */}
@@ -259,7 +261,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {slug || "project"}.domain.com
+              {selectedClient?.slug || "client"}.{BASE_DOMAIN}/project/{slug || "project"}
             </p>
           </div>
           <div>
@@ -276,15 +278,6 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>{t("customDomain")}</Label>
-            <Input
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="custom.example.com"
-              className="mt-1"
-            />
           </div>
         </CardContent>
       </Card>

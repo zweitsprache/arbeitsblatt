@@ -15,27 +15,33 @@ import { EBookViewer } from "@/components/viewer/ebook-viewer";
 export default async function ProjectEBookPage({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; projectSlug: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { locale, projectSlug, slug } = await params;
   setRequestLocale(locale);
 
   const headersList = await headers();
   const clientSlug = headersList.get("x-client-slug");
   if (!clientSlug) notFound();
 
+  const project = await prisma.project.findFirst({
+    where: { slug: projectSlug, client: { slug: clientSlug } },
+  });
+  if (!project) notFound();
+
   const ebook = await prisma.eBook.findUnique({ where: { slug } });
   if (!ebook || !ebook.published) notFound();
 
-  const assignments = await prisma.projectContent.findMany({
+  const assignment = await prisma.projectContent.findUnique({
     where: {
-      contentType: "EBOOK",
-      contentId: ebook.id,
-      project: { client: { slug: clientSlug } },
+      projectId_contentType_contentId: {
+        projectId: project.id,
+        contentType: "EBOOK",
+        contentId: ebook.id,
+      },
     },
-    include: { project: true },
   });
-  if (assignments.length !== 1) notFound();
+  if (!assignment) notFound();
 
   const chapters = ebook.chapters as unknown as EBookChapter[];
   const coverSettings = {
@@ -47,20 +53,19 @@ export default async function ProjectEBookPage({
     ...(ebook.settings as unknown as Partial<EBookSettings>),
   };
 
-  // Fetch item metadata
-  const allItemIds = chapters.flatMap((ch) => ch.worksheetIds);
+  const allItemIds = chapters.flatMap((chapter) => chapter.worksheetIds);
   const itemsData = await prisma.worksheet.findMany({
     where: { id: { in: allItemIds } },
     select: { id: true, type: true, title: true, slug: true },
   });
-  const itemMap = new Map(itemsData.map((i) => [i.id, i]));
+  const itemMap = new Map(itemsData.map((item) => [item.id, item]));
 
   const populatedChapters = chapters.map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
     items: chapter.worksheetIds
-      .map((wId) => {
-        const item = itemMap.get(wId);
+      .map((worksheetId) => {
+        const item = itemMap.get(worksheetId);
         return item
           ? {
               id: item.id,
@@ -72,13 +77,13 @@ export default async function ProjectEBookPage({
       })
       .filter(
         (
-          w
-        ): w is {
+          item
+        ): item is {
           id: string;
           title: string;
           slug: string;
           type: EBookContentType;
-        } => !!w
+        } => !!item
       ),
   }));
 

@@ -2,7 +2,6 @@
 
 import { useCourse } from "@/components/viewer/course-context";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import {
   BookOpen,
   File,
@@ -11,14 +10,24 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
-import { BRAND_FONTS } from "@/types/worksheet";
+import { BRAND_FONTS, getStaticBrandProfile } from "@/types/worksheet";
 import { CoursePageNav } from "@/components/viewer/course-page-nav";
 
 export default function CourseOverviewPage() {
-  const { title, description, languageLevel, structure, brand } = useCourse();
-  const { locale, slug } = useParams<{ locale: string; slug: string }>();
+  const {
+    title,
+    description,
+    languageLevel,
+    structure,
+    brand,
+    brandProfile,
+    viewerBasePath,
+  } = useCourse();
 
-  const primaryColor = BRAND_FONTS[brand ?? "edoomio"]?.primaryColor ?? BRAND_FONTS.edoomio.primaryColor;
+  const brandKey = brand ?? "edoomio";
+  const staticBrandFonts = BRAND_FONTS[brandKey] ?? BRAND_FONTS.edoomio;
+  const resolvedBrandProfile = brandProfile ?? getStaticBrandProfile(brandKey);
+  const primaryColor = resolvedBrandProfile.primaryColor || staticBrandFonts.primaryColor;
   const firstModule = structure[0] ?? null;
 
   return (
@@ -60,7 +69,7 @@ export default function CourseOverviewPage() {
             <div key={mod.id} className="py-5">
               {/* Module row */}
               <Link
-                href={`/${locale}/course/${slug}/${mod.id}`}
+                href={`${viewerBasePath}/${mod.id}`}
                 className="group flex items-center gap-4 w-full text-left"
               >
                 <span
@@ -90,7 +99,7 @@ export default function CourseOverviewPage() {
                   {mod.topics.map((topic) => (
                     <div key={topic.id}>
                       <Link
-                        href={`/${locale}/course/${slug}/${mod.id}/${topic.id}`}
+                        href={`${viewerBasePath}/${mod.id}/${topic.id}`}
                         className="group/topic flex w-full items-center gap-1 text-lg font-semibold mb-1.5"
                       >
                         <span className="flex-1 truncate">{topic.title}</span>
@@ -100,7 +109,7 @@ export default function CourseOverviewPage() {
                         {topic.lessons.map((lesson) => (
                           <li key={lesson.id}>
                             <Link
-                              href={`/${locale}/course/${slug}/${mod.id}/${topic.id}/${lesson.id}`}
+                              href={`${viewerBasePath}/${mod.id}/${topic.id}/${lesson.id}`}
                               className="group/lesson flex w-full items-center gap-2 py-1.5 text-lg"
                             >
                               <File className="h-4 w-4 shrink-0" style={{ color: primaryColor }} />
@@ -127,7 +136,7 @@ export default function CourseOverviewPage() {
 
         <CoursePageNav
           next={firstModule ? {
-            href: `/${locale}/course/${slug}/${firstModule.id}`,
+            href: `${viewerBasePath}/${firstModule.id}`,
             title: firstModule.title || "Untitled Module",
           } : null}
         />

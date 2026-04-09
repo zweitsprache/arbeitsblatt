@@ -22,6 +22,7 @@ import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { useUpload } from "@/lib/use-upload";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAvailableBrands } from "@/lib/use-available-brands";
 
 interface CourseSettingsPanelProps {
   isFullPanel?: boolean;
@@ -32,6 +33,7 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
   const tc = useTranslations("common");
   const { state, dispatch } = useCourse();
   const { settings, coverSettings } = state;
+  const availableBrands = useAvailableBrands();
   const [imageBrowserOpen, setImageBrowserOpen] = useState(false);
   const { upload } = useUpload();
 
@@ -152,9 +154,19 @@ export function CourseSettingsPanel({ isFullPanel }: CourseSettingsPanelProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="edoomio">Edoomio</SelectItem>
-              <SelectItem value="lingostar">LingoStar</SelectItem>
-              <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+              {availableBrands.length > 0 ? (
+                availableBrands.map((brandProfile) => (
+                  <SelectItem key={brandProfile.id} value={brandProfile.slug}>
+                    {brandProfile.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <>
+                  <SelectItem value="edoomio">Edoomio</SelectItem>
+                  <SelectItem value="lingostar">LingoStar</SelectItem>
+                  <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>

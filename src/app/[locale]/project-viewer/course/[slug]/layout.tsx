@@ -30,28 +30,23 @@ export default async function ProjectCourseLayout({
   setRequestLocale(locale);
 
   const headersList = await headers();
-  const projectSlug = headersList.get("x-project-slug");
-  if (!projectSlug) notFound();
-
-  const project = await prisma.project.findUnique({
-    where: { slug: projectSlug },
-  });
-  if (!project) notFound();
+  const clientSlug = headersList.get("x-client-slug");
+  if (!clientSlug) notFound();
 
   const course = await prisma.course.findUnique({ where: { slug } });
   if (!course) notFound();
 
-  // Verify course is assigned to this project
-  const assignment = await prisma.projectContent.findUnique({
+  const assignments = await prisma.projectContent.findMany({
     where: {
-      projectId_contentType_contentId: {
-        projectId: project.id,
-        contentType: "COURSE",
-        contentId: course.id,
-      },
+      contentType: "COURSE",
+      contentId: course.id,
+      project: { client: { slug: clientSlug } },
     },
+    include: { project: true },
   });
-  if (!assignment) notFound();
+  if (assignments.length !== 1) notFound();
+
+  const project = assignments[0].project;
 
   const structure = normalizeCourseStructure(
     course.structure as unknown as CourseModule[]
@@ -94,6 +89,12 @@ export default async function ProjectCourseLayout({
     ...(course.settings as unknown as Partial<CourseSettings>),
   };
 
+  const brandProfileId = (course as { brandProfileId?: string | null }).brandProfileId;
+  const brandSlug = ((course.settings as { brand?: string } | null)?.brand) ?? "edoomio";
+  const brandProfile = brandProfileId
+    ? await prisma.brandProfile.findUnique({ where: { id: brandProfileId }, include: { subProfiles: { orderBy: { name: "asc" } } } })
+    : await prisma.brandProfile.findFirst({ where: { slug: brandSlug }, include: { subProfiles: { orderBy: { name: "asc" } } } });
+
   const coverSettings: CourseCoverSettings = {
     ...DEFAULT_COURSE_COVER_SETTINGS,
     ...(course.coverSettings as unknown as Partial<CourseCoverSettings>),
@@ -113,11 +114,13 @@ export default async function ProjectCourseLayout({
       value={{
         id: course.id,
         slug,
+        viewerBasePath: `/${locale}/project/${project.slug}/course/${slug}`,
         title: course.title,
         description: settings.description,
         languageLevel: settings.languageLevel,
         image: settings.image,
         brand: settings.brand || "edoomio",
+        brandProfile,
         sidebarTheme: settings.sidebarTheme || "dark",
         structure,
         coverSettings,
