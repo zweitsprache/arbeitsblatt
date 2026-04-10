@@ -467,6 +467,12 @@
   page-break-inside: auto;
 }
 
+/* Numbered items may break between rows, but never inside a single row. */
+.worksheet-block-numbered-items {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
 .worksheet-block-text-snippet .snippet-item-row,
 .worksheet-block-text-snippet .snippet-item-card {
   break-inside: avoid;
