@@ -306,6 +306,20 @@
   margin-bottom: 0;
 }
 
+.tiptap p + ul,
+.tiptap p + ol,
+.course-content p + ul,
+.course-content p + ol {
+  margin-top: -0.25rem;
+}
+
+.tiptap ul + p,
+.tiptap ol + p,
+.course-content ul + p,
+.course-content ol + p {
+  margin-top: 0.75rem;
+}
+
 .tiptap ul {
   --li-icon-top: calc(0.4rem + 0.7em);
   list-style-type: none;
@@ -319,6 +333,21 @@
 .tiptap ul > li {
   position: relative;
   padding-left: 0;
+}
+
+.ProseMirror ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  width: 16px;
+  height: 10px;
+  background-color: transparent;
+  background-image: radial-gradient(circle at 3px 5px, currentColor 0 3px, transparent 3.2px), linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 4px;
+  background-size: 6px 10px, 10px 2px;
 }
 
 .tiptap ul > li:not(:last-child)::after {
@@ -697,6 +726,20 @@
   position: relative;
   border-top: var(--print-list-divider);
   border-bottom: var(--print-list-divider);
+}
+
+.print-worksheet-root .print-body-content .tiptap p + ul,
+.print-worksheet-root .print-body-content .tiptap p + ol,
+.print-worksheet-root .print-body-content p + ul,
+.print-worksheet-root .print-body-content p + ol {
+  margin-top: -0.25rem !important;
+}
+
+.print-worksheet-root .print-body-content .tiptap ul + p,
+.print-worksheet-root .print-body-content .tiptap ol + p,
+.print-worksheet-root .print-body-content ul + p,
+.print-worksheet-root .print-body-content ol + p {
+  margin-top: 0.75rem !important;
 }
 
 .print-worksheet-root .print-body-content .tiptap li,

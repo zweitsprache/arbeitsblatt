@@ -75,6 +75,15 @@ const NUMBER_BADGE_CLASS = "flex h-5 w-5 min-w-5 items-center justify-center rou
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 
+// Inline <svg> bullet marker for viewer/print lists.
+// CSS background-image markers are unreliable in Chromium PDF output.
+const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.75rem;top:var(--li-icon-top,0.95em);transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+
+function injectLiIcons(html: string): string {
+  if (!html.includes("<li")) return html;
+  return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
+}
+
 /** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
 function hashString(input: string): number {
   let h = 2166136261;
@@ -351,17 +360,6 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
-
-  // Inline SVG icon for the "rows" style — replaces CSS background-image/::before entirely.
-  // background-image (even on real elements, not just ::before) is NOT rendered by Chromium's PDF engine.
-  // Inline <svg> elements ARE rendered correctly.
-  // Lucide line-dot-right-horizontal icon injected into each <li> as a real inline SVG element.
-  // CSS background-image on ::before is not rendered by Chromium's PDF engine.
-  const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.75rem;top:var(--li-icon-top,0.95em);transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
-  const injectLiIcons = (html: string): string => {
-    if (!html.includes("<li")) return html;
-    return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
-  };
 
   const RowsIconSvg = () => {
     const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -3931,8 +3929,36 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
+  const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+
+  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
+    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+      <div
+        className="tiptap max-w-none text-foreground font-normal"
+        dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
+      />
+    </div>
+  );
+
+  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        gap: "0 1rem",
+        alignItems: "start",
+      }}
+    >
+      {renderNumberedItemContent(originalContent)}
+      {renderNumberedItemContent(
+        translatedContent,
+        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
+        "tiptap-bilingual-translated"
+      )}
+    </div>
+  );
 
   if (!hasBg) {
     return (
@@ -3943,18 +3969,11 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
           return (
             <div key={item.id} className={s.numberedItemRow}>
               <span className={s.accentBadge}>{String(block.startNumber + i).padStart(2, "0")}</span>
-              <div className={`${s.numberedItemContent} tiptap-compact`}>
+              <div className={s.numberedItemContent}>
                 {showBilingual ? (
-                  <div className="flex-1 min-w-0">
-                    <span dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
-                    <span style={{ fontWeight: 400 }}> | </span>
-                    <span style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(item.content)) }} />
-                  </div>
+                  renderBilingualColumns(originalItem.content, item.content)
                 ) : (
-                  <div
-                    className="tiptap max-w-none"
-                    dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
-                  />
+                  renderNumberedItemContent(item.content)
                 )}
               </div>
             </div>
@@ -3972,11 +3991,12 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
         return (
           <div
             key={item.id}
-            className="flex gap-0 font-semibold tiptap-compact"
+            className="flex gap-0"
             style={hasBg ? {
-              backgroundColor: `${block.bgColor}18`,
+              backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
-              color: block.bgColor,
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
             } : undefined}
           >
             <div
@@ -3990,17 +4010,12 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
               {String(block.startNumber + i).padStart(2, '0')}
             </div>
             {showBilingual ? (
-              <div className="flex-1 min-w-0 px-3 py-1.5 tiptap-compact">
-                <span dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(originalItem.content)) }} />
-                <span style={{ fontWeight: 400 }}> | </span>
-                <span style={effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined} dangerouslySetInnerHTML={{ __html: stripOuterP(prepareTiptapHtml(item.content)) }} />
+              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+                {renderBilingualColumns(originalItem.content, item.content)}
               </div>
             ) : (
-              <div className="flex-1 min-w-0 px-3 py-1.5">
-                <div
-                  className="tiptap max-w-none"
-                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content) }}
-                />
+              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+                {renderNumberedItemContent(item.content)}
               </div>
             )}
           </div>

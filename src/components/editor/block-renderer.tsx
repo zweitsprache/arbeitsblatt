@@ -3990,17 +3990,17 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
+  const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
 
   return (
     <div className="space-y-2">
       {block.items.map((item, i) => (
         <div key={item.id} className="relative group">
           <div
-            className="flex gap-0 font-semibold tiptap-compact"
+            className="flex gap-0"
             style={hasBg ? {
-              backgroundColor: `${block.bgColor}18`,
+              backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
-              color: block.bgColor,
             } : undefined}
           >
             <div
@@ -4013,12 +4013,12 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
             >
               {String(block.startNumber + i).padStart(2, '0')}
             </div>
-            <div className="flex-1 min-w-0 px-3 py-1.5">
+            <div className="numbered-items-richtext flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
               <RichTextEditor
                 content={item.content}
                 onChange={(html) => updateItem(i, html)}
                 placeholder="…"
-                editorClassName="prose prose-sm max-w-none focus:outline-none px-0 py-0"
+                editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
               />
             </div>
           </div>

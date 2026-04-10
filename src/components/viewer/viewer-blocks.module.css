@@ -312,9 +312,11 @@
   display: grid;
   grid-template-columns: 2rem 1fr;
   gap: 1rem;
-  align-items: center;
+  align-items: start;
   padding: 0.5rem 0;
   border-bottom: 1px solid #e5e7eb;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .numberedItemRow:first-child {
@@ -322,9 +324,7 @@
 }
 
 .numberedItemContent {
-  display: flex;
-  align-items: center;
-  min-height: 2rem;
+  display: block;
   line-height: 1.35;
 }
 
