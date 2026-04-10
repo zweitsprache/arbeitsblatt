@@ -56,6 +56,7 @@ import {
   lessonNumber,
 } from "@/types/course";
 import { LucideIconPicker, DynamicLucideIcon } from "@/components/ui/lucide-icon-picker";
+import { CourseJsonImportDialog } from "./course-json-import-dialog";
 
 // ─── Sortable Lesson ─────────────────────────────────────────
 function SortableLessonItem({
@@ -803,6 +804,7 @@ export function CourseStructureManager() {
           </Badge>
         </div>
         <div className="flex-1" />
+        <CourseJsonImportDialog />
         <Button
           size="sm"
           variant="outline"
@@ -823,14 +825,17 @@ export function CourseStructureManager() {
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 {t("noModules")}
               </h3>
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => addModule()}
-              >
-                <Plus className="h-4 w-4" />
-                {t("addModule")}
-              </Button>
+              <div className="flex items-center justify-center gap-2">
+                <CourseJsonImportDialog />
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => addModule()}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("addModule")}
+                </Button>
+              </div>
             </div>
           ) : (
             <DndContext

@@ -98,43 +98,92 @@ export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
 
 // ─── Helpers ────────────────────────────────────────────────
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 /**
  * Normalize course structure loaded from DB.
  * Migrates old lessons (worksheetId) → new format (blocks[]).
  */
 export function normalizeCourseStructure(modules: CourseModule[]): CourseModule[] {
-  return modules.map((mod) => ({
-    ...mod,
-    image: mod.image ?? null,
-    icon: mod.icon ?? null,
-    shortTitle: mod.shortTitle ?? "",
-    blocks: Array.isArray(mod.blocks) ? mod.blocks : [],
-    topics: mod.topics.map((topic) => ({
-      ...topic,
-      image: topic.image ?? null,
-      icon: topic.icon ?? null,
-      shortTitle: topic.shortTitle ?? "",
-      blocks: Array.isArray(topic.blocks) ? topic.blocks : [],
-      lessons: topic.lessons.map((lesson) => {
-        // Already migrated
-        if (Array.isArray(lesson.blocks)) return { ...lesson, shortTitle: lesson.shortTitle ?? "" };
-        // Old format: convert worksheetId → linked-blocks block
-        const raw = lesson as unknown as { id: string; title: string; worksheetId?: string | null };
-        const blocks: WorksheetBlock[] = [];
-        if (raw.worksheetId) {
-          blocks.push({
-            id: crypto.randomUUID(),
-            type: "linked-blocks",
-            visibility: "both",
-            worksheetId: raw.worksheetId,
-            worksheetTitle: "",
-            worksheetSlug: "",
-          });
-        }
-        return { id: raw.id, title: raw.title, shortTitle: "", blocks };
+  const safeModules = Array.isArray(modules) ? modules : [];
+
+  return safeModules.map((mod) => {
+    const safeTopics = Array.isArray(mod?.topics) ? mod.topics : [];
+
+    return {
+      ...mod,
+      id: typeof mod?.id === "string" && mod.id ? mod.id : crypto.randomUUID(),
+      title: typeof mod?.title === "string" ? mod.title : "",
+      image: mod?.image ?? null,
+      icon: mod?.icon ?? null,
+      shortTitle: typeof mod?.shortTitle === "string" ? mod.shortTitle : "",
+      blocks: Array.isArray(mod?.blocks) ? mod.blocks : [],
+      topics: safeTopics.map((topic) => {
+        const safeLessons = Array.isArray(topic?.lessons) ? topic.lessons : [];
+
+        return {
+          ...topic,
+          id: typeof topic?.id === "string" && topic.id ? topic.id : crypto.randomUUID(),
+          title: typeof topic?.title === "string" ? topic.title : "",
+          image: topic?.image ?? null,
+          icon: topic?.icon ?? null,
+          shortTitle: typeof topic?.shortTitle === "string" ? topic.shortTitle : "",
+          blocks: Array.isArray(topic?.blocks) ? topic.blocks : [],
+          lessons: safeLessons.map((lesson) => {
+            // Already migrated
+            if (Array.isArray(lesson?.blocks)) {
+              return {
+                ...lesson,
+                id: typeof lesson?.id === "string" && lesson.id ? lesson.id : crypto.randomUUID(),
+                title: typeof lesson?.title === "string" ? lesson.title : "",
+                shortTitle: typeof lesson?.shortTitle === "string" ? lesson.shortTitle : "",
+                blocks: lesson.blocks,
+              };
+            }
+
+            // Old format: convert worksheetId → linked-blocks block
+            const raw = lesson as unknown as { id?: string; title?: string; worksheetId?: string | null };
+            const blocks: WorksheetBlock[] = [];
+            if (raw.worksheetId) {
+              blocks.push({
+                id: crypto.randomUUID(),
+                type: "linked-blocks",
+                visibility: "both",
+                worksheetId: raw.worksheetId,
+                worksheetTitle: "",
+                worksheetSlug: "",
+              });
+            }
+
+            return {
+              id: typeof raw.id === "string" && raw.id ? raw.id : crypto.randomUUID(),
+              title: typeof raw.title === "string" ? raw.title : "",
+              shortTitle: "",
+              blocks,
+            };
+          }),
+        };
       }),
-    })),
-  }));
+    };
+  });
+}
+
+export function parseCourseStructureImport(raw: unknown): CourseModule[] {
+  const candidate = Array.isArray(raw)
+    ? raw
+    : isRecord(raw) && Array.isArray(raw.structure)
+      ? raw.structure
+      : isRecord(raw) && Array.isArray(raw.modules)
+        ? raw.modules
+        : null;
+
+  if (!candidate) {
+    throw new Error("Invalid course structure import payload");
+  }
+
+  return normalizeCourseStructure(candidate as CourseModule[]);
 }
 
 /** Collect all worksheet IDs from linked-blocks blocks in the structure */

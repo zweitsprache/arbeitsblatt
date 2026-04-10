@@ -52,6 +52,7 @@ const initialState: CourseState = {
 // ─── Actions ─────────────────────────────────────────────────
 type CourseAction =
   | { type: "LOAD_COURSE"; payload: { id: string; title: string; slug: string; structure: CourseModule[]; coverSettings: CourseCoverSettings; settings: CourseSettings; published: boolean } }
+  | { type: "REPLACE_STRUCTURE"; payload: CourseModule[] }
   | { type: "SET_TITLE"; payload: string }
   // Module actions
   | { type: "ADD_MODULE"; payload: { title: string } }
@@ -137,6 +138,16 @@ function courseReducer(state: CourseState, action: CourseAction): CourseState {
 
     case "SET_TITLE":
       return { ...state, title: action.payload, isDirty: true };
+
+    case "REPLACE_STRUCTURE":
+      return {
+        ...state,
+        structure: action.payload,
+        selectedModuleId: action.payload[0]?.id ?? null,
+        selectedTopicId: null,
+        selectedLessonId: null,
+        isDirty: true,
+      };
 
     // ─── Module ────────────────────────────────────────────
     case "ADD_MODULE": {

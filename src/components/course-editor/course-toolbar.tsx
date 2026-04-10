@@ -14,6 +14,7 @@ import { Save, Loader2, ArrowLeft, Eye, LayoutList, PenLine } from "lucide-react
 import { useCourse } from "@/store/course-store";
 import { Link } from "@/i18n/navigation";
 import { CourseTranslationDialog } from "./course-translation-dialog";
+import { CourseJsonImportDialog } from "./course-json-import-dialog";
 
 export function CourseToolbar() {
   const t = useTranslations("course");
@@ -88,6 +89,8 @@ export function CourseToolbar() {
         </div>
 
         <Separator orientation="vertical" className="h-6" />
+
+        <CourseJsonImportDialog />
 
         {/* Translations */}
         {state.courseId && <CourseTranslationDialog />}
