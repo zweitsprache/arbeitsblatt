@@ -600,6 +600,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
+  const { upload } = useUpload();
   const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
 
@@ -607,21 +608,13 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
     if (!file.type.startsWith("image/")) return;
     setUploadingIndex(index);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const result = await upload(file);
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], src: result.url, alt: file.name };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
       });
-      if (response.ok) {
-        const data = await response.json();
-        const newItems = [...block.items];
-        newItems[index] = { ...newItems[index], src: data.url, alt: file.name };
-        dispatch({
-          type: "UPDATE_BLOCK",
-          payload: { id: block.id, updates: { items: newItems } },
-        });
-      }
     } catch (error) {
       console.error("Upload failed:", error);
     } finally {
