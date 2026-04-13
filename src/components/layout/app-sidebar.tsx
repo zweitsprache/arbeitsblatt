@@ -20,6 +20,9 @@ import {
   GraduationCap,
   Bot,
   Monitor,
+  Gamepad2,
+  Puzzle,
+  Dices,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -37,6 +40,7 @@ interface NavItem {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
 }
 
 interface NavSection {
@@ -73,6 +77,15 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor/cards", labelKey: "newCards", icon: Plus },
       { href: "/cards", labelKey: "cardLibrary", icon: Library },
+    ],
+  },
+  {
+    titleKey: "games",
+    icon: Gamepad2,
+    items: [
+      { href: "/editor/kartenpaare", labelKey: "newKartenpaare", icon: Plus },
+      { href: "/kartenpaare", labelKey: "kartenpaarLibrary", icon: Puzzle },
+      { href: "/brettspiel", labelKey: "brettspiel", icon: Dices, disabled: true },
     ],
   },
   {
@@ -234,6 +247,28 @@ export function AppSidebar() {
                         !pathname.startsWith("/editor/covers"));
                   } else {
                     isActive = pathname.startsWith(item.href);
+                  }
+
+                  if (item.disabled) {
+                    return (
+                      <Tooltip key={item.labelKey}>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-40 cursor-not-allowed bg-white/10 text-white/80
+                              ${collapsed ? "justify-center px-0" : ""}
+                            `}
+                          >
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span>{t(item.labelKey)}</span>}
+                          </span>
+                        </TooltipTrigger>
+                        {collapsed && (
+                          <TooltipContent side="right">
+                            {t(item.labelKey)}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    );
                   }
 
                   return (

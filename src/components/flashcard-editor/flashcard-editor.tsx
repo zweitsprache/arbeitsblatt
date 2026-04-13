@@ -41,6 +41,14 @@ import { FlashcardRichTextEditor } from "./flashcard-rich-text-editor";
 import { CsvImportModal } from "./csv-import-modal";
 import { useUpload } from "@/lib/use-upload";
 import { authFetch } from "@/lib/auth-fetch";
+import { useAvailableBrands } from "@/lib/use-available-brands";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -371,6 +379,8 @@ function FlashcardRow({
   singleSided,
   localeMode,
   chOverrides,
+  frontLabel,
+  backLabel,
   onSelect,
   onUpdate,
   onRemove,
@@ -384,6 +394,8 @@ function FlashcardRow({
   singleSided: boolean;
   localeMode: FlashcardLocaleMode;
   chOverrides?: Record<string, Record<string, string>>;
+  frontLabel: string;
+  backLabel: string;
   onSelect: () => void;
   onUpdate: (updates: Partial<FlashcardItem>) => void;
   onRemove: () => void;
@@ -442,7 +454,7 @@ function FlashcardRow({
       {/* Card content — front & back side by side */}
       <div className="flex gap-4 p-4">
         <FlashcardSideEditor
-          label={t("front")}
+          label={frontLabel}
           side={card.front}
           cardId={card.id}
           sideKey="front"
@@ -456,7 +468,7 @@ function FlashcardRow({
           <>
             <div className="w-px bg-border self-stretch" />
             <FlashcardSideEditor
-              label={t("back")}
+              label={backLabel}
               side={card.back}
               cardId={card.id}
               sideKey="back"
@@ -479,9 +491,13 @@ function FlashcardEditorInner({
 }: {
   initialData?: FlashcardDocument | null;
 }) {
-  const { state, dispatch, addCard, duplicateCard, save } = useFlashcardEditor();
+  const { state, dispatch, addCard, duplicateCard, save, worksheetType } = useFlashcardEditor();
   const t = useTranslations("flashcardEditor");
   const tc = useTranslations("common");
+  const availableBrands = useAvailableBrands();
+
+  const frontLabel = worksheetType === "kartenpaare" ? "Item A" : t("front");
+  const backLabel = worksheetType === "kartenpaare" ? "Item B" : t("back");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
   const [localeDialog, setLocaleDialog] = useState<{
@@ -528,7 +544,10 @@ function FlashcardEditorInner({
     }
     setIsGeneratingPdf(true);
     try {
-      const res = await authFetch(`/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`);
+      const apiPath = worksheetType === "kartenpaare"
+        ? `/api/worksheets/${state.worksheetId}/kartenpaare-pdf`
+        : `/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`;
+      const res = await authFetch(apiPath);
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}`;
         try {
@@ -543,7 +562,9 @@ function FlashcardEditorInner({
       const a = document.createElement("a");
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
-      a.download = `${shortId}_${locale}.pdf`;
+      a.download = worksheetType === "kartenpaare"
+        ? `${shortId}_kartenpaare.pdf`
+        : `${shortId}_${locale}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -594,6 +615,49 @@ function FlashcardEditorInner({
           placeholder={t("titlePlaceholder")}
         />
         <div className="flex-1" />
+        {worksheetType === "kartenpaare" && availableBrands.length > 0 && (
+          <Select
+            value={state.settings.brandProfileId ?? ""}
+            onValueChange={(value) =>
+              dispatch({ type: "UPDATE_SETTINGS", payload: { brandProfileId: value || undefined, subProfileId: undefined } })
+            }
+          >
+            <SelectTrigger className="h-8 w-[170px] text-xs">
+              <SelectValue placeholder="Brand wählen…" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableBrands.map((bp) => (
+                <SelectItem key={bp.id} value={bp.id}>
+                  {bp.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {worksheetType === "kartenpaare" && (() => {
+          const selectedBrand = availableBrands.find((bp) => bp.id === state.settings.brandProfileId);
+          const subs = selectedBrand?.subProfiles ?? [];
+          if (subs.length === 0) return null;
+          return (
+            <Select
+              value={state.settings.subProfileId ?? ""}
+              onValueChange={(value) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { subProfileId: value || undefined } })
+              }
+            >
+              <SelectTrigger className="h-8 w-[170px] text-xs">
+                <SelectValue placeholder="Sub-Profil…" />
+              </SelectTrigger>
+              <SelectContent>
+                {subs.map((sp) => (
+                  <SelectItem key={sp.id} value={sp.id}>
+                    {sp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        })()}
         <Badge variant="outline" className="text-xs text-muted-foreground">
           {t("cardCount", { count: state.cards.length })}
         </Badge>
@@ -688,7 +752,13 @@ function FlashcardEditorInner({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setLocaleDialog({ open: true, mode: "pdf" })}
+              onClick={() => {
+                if (worksheetType === "kartenpaare") {
+                  handleDownloadPdf("DE");
+                } else {
+                  setLocaleDialog({ open: true, mode: "pdf" });
+                }
+              }}
               disabled={isGeneratingPdf || !state.worksheetId || state.cards.length === 0}
               className="gap-1.5"
             >
@@ -751,6 +821,8 @@ function FlashcardEditorInner({
                   singleSided={state.settings.singleSided}
                   localeMode={state.localeMode}
                   chOverrides={state.settings.chOverrides}
+                  frontLabel={frontLabel}
+                  backLabel={backLabel}
                   onSelect={() =>
                     dispatch({ type: "SELECT_CARD", payload: card.id })
                   }
@@ -838,12 +910,16 @@ function FlashcardEditorInner({
 // ─── Exported wrapper ────────────────────────────────────────
 export function FlashcardEditor({
   initialData,
+  worksheetType = "flashcards",
+  editorBasePath = "/editor/flashcards",
 }: {
   initialData?: FlashcardDocument | null;
+  worksheetType?: string;
+  editorBasePath?: string;
 }) {
   return (
     <TooltipProvider>
-      <FlashcardProvider>
+      <FlashcardProvider worksheetType={worksheetType} editorBasePath={editorBasePath}>
         <FlashcardEditorInner initialData={initialData} />
       </FlashcardProvider>
     </TooltipProvider>

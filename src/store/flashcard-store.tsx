@@ -218,6 +218,7 @@ interface FlashcardContextValue {
   addCard: () => void;
   duplicateCard: (id: string) => void;
   save: () => Promise<void>;
+  worksheetType: string;
 }
 
 const FlashcardContext = createContext<FlashcardContextValue | null>(null);
@@ -230,7 +231,15 @@ function createEmptyCard(): FlashcardItem {
   };
 }
 
-export function FlashcardProvider({ children }: { children: React.ReactNode }) {
+export function FlashcardProvider({
+  children,
+  worksheetType = "flashcards",
+  editorBasePath = "/editor/flashcards",
+}: {
+  children: React.ReactNode;
+  worksheetType?: string;
+  editorBasePath?: string;
+}) {
   const [state, dispatch] = useReducer(flashcardReducer, initialState);
 
   const addCard = useCallback(() => {
@@ -263,7 +272,7 @@ export function FlashcardProvider({ children }: { children: React.ReactNode }) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "flashcards",
+          type: worksheetType,
           title: state.title,
           blocks: state.cards, // stored in the blocks JSON column
           settings: state.settings,
@@ -291,17 +300,17 @@ export function FlashcardProvider({ children }: { children: React.ReactNode }) {
         });
         // Preserve locale prefix from current URL
         const locale = window.location.pathname.split("/")[1] || "de";
-        window.history.replaceState(null, "", `/${locale}/editor/flashcards/${data.id}`);
+        window.history.replaceState(null, "", `/${locale}${editorBasePath}/${data.id}`);
       }
       dispatch({ type: "MARK_SAVED" });
     } catch (err) {
       console.error("Save failed:", err);
       dispatch({ type: "SET_SAVING", payload: false });
     }
-  }, [state.worksheetId, state.title, state.cards, state.settings, state.published]);
+  }, [state.worksheetId, state.title, state.cards, state.settings, state.published, worksheetType, editorBasePath]);
 
   return (
-    <FlashcardContext.Provider value={{ state, dispatch, addCard, duplicateCard, save }}>
+    <FlashcardContext.Provider value={{ state, dispatch, addCard, duplicateCard, save, worksheetType }}>
       {children}
     </FlashcardContext.Provider>
   );

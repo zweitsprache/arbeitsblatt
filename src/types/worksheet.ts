@@ -799,6 +799,13 @@ export interface TranslationFontOverride {
 
 export type TranslationFontOverrides = Record<string, TranslationFontOverride>;
 
+export interface BrandGameSettings {
+  kartenpaare?: {
+    itemABackImage?: string | null;
+    itemBBackImage?: string | null;
+  };
+}
+
 export interface BrandProfile {
   id: string;
   name: string;
@@ -843,6 +850,9 @@ export interface BrandProfile {
   // PDF settings
   pdfFontSize?: number | null;
   pdfTranslationScale?: number | null;
+
+  // Game settings
+  gameSettings?: BrandGameSettings | null;
 
   // Meta
   pageTitle?: string | null;

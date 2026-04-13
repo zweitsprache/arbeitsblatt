@@ -226,6 +226,9 @@ model BrandProfile {
   pdfFontSize         Float? // font size override for PDF output
   pdfTranslationScale Float? // scale factor for translated text (0-1)
 
+  // Game settings (JSON, e.g. { kartenpaare: { itemABackImage, itemBBackImage } })
+  gameSettings Json @default("{}")
+
   // Meta
   pageTitle String? // custom browser tab title
 

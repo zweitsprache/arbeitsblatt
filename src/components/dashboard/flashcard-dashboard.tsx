@@ -46,7 +46,13 @@ interface FlashcardSetItem {
   updatedAt: string;
 }
 
-export function FlashcardDashboard() {
+export function FlashcardDashboard({
+  worksheetType = "flashcards",
+  editorBasePath = "/editor/flashcards",
+}: {
+  worksheetType?: string;
+  editorBasePath?: string;
+} = {}) {
   const t = useTranslations("flashcardDashboard");
   const tc = useTranslations("common");
   const format = useFormatter();
@@ -61,7 +67,7 @@ export function FlashcardDashboard() {
   const fetchFlashcards = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await authFetch("/api/worksheets?type=flashcards");
+      const res = await authFetch(`/api/worksheets?type=${worksheetType}`);
       const data = await res.json();
       setFlashcardSets(data);
     } catch (err) {
@@ -69,7 +75,7 @@ export function FlashcardDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [worksheetType]);
 
   useEffect(() => {
     fetchFlashcards();
@@ -86,7 +92,7 @@ export function FlashcardDashboard() {
       setSearchLoading(true);
       try {
         const res = await authFetch(
-          `/api/worksheets?type=flashcards&search=${encodeURIComponent(search.trim())}`
+          `/api/worksheets?type=${worksheetType}&search=${encodeURIComponent(search.trim())}`
         );
         const data = await res.json();
         setSearchResults(data);
@@ -98,7 +104,7 @@ export function FlashcardDashboard() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, worksheetType]);
 
   const deleteFlashcardSet = async (id: string) => {
     if (!confirm(t("deleteFlashcards"))) return;
@@ -125,15 +131,17 @@ export function FlashcardDashboard() {
           <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setGenerateModalOpen(true)}
-          >
-            <TableProperties className="h-4 w-4" />
-            {t("generateFromTable")}
-          </Button>
-          <Link href="/editor/flashcards">
+          {worksheetType === "flashcards" && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setGenerateModalOpen(true)}
+            >
+              <TableProperties className="h-4 w-4" />
+              {t("generateFromTable")}
+            </Button>
+          )}
+          <Link href={editorBasePath}>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
               {t("newFlashcards")}
@@ -184,7 +192,7 @@ export function FlashcardDashboard() {
               {isSearching ? t("tryDifferentSearch") : t("createFirstFlashcards")}
             </p>
             {!isSearching && (
-              <Link href="/editor/flashcards">
+              <Link href={editorBasePath}>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   {t("createFlashcards")}
@@ -197,7 +205,7 @@ export function FlashcardDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {displaySets.map((fs) => (
             <div key={fs.id} className="group relative">
-              <Link href={`/editor/flashcards/${fs.id}`}>
+              <Link href={`${editorBasePath}/${fs.id}`}>
                 <Card className="hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
@@ -247,7 +255,7 @@ export function FlashcardDashboard() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => router.push(`/editor/flashcards/${fs.id}`)}
+                      onClick={() => router.push(`${editorBasePath}/${fs.id}`)}
                     >
                       <Pencil className="h-3.5 w-3.5 mr-2" />
                       {tc("edit")}

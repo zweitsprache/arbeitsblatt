@@ -2,19 +2,21 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Upload, X, ImagePlus } from "lucide-react";
 import type {
   BrandProfile,
   BrandSubProfile,
+  BrandGameSettings,
   TranslationFontOverrides,
 } from "@/types/worksheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useUpload } from "@/lib/use-upload";
 
 type TranslationFontOverrideRow = {
   id: string;
@@ -74,6 +76,12 @@ export function BrandEditor({ brandId }: { brandId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [translationFontRows, setTranslationFontRows] = useState<TranslationFontOverrideRow[]>([]);
+  const { upload, isUploading } = useUpload();
+
+  // Game settings
+  const [gameSettings, setGameSettings] = useState<BrandGameSettings>({});
+  const itemABackRef = useRef<HTMLInputElement>(null);
+  const itemBBackRef = useRef<HTMLInputElement>(null);
 
   // Sub-profiles
   const [subProfiles, setSubProfiles] = useState<BrandSubProfile[]>([]);
@@ -167,6 +175,12 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         setTranslationFontRows(
           translationFontOverrideRowsFromMap(data.translationFontOverrides),
         );
+        const rawGameSettings = data.gameSettings;
+        const parsedGameSettings: BrandGameSettings =
+          typeof rawGameSettings === "string"
+            ? (JSON.parse(rawGameSettings) as BrandGameSettings)
+            : ((rawGameSettings as BrandGameSettings) ?? {});
+        setGameSettings(parsedGameSettings);
       }
     } finally {
       setLoading(false);
@@ -252,6 +266,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         iconLogo: form.iconLogo || null,
         favicon: form.favicon || null,
         pageTitle: form.pageTitle || null,
+        gameSettings,
       };
 
       const res = await authFetch(`/api/brands/${brandId}`, {
@@ -260,7 +275,9 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        setBrand(await res.json());
+        const saved: BrandProfile = await res.json();
+        setBrand(saved);
+        setGameSettings((saved.gameSettings as BrandGameSettings) ?? {});
       }
     } finally {
       setSaving(false);
@@ -965,6 +982,131 @@ export function BrandEditor({ brandId }: { brandId: string }) {
               <p className="text-xs text-muted-foreground mt-1">
                 {t("pdfTranslationScaleHelp")}
               </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Games settings */}
+      <h2 className="text-lg font-semibold mb-3">{t("gamesSettings")}</h2>
+      <Card className="mb-6">
+        <CardContent className="p-5 space-y-6">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Kartenpaare</h3>
+          <div className="grid grid-cols-2 gap-6">
+            {/* Item A Back Image */}
+            <div className="space-y-2">
+              <Label>{t("kartenpaarItemABack")}</Label>
+              {gameSettings.kartenpaare?.itemABackImage ? (
+                <div className="relative group">
+                  <img
+                    src={gameSettings.kartenpaare.itemABackImage}
+                    alt="Item A Backside"
+                    className="w-full aspect-square object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+                    onClick={() =>
+                      setGameSettings((prev) => ({
+                        ...prev,
+                        kartenpaare: { ...prev.kartenpaare, itemABackImage: null },
+                      }))
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <ImagePlus className="h-7 w-7 text-muted-foreground mb-1.5" />
+                  <span className="text-xs text-muted-foreground">
+                    {isUploading ? t("uploading") : t("clickToUpload")}
+                  </span>
+                  <input
+                    ref={itemABackRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await upload(file);
+                        if (result?.url) {
+                          setGameSettings((prev) => ({
+                            ...prev,
+                            kartenpaare: { ...prev.kartenpaare, itemABackImage: result.url },
+                          }));
+                        }
+                      } catch (err) {
+                        console.error("Upload failed:", err);
+                      } finally {
+                        if (itemABackRef.current) itemABackRef.current.value = "";
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Item B Back Image */}
+            <div className="space-y-2">
+              <Label>{t("kartenpaarItemBBack")}</Label>
+              {gameSettings.kartenpaare?.itemBBackImage ? (
+                <div className="relative group">
+                  <img
+                    src={gameSettings.kartenpaare.itemBBackImage}
+                    alt="Item B Backside"
+                    className="w-full aspect-square object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+                    onClick={() =>
+                      setGameSettings((prev) => ({
+                        ...prev,
+                        kartenpaare: { ...prev.kartenpaare, itemBBackImage: null },
+                      }))
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <ImagePlus className="h-7 w-7 text-muted-foreground mb-1.5" />
+                  <span className="text-xs text-muted-foreground">
+                    {isUploading ? t("uploading") : t("clickToUpload")}
+                  </span>
+                  <input
+                    ref={itemBBackRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await upload(file);
+                        if (result?.url) {
+                          setGameSettings((prev) => ({
+                            ...prev,
+                            kartenpaare: { ...prev.kartenpaare, itemBBackImage: result.url },
+                          }));
+                        }
+                      } catch (err) {
+                        console.error("Upload failed:", err);
+                      } finally {
+                        if (itemBBackRef.current) itemBBackRef.current.value = "";
+                      }
+                    }}
+                  />
+                </label>
+              )}
             </div>
           </div>
         </CardContent>

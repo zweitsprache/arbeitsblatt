@@ -67,6 +67,11 @@
     "pageTitle": "Seitentitel",
     "pdfFontSize": "PDF-Schriftgrösse",
     "pdfFontSizeHelp": "Basis-Schriftgrösse für die PDF-Ausgabe (in px)",
+    "gamesSettings": "Spiele",
+    "kartenpaarItemABack": "Item A Rückseite",
+    "kartenpaarItemBBack": "Item B Rückseite",
+    "clickToUpload": "Bild hochladen",
+    "uploading": "Hochladen…",
     "pdfSettings": "PDF-Einstellungen",
     "pdfTranslationScale": "Skalierung Übersetzung",
     "pdfTranslationScaleHelp": "Skalierungsfaktor für übersetzten Text (0–1, z.B. 0.9 = 90%)",
@@ -1489,6 +1494,10 @@
     "adminClients": "Kunden",
     "adminProjects": "Projekte",
     "aiTools": "KI-Tools",
+    "brettspiel": "Brettspiel",
+    "games": "Spiele",
+    "kartenpaarLibrary": "Kartenpaare-Bibliothek",
+    "newKartenpaare": "Neue Kartenpaare",
     "worksheetLibrary": "Arbeitsblatt-Bibliothek"
   },
   "toolbar": {

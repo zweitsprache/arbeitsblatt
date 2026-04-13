@@ -114,6 +114,9 @@ export async function PUT(
         ...(body.pdfTranslationScale !== undefined && {
           pdfTranslationScale: body.pdfTranslationScale,
         }),
+        ...(body.gameSettings !== undefined && {
+          gameSettings: body.gameSettings,
+        }),
         ...(body.pageTitle !== undefined && { pageTitle: body.pageTitle }),
       },
     });

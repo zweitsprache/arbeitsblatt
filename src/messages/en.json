@@ -67,6 +67,11 @@
     "pageTitle": "Page title",
     "pdfFontSize": "PDF font size",
     "pdfFontSizeHelp": "Base font size for PDF output (in px)",
+    "gamesSettings": "Games",
+    "kartenpaarItemABack": "Item A Backside",
+    "kartenpaarItemBBack": "Item B Backside",
+    "clickToUpload": "Click to upload",
+    "uploading": "Uploading…",
     "pdfSettings": "PDF settings",
     "pdfTranslationScale": "Translation scale",
     "pdfTranslationScaleHelp": "Scale factor for translated text (0–1, e.g. 0.9 = 90%)",
@@ -1489,6 +1494,10 @@
     "adminClients": "Clients",
     "adminProjects": "Projects",
     "aiTools": "AI Tools",
+    "brettspiel": "Board Game",
+    "games": "Games",
+    "kartenpaarLibrary": "Card Pairs Library",
+    "newKartenpaare": "New Card Pairs",
     "worksheetLibrary": "Worksheet library"
   },
   "toolbar": {

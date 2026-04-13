@@ -38,6 +38,8 @@ export interface FlashcardSettings {
   singleSided: boolean;
   padEmptyCards: boolean;
   chOverrides?: ChOverrides;
+  brandProfileId?: string;
+  subProfileId?: string;
 }
 
 export const DEFAULT_FLASHCARD_SETTINGS: FlashcardSettings = {
