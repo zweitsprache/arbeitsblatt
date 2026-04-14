@@ -1,8 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Shadows+Into+Light+Two&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@neondatabase/auth/ui/tailwind";
-@import url("https://fonts.googleapis.com/css2?family=Shadows+Into+Light+Two&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 

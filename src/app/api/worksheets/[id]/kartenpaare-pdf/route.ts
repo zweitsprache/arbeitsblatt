@@ -122,7 +122,7 @@ function renderContentCell(
     const textInner = isHtmlContent
       ? side.text!
       : escapeHtml(side.text!);
-    textHtml = `<div style="font-size:${fontSize}pt;${isHtmlContent ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 1.5mm;border-radius:0.5mm;position:relative;z-index:1;">${textInner}</div>`;
+    textHtml = `<div class="card-content" style="font-size:${fontSize}pt;${isHtmlContent ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 1.5mm;border-radius:0.5mm;position:relative;z-index:1;">${textInner}</div>`;
   }
 
   const SMALL_ICON = 3.5;
@@ -228,14 +228,23 @@ function buildPage(
 
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const footerFont = `'${brand.headerFooterFont}', sans-serif`;
+  const footerFont = brand.headerFooterFont
+    .split(",")
+    .map((f) => {
+      const t = f.trim();
+      return t.includes(" ") ? `"${t}"` : t;
+    })
+    .join(", ");
 
   function resolveFooterText(brandText: string, fallback: string): string {
     const text = brandText || fallback;
     return text
       .replace(/\{worksheet_uuid\}/g, worksheetId.toUpperCase())
+      .replace(/\{current_date\}/g, currentDate)
       .replace(/\{date\}/g, currentDate)
-      .replace(/\{year\}/g, String(currentYear));
+      .replace(/\{current_year\}/g, String(currentYear))
+      .replace(/\{year\}/g, String(currentYear))
+      .replace(/\{organization\}/g, brand.organization || "");
   }
 
   const footerLeftText = resolveFooterText(
@@ -247,13 +256,14 @@ function buildPage(
     `{worksheet_uuid}<br/>${currentDate}`
   );
 
-  const headerHtml = `<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;padding:8mm 12mm 0 12mm;z-index:10;">
-    <img src="${brand.logoUrl}" style="width:5mm;height:auto;" />
+  const headerHtml = `<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;padding:10mm 15mm 0 15mm;z-index:10;">
+    <img src="${brand.logoUrl}" style="width:6mm;height:auto;" />
   </div>`;
 
-  const footerHtml = `<div style="position:absolute;bottom:4mm;left:0;right:0;font-size:6.5pt;font-family:${footerFont};color:#666;padding:0 12mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:10;">
-    <div style="line-height:1.4;">${footerLeftText}</div>
-    <div style="text-align:right;line-height:1.4;">${footerRightText}</div>
+  const footerHtml = `<div style="position:absolute;bottom:0;left:0;width:100%;height:25mm;padding:0 15mm 8mm 15mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-end;font-size:7pt;font-family:${footerFont};font-weight:400;line-height:1.5;color:#666;z-index:10;">
+    <div class="footer-col" style="flex:1;min-width:0;text-align:left;">${footerLeftText}</div>
+    <div class="footer-col" style="flex:1;min-width:0;"></div>
+    <div class="footer-col" style="flex:1;min-width:0;text-align:right;">${footerRightText}</div>
   </div>`;
 
   return `<div class="page">
@@ -285,7 +295,7 @@ function buildFullHtml(
   }
 
   const fontsLink = brand.googleFontsUrl
-    ? `<link href="${brand.googleFontsUrl}" rel="stylesheet">`
+    ? `<link href="${brand.googleFontsUrl}" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">`
     : `<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
 
   return `<!DOCTYPE html>
@@ -318,8 +328,10 @@ ${fontsLink}
   }
   .page:last-child { page-break-after: auto; }
   img { display: block; }
-  p { margin: 0 0 0.4em 0; }
-  p:last-child { margin-bottom: 0; }
+  .card-content p { margin: 0 0 0.4em 0; }
+  .card-content p:last-child { margin-bottom: 0; }
+  .footer-col p { margin: 0; }
+  .footer-col > * { margin: 0; }
   mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
   sup { font-size: 0.65em; }
   sub { font-size: 0.65em; }
