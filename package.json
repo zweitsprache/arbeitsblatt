@@ -14,6 +14,7 @@
     "lint": "eslint",
     "postinstall": "node scripts/fix-neon-auth-avatar.mjs",
     "pdf:fixture": "node scripts/generate-print-fixture-pdf.mjs",
+    "worksheet:import": "node scripts/import-worksheet-backup.mjs",
     "i18n:validate": "node scripts/validate-translations.mjs"
   },
   "dependencies": {
