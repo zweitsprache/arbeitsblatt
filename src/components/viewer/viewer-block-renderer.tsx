@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   WorksheetBlock,
   HeadingBlock,
@@ -1003,28 +1004,47 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
 }
 
 function ImageView({ block }: { block: ImageBlock }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   if (!block.src) return null;
   const isExample = block.imageStyle === "example";
   return (
-    <figure className={isExample ? `border border-dashed rounded-sm p-3 ${s.styledBorder}` : undefined}
-      style={isExample ? { "--block-color": "#475569" } as React.CSSProperties : undefined}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={block.src}
-        alt={block.alt}
-        className="max-w-full rounded-sm mx-auto block"
-        style={{
-          ...(block.width ? { width: block.width } : {}),
-          ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
-        }}
-      />
-      {block.caption && (
-        <figcaption className="text-muted-foreground mt-1 text-center">
-          {block.caption}
-        </figcaption>
+    <>
+      <figure className={isExample ? `border border-dashed rounded-sm p-3 ${s.styledBorder}` : undefined}
+        style={isExample ? { "--block-color": "#475569" } as React.CSSProperties : undefined}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={block.src}
+          alt={block.alt}
+          className="max-w-full rounded-sm mx-auto block cursor-zoom-in"
+          style={{
+            ...(block.width ? { width: block.width } : {}),
+            ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
+          }}
+          onClick={() => setLightboxOpen(true)}
+        />
+        {block.caption && (
+          <figcaption className="text-muted-foreground mt-1 text-center">
+            {block.caption}
+          </figcaption>
+        )}
+      </figure>
+      {lightboxOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 cursor-zoom-out"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.src}
+            alt={block.alt}
+            className="max-w-[90vw] max-h-[90vh] rounded object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>,
+        document.body
       )}
-    </figure>
+    </>
   );
 }
 

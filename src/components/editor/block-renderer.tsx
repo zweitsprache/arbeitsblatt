@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
@@ -567,6 +567,7 @@ function JobApplicationRenderer({ block }: { block: JobApplicationBlock }) {
 // ─── Image ───────────────────────────────────────────────────
 function ImageRenderer({ block }: { block: ImageBlock }) {
   const t = useTranslations("blockRenderer");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   if (!block.src) {
     return (
       <div className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-8 text-center text-muted-foreground text-sm">
@@ -575,23 +576,40 @@ function ImageRenderer({ block }: { block: ImageBlock }) {
     );
   }
   return (
-    <figure>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={block.src}
-        alt={block.alt}
-        className="max-w-full rounded mx-auto block"
-        style={{
-          ...(block.width ? { width: block.width } : {}),
-          ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
-        }}
-      />
-      {block.caption && (
-        <figcaption className="text-sm text-muted-foreground mt-1 text-center">
-          {block.caption}
-        </figcaption>
+    <>
+      <figure>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={block.src}
+          alt={block.alt}
+          className="max-w-full rounded mx-auto block cursor-zoom-in"
+          style={{
+            ...(block.width ? { width: block.width } : {}),
+            ...(block.height ? { height: block.height, objectFit: "contain" as const } : {}),
+          }}
+          onClick={() => setLightboxOpen(true)}
+        />
+        {block.caption && (
+          <figcaption className="text-sm text-muted-foreground mt-1 text-center">
+            {block.caption}
+          </figcaption>
+        )}
+      </figure>
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 cursor-zoom-out"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.src}
+            alt={block.alt}
+            className="max-w-[90vw] max-h-[90vh] rounded object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
-    </figure>
+    </>
   );
 }
 

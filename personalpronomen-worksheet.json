@@ -1,0 +1,229 @@
+{
+  "id": "ws-personalpronomen-001",
+  "title": "Personalpronomen im Deutschen",
+  "description": "Eine vollständige Lektion zu den Personalpronomen im Nominativ, Akkusativ und Dativ.",
+  "slug": "personalpronomen",
+  "blocks": [
+    {
+      "id": "h-1",
+      "type": "heading",
+      "visibility": "both",
+      "content": "Personalpronomen",
+      "level": 1,
+      "bilingual": false,
+      "skipTranslation": false
+    },
+    {
+      "id": "t-lernziel",
+      "type": "text",
+      "visibility": "both",
+      "content": "<p>Du lernst die Personalpronomen im Nominativ, Akkusativ und Dativ kennen und kannst sie in Sätzen korrekt verwenden.</p>",
+      "textStyle": "lernziel"
+    },
+    {
+      "id": "t-intro",
+      "type": "text",
+      "visibility": "both",
+      "content": "<p>Personalpronomen ersetzen Personen oder Dinge in einem Satz. Statt <em>Anna geht ins Kino</em> sagen wir <em>sie geht ins Kino</em>. Personalpronomen verändern ihre Form je nach Fall (Nominativ, Akkusativ, Dativ).</p>",
+      "textStyle": "standard"
+    },
+    {
+      "id": "h-nom",
+      "type": "heading",
+      "visibility": "both",
+      "content": "1. Nominativ – Wer oder was?",
+      "level": 2
+    },
+    {
+      "id": "tab-nom",
+      "type": "table",
+      "visibility": "both",
+      "content": "<table><tbody><tr><th colspan=\"1\" rowspan=\"1\"><p>Person</p></th><th colspan=\"1\" rowspan=\"1\"><p>Singular</p></th><th colspan=\"1\" rowspan=\"1\"><p>Plural</p></th></tr><tr><td><p>1. Person</p></td><td><p>ich</p></td><td><p>wir</p></td></tr><tr><td><p>2. Person</p></td><td><p>du</p></td><td><p>ihr</p></td></tr><tr><td><p>3. Person</p></td><td><p>er / sie / es</p></td><td><p>sie / Sie</p></td></tr></tbody></table>",
+      "tableStyle": "striped",
+      "caption": "Personalpronomen im Nominativ",
+      "columnWidths": [34, 33, 33]
+    },
+    {
+      "id": "t-bsp-nom",
+      "type": "text",
+      "visibility": "both",
+      "content": "<p><strong>Ich</strong> wohne in Zürich. – <strong>Wir</strong> lernen Deutsch. – <strong>Sie</strong> ist meine Lehrerin.</p>",
+      "textStyle": "example"
+    },
+    {
+      "id": "h-akk",
+      "type": "heading",
+      "visibility": "both",
+      "content": "2. Akkusativ – Wen oder was?",
+      "level": 2
+    },
+    {
+      "id": "tab-akk",
+      "type": "table",
+      "visibility": "both",
+      "content": "<table><tbody><tr><th><p>Nominativ</p></th><th><p>Akkusativ</p></th></tr><tr><td><p>ich</p></td><td><p>mich</p></td></tr><tr><td><p>du</p></td><td><p>dich</p></td></tr><tr><td><p>er</p></td><td><p>ihn</p></td></tr><tr><td><p>sie</p></td><td><p>sie</p></td></tr><tr><td><p>es</p></td><td><p>es</p></td></tr><tr><td><p>wir</p></td><td><p>uns</p></td></tr><tr><td><p>ihr</p></td><td><p>euch</p></td></tr><tr><td><p>sie / Sie</p></td><td><p>sie / Sie</p></td></tr></tbody></table>",
+      "tableStyle": "striped",
+      "columnWidths": [50, 50]
+    },
+    {
+      "id": "h-dat",
+      "type": "heading",
+      "visibility": "both",
+      "content": "3. Dativ – Wem?",
+      "level": 2
+    },
+    {
+      "id": "tab-dat",
+      "type": "table",
+      "visibility": "both",
+      "content": "<table><tbody><tr><th><p>Nominativ</p></th><th><p>Dativ</p></th></tr><tr><td><p>ich</p></td><td><p>mir</p></td></tr><tr><td><p>du</p></td><td><p>dir</p></td></tr><tr><td><p>er</p></td><td><p>ihm</p></td></tr><tr><td><p>sie</p></td><td><p>ihr</p></td></tr><tr><td><p>es</p></td><td><p>ihm</p></td></tr><tr><td><p>wir</p></td><td><p>uns</p></td></tr><tr><td><p>ihr</p></td><td><p>euch</p></td></tr><tr><td><p>sie / Sie</p></td><td><p>ihnen / Ihnen</p></td></tr></tbody></table>",
+      "tableStyle": "striped",
+      "columnWidths": [50, 50]
+    },
+    {
+      "id": "t-hinweis",
+      "type": "text",
+      "visibility": "both",
+      "content": "<p>Die Höflichkeitsform <strong>Sie</strong> wird immer grossgeschrieben – im Nominativ, Akkusativ und Dativ.</p>",
+      "textStyle": "hinweis-wichtig"
+    },
+    {
+      "id": "h-ueb",
+      "type": "heading",
+      "visibility": "both",
+      "content": "Übungen",
+      "level": 2
+    },
+    {
+      "id": "ueb-1",
+      "type": "fill-in-blank-items",
+      "visibility": "both",
+      "items": [
+        { "id": "fb-1", "content": "Anna ist müde. {{blank:Sie}} geht früh ins Bett." },
+        { "id": "fb-2", "content": "Mein Bruder und ich kochen. {{blank:Wir}} machen Pasta." },
+        { "id": "fb-3", "content": "Wo ist Tom? {{blank:Er}} ist im Garten." },
+        { "id": "fb-4", "content": "Das Buch ist neu. {{blank:Es}} liegt auf dem Tisch." },
+        { "id": "fb-5", "content": "Kinder, kommt {{blank:ihr}} mit ins Schwimmbad?" }
+      ],
+      "showWordBank": true
+    },
+    {
+      "id": "ueb-2",
+      "type": "multiple-choice",
+      "visibility": "both",
+      "question": "Ich sehe ___ morgen im Büro. (du)",
+      "options": [
+        { "id": "o1", "text": "dir", "isCorrect": false },
+        { "id": "o2", "text": "dich", "isCorrect": true },
+        { "id": "o3", "text": "du", "isCorrect": false }
+      ],
+      "allowMultiple": false
+    },
+    {
+      "id": "ueb-3",
+      "type": "multiple-choice",
+      "visibility": "both",
+      "question": "Kannst du ___ bitte helfen? (ich)",
+      "options": [
+        { "id": "p1", "text": "mich", "isCorrect": false },
+        { "id": "p2", "text": "mir", "isCorrect": true },
+        { "id": "p3", "text": "ich", "isCorrect": false }
+      ],
+      "allowMultiple": false
+    },
+    {
+      "id": "ueb-4",
+      "type": "matching",
+      "visibility": "both",
+      "instruction": "Ordne die Nominativformen den Dativformen zu.",
+      "pairs": [
+        { "id": "m1", "left": "ich", "right": "mir" },
+        { "id": "m2", "left": "du", "right": "dir" },
+        { "id": "m3", "left": "er", "right": "ihm" },
+        { "id": "m4", "left": "sie", "right": "ihr" },
+        { "id": "m5", "left": "wir", "right": "uns" },
+        { "id": "m6", "left": "sie (Pl.)", "right": "ihnen" }
+      ],
+      "extendedRows": false
+    },
+    {
+      "id": "ueb-5",
+      "type": "two-column-fill",
+      "visibility": "both",
+      "instruction": "Ergänze die fehlenden Akkusativformen.",
+      "items": [
+        { "id": "tc1", "left": "ich", "right": "mich" },
+        { "id": "tc2", "left": "du", "right": "dich" },
+        { "id": "tc3", "left": "er", "right": "ihn" },
+        { "id": "tc4", "left": "wir", "right": "uns" },
+        { "id": "tc5", "left": "ihr", "right": "euch" }
+      ],
+      "fillSide": "right"
+    },
+    {
+      "id": "ueb-6",
+      "type": "fill-in-blank",
+      "visibility": "both",
+      "content": "Maria hat Geburtstag. Ich schenke {{blank:ihr}} Blumen und gratuliere {{blank:ihr}} herzlich. Mein Freund kommt auch mit – ich treffe {{blank:ihn}} um 18 Uhr am Bahnhof."
+    },
+    {
+      "id": "ueb-7",
+      "type": "sorting-categories",
+      "visibility": "both",
+      "instruction": "Sortiere die Pronomen nach dem richtigen Fall.",
+      "categories": [
+        { "id": "c-nom", "label": "Nominativ", "correctItems": ["i1", "i4"] },
+        { "id": "c-akk", "label": "Akkusativ", "correctItems": ["i2", "i5", "i7", "i9"] },
+        { "id": "c-dat", "label": "Dativ", "correctItems": ["i3", "i6", "i8"] }
+      ],
+      "items": [
+        { "id": "i1", "text": "ich" },
+        { "id": "i2", "text": "mich" },
+        { "id": "i3", "text": "mir" },
+        { "id": "i4", "text": "du" },
+        { "id": "i5", "text": "dich" },
+        { "id": "i6", "text": "dir" },
+        { "id": "i7", "text": "ihn" },
+        { "id": "i8", "text": "ihm" },
+        { "id": "i9", "text": "uns" }
+      ],
+      "showWritingLines": true
+    },
+    {
+      "id": "ueb-8",
+      "type": "open-response",
+      "visibility": "both",
+      "question": "Schreibe drei Sätze über deine Familie. Verwende mindestens drei verschiedene Personalpronomen.",
+      "lines": 5
+    }
+  ],
+  "settings": {
+    "pageSize": "a4",
+    "orientation": "portrait",
+    "margins": { "top": 20, "right": 20, "bottom": 113, "left": 20 },
+    "showHeader": true,
+    "showFooter": true,
+    "headerText": "",
+    "footerText": "",
+    "fontSize": 12.5,
+    "fontFamily": "Asap Condensed, sans-serif",
+    "brand": "edoomio",
+    "brandSettings": {
+      "logo": "/logo/arbeitsblatt_logo_full_brand.svg",
+      "organization": "",
+      "teacher": "",
+      "headerRight": "",
+      "footerLeft": "",
+      "footerCenter": "",
+      "footerRight": ""
+    },
+    "coverSubtitle": "Arbeitsblatt",
+    "coverInfoText": "",
+    "coverImages": [],
+    "coverImageBorder": false,
+    "translationLanguages": []
+  },
+  "published": false,
+  "createdAt": "2026-04-10T00:00:00.000Z",
+  "updatedAt": "2026-04-10T00:00:00.000Z"
+}

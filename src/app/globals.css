@@ -395,6 +395,11 @@
   pointer-events: none;
 }
 
+/* Allow click on lightbox-enabled images */
+.content-scroll img.cursor-zoom-in {
+  pointer-events: auto;
+}
+
 .tiptap blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1rem;

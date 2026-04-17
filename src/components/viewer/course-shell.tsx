@@ -666,9 +666,9 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
               .content-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
               .content-scroll::-webkit-scrollbar-button { display: none; height: 0; }
               .content-scroll::-webkit-scrollbar-corner { display: none; }
-              .course-content { font-family: ${brandFonts.bodyFont}; font-size: 1.125rem; }
-              .course-content p { font-size: 1.125rem; }
-              .course-content .email-skeleton-fields { font-size: 1.125rem; }
+              .course-content { font-family: ${brandFonts.bodyFont}; font-size: 1.25rem; }
+              .course-content p { font-size: 1.25rem; }
+              .course-content .email-skeleton-fields { font-size: 1.25rem; }
               .course-content h1 {
                 font-family: ${brandFonts.headlineFont};
                 font-weight: ${brandFonts.headlineWeight};
