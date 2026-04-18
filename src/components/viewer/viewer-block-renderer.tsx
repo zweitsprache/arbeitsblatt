@@ -2048,6 +2048,7 @@ function GlossaryView({
   const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
   const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const defStyle: React.CSSProperties = scale ? { fontSize: `${scale}em` } : {};
+  const hasExamples = block.pairs.some((p) => p.example);
   return (
     <div className={`space-y-2 ${s.glossary}`}>
       {block.instruction && (
@@ -2062,9 +2063,14 @@ function GlossaryView({
             <span className={`font-medium ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth, ...termStyle }}>
               {pair.term}
             </span>
-            <span className="flex-1" style={defStyle}>
+            <span className="flex-1" dir="auto" style={defStyle}>
               {pair.definition}
             </span>
+            {hasExamples && (
+              <span className="flex-1 text-muted-foreground" dir="auto" style={defStyle}>
+                {pair.example}
+              </span>
+            )}
           </div>
         ))}
       </div>

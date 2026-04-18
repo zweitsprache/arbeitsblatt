@@ -268,7 +268,7 @@ export function EditorToolbar() {
 
   // Available translation languages for this worksheet (from settings)
   const worksheetTranslationLangs = state.settings.translationLanguages ?? [];
-  const LANG_LABELS: Record<string, string> = { de: "Deutsch (Original)", en: "English", uk: "Українська", fr: "Français", es: "Español", it: "Italiano", pt: "Português", tr: "Türkçe", pl: "Polski", ar: "العربية" };
+  const LANG_LABELS: Record<string, string> = { de: "Deutsch (Original)", en: "Englisch", uk: "Ukrainisch", fr: "Französisch", es: "Spanisch", it: "Italienisch", pt: "Portugiesisch", tr: "Türkisch", pl: "Polnisch", ar: "Arabisch", ru: "Russisch", hu: "Ungarisch", ps: "Paschtu", fa: "Farsi/Dari", cs: "Tschechisch", ur: "Urdu" };
 
   return (
     <>
@@ -603,7 +603,7 @@ export function EditorToolbar() {
             <div className="space-y-2 pt-1">
               <Label className="text-sm font-medium">{t("translatedLanguages")}</Label>
               <div className="flex flex-wrap gap-2">
-                {["de", ...worksheetTranslationLangs].map((code) => (
+                {["de", ...worksheetTranslationLangs.slice().sort((a, b) => (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de"))].map((code) => (
                   <button
                     key={code}
                     type="button"

@@ -5,16 +5,21 @@ import React from "react";
 /** Human-readable labels for content languages */
 const LANGUAGE_LABELS: Record<string, string> = {
   de: "Deutsch",
-  en: "English",
-  uk: "Українська",
-  fr: "Français",
-  es: "Español",
-  it: "Italiano",
-  pt: "Português",
-  tr: "Türkçe",
-  ar: "العربية",
-  pl: "Polski",
-  ru: "Русский",
+  en: "Englisch",
+  uk: "Ukrainisch",
+  fr: "Französisch",
+  es: "Spanisch",
+  it: "Italienisch",
+  pt: "Portugiesisch",
+  tr: "Türkisch",
+  ar: "Arabisch",
+  pl: "Polnisch",
+  ru: "Russisch",
+  hu: "Ungarisch",
+  ps: "Paschtu",
+  fa: "Farsi/Dari",
+  cs: "Tschechisch",
+  ur: "Urdu",
 };
 
 /** Map language codes to flag SVG filenames in /public/flags/ */
@@ -30,6 +35,11 @@ const LANGUAGE_FLAG_CODES: Record<string, string> = {
   ar: "sa",
   pl: "pl",
   ru: "ru",
+  hu: "hu",
+  ps: "af",
+  fa: "ir",
+  cs: "cz",
+  ur: "pk",
 };
 
 interface WorksheetLanguageSwitcherProps {
@@ -77,7 +87,7 @@ export function WorksheetLanguageSwitcher({
                   className="inline-block h-[0.9em] w-[1.2em] rounded-[1px] object-cover"
                 />
               )}
-              {locale.toUpperCase()}
+              {LANGUAGE_LABELS[locale] ?? locale.toUpperCase()}
             </button>
           );
         })}

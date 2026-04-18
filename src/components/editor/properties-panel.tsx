@@ -2085,16 +2085,16 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
     if (!text) return;
 
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    const parsed: { term: string; definition: string }[] = [];
+    const parsed: { term: string; definition: string; example: string }[] = [];
 
     for (const line of lines) {
       const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
       const parts = line.split(sep).map((p) => p.trim());
 
       if (parts.length >= 2) {
-        parsed.push({ term: parts[0], definition: parts.slice(1).join(sep === "\t" ? " " : ", ").trim() });
+        parsed.push({ term: parts[0], definition: parts[1], example: parts[2] ?? "" });
       } else if (parts[0]) {
-        parsed.push({ term: parts[0], definition: "" });
+        parsed.push({ term: parts[0], definition: "", example: "" });
       }
     }
 
@@ -2107,6 +2107,7 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
       id: `g${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       term: p.term,
       definition: p.definition,
+      example: p.example,
     }));
 
     const pairs = csvMode === "append"
@@ -2120,7 +2121,7 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
     setCsvText("");
   };
 
-  const updatePair = (index: number, updates: Partial<{ term: string; definition: string }>) => {
+  const updatePair = (index: number, updates: Partial<{ term: string; definition: string; example: string }>) => {
     const newPairs = [...block.pairs];
     newPairs[index] = { ...newPairs[index], ...updates };
     dispatch({
@@ -2132,7 +2133,7 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
   const addPair = () => {
     const newPairs = [
       ...block.pairs,
-      { id: `g${Date.now()}`, term: t("newItem"), definition: t("newMatch") },
+      { id: `g${Date.now()}`, term: t("newItem"), definition: t("newMatch"), example: "" },
     ];
     dispatch({
       type: "UPDATE_BLOCK",
@@ -2210,6 +2211,17 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
                 onBaseChange={(v) => updatePair(i, { definition: v })}
                 className="h-8 text-xs"
                 placeholder={t("glossaryDefinition")}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">→</span>
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`pairs.${i}.example`}
+                baseValue={pair.example ?? ""}
+                onBaseChange={(v) => updatePair(i, { example: v })}
+                className="h-8 text-xs"
+                placeholder={t("glossaryExample")}
               />
             </div>
             <Button

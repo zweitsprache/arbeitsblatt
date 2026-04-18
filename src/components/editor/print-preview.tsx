@@ -22,15 +22,21 @@ import { ZoomIn, ZoomOut, Printer, RotateCcw, Loader2, RefreshCw } from "lucide-
 
 const LANG_LABELS: Record<string, string> = {
   de: "Deutsch",
-  en: "English",
-  uk: "Українська",
-  fr: "Français",
-  es: "Español",
-  it: "Italiano",
-  pt: "Português",
-  tr: "Türkçe",
-  pl: "Polski",
-  ar: "العربية",
+  en: "Englisch",
+  uk: "Ukrainisch",
+  fr: "Französisch",
+  es: "Spanisch",
+  it: "Italienisch",
+  pt: "Portugiesisch",
+  tr: "Türkisch",
+  pl: "Polnisch",
+  ar: "Arabisch",
+  ru: "Russisch",
+  hu: "Ungarisch",
+  ps: "Paschtu",
+  fa: "Farsi/Dari",
+  cs: "Tschechisch",
+  ur: "Urdu",
 };
 
 export function PrintPreview({
@@ -180,7 +186,7 @@ export function PrintPreview({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="de">{LANG_LABELS.de}</SelectItem>
-                    {translationLangs.map((code) => (
+                    {translationLangs.slice().sort((a, b) => (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de")).map((code) => (
                       <SelectItem key={code} value={code}>
                         {LANG_LABELS[code] || code}
                       </SelectItem>

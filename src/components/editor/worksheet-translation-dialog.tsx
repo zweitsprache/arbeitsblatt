@@ -27,16 +27,21 @@ interface TranslationStatus {
 
 /** All supported target languages with human-readable labels and flag codes. */
 const AVAILABLE_LANGUAGES: { code: string; label: string; flagCode: string }[] = [
-  { code: "en", label: "English", flagCode: "gb" },
-  { code: "uk", label: "Українська", flagCode: "ua" },
-  { code: "fr", label: "Français", flagCode: "fr" },
-  { code: "es", label: "Español", flagCode: "es" },
-  { code: "it", label: "Italiano", flagCode: "it" },
-  { code: "pt", label: "Português", flagCode: "pt" },
-  { code: "tr", label: "Türkçe", flagCode: "tr" },
-  { code: "pl", label: "Polski", flagCode: "pl" },
-  { code: "ar", label: "العربية", flagCode: "sa" },
-  { code: "ru", label: "Русский", flagCode: "ru" },
+  { code: "en", label: "Englisch", flagCode: "gb" },
+  { code: "hu", label: "Ungarisch", flagCode: "hu" },
+  { code: "ps", label: "Paschtu", flagCode: "af" },
+  { code: "fa", label: "Farsi/Dari", flagCode: "ir" },
+  { code: "cs", label: "Tschechisch", flagCode: "cz" },
+  { code: "ur", label: "Urdu", flagCode: "pk" },
+  { code: "uk", label: "Ukrainisch", flagCode: "ua" },
+  { code: "fr", label: "Französisch", flagCode: "fr" },
+  { code: "es", label: "Spanisch", flagCode: "es" },
+  { code: "it", label: "Italienisch", flagCode: "it" },
+  { code: "pt", label: "Portugiesisch", flagCode: "pt" },
+  { code: "tr", label: "Türkisch", flagCode: "tr" },
+  { code: "pl", label: "Polnisch", flagCode: "pl" },
+  { code: "ar", label: "Arabisch", flagCode: "sa" },
+  { code: "ru", label: "Russisch", flagCode: "ru" },
 ];
 
 const LANGUAGE_LABELS: Record<string, string> = Object.fromEntries(

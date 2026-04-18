@@ -254,6 +254,7 @@ export interface GlossaryPair {
   id: string;
   term: string;
   definition: string;
+  example?: string;
 }
 
 export interface GlossaryBlock extends BlockBase {
@@ -1700,9 +1701,9 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "glossary",
       instruction: "",
       pairs: [
-        { id: "g1", term: "Term 1", definition: "Definition 1" },
-        { id: "g2", term: "Term 2", definition: "Definition 2" },
-        { id: "g3", term: "Term 3", definition: "Definition 3" },
+        { id: "g1", term: "Term 1", definition: "Definition 1", example: "" },
+        { id: "g2", term: "Term 2", definition: "Definition 2", example: "" },
+        { id: "g3", term: "Term 3", definition: "Definition 3", example: "" },
       ],
       leftColWidth: 25,
       visibility: "both",

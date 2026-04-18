@@ -1546,6 +1546,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
 // ─── Glossary ────────────────────────────────────────────────
 function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
   const colWidth = `${block.leftColWidth ?? 25}%`;
+  const hasExamples = block.pairs.some((p) => p.example);
   return (
     <div className="space-y-3">
       {block.instruction && (
@@ -1560,9 +1561,14 @@ function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
             <span className="text-base font-semibold" style={{ width: colWidth, minWidth: colWidth, flexShrink: 0 }}>
               {pair.term}
             </span>
-            <span className="text-base flex-1">
+            <span className={`text-base ${hasExamples ? "flex-1" : "flex-1"}`}>
               {pair.definition}
             </span>
+            {hasExamples && (
+              <span className="text-base flex-1 text-muted-foreground">
+                {pair.example}
+              </span>
+            )}
           </div>
         ))}
       </div>
