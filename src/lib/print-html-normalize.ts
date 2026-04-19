@@ -59,10 +59,13 @@ export function resolveDateShortcodes(html: string): string {
 }
 
 /** Replace {{de:…}} markers in HTML with styled <span> elements. */
-export function resolveDeMarkers(html: string): string {
+export function resolveDeMarkers(html: string, color?: string | null): string {
+  const style = color
+    ? `font-weight:600;color:${color}`
+    : "font-weight:600";
   return html.replace(
     /\{\{de:(.*?)\}\}/g,
-    '«<span style="font-weight:600">$1</span>»',
+    `<span style="${style}">$1</span>`,
   );
 }
 
@@ -87,9 +90,9 @@ export function stripInlineTypographyStyles(html: string): string {
 }
 
 /** Pipeline: sanitise nbsp + resolve date shortcodes + resolve {{de:…}} markers. */
-export function prepareTiptapHtml(html: string): string {
+export function prepareTiptapHtml(html: string, deMarkerColor?: string | null): string {
   return stripInlineTypographyStyles(
-    resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)))
+    resolveDeMarkers(resolveDateShortcodes(nbspToSpace(html)), deMarkerColor)
   );
 }
 

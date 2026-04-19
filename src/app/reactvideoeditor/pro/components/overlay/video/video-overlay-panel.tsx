@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useEditorContext } from "../../../contexts/editor-context";
 import { useTimelinePositioning } from "../../../hooks/use-timeline-positioning";
 import { useAspectRatio } from "../../../hooks/use-aspect-ratio";
@@ -10,6 +10,7 @@ import { MediaOverlayPanel } from "../shared/media-overlay-panel";
 import { getSrcDuration } from "../../../hooks/use-src-duration";
 import { calculateIntelligentAssetSize, getAssetDimensions } from "../../../utils/asset-sizing";
 import { useVideoReplacement } from "../../../hooks/use-video-replacement";
+import { useLocalMedia } from "../../../contexts/local-media-context";
 
 /**
  * VideoOverlayPanel is a component that provides video search and management functionality.
@@ -50,6 +51,7 @@ export const VideoOverlayPanel: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   const { searchVideos, videoAdaptors } = useMediaAdaptors();
+  const { localMediaFiles } = useLocalMedia();
   const { isReplaceMode, startReplaceMode, cancelReplaceMode, replaceVideo } = useVideoReplacement();
 
   const {
@@ -82,8 +84,75 @@ export const VideoOverlayPanel: React.FC = () => {
 
   const PAGE_SIZE = 20;
 
+  const mappedLocalVideos = useMemo(
+    () =>
+      localMediaFiles
+        .filter((file) => {
+          const lowerType = (file.type || "").toLowerCase();
+          if (lowerType === "video" || lowerType.startsWith("video/")) return true;
+          return /\.(mp4|webm|mov|m4v|avi|mkv|ogv)$/i.test((file.name || "").toLowerCase());
+        })
+        .map((file) => ({
+          id: file.id,
+          type: "video" as const,
+          width: 1920,
+          height: 1080,
+          thumbnail: file.thumbnail || file.path,
+          duration: file.duration,
+          videoFiles: [
+            {
+              quality: "hd" as const,
+              format: "video/mp4",
+              url: file.path,
+            },
+          ],
+          _source: "uploads",
+          _sourceDisplayName: "Uploads",
+          _isLocalMedia: true,
+          _localSrc: file.path,
+        })) as Array<
+          StandardVideo & {
+            _source: string;
+            _sourceDisplayName: string;
+            _isLocalMedia?: boolean;
+            _localSrc?: string;
+          }
+        >,
+    [localMediaFiles]
+  );
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setVideos(mappedLocalVideos);
+      setSourceResults([
+        {
+          adaptorName: 'uploads',
+          adaptorDisplayName: 'Uploads',
+          itemCount: mappedLocalVideos.length,
+          totalCount: mappedLocalVideos.length,
+          hasMore: false,
+        },
+      ]);
+      setTotalCount(mappedLocalVideos.length);
+      setCurrentPage(1);
+    }
+  }, [mappedLocalVideos, searchQuery]);
+
   const loadPage = useCallback(async (query: string, page: number) => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setVideos(mappedLocalVideos);
+      setSourceResults([
+        {
+          adaptorName: 'uploads',
+          adaptorDisplayName: 'Uploads',
+          itemCount: mappedLocalVideos.length,
+          totalCount: mappedLocalVideos.length,
+          hasMore: false,
+        },
+      ]);
+      setTotalCount(mappedLocalVideos.length);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -104,7 +173,7 @@ export const VideoOverlayPanel: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchVideos]);
+  }, [mappedLocalVideos, searchVideos]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +215,9 @@ export const VideoOverlayPanel: React.FC = () => {
       } else {
         // Add mode: Create new overlay
         const adaptor = videoAdaptors.find((a) => a.name === video._source);
-        const videoUrl = adaptor?.getVideoUrl(video, "hd") || "";
+        const videoUrl = (video as any)._isLocalMedia
+          ? ((video as any)._localSrc || video.videoFiles?.[0]?.url || "")
+          : (adaptor?.getVideoUrl(video, "hd") || "");
 
         // Get actual video duration using media-parser
         let durationInFrames = 200; // fallback

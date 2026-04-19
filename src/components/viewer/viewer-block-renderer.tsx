@@ -21,6 +21,7 @@ import {
   WordBankBlock,
   NumberLineBlock,
   ColumnsBlock,
+  GridBlock,
   TrueFalseMatrixBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
@@ -32,6 +33,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  TransformSentencesBlock,
   VerbTableBlock,
   ChartBlock,
   NumberedLabelBlock,
@@ -82,7 +84,11 @@ const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg
 
 function injectLiIcons(html: string): string {
   if (!html.includes("<li")) return html;
-  return html.replace(/<li(\b[^>]*)?>/gi, (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}`);
+  const withBullets = html.replace(
+    /<li(\b[^>]*)?>/gi,
+    (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}<div class="li-content-no-break">`,
+  );
+  return withBullets.replace(/<\/li>/gi, "</div></li>");
 }
 
 /** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
@@ -116,16 +122,16 @@ function deterministicShuffle<T>(items: T[], seedKey: string): T[] {
 }
 
 // ─── German marker helper ────────────────────────────────────
-/** Parse {{de:…}} markers and render the German text in italic */
-function renderDeMarkers(text: string): React.ReactNode {
+/** Parse {{de:…}} markers and render the German text in semibold + accent color */
+function renderDeMarkers(text: string, color?: string | null): React.ReactNode {
   const parts = text.split(/(\{\{de:.*?\}\})/g);
   if (parts.length === 1) return text;
   return parts.map((part, i) => {
     const m = part.match(/^\{\{de:(.*?)\}\}$/);
     if (m) {
       return (
-        <em key={i} className="not-italic font-semibold">
-          «{m[1]}»
+        <em key={i} className="not-italic font-semibold" style={color ? { color } : undefined}>
+          {m[1]}
         </em>
       );
     }
@@ -343,11 +349,17 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   return <Tag className={sizes[block.level]} style={style}>{block.content}</Tag>;
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a" }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
-  const hasExampleBox = isExample || isExampleStandard || isExampleImproved;
+  const isExamplePrimary = block.textStyle === "example-primary";
+  const isExampleSecondary = block.textStyle === "example-secondary";
+  const isFrame = block.textStyle === "frame";
+  const isFramePrimary = block.textStyle === "frame-primary";
+  const isFrameSecondary = block.textStyle === "frame-secondary";
+  const hasExampleBox = isExample || isExampleStandard || isExampleImproved || isExamplePrimary || isExampleSecondary;
+  const hasFrameBox = isFrame || isFramePrimary || isFrameSecondary;
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
@@ -446,10 +458,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Render a single column of tiptap content (used for both original and translated) */
   const renderContent = (html: string) => {
-    const processed = injectLiIcons(prepareTiptapHtml(html));
+    const processed = injectLiIcons(prepareTiptapHtml(html, accentColor));
     return (
       <div
-        className={`tiptap max-w-none ${hasExampleBox || hasHinweisBox ? s.tiptapFlush : ""}`}
+        className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
         dangerouslySetInnerHTML={{ __html: processed }}
       />
     );
@@ -457,7 +469,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Split HTML into individual paragraph strings */
   const splitParagraphs = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html);
+    const prepared = prepareTiptapHtml(html, accentColor);
     const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi);
     return matches || [prepared];
   };
@@ -465,7 +477,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
    *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
   const splitRowItems = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html);
+    const prepared = prepareTiptapHtml(html, accentColor);
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
@@ -597,7 +609,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     );
   }
 
-  if (!hasExampleBox && !hasHinweisBox) {
+  if (!hasExampleBox && !hasFrameBox && !hasHinweisBox) {
     // For rows style (non-bilingual): render paragraph-by-paragraph with real DOM icon divs.
     // CSS ::before background-image is not rendered by Chromium's PDF engine.
     if (isRows && !isBilingual) {
@@ -699,17 +711,16 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     );
   }
 
-  const borderTextColor = isExampleStandard ? "#990033" : isExampleImproved ? "#3A4F40" : "#475569";
+  const borderTextColor = isExampleStandard ? "#990033" : isExampleImproved ? "#3A4F40" : isExamplePrimary ? primaryColor : isExampleSecondary ? (accentColor || "#475569") : isFramePrimary ? primaryColor : isFrameSecondary ? (accentColor || "#475569") : "#475569";
 
-  if (isExample) {
+  if (hasFrameBox) {
     return (
       <div>
         <div
-          className={s.exampleBox}
+          className={s.frameBox}
           style={{
             "--block-color": borderTextColor,
             "--example-radius": mode === "online" ? "5px" : "4px",
-            "--example-padding": mode === "online" ? "0.5rem 1rem" : "0.75rem 1rem",
             fontFamily: resolvedBodyFont,
             ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
           } as React.CSSProperties}
@@ -719,7 +730,31 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment)}
+            {renderDeMarkers(block.comment, accentColor)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isExample || isExamplePrimary || isExampleSecondary) {
+    return (
+      <div>
+        <div
+          className={s.exampleBox}
+          style={{
+            "--block-color": borderTextColor,
+            "--example-radius": mode === "online" ? "5px" : "4px",
+            fontFamily: resolvedBodyFont,
+            ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+          } as React.CSSProperties}
+        >
+          {imageEl}
+          {wrapBilingual(block.content, originalBlock?.content)}
+        </div>
+        {block.comment && (
+          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
+            {renderDeMarkers(block.comment, accentColor)}
           </div>
         )}
       </div>
@@ -748,7 +783,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       </div>
       {block.comment && (
         <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-          {renderDeMarkers(block.comment)}
+          {renderDeMarkers(block.comment, accentColor)}
         </div>
       )}
     </div>
@@ -756,7 +791,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 }
 
 // ─── Email Skeleton View ─────────────────────────────────────
-function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
+function EmailSkeletonView({ block, accentColor }: { block: EmailSkeletonBlock; accentColor?: string | null }) {
   const t = useTranslations("blockRenderer");
 
   const attachments = block.attachments ?? [];
@@ -793,7 +828,7 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
         </div>
 
         <div className={s.emailBody}>
-          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
+          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body, accentColor) }} />
         </div>
 
       {/* Attachments */}
@@ -811,14 +846,14 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
       )}
       </div>
       {isStyled && block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment, accentColor)}</div>
       )}
     </div>
   );
 }
 
 // ─── Job Application View ────────────────────────────────────
-function JobApplicationView({ block }: { block: JobApplicationBlock }) {
+function JobApplicationView({ block, accentColor }: { block: JobApplicationBlock; accentColor?: string | null }) {
   const t = useTranslations("blockRenderer");
 
   const style = block.applicationStyle ?? "none";
@@ -877,13 +912,13 @@ function JobApplicationView({ block }: { block: JobApplicationBlock }) {
           <div className="flex items-start gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 pt-1.5">{t("jobMessage")}</span>
             <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5">
-              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message) }} />
+              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message, accentColor) }} />
             </div>
           </div>
         </div>
       </div>
       {isStyled && block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment, accentColor)}</div>
       )}
     </div>
   );
@@ -2429,9 +2464,83 @@ function ColumnsView({
       className="grid gap-4"
       style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
     >
-      {block.children.map((col, colIndex) => (
-        <div key={colIndex} className="space-y-4">
+      {block.children.map((col, colIndex) => {
+        const colBorder = block.columnBorders?.[colIndex] ?? (block.showBorder ?? true);
+        return (
+        <div
+          key={colIndex}
+          className={`space-y-4 px-3 py-0
+            [&_p:first-child]:-mt-2.5 [&_p:last-child]:mb-0
+            ${block.columnBgColors?.[colIndex] ? "rounded" : "rounded-sm"}
+            ${colBorder ? "border border-border" : ""}`}
+          style={{
+            ...(block.columnBgColors?.[colIndex]
+              ? { backgroundColor: block.columnBgColors[colIndex] }
+              : {}),
+            ...(colBorder && block.columnBorderColors?.[colIndex]
+              ? { borderColor: block.columnBorderColors[colIndex] }
+              : {}),
+          }}
+        >
           {col.map((childBlock) => (
+            <ViewerBlockRenderer
+              key={childBlock.id}
+              block={childBlock}
+              mode={mode}
+              answer={answers[childBlock.id]}
+              onAnswer={(value) =>
+                onAnswer({ ...answers, [childBlock.id]: value })
+              }
+              showResults={showResults}
+              showSolutions={showSolutions}
+              primaryColor={primaryColor}
+              allBlocks={allBlocks}
+              brand={brand}
+            />
+          ))}
+        </div>
+      );
+      })}
+    </div>
+  );
+}
+
+// ─── Grid View ───────────────────────────────────────────────
+function GridView({
+  block,
+  mode,
+  answer,
+  onAnswer,
+  showResults,
+  showSolutions = false,
+  primaryColor,
+  allBlocks,
+  brand = "edoomio",
+}: {
+  block: GridBlock;
+  mode: ViewMode;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  primaryColor?: string;
+  allBlocks?: WorksheetBlock[];
+  brand?: Brand;
+}) {
+  const answers = (answer as Record<string, unknown> | undefined) || {};
+  return (
+    <div
+      className="grid"
+      style={{
+        gridTemplateColumns: `repeat(${block.cols}, 1fr)`,
+        gridTemplateRows: `repeat(${block.rows}, auto)`,
+        columnGap: `${block.colGap}px`,
+        rowGap: `${block.rowGap}px`,
+      }}
+    >
+      {block.children.map((cell, cellIndex) => (
+        <div key={cellIndex}>
+          {cell.map((childBlock) => (
             <ViewerBlockRenderer
               key={childBlock.id}
               block={childBlock}
@@ -3511,6 +3620,79 @@ function CompleteSentencesView({
   );
 }
 
+// ─── Transform Sentences View ─────────────────────────────────
+function TransformSentencesView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+}: {
+  block: TransformSentencesBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+}) {
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+
+  return (
+    <div className="space-y-2">
+      {block.instruction && (
+        <p className="font-medium">{block.instruction}</p>
+      )}
+      <div>
+        {block.sentences.map((item, i) => {
+          const userVal = userAnswers[item.id] || "";
+          const hasSolution = !!item.solution;
+          const isCorrect = showResults && hasSolution && userVal.trim().toLowerCase() === item.solution!.trim().toLowerCase();
+          const isWrong = showResults && hasSolution && userVal.trim() !== "" && !isCorrect;
+
+          return (
+            <div
+              key={item.id}
+              className="py-2 border-b last:border-b-0"
+            >
+              <div className="flex items-center gap-3">
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span>{item.beginning}</span>
+              </div>
+              {interactive ? (
+                <div className="mt-1 ml-9" style={{ width: 'calc(100% - 2.25rem)' }}>
+                  <input
+                    type="text"
+                    value={userVal}
+                    onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
+                    disabled={showResults}
+                    className={`w-full border-b border-dashed bg-transparent px-2 py-0.5 focus:outline-none ${
+                      showResults
+                        ? isCorrect
+                          ? "border-green-500 text-green-700"
+                          : isWrong
+                            ? "border-red-500 text-red-700"
+                            : "border-muted-foreground/30"
+                        : "border-muted-foreground/30 focus:border-primary"
+                    }`}
+                  />
+                  {showResults && isWrong && hasSolution && (
+                    <span className="text-cv-xs text-green-600 mt-0.5 block">{item.solution}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-1 ml-9 border-b border-dashed border-muted-foreground/30 min-h-[14px]" style={{ width: 'calc(100% - 2.25rem)' }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Verb Table View ────────────────────────────────────────
 function VerbTableView({
   block,
@@ -3559,7 +3741,7 @@ function VerbTableView({
     const isWrong2 = showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
 
     return (
-      <div key={row.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+      <div key={row.id} className="flex items-center gap-3 py-1 px-3 border-b last:border-b-0">
         {/* Person */}
         <span
           className="text-muted-foreground uppercase shrink-0"
@@ -3670,20 +3852,20 @@ function VerbTableView({
   const totalCount = isSplit ? allRows.length * 2 : allRows.length;
 
   return (
-    <div>
-      {block.verb && (
-        <div className="font-bold py-2 border-b" style={{ color: primaryColor, borderColor: primaryColor }}>
-          {block.verb}
+    <div className="border rounded-[4px] overflow-hidden" style={{ borderColor: primaryColor, breakInside: "avoid", pageBreakInside: "avoid" }}>
+      {(block.showInfinitive ?? true) && (block.infinitiveOverride || block.verb) && (
+        <div className="font-bold py-2 px-3 border-b" style={{ color: primaryColor, borderColor: primaryColor }}>
+          {block.infinitiveOverride || block.verb}
         </div>
       )}
       <div>
         {/* Singular */}
-        <div className="text-muted-foreground font-bold uppercase border-b border-border py-2 flex items-center">
+        <div className="text-muted-foreground font-bold uppercase border-b border-border px-3 flex items-center" style={{ height: '37.5px' }}>
           Singular
         </div>
         {block.singularRows.map((row) => renderRow(row))}
         {/* Plural */}
-        <div className="text-muted-foreground font-bold uppercase border-b border-border py-2 flex items-center">
+        <div className="text-muted-foreground font-bold uppercase border-b border-border px-3 flex items-center" style={{ height: '37.5px' }}>
           Plural
         </div>
         {block.pluralRows.map((row) => renderRow(row))}
@@ -4817,7 +4999,7 @@ export function ViewerBlockRenderer({
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -5034,6 +5216,17 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
         />
       );
+    case "transform-sentences":
+      return (
+        <TransformSentencesView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+        />
+      );
     case "verb-table":
       return (
         <VerbTableView
@@ -5076,12 +5269,26 @@ export function ViewerBlockRenderer({
           brand={brand}
         />
       );
+    case "grid":
+      return (
+        <GridView
+          block={block as GridBlock}
+          mode={mode}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          primaryColor={primaryColor}
+          allBlocks={allBlocks}
+          brand={brand}
+        />
+      );
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
-      return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
+      return <EmailSkeletonView block={block as EmailSkeletonBlock} accentColor={accentColor} />;
     case "job-application":
-      return <JobApplicationView block={block as JobApplicationBlock} />;
+      return <JobApplicationView block={block as JobApplicationBlock} accentColor={accentColor} />;
     case "dos-and-donts":
       return <DosAndDontsView block={block as DosAndDontsBlock} />;
     case "text-comparison":

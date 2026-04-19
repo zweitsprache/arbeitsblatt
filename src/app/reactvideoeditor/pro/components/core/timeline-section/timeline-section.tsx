@@ -112,6 +112,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = () => {
     handleSplitItems,
     handleItemMove,
     handleItemResize,
+    handleBlockRowTimingsChange,
     handleNewItemDrop,
   } = useTimelineHandlers({
     overlays,
@@ -287,6 +288,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = () => {
           onFrameChange={handleTimelineFrameChange}
           onItemMove={handleItemMove}
           onItemResize={handleItemResize}
+          onBlockRowTimingsChange={handleBlockRowTimingsChange}
           onItemSelect={handleItemSelect}
           onSelectedItemsChange={handleSelectedItemsChange}
           onDeleteItems={handleDeleteItems}

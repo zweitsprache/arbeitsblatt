@@ -1,5 +1,6 @@
 import React from 'react';
 import { TimelineTrack as TimelineTrackType, TimelineItem as TimelineItemType } from '../types';
+import type { TimelineBlockRowTiming } from '../types';
 import { TimelineItem } from './timeline-item';
 import { TimelineGhostElement } from './timeline-ghost-element';
 import { TimelineGapIndicator } from './timeline-gap-indicator';
@@ -19,6 +20,7 @@ interface TimelineTrackProps {
   selectedItemIds?: string[]; // Currently selected item IDs (supports multiple)
   onSelectedItemsChange?: (itemIds: string[]) => void; // Callback when selection changes
   onItemMove?: (itemId: string, newStart: number, newEnd: number, newTrackId: string) => void;
+  onBlockRowTimingsChange?: (itemId: string, rowTimings: TimelineBlockRowTiming[]) => void;
   onDragStart?: (
     item: TimelineItemType,
     clientX: number,
@@ -54,6 +56,7 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
   selectedItemIds = [],
   onSelectedItemsChange,
   onItemMove,
+  onBlockRowTimingsChange,
   onDragStart,
   zoomScale = 1,
   isDragging = false,
@@ -124,6 +127,7 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
               onSelect={onItemSelect}
               onSelectionChange={handleSelectionChange}
               onDragStart={onDragStart}
+              onBlockRowTimingsChange={onBlockRowTimingsChange}
               onDeleteItems={onDeleteItems}
               onDuplicateItems={onDuplicateItems}
               onSplitItems={onSplitItems}
@@ -157,6 +161,7 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
               onSelect={onItemSelect}
               onSelectionChange={handleSelectionChange}
               onDragStart={onDragStart}
+              onBlockRowTimingsChange={onBlockRowTimingsChange}
               onDeleteItems={onDeleteItems}
               onDuplicateItems={onDuplicateItems}
               onSplitItems={onSplitItems}

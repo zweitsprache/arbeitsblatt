@@ -22,6 +22,11 @@ interface VideoItemContentProps {
     thumbnailError?: string | null;
     intervalSec?: number;
     mediaStart?: number;
+    waveformData?: {
+      peaks: number[];
+      length: number;
+    } | null;
+    isLoadingWaveform?: boolean;
   };
   itemWidth: number;
   itemHeight: number;
@@ -77,6 +82,7 @@ export const VideoItemContent: React.FC<VideoItemContentProps> = ({
   const intervalSec = data?.intervalSec || 5;
   const mediaStart = data?.mediaStart || 0;
   const isShowingThumbnails = !!spriteUrl && !!rectForTime && !isLoadingThumbnails;
+  const waveformData = data?.waveformData;
 
   // Delayed spinner logic
   const showLoading = useDelayVisible(isLoadingThumbnails && !!videoSrc, 1000);
@@ -110,6 +116,35 @@ export const VideoItemContent: React.FC<VideoItemContentProps> = ({
       </div>
     );
   }, [isHovering, itemWidth, showLabelOnHover]);
+
+  const waveformOverlay = useMemo(() => {
+    if (!waveformData?.peaks?.length || itemWidth < 48 || itemHeight < 18) {
+      return null;
+    }
+
+    const peaks = waveformData.peaks;
+    const barCount = Math.min(peaks.length, Math.max(20, Math.floor(itemWidth / 3)));
+
+    return (
+      <div className="absolute bottom-0 left-0 right-0 h-3 bg-black/25 pointer-events-none">
+        <div className="flex items-end h-full w-full overflow-hidden px-0.5">
+          {Array.from({ length: barCount }, (_, index) => {
+            const peakIndex = Math.floor((index / barCount) * peaks.length);
+            const amplitude = peaks[peakIndex] || 0;
+            const barHeight = Math.max(1, Math.round(amplitude * 10));
+
+            return (
+              <div
+                key={`video-wave-${index}`}
+                className="flex-1 bg-white/75 mx-px rounded-t-[1px]"
+                style={{ height: `${barHeight}px` }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }, [waveformData, itemHeight, itemWidth]);
 
   const [spriteNaturalSize, setSpriteNaturalSize] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
@@ -215,7 +250,12 @@ export const VideoItemContent: React.FC<VideoItemContentProps> = ({
 
   // Show thumbnails if we have them and they're ready and loading has been going for less than 1 second
   if (spriteUrl && rectForTime && (isShowingThumbnails || (isLoadingThumbnails && !showLoading))) {
-    return renderThumbnails();
+    return (
+      <div className="relative h-full w-full">
+        {renderThumbnails()}
+        {waveformOverlay}
+      </div>
+    );
   }
 
   // Show loading spinner if we're loading for more than 1 second or don't have thumbnails yet.
@@ -246,11 +286,14 @@ export const VideoItemContent: React.FC<VideoItemContentProps> = ({
 
   // Fallback to simple label (no video source or small width)
   return (
-    <TimelineItemLabel
-      icon={Video}
-      label={label}
-      defaultLabel="VIDEO"
-      isHovering={isHovering}
-    />
+    <div className="relative h-full w-full">
+      <TimelineItemLabel
+        icon={Video}
+        label={label}
+        defaultLabel="VIDEO"
+        isHovering={isHovering}
+      />
+      {waveformOverlay}
+    </div>
   );
 };

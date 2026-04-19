@@ -36,18 +36,23 @@ export const TimelineItemContent: React.FC<TimelineItemContentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Calculate audio content timing - prioritize mediaStart from timeline item, then fall back to data properties
-  const audioContentStart = type === TrackItemType.AUDIO 
-    ? (mediaStart !== undefined 
-        ? mediaStart 
-        : (data?.startFromSound !== undefined ? data.startFromSound : 0))
-    : 0;
+  // Calculate media content start for waveform extraction.
+  // For audio clips we still support legacy startFromSound fallback.
+  const mediaContentStart =
+    type === TrackItemType.AUDIO
+      ? (mediaStart !== undefined
+          ? mediaStart
+          : data?.startFromSound !== undefined
+            ? data.startFromSound
+            : 0)
+      : mediaStart !== undefined
+        ? mediaStart
+        : 0;
 
-  // Generate waveform data for audio items - ALWAYS generate fresh waveforms
-  // This ensures split audio items get correct waveforms for their time segment
+  // Generate waveform data for audio and video items.
   const waveformResult = useWaveformProcessor(
-    type === TrackItemType.AUDIO && data?.src ? data.src : undefined,
-    audioContentStart, // Start time in seconds
+    (type === TrackItemType.AUDIO || type === TrackItemType.VIDEO) && data?.src ? data.src : undefined,
+    mediaContentStart, // Start time in seconds
     end - start // Duration in seconds
   );
 
@@ -88,7 +93,9 @@ export const TimelineItemContent: React.FC<TimelineItemContentProps> = ({
         isLoadingThumbnails: thumbnailResult.isLoading,
         thumbnailError: thumbnailResult.error,
         intervalSec: thumbnailResult.intervalSec,
-        mediaStart: mediaStart
+        mediaStart: mediaStart,
+        waveformData: waveformResult.data,
+        isLoadingWaveform: waveformResult.isLoading,
       }
     : data;
 

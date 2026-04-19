@@ -3,7 +3,7 @@ import { WorksheetBlock } from "@/types/worksheet";
 
 /**
  * Deep-clone an array of blocks, assigning fresh UUIDs to every block id.
- * Recurses into `columns` children and `accordion` item children so that
+ * Recurses into `columns`, `grid`, and `accordion` item children so that
  * nested block ids are also replaced.
  */
 export function deepCloneBlocksWithNewIds(blocks: WorksheetBlock[]): WorksheetBlock[] {
@@ -14,6 +14,10 @@ export function deepCloneBlocksWithNewIds(blocks: WorksheetBlock[]): WorksheetBl
     if (cloned.type === "columns") {
       cloned.children = cloned.children.map((col) =>
         deepCloneBlocksWithNewIds(col)
+      );
+    } else if (cloned.type === "grid") {
+      cloned.children = cloned.children.map((cell) =>
+        deepCloneBlocksWithNewIds(cell)
       );
     } else if (cloned.type === "accordion") {
       cloned.items = cloned.items.map((item) => ({

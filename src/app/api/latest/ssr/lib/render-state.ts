@@ -1,7 +1,8 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 
-const RENDER_STATE_DIR = path.join(process.cwd(), "tmp", "render-state");
+const RENDER_STATE_DIR = path.join(os.tmpdir(), "arbeitsblatt-render-state");
 
 // Ensure the directory exists
 if (!fs.existsSync(RENDER_STATE_DIR)) {
@@ -10,7 +11,14 @@ if (!fs.existsSync(RENDER_STATE_DIR)) {
 
 export const saveRenderState = (renderId: string, state: any) => {
   const filePath = path.join(RENDER_STATE_DIR, `${renderId}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(state));
+  const tmpFilePath = path.join(
+    RENDER_STATE_DIR,
+    `${renderId}.${process.pid}.${Date.now()}.tmp`
+  );
+
+  // Write via temp file + rename to avoid readers seeing partially written JSON.
+  fs.writeFileSync(tmpFilePath, JSON.stringify(state));
+  fs.renameSync(tmpFilePath, filePath);
 };
 
 export const getRenderState = (renderId: string) => {
@@ -18,7 +26,19 @@ export const getRenderState = (renderId: string) => {
   if (!fs.existsSync(filePath)) {
     return null;
   }
-  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+  // Be tolerant to transient read races in development/hot-reload scenarios.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    } catch {
+      if (attempt === 1) {
+        return null;
+      }
+    }
+  }
+
+  return null;
 };
 
 export const updateRenderProgress = (renderId: string, progress: number) => {

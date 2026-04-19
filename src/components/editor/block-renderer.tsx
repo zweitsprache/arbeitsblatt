@@ -21,6 +21,7 @@ import {
   WordBankBlock,
   NumberLineBlock,
   ColumnsBlock,
+  GridBlock,
   TrueFalseMatrixBlock,
   OrderItemsBlock,
   InlineChoicesBlock,
@@ -30,6 +31,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  TransformSentencesBlock,
   VerbTableBlock,
   VerbTableRow,
   ArticleTrainingBlock,
@@ -1545,27 +1547,82 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
 
 // ─── Glossary ────────────────────────────────────────────────
 function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const colWidth = `${block.leftColWidth ?? 25}%`;
   const hasExamples = block.pairs.some((p) => p.example);
+
+  const updatePair = (
+    index: number,
+    updates: Partial<Pick<GlossaryBlock["pairs"][number], "term" | "definition" | "example">>,
+  ) => {
+    const pairs = [...block.pairs];
+    pairs[index] = { ...pairs[index], ...updates };
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { pairs } } });
+  };
+
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <p className="text-base text-muted-foreground">{block.instruction}</p>
+        <p
+          className="text-base text-muted-foreground outline-none"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            const value = e.currentTarget.textContent || "";
+            localeUpdate(block.id, "instruction", value, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+            );
+          }}
+        >
+          {block.instruction}
+        </p>
       )}
       <div className="space-y-0 border-t">
-        {block.pairs.map((pair) => (
+        {block.pairs.map((pair, i) => (
           <div
             key={pair.id}
             className="flex items-start gap-4 py-1 border-b"
           >
-            <span className="text-base font-semibold" style={{ width: colWidth, minWidth: colWidth, flexShrink: 0 }}>
+            <span
+              className="text-base font-semibold outline-none"
+              style={{ width: colWidth, minWidth: colWidth, flexShrink: 0 }}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, `pairs.${i}.term`, value, () =>
+                  updatePair(i, { term: value })
+                );
+              }}
+            >
               {pair.term}
             </span>
-            <span className={`text-base ${hasExamples ? "flex-1" : "flex-1"}`}>
+            <span
+              className={`text-base ${hasExamples ? "flex-1" : "flex-1"} outline-none`}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, `pairs.${i}.definition`, value, () =>
+                  updatePair(i, { definition: value })
+                );
+              }}
+            >
               {pair.definition}
             </span>
             {hasExamples && (
-              <span className="text-base flex-1 text-muted-foreground">
+              <span
+                className="text-base flex-1 text-muted-foreground outline-none"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, `pairs.${i}.example`, value, () =>
+                    updatePair(i, { example: value })
+                  );
+                }}
+              >
                 {pair.example}
               </span>
             )}
@@ -3107,6 +3164,121 @@ function CompleteSentencesRenderer({ block }: { block: CompleteSentencesBlock })
   );
 }
 
+// ─── Transform Sentences ────────────────────────────────────
+function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const updateSentence = (id: string, beginning: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.map((s) =>
+            s.id === id ? { ...s, beginning } : s
+          ),
+        },
+      },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: crypto.randomUUID(), beginning: "" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (id: string) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((s) => s.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {block.instruction}
+      </div>
+
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className="group/item py-2 border-b last:border-b-0"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span
+                className="outline-none block flex-1"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                    updateSentence(item.id, value)
+                  );
+                }}
+              >
+                {item.beginning}
+              </span>
+              <button
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                  ${block.sentences.length <= 1 ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeSentence(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+            <div className="ml-9 mt-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
+          </div>
+        ))}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addSentence();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addSentence")}
+      </button>
+    </div>
+  );
+}
+
 // ─── Verb Table ─────────────────────────────────────────────
 function VerbTableRenderer({ block }: { block: VerbTableBlock }) {
   const { dispatch } = useEditor();
@@ -3510,11 +3682,17 @@ function DroppableColumn({
   colIndex,
   children,
   isEmpty,
+  bgColor,
+  showBorder,
+  borderColor,
 }: {
   blockId: string;
   colIndex: number;
   children: React.ReactNode;
   isEmpty: boolean;
+  bgColor?: string;
+  showBorder: boolean;
+  borderColor?: string;
 }) {
   const t = useTranslations("blockRenderer");
   const { setNodeRef, isOver } = useDroppable({
@@ -3525,9 +3703,20 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`border border-dashed rounded-sm p-3 min-h-[80px] space-y-2 transition-colors
-        ${isOver ? "border-primary bg-primary/5" : "border-border"}
+      className={`px-3 py-0 min-h-[80px] space-y-2 transition-colors
+        [&_p:first-child]:-mt-2.5 [&_p:last-child]:mb-0
+        ${bgColor || borderColor ? "rounded" : "rounded-sm"}
+        ${showBorder ? "border border-dashed" : "border border-transparent"}
+        ${isOver ? "border-primary bg-primary/5" : showBorder ? "border-border" : ""}
         ${isEmpty ? "" : ""}`}
+      style={
+        isOver
+          ? undefined
+          : {
+              ...(bgColor ? { backgroundColor: bgColor } : {}),
+              ...(showBorder && borderColor ? { borderColor } : {}),
+            }
+      }
     >
       {isEmpty ? (
         <p className={`text-xs text-center py-4 transition-colors ${isOver ? "text-primary opacity-70" : "text-muted-foreground opacity-50"}`}>
@@ -3558,6 +3747,9 @@ function ColumnsRenderer({
           blockId={block.id}
           colIndex={colIndex}
           isEmpty={col.length === 0}
+          bgColor={block.columnBgColors?.[colIndex]}
+          showBorder={block.columnBorders?.[colIndex] ?? (block.showBorder ?? true)}
+          borderColor={block.columnBorderColors?.[colIndex]}
         >
           {col.map((childBlock) => (
             <ColumnChildBlock
@@ -3570,6 +3762,90 @@ function ColumnsRenderer({
           ))}
         </DroppableColumn>
       ))}
+    </div>
+  );
+}
+
+// ─── Grid ────────────────────────────────────────────────────
+function DroppableGridCell({
+  blockId,
+  cellIndex,
+  children,
+  isEmpty,
+  row,
+  col,
+}: {
+  blockId: string;
+  cellIndex: number;
+  children: React.ReactNode;
+  isEmpty: boolean;
+  row: number;
+  col: number;
+}) {
+  const t = useTranslations("blockRenderer");
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${blockId}-${cellIndex}`,
+    data: { type: "column-drop", blockId, colIndex: cellIndex },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-[40px] space-y-2 transition-colors
+        ${isOver ? "bg-primary/5" : ""}`}
+    >
+      {isEmpty ? (
+        <p className={`text-xs text-center py-4 transition-colors ${isOver ? "text-primary opacity-70" : "text-muted-foreground opacity-50"}`}>
+          {isOver ? t("dropHere") : t("gridCell", { row: row + 1, col: col + 1 })}
+        </p>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
+function GridRenderer({
+  block,
+  mode,
+}: {
+  block: GridBlock;
+  mode: ViewMode;
+}) {
+  return (
+    <div
+      className="grid"
+      style={{
+        gridTemplateColumns: `repeat(${block.cols}, 1fr)`,
+        gridTemplateRows: `repeat(${block.rows}, auto)`,
+        columnGap: `${block.colGap}px`,
+        rowGap: `${block.rowGap}px`,
+      }}
+    >
+      {block.children.map((cell, cellIndex) => {
+        const row = Math.floor(cellIndex / block.cols);
+        const col = cellIndex % block.cols;
+        return (
+          <DroppableGridCell
+            key={cellIndex}
+            blockId={block.id}
+            cellIndex={cellIndex}
+            isEmpty={cell.length === 0}
+            row={row}
+            col={col}
+          >
+            {cell.map((childBlock) => (
+              <ColumnChildBlock
+                key={childBlock.id}
+                block={childBlock}
+                mode={mode}
+                parentBlockId={block.id}
+                colIndex={cellIndex}
+              />
+            ))}
+          </DroppableGridCell>
+        );
+      })}
     </div>
   );
 }
@@ -5197,6 +5473,8 @@ export function BlockRenderer({
       return <FixSentencesRenderer block={block} />;
     case "complete-sentences":
       return <CompleteSentencesRenderer block={block} />;
+    case "transform-sentences":
+      return <TransformSentencesRenderer block={block} />;
     case "verb-table":
       return <VerbTableRenderer block={block} />;
     case "chart":
@@ -5207,6 +5485,8 @@ export function BlockRenderer({
       return <NumberedLabelRenderer block={block} />;
     case "columns":
       return <ColumnsRenderer block={block} mode={mode} />;
+    case "grid":
+      return <GridRenderer block={block as GridBlock} mode={mode} />;
     case "linked-blocks":
       return <LinkedBlocksRenderer block={block as LinkedBlocksBlock} />;
     case "text-snippet":

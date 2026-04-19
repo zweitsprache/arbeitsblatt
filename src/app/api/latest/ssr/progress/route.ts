@@ -15,24 +15,32 @@ const ProgressRequest = z.object({
 export async function POST(request: NextRequest) {
   try {
     const requestTime = new Date().toISOString();
-    const body = await request.json();
+    const rawBody = await request.text();
+    const body = rawBody.trim().length > 0 ? JSON.parse(rawBody) : {};
     console.log(`📊 [${requestTime}] SSR progress request received:`, body);
     
     // Validate the request
-    const validatedData = ProgressRequest.parse(body);
+    const parsed = ProgressRequest.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({
+        type: 'error',
+        message: 'Invalid progress request payload',
+      });
+    }
+    const validatedData = parsed.data;
     
     // Get the render state (should be immediately available in memory)
-    const firstAttemptTime = performance.now();
+    const firstAttemptTime = Date.now();
     let renderState = getRenderState(validatedData.id);
-    const firstAttemptDuration = performance.now() - firstAttemptTime;
+    const firstAttemptDuration = Date.now() - firstAttemptTime;
     
     // If render state not found on first attempt, try one more time after a brief wait
     if (!renderState) {
       console.log(`🔄 [${new Date().toISOString()}] Render state not found for ${validatedData.id}, trying once more... (first attempt took ${firstAttemptDuration.toFixed(2)}ms)`);
       await new Promise(resolve => setTimeout(resolve, 50));
-      const secondAttemptTime = performance.now();
+      const secondAttemptTime = Date.now();
       renderState = getRenderState(validatedData.id);
-      const secondAttemptDuration = performance.now() - secondAttemptTime;
+      const secondAttemptDuration = Date.now() - secondAttemptTime;
       console.log(`🔄 [${new Date().toISOString()}] Second attempt result: ${renderState ? 'FOUND' : 'NOT FOUND'} (took ${secondAttemptDuration.toFixed(2)}ms)`);
     } else {
       console.log(`✅ [${new Date().toISOString()}] Render state found on first attempt for ${validatedData.id} (took ${firstAttemptDuration.toFixed(2)}ms)`);
@@ -71,20 +79,11 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('SSR progress endpoint error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid request data',
-          details: error.message 
-        },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to get render progress' },
-      { status: 500 }
-    );
+
+    // Return a structured progress error instead of HTTP 500 so polling can continue gracefully.
+    return NextResponse.json({
+      type: 'error',
+      message: error instanceof Error ? error.message : 'Failed to get render progress',
+    });
   }
 } 

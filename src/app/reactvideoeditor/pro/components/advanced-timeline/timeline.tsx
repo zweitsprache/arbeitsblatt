@@ -48,6 +48,7 @@ export const Timeline = forwardRef<TimelineRef, TimelineProps>(({
   onFrameChange,
   onItemMove,
   onItemResize,
+  onBlockRowTimingsChange,
   onItemSelect,
   onDeleteItems,
   onDuplicateItems,
@@ -516,6 +517,7 @@ export const Timeline = forwardRef<TimelineRef, TimelineProps>(({
             onSelectedItemsChange={onSelectedItemsChange}
             onItemMove={handleCombinedItemMove}
             onItemResize={handleCombinedItemResize}
+            onBlockRowTimingsChange={onBlockRowTimingsChange}
             timelineRef={timelineRef}
             ghostMarkerPosition={ghostMarkerPosition}
             isDragging={isDragging}

@@ -13,6 +13,19 @@ import { UserMediaItem, addMediaItem } from "./indexdb";
 import { MediaBunnyThumbnailService } from "../../services/media-bunny-thumbnail-service";
 import { getSrcDuration } from "../../hooks/use-src-duration";
 
+const inferMediaTypeFromFile = (file: File): "video" | "image" | "audio" => {
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("audio/")) return "audio";
+
+  const lower = file.name.toLowerCase();
+  if (/\.(mp4|webm|mov|m4v|avi|mkv|ogv)$/.test(lower)) return "video";
+  if (/\.(jpg|jpeg|png|gif|webp|svg|avif)$/.test(lower)) return "image";
+  if (/\.(mp3|wav|ogg|oga|aac|m4a|flac)$/.test(lower)) return "audio";
+
+  throw new Error("Unsupported file type");
+};
+
 /**
  * Uploads a file with hybrid approach: server upload with blob fallback
  * Tries server upload first, falls back to blob storage if server fails
@@ -38,16 +51,7 @@ export const uploadMediaFile = async (file: File): Promise<UserMediaItem> => {
     }
 
     // Determine file type
-    let fileType: "video" | "image" | "audio";
-    if (file.type.startsWith("video/")) {
-      fileType = "video";
-    } else if (file.type.startsWith("image/")) {
-      fileType = "image";
-    } else if (file.type.startsWith("audio/")) {
-      fileType = "audio";
-    } else {
-      throw new Error("Unsupported file type");
-    }
+    const fileType = inferMediaTypeFromFile(file);
 
     // Get user ID
     const userId = getUserId();
@@ -307,7 +311,11 @@ export const deleteMediaFile = async (
   filePath: string
 ): Promise<boolean> => {
   try {
-    const response = await fetch("/api/media/delete", {
+    if (filePath.startsWith("blob:")) {
+      return true;
+    }
+
+    const response = await fetch("/api/latest/local-media/delete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

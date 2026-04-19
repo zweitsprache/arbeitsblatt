@@ -29,7 +29,8 @@ type Tense =
   | "praeteritum"
   | "perfekt"
   | "plusquamperfekt"
-  | "futur1";
+  | "futur1"
+  | "konjunktiv2";
 
 const TWO_PART_TENSES: Tense[] = ["perfekt", "plusquamperfekt"];
 
@@ -54,6 +55,7 @@ const TENSE_OPTIONS: { value: Tense; labelKey: string; descKey: string }[] = [
   { value: "perfekt", labelKey: "tensePerfekt", descKey: "tensePerfektDesc" },
   { value: "plusquamperfekt", labelKey: "tensePlusquamperfekt", descKey: "tensePlusquamperfektDesc" },
   { value: "futur1", labelKey: "tenseFutur1", descKey: "tenseFutur1Desc" },
+  { value: "konjunktiv2", labelKey: "tenseKonjunktiv2", descKey: "tenseKonjunktiv2Desc" },
 ];
 
 export function AiVerbTableModal({
@@ -137,6 +139,7 @@ export function AiVerbTableModal({
           splitConjugation: isSplit,
           singularRows,
           pluralRows,
+          ...(tense ? { tense } : {}),
         },
       },
     });

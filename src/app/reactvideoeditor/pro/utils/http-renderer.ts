@@ -48,7 +48,20 @@ export class HttpRenderer implements VideoRenderer {
     });
 
     if (!response.ok) {
-      throw new Error(`Progress request failed: ${response.statusText}`);
+      let message = `Progress request failed: ${response.statusText}`;
+
+      try {
+        const errorData = await response.json();
+        if (typeof errorData?.message === 'string') {
+          message = errorData.message;
+        } else if (typeof errorData?.error === 'string') {
+          message = errorData.error;
+        }
+      } catch {
+        // Keep fallback message when body is not JSON.
+      }
+
+      return { type: 'error', message };
     }
 
     const responseData = await response.json();

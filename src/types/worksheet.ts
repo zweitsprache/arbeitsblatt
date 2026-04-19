@@ -33,6 +33,7 @@ export type BlockType =
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
+  | "transform-sentences"
   | "verb-table"
   | "text-cards"
   | "glossary"
@@ -60,7 +61,8 @@ export type BlockType =
   | "audio"
   | "schedule"
   | "website"
-  | "checklist";
+  | "checklist"
+  | "grid";
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -80,7 +82,7 @@ export interface HeadingBlock extends BlockBase {
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
-export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "fragen" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "redemittel" | "metadaten" | "rows";
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "example-primary" | "example-secondary" | "frame" | "frame-primary" | "frame-secondary" | "fragen" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "redemittel" | "metadaten" | "rows";
 
 export interface TextBlock extends BlockBase {
   type: "text";
@@ -291,6 +293,21 @@ export interface ColumnsBlock extends BlockBase {
   type: "columns";
   columns: number; // 1–4
   children: WorksheetBlock[][];
+  columnBgColors?: string[];
+  columnBorderColors?: string[];
+  columnBorders?: boolean[];
+  /** @deprecated Use columnBorders[] instead */
+  showBorder?: boolean;
+}
+
+// ─── Grid block (layout) ─────────────────────────────────────
+export interface GridBlock extends BlockBase {
+  type: "grid";
+  rows: number;
+  cols: number;
+  rowGap: number;
+  colGap: number;
+  children: WorksheetBlock[][]; // flat array of cells, length = rows * cols
 }
 
 // ─── True/False Matrix block ─────────────────────────────────
@@ -460,7 +477,21 @@ export interface CompleteSentencesBlock extends BlockBase {
   sentences: CompleteSentenceItem[];
 }
 
+export interface TransformSentencesBlock extends BlockBase {
+  type: "transform-sentences";
+  instruction: string;
+  sentences: TransformSentenceItem[];
+}
+
+export interface TransformSentenceItem {
+  id: string;
+  beginning: string;
+  solution?: string;
+}
+
 // ─── Verb Table block ───────────────────────────────────────
+export type VerbTableTense = "praesens" | "praeteritum" | "perfekt" | "plusquamperfekt" | "futur1" | "konjunktiv2";
+
 export interface VerbTableRow {
   id: string;
   person: string; // e.g. "1. Person"
@@ -475,6 +506,9 @@ export interface VerbTableRow {
 export interface VerbTableBlock extends BlockBase {
   type: "verb-table";
   verb: string; // infinitive form
+  tense?: VerbTableTense; // which tense was generated
+  showInfinitive?: boolean; // show/hide infinitive header (default true)
+  infinitiveOverride?: string; // override text for infinitive display
   splitConjugation?: boolean; // split col 4 into two columns
   showConjugations?: boolean; // show conjugation answers globally
   singularRows: VerbTableRow[];
@@ -759,6 +793,7 @@ export type WorksheetBlock =
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
+  | TransformSentencesBlock
   | VerbTableBlock
   | GlossaryBlock
   | ArticleTrainingBlock
@@ -785,7 +820,8 @@ export type WorksheetBlock =
   | WebsiteBlock
   | AiPromptBlock
   | AiToolBlock
-  | TableBlock;
+  | TableBlock
+  | GridBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 
@@ -1360,6 +1396,29 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "columns",
       columns: 2,
       children: [[], []],
+      columnBgColors: ["", ""],
+      columnBorderColors: ["", ""],
+      columnBorders: [true, true],
+      showBorder: true,
+      visibility: "both",
+    },
+  },
+  {
+    type: "grid",
+    label: "Grid",
+    description: "Grid layout with rows and columns",
+    labelKey: "gridLabel",
+    descriptionKey: "gridDesc",
+    icon: "Grid3X3",
+    category: "layout",
+    translations: { de: { label: "Raster", description: "Raster-Layout mit Zeilen und Spalten" } },
+    defaultData: {
+      type: "grid",
+      rows: 2,
+      cols: 2,
+      rowGap: 16,
+      colGap: 16,
+      children: [[], [], [], []],
       visibility: "both",
     },
   },
@@ -1657,6 +1716,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       sentences: [
         { id: "cs1", beginning: "Ich gehe gerne …" },
         { id: "cs2", beginning: "Am Wochenende …" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "transform-sentences",
+    label: "Transform Sentences",
+    description: "Rewrite sentences in a different form",
+    labelKey: "transformSentences",
+    descriptionKey: "transformSentencesDesc",
+    icon: "ArrowLeftRight",
+    category: "interactive",
+    translations: { de: { label: "Sätze umformen", description: "Sätze in anderer Form umschreiben" } },
+    defaultData: {
+      type: "transform-sentences",
+      instruction: "Formen Sie die Sätze um.",
+      sentences: [
+        { id: "ts1", beginning: "Ich gehe gerne ins Kino." },
+        { id: "ts2", beginning: "Er hat das Buch gelesen." },
       ],
       visibility: "both",
     },

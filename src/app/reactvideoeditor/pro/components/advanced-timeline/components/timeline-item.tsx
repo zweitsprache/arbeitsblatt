@@ -1,6 +1,14 @@
 import React, { useRef, useCallback } from 'react';
 import { TimelineItem as TimelineItemType } from '../types';
+import type { TimelineBlockRowTiming } from '../types';
 import { TIMELINE_CONSTANTS } from '../constants';
+import {
+  extractWorksheetRows,
+  isWorksheetRowsStyle,
+  normalizeWorksheetItemTimings,
+  updateWorksheetItemTimingEnd,
+  updateWorksheetItemTimingStart,
+} from '../../../../../../lib/worksheet-row-timing';
 
 import {
   TimelineItemContent,
@@ -26,6 +34,7 @@ interface TimelineItemProps {
     action: "move" | "resize-start" | "resize-end",
     selectedItemIds?: string[] // Add selectedItemIds parameter
   ) => void;
+  onBlockRowTimingsChange?: (itemId: string, rowTimings: TimelineBlockRowTiming[]) => void;
   onDeleteItems?: (itemIds: string[]) => void; // Always takes array of item IDs
   onDuplicateItems?: (itemIds: string[]) => void; // Always takes array of item IDs
   onSplitItems?: (itemId: string, splitTime: number) => void; // Callback when item should be split
@@ -45,6 +54,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
   onSelect,
   onSelectionChange,
   onDragStart,
+  onBlockRowTimingsChange,
   onDeleteItems,
   onDuplicateItems,
   onSplitItems,
@@ -57,6 +67,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
   fps = 30,
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(false);
   const duration = item.end - item.start;
   
   // State for splitting mode
@@ -75,9 +86,26 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
   // Simplified touch state for immediate drag response
   const [touchStartPosition, setTouchStartPosition] = React.useState<{ x: number; y: number; time: number } | null>(null);
 
+  const [draggingBoundary, setDraggingBoundary] = React.useState<{
+    rowIndex: number;
+    kind: 'start' | 'end';
+  } | null>(null);
+
   // Throttle ref for split position updates
   const splitThrottleRef = useRef<number | null>(null);
   const lastSplitPositionRef = useRef<number | null>(null);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      if (splitThrottleRef.current) {
+        cancelAnimationFrame(splitThrottleRef.current);
+        splitThrottleRef.current = null;
+      }
+    };
+  }, []);
 
   // Use simple percentage calculation since the container already handles zoom scaling
   const leftPercentage = (item.start / totalDuration) * 100;
@@ -87,6 +115,83 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
   const handleThumbnailDisplayChange = React.useCallback((isShowingThumbnails: boolean) => {
     setIsShowingVideoThumbnails(isShowingThumbnails);
   }, []);
+
+  const worksheetStyle = item.data?.styles?.worksheetTextStyle as string | undefined;
+  const worksheetHtml = item.data?.styles?.worksheetHtml as string | undefined;
+  const isRowsBlock =
+    item.data?.type === 'blocks' &&
+    isWorksheetRowsStyle(worksheetStyle) &&
+    typeof worksheetHtml === 'string' &&
+    worksheetHtml.trim().length > 0;
+
+  const worksheetRows = React.useMemo(
+    () => (isRowsBlock && worksheetHtml ? extractWorksheetRows(worksheetHtml) : []),
+    [isRowsBlock, worksheetHtml]
+  );
+
+  const rowTimings = React.useMemo(
+    () => normalizeWorksheetItemTimings(item.data?.styles?.worksheetItemTimings, worksheetRows.length),
+    [item.data?.styles?.worksheetItemTimings, worksheetRows.length]
+  );
+
+  const durationInFramesForSnap = React.useMemo(
+    () => Math.max(1, Math.round((item.end - item.start) * fps)),
+    [item.end, item.start, fps]
+  );
+
+  const snapRatioToFrame = React.useCallback((ratio: number) => {
+    const clamped = Math.max(0, Math.min(1, ratio));
+    return Math.round(clamped * durationInFramesForSnap) / durationInFramesForSnap;
+  }, [durationInFramesForSnap]);
+
+  const handleRowMarkerPointerDown = React.useCallback((e: React.PointerEvent, rowIndex: number, kind: 'start' | 'end') => {
+    if (!onBlockRowTimingsChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (isMountedRef.current) {
+      setDraggingBoundary({ rowIndex, kind });
+    }
+  }, [onBlockRowTimingsChange]);
+
+  React.useEffect(() => {
+    if (!draggingBoundary || !onBlockRowTimingsChange) return;
+
+    const onPointerMove = (event: PointerEvent) => {
+      const rect = itemRef.current?.getBoundingClientRect();
+      if (!rect || rect.width <= 0) return;
+
+      const ratio = snapRatioToFrame((event.clientX - rect.left) / rect.width);
+      const nextTimings = draggingBoundary.kind === 'end'
+        ? updateWorksheetItemTimingEnd(
+            rowTimings,
+            rowTimings.length,
+            draggingBoundary.rowIndex,
+            ratio
+          )
+        : updateWorksheetItemTimingStart(
+            rowTimings,
+            rowTimings.length,
+            draggingBoundary.rowIndex,
+            ratio
+          );
+
+      onBlockRowTimingsChange(item.id, nextTimings);
+    };
+
+    const onPointerUp = () => {
+      if (isMountedRef.current) {
+        setDraggingBoundary(null);
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, [draggingBoundary, item.id, onBlockRowTimingsChange, rowTimings, snapRatioToFrame]);
 
   // Unified drag start logic for both mouse and touch
   const initiateDragStart = React.useCallback((
@@ -351,6 +456,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
     // Throttle using requestAnimationFrame for smooth updates
     splitThrottleRef.current = requestAnimationFrame(() => {
       if (!itemRef.current) return;
+      if (!isMountedRef.current) return;
       
       const rect = itemRef.current.getBoundingClientRect();
       const relativeX = e.clientX - rect.left;
@@ -499,6 +605,48 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
             currentFrame={currentFrame}
             fps={fps}
           />
+
+          {isRowsBlock && rowTimings.length > 0 && (
+            <div className="absolute inset-x-0 top-0 h-6 pointer-events-none z-[60]">
+              {rowTimings.map((timing) => (
+                <React.Fragment key={`${item.id}-row-marker-${timing.rowIndex}`}>
+                  <button
+                    type="button"
+                    className="absolute top-0 h-6 w-4 -translate-x-1/2 cursor-ew-resize pointer-events-auto z-[60]"
+                    style={{
+                      left: `${timing.startRatio * 100}%`,
+                      touchAction: 'none',
+                      opacity: timing.rowIndex === 0 ? 0.65 : 1,
+                    }}
+                    onPointerDown={(e) => handleRowMarkerPointerDown(e, timing.rowIndex, 'start')}
+                    aria-label={`Adjust start timing for row ${timing.rowIndex + 1}`}
+                    title={`Row ${timing.rowIndex + 1} start`}
+                  >
+                    <span className="absolute left-1/2 top-1 h-5 w-px -translate-x-1/2 bg-white/85" />
+                    <span className="absolute left-1/2 top-0.5 -translate-x-1/2 rounded bg-black/60 px-1 py-0 text-[9px] font-semibold leading-none text-white">
+                      {timing.rowIndex + 1}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="absolute top-1.5 h-3 w-3 -translate-x-1/2 cursor-ew-resize pointer-events-auto z-[60]"
+                    style={{
+                      left: `${timing.endRatio * 100}%`,
+                      touchAction: 'none',
+                      opacity: timing.rowIndex === rowTimings.length - 1 ? 0.65 : 1,
+                    }}
+                    onPointerDown={(e) => handleRowMarkerPointerDown(e, timing.rowIndex, 'end')}
+                    aria-label={`Adjust end timing for row ${timing.rowIndex + 1}`}
+                    title={`Row ${timing.rowIndex + 1} end`}
+                  >
+                    <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-amber-200/95" />
+                    <span className="absolute left-1/2 top-0.5 h-2 w-2 -translate-x-1/2 rounded-[2px] border border-amber-300 bg-amber-200/95" />
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
 
           {/* Fade overlays for audio/sound items */}
           <TimelineItemFadeOverlays 

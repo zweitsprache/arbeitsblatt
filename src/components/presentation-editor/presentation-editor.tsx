@@ -139,6 +139,12 @@ function EditorInner({
             type: "DUPLICATE_IN_COLUMN",
             payload: { parentBlockId: blockId, colIndex, block: newChildBlock, afterIndex: slot.length },
           });
+        } else if (containerBlock.type === "grid") {
+          const slot = containerBlock.children[colIndex] ?? [];
+          dispatch({
+            type: "DUPLICATE_IN_COLUMN",
+            payload: { parentBlockId: blockId, colIndex, block: newChildBlock, afterIndex: slot.length },
+          });
         } else if (containerBlock.type === "accordion") {
           const slot = containerBlock.items[colIndex]?.children ?? [];
           dispatch({

@@ -7,6 +7,19 @@ import { Overlay, OverlayType } from "../../../types";
 import { LocalMediaGallery } from "./local-media-gallery";
 import { DEFAULT_IMAGE_DURATION_FRAMES, IMAGE_DURATION_PERCENTAGE } from "../../../../../constants";
 
+const normalizeMediaType = (type: string, name: string): "video" | "image" | "audio" | null => {
+  const lowerType = (type || "").toLowerCase();
+  if (lowerType === "video" || lowerType.startsWith("video/")) return "video";
+  if (lowerType === "image" || lowerType.startsWith("image/")) return "image";
+  if (lowerType === "audio" || lowerType.startsWith("audio/")) return "audio";
+
+  const lowerName = (name || "").toLowerCase();
+  if (/\.(mp4|webm|mov|m4v|avi|mkv|ogv)$/.test(lowerName)) return "video";
+  if (/\.(jpg|jpeg|png|gif|webp|svg|avif)$/.test(lowerName)) return "image";
+  if (/\.(mp3|wav|ogg|oga|aac|m4a|flac)$/.test(lowerName)) return "audio";
+  return null;
+};
+
 /**
  * LocalMediaPanel Component
  *
@@ -25,6 +38,9 @@ export const LocalMediaPanel: React.FC = () => {
    * Memoized to prevent recreation on every frame update
    */
   const handleAddToTimeline = useCallback((file: any) => {
+    const mediaType = normalizeMediaType(file.type, file.name);
+    if (!mediaType) return;
+
     const canvasDimensions = getAspectRatioDimensions();
     
     // Note: Local media files don't currently store dimension information
@@ -43,8 +59,8 @@ export const LocalMediaPanel: React.FC = () => {
 
     // Handle both server paths and blob URLs
     let mediaSrc: string;
-    if (file.path.startsWith('blob:')) {
-      // Direct blob URL - use as-is
+    if (file.path.startsWith('blob:') || file.path.startsWith('http://') || file.path.startsWith('https://')) {
+      // Direct URL (blob or server-hosted) - use as-is
       mediaSrc = file.path;
     } else {
       // Server path - convert to use the API route for better content-type handling
@@ -57,7 +73,7 @@ export const LocalMediaPanel: React.FC = () => {
 
     let newOverlay: Overlay;
 
-    if (file.type === "video") {
+    if (mediaType === "video") {
       newOverlay = {
         id: newId,
         left: 0,
@@ -81,7 +97,7 @@ export const LocalMediaPanel: React.FC = () => {
           objectFit: "contain",
         },
       };
-    } else if (file.type === "image") {
+    } else if (mediaType === "image") {
       // Use a percentage of composition duration for smart image length when there are existing overlays,
       // otherwise default to DEFAULT_IMAGE_DURATION_FRAMES
       const smartDuration = overlays.length > 0 
@@ -110,7 +126,7 @@ export const LocalMediaPanel: React.FC = () => {
           },
         },
       };
-    } else if (file.type === "audio") {
+    } else if (mediaType === "audio") {
       newOverlay = {
         id: newId,
         left: 0,

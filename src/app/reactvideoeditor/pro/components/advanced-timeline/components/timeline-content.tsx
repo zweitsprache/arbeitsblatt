@@ -31,6 +31,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({
   onSelectedItemsChange,
   onItemMove,
   onItemResize,
+  onBlockRowTimingsChange,
   onNewItemDrop,
   timelineRef,
   ghostMarkerPosition,
@@ -513,6 +514,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({
                 selectedItemIds={selectedItemIds}
                 onSelectedItemsChange={onSelectedItemsChange}
                 onItemMove={onItemMove}
+                onBlockRowTimingsChange={onBlockRowTimingsChange}
                 onDragStart={handleDragStart}
                 zoomScale={zoomScale}
                 isDragging={isDragging}

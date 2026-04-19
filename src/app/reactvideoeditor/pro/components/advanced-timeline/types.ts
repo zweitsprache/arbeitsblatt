@@ -29,6 +29,12 @@ export interface TimelineItem {
   speed?: number; // playback speed multiplier (e.g., 0.5 = half speed, 2 = double speed)
 }
 
+export interface TimelineBlockRowTiming {
+  rowIndex: number;
+  startRatio: number;
+  endRatio: number;
+}
+
 // A track (row) in the timeline
 export interface TimelineTrack {
   id: string;
@@ -65,6 +71,7 @@ export interface TimelineProps {
   onFrameChange?: (frame: number) => void; // callback when frame changes
   onItemMove?: (itemId: string, newStart: number, newEnd: number, newTrackId: string) => void;
   onItemResize?: (itemId: string, newStart: number, newEnd: number) => void;
+  onBlockRowTimingsChange?: (itemId: string, rowTimings: TimelineBlockRowTiming[]) => void;
   onItemSelect?: (itemId: string) => void;
   onDeleteItems?: (itemIds: string[]) => void; // Callback when items should be deleted
   onDuplicateItems?: (itemIds: string[]) => void; // Callback when items should be duplicated
@@ -141,6 +148,7 @@ export interface TimelineContentProps {
   onSelectedItemsChange?: (itemIds: string[]) => void; // Callback when selection changes
   onItemMove?: (itemId: string, newStart: number, newEnd: number, newTrackId: string) => void;
   onItemResize?: (itemId: string, newStart: number, newEnd: number) => void;
+  onBlockRowTimingsChange?: (itemId: string, rowTimings: TimelineBlockRowTiming[]) => void;
   onNewItemDrop?: (
     itemType: string,
     trackIndex: number,

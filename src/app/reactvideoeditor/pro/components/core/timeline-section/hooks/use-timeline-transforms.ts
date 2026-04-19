@@ -157,6 +157,8 @@ const getOverlayLabel = (overlay: Overlay): string => {
   switch (overlay.type) {
     case OverlayType.TEXT:
       return content || 'Text';
+    case OverlayType.BLOCKS:
+      return content || 'Block';
     case OverlayType.IMAGE:
       return content || 'Image';
     case OverlayType.VIDEO:
@@ -181,6 +183,8 @@ const mapOverlayTypeToTimelineType = (type: OverlayType): string => {
   switch (type) {
     case OverlayType.TEXT:
       return 'text';
+    case OverlayType.BLOCKS:
+      return 'text';
     case OverlayType.IMAGE:
       return 'image';
     case OverlayType.VIDEO:
@@ -204,6 +208,8 @@ const mapOverlayTypeToTimelineType = (type: OverlayType): string => {
 const getOverlayColor = (type: OverlayType): string => {
   switch (type) {
     case OverlayType.TEXT:
+      return '#3b82f6'; // blue
+    case OverlayType.BLOCKS:
       return '#3b82f6'; // blue
     case OverlayType.IMAGE:
       return '#10b981'; // green

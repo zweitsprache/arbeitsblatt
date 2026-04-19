@@ -779,6 +779,9 @@
   padding-left: var(--print-list-text-pad-left) !important;
   break-inside: avoid !important;
   page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid;
+  break-after: avoid !important;
+  page-break-after: avoid !important;
 }
 
 .print-worksheet-root .print-body-content .tiptap li p,
@@ -786,6 +789,21 @@
 .print-worksheet-root .print-body-content li p {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+}
+
+.print-worksheet-root .print-body-content .tiptap ul > li > *,
+.print-worksheet-root .print-body-content .tiptap ol > li > *,
+.print-worksheet-root .print-body-content ul > li > *,
+.print-worksheet-root .print-body-content ol > li > * {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid;
+}
+
+.print-worksheet-root .print-body-content .li-content-no-break {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid;
 }
 
 .print-worksheet-root .print-body-content .tiptap ul > li:not(:last-child),
@@ -923,6 +941,18 @@
   li {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  li > * {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
+  }
+
+  .li-content-no-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid;
   }
 
   .worksheet-block-true-false-matrix,

@@ -60,23 +60,23 @@ function estimateInitialBlockHeight(contentHtml: string, style: TextBlockStyle):
         : 16;
 
   const estimated = textLines * lineHeight + verticalPadding;
-  return Math.max(72, Math.min(estimated, 260));
+  return Math.max(36, estimated);
 }
 
 function resolveTextStyles(style: TextBlockStyle) {
   const styles: Record<TextBlockStyle, { color: string; backgroundColor: string }> = {
     standard: { color: "#1a1a1a", backgroundColor: "transparent" },
-    example: { color: "#1f2937", backgroundColor: "#fef3c7" },
-    "example-standard": { color: "#1f2937", backgroundColor: "#dbeafe" },
-    "example-improved": { color: "#1f2937", backgroundColor: "#d1fae5" },
-    fragen: { color: "#8b5cf6", backgroundColor: "transparent" },
-    hinweis: { color: "#f59e0b", backgroundColor: "rgba(254, 243, 199, 0.2)" },
-    "hinweis-wichtig": { color: "#ef4444", backgroundColor: "rgba(254, 242, 242, 0.2)" },
-    "hinweis-alarm": { color: "#dc2626", backgroundColor: "rgba(254, 226, 226, 0.2)" },
+    example: { color: "#475569", backgroundColor: "#ffffff" },
+    "example-standard": { color: "#990033", backgroundColor: "#ffffff" },
+    "example-improved": { color: "#3A4F40", backgroundColor: "#ffffff" },
+    fragen: { color: "#1a1a1a", backgroundColor: "transparent" },
+    hinweis: { color: "#475569", backgroundColor: "#47556908" },
+    "hinweis-wichtig": { color: "#0369a1", backgroundColor: "#0369a108" },
+    "hinweis-alarm": { color: "#990033", backgroundColor: "#99003308" },
     lernziel: { color: "#1a1a1a", backgroundColor: "transparent" },
     kompetenzziele: { color: "#1a1a1a", backgroundColor: "transparent" },
     handlungsziele: { color: "#1a1a1a", backgroundColor: "transparent" },
-    redemittel: { color: "#3b82f6", backgroundColor: "transparent" },
+    redemittel: { color: "#1a1a1a", backgroundColor: "transparent" },
     metadaten: { color: "#1a1a1a", backgroundColor: "transparent" },
     rows: { color: "#1a1a1a", backgroundColor: "transparent" },
   };
@@ -128,21 +128,33 @@ export function BlocksOverlayPanel() {
   React.useLayoutEffect(() => {
     if (!activeBlockOverlay || !measureRef.current) return;
 
-    const nextHeight = Math.max(48, Math.ceil(measureRef.current.getBoundingClientRect().height));
-    if (Math.abs(nextHeight - activeBlockOverlay.height) <= 2) {
-      return;
-    }
+    const frameId = window.requestAnimationFrame(() => {
+      if (!measureRef.current) return;
 
-    changeOverlay(activeBlockOverlay.id, (overlay) => {
-      if (overlay.type !== OverlayType.TEXT && overlay.type !== OverlayType.BLOCKS) {
-        return overlay;
+      const measuredRect = measureRef.current.getBoundingClientRect().height;
+      const measuredScroll = measureRef.current.scrollHeight;
+      const measuredOffset = measureRef.current.offsetHeight;
+      const measured = Math.ceil(Math.max(measuredRect, measuredScroll, measuredOffset));
+      const estimated = estimateInitialBlockHeight(newBlockContent, newBlockStyle);
+      const nextHeight = Math.max(estimated, measured >= 24 ? measured : 0);
+
+      if (Math.abs(nextHeight - activeBlockOverlay.height) <= 1) {
+        return;
       }
 
-      return {
-        ...overlay,
-        height: nextHeight,
-      };
+      changeOverlay(activeBlockOverlay.id, (overlay) => {
+        if (overlay.type !== OverlayType.TEXT && overlay.type !== OverlayType.BLOCKS) {
+          return overlay;
+        }
+
+        return {
+          ...overlay,
+          height: nextHeight,
+        };
+      });
     });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [activeBlockOverlay, newBlockContent, newBlockStyle, brandSettings.bodyFont, brandSettings.primaryColor, changeOverlay]);
 
   // If a text overlay is selected, show its editor

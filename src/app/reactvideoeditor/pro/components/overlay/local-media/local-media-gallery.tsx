@@ -13,6 +13,28 @@ import {
 import { UnifiedTabs } from "../shared/unified-tabs";
 import { setCurrentNewItemDragData, setCurrentNewItemDragType } from "../../advanced-timeline/hooks/use-new-item-drag";
 
+const normalizeMediaType = (type: string, name: string): "video" | "image" | "audio" | null => {
+  const lowerType = (type || "").toLowerCase();
+  if (lowerType === "video" || lowerType.startsWith("video/")) return "video";
+  if (lowerType === "image" || lowerType.startsWith("image/")) return "image";
+  if (lowerType === "audio" || lowerType.startsWith("audio/")) return "audio";
+
+  const lowerName = (name || "").toLowerCase();
+  if (/\.(mp4|webm|mov|m4v|avi|mkv|ogv)$/.test(lowerName)) return "video";
+  if (/\.(jpg|jpeg|png|gif|webp|svg|avif)$/.test(lowerName)) return "image";
+  if (/\.(mp3|wav|ogg|oga|aac|m4a|flac)$/.test(lowerName)) return "audio";
+  return null;
+};
+
+const resolveMediaPath = (path: string): string => {
+  if (path.startsWith('blob:') || path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  const apiPath = path.startsWith('/') ? path.substring(1) : path;
+  return `/api/latest/local-media/serve/${apiPath}`;
+};
+
 /**
  * User Media Gallery Component
  *
@@ -41,20 +63,20 @@ export function LocalMediaGallery({
     {
       adaptorName: "image",
       adaptorDisplayName: "Images",
-      itemCount: localMediaFiles.filter(file => file.type === "image").length,
-      totalCount: localMediaFiles.filter(file => file.type === "image").length,
+      itemCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "image").length,
+      totalCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "image").length,
     },
     {
       adaptorName: "video",
       adaptorDisplayName: "Videos",
-      itemCount: localMediaFiles.filter(file => file.type === "video").length,
-      totalCount: localMediaFiles.filter(file => file.type === "video").length,
+      itemCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "video").length,
+      totalCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "video").length,
     },
     {
       adaptorName: "audio",
       adaptorDisplayName: "Audio",
-      itemCount: localMediaFiles.filter(file => file.type === "audio").length,
-      totalCount: localMediaFiles.filter(file => file.type === "audio").length,
+      itemCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "audio").length,
+      totalCount: localMediaFiles.filter(file => normalizeMediaType(file.type, file.name) === "audio").length,
     },
   ], [localMediaFiles]);
 
@@ -62,7 +84,7 @@ export function LocalMediaGallery({
   const filteredMedia = useMemo(() => {
     return localMediaFiles.filter((file) => {
       if (activeTab === "all") return true;
-      return file.type === activeTab;
+      return normalizeMediaType(file.type, file.name) === activeTab;
     });
   }, [localMediaFiles, activeTab]);
 
@@ -106,27 +128,21 @@ export function LocalMediaGallery({
 
   // Handle drag start for timeline integration
   const handleDragStart = useCallback((file: any) => (e: React.DragEvent) => {
+    const mediaType = normalizeMediaType(file.type, file.name);
+    if (!mediaType) return;
+
     // Extract duration from file if available
     const fileDuration = file.duration;
-    const defaultDuration = file.type === "video" ? 5 : file.type === "audio" ? 5 : 5; // Default to 5 seconds
+    const defaultDuration = mediaType === "video" ? 5 : mediaType === "audio" ? 5 : 5; // Default to 5 seconds
     const duration = typeof fileDuration === 'number' && fileDuration > 0 
       ? fileDuration 
       : defaultDuration;
     
     // Use file type directly - timeline expects 'video', 'image', or 'audio'
-    const timelineType = file.type; // video, image, or audio
+    const timelineType = mediaType; // video, image, or audio
     
     // Convert file path to proper src URL for timeline
-    // Handle both server paths and blob URLs
-    let mediaSrc: string;
-    if (file.path.startsWith('blob:')) {
-      // Direct blob URL - use as-is
-      mediaSrc = file.path;
-    } else {
-      // Server path - convert to use the API route for better content-type handling
-      const apiPath = file.path.startsWith('/') ? file.path.substring(1) : file.path;
-      mediaSrc = `/api/latest/local-media/serve/${apiPath}`;
-    }
+    const mediaSrc = resolveMediaPath(file.path);
     
     // Create enriched file data with proper src for timeline
     const enrichedFileData = {
@@ -182,7 +198,7 @@ export function LocalMediaGallery({
       setTimeout(() => {
         dragPreview.remove();
       }, 0);
-    } else if (file.type === "audio") {
+    } else if (mediaType === "audio") {
       // For audio files without thumbnail, create a simple preview
       const dragPreview = document.createElement('div');
       dragPreview.style.position = 'absolute';
@@ -287,7 +303,7 @@ export function LocalMediaGallery({
         <div className="aspect-video relative">
           {file.type === "image" && (
             <img
-              src={file.thumbnail || `/api/latest/local-media/serve/${file.path.startsWith('/') ? file.path.substring(1) : file.path}`}
+              src={file.thumbnail || resolveMediaPath(file.path)}
               alt={file.name}
               className="absolute inset-0 w-full h-full object-cover bg-card"
               draggable={false}

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { authFetch } from "@/lib/auth-fetch";
+import { deepCloneBlocksWithNewIds } from "@/lib/block-utils";
 import {
   WorksheetBlock,
   WorksheetSettings,
@@ -107,6 +108,12 @@ function deepMapBlocks(
         })),
       } as WorksheetBlock;
     }
+    if (mapped.type === "grid") {
+      return {
+        ...mapped,
+        children: mapped.children.map((cell) => deepMapBlocks(cell, fn)),
+      } as WorksheetBlock;
+    }
     return mapped;
   });
 }
@@ -132,6 +139,12 @@ function deepFilterBlocks(
             ...item,
             children: deepFilterBlocks(item.children, predicate),
           })),
+        } as WorksheetBlock;
+      }
+      if (b.type === "grid") {
+        return {
+          ...b,
+          children: b.children.map((cell) => deepFilterBlocks(cell, predicate)),
         } as WorksheetBlock;
       }
       return b;
@@ -163,17 +176,27 @@ function deepFindBlock(
         }
       }
     }
+    if (b.type === "grid") {
+      for (let ci = 0; ci < b.children.length; ci++) {
+        const cell = b.children[ci];
+        const idx = cell.findIndex((c) => c.id === id);
+        if (idx !== -1) {
+          return { block: cell[idx], parentBlockId: b.id, colIndex: ci, indexInCol: idx };
+        }
+      }
+    }
   }
   return null;
 }
 
 /** Types that act as block containers (cannot be nested inside each other) */
-const CONTAINER_TYPES: Set<string> = new Set(["columns", "accordion"]);
+const CONTAINER_TYPES: Set<string> = new Set(["columns", "accordion", "grid"]);
 
 /** Get children array at given slot index from a container block */
 function getContainerSlot(b: WorksheetBlock, slotIndex: number): WorksheetBlock[] | null {
   if (b.type === "columns") return b.children[slotIndex] ?? null;
   if (b.type === "accordion") return b.items[slotIndex]?.children ?? null;
+  if (b.type === "grid") return b.children[slotIndex] ?? null;
   return null;
 }
 
@@ -188,6 +211,11 @@ function setContainerSlot(b: WorksheetBlock, slotIndex: number, newSlot: Workshe
     const newItems = [...b.items];
     newItems[slotIndex] = { ...newItems[slotIndex], children: newSlot };
     return { ...b, items: newItems } as WorksheetBlock;
+  }
+  if (b.type === "grid") {
+    const newChildren = [...b.children];
+    newChildren[slotIndex] = newSlot;
+    return { ...b, children: newChildren } as WorksheetBlock;
   }
   return b;
 }
@@ -207,6 +235,12 @@ function removeFromContainer(b: WorksheetBlock, childId: string): WorksheetBlock
         ...item,
         children: item.children.filter((c) => c.id !== childId),
       })),
+    } as WorksheetBlock;
+  }
+  if (b.type === "grid") {
+    return {
+      ...b,
+      children: b.children.map((cell: WorksheetBlock[]) => cell.filter((c) => c.id !== childId)),
     } as WorksheetBlock;
   }
   return b;
@@ -580,14 +614,14 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
       const topIdx = state.blocks.findIndex((b) => b.id === id);
       if (topIdx !== -1) {
         const block = state.blocks[topIdx];
-        const newBlock = { ...JSON.parse(JSON.stringify(block)), id: uuidv4() } as WorksheetBlock;
+        const newBlock = deepCloneBlocksWithNewIds([block])[0];
         dispatch({ type: "ADD_BLOCK", payload: { block: newBlock, index: topIdx + 1 } });
         return;
       }
       // Check inside columns
       const found = deepFindBlock(state.blocks, id);
       if (found && found.parentBlockId !== undefined && found.colIndex !== undefined && found.indexInCol !== undefined) {
-        const newBlock = { ...JSON.parse(JSON.stringify(found.block)), id: uuidv4() } as WorksheetBlock;
+        const newBlock = deepCloneBlocksWithNewIds([found.block])[0];
         dispatch({
           type: "DUPLICATE_IN_COLUMN",
           payload: {

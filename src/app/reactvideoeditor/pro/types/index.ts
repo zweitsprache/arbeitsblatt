@@ -38,6 +38,11 @@ type WorksheetTextMetadata = {
   worksheetHtml?: string;
   worksheetTextStyle?: string;
   brandPrimaryColor?: string;
+  worksheetItemTimings?: Array<{
+    rowIndex: number;
+    startRatio: number;
+    endRatio: number;
+  }>;
 };
 
 // Base animation type

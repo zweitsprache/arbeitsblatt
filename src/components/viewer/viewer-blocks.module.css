@@ -115,7 +115,15 @@
   border-radius: var(--example-radius, 4px);
   background: #fff;
   color: var(--block-color);
-  padding: var(--example-padding, 0.75rem 1rem);
+  padding: 0.5rem 0.75rem;
+}
+
+.frameBox {
+  border: 1px solid var(--block-color);
+  border-radius: var(--example-radius, 4px);
+  background: #fff;
+  color: var(--block-color);
+  padding: 0.5rem 0.75rem;
 }
 
 .exampleSplit {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Overlay, OverlayType } from '../../../../types';
-import { TimelineTrack } from '../../../advanced-timeline/types';
+import { TimelineTrack, TimelineBlockRowTiming } from '../../../advanced-timeline/types';
 import { FPS } from '../../../../../../constants';
 import { useTimelineTransforms } from './use-timeline-transforms';
 import { useMediaAdaptors } from '../../../../contexts/media-adaptor-context';
@@ -201,6 +201,28 @@ export const useTimelineHandlers = ({
       };
       handleOverlayChange(updatedOverlay);
     }
+  }, [overlays, handleOverlayChange, isUpdatingFromTimelineRef]);
+
+  const handleBlockRowTimingsChange = React.useCallback((itemId: string, rowTimings: TimelineBlockRowTiming[]) => {
+    if (isUpdatingFromTimelineRef.current) {
+      return;
+    }
+
+    const overlayId = parseInt(itemId, 10);
+    const overlay = overlays.find((o) => o.id === overlayId);
+    if (!overlay || overlay.type !== OverlayType.BLOCKS) {
+      return;
+    }
+
+    const updatedOverlay: Overlay = {
+      ...overlay,
+      styles: {
+        ...(overlay as any).styles,
+        worksheetItemTimings: rowTimings,
+      },
+    };
+
+    handleOverlayChange(updatedOverlay);
   }, [overlays, handleOverlayChange, isUpdatingFromTimelineRef]);
 
   // Handler for new item drop from external sources (e.g., media grid)
@@ -421,6 +443,7 @@ export const useTimelineHandlers = ({
     handleSplitItems,
     handleItemMove,
     handleItemResize,
+    handleBlockRowTimingsChange,
     handleNewItemDrop,
   };
 }; 

@@ -35,6 +35,7 @@ import {
   GlossaryBlock,
   WordBankBlock,
   ColumnsBlock,
+  GridBlock,
   TrueFalseMatrixBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
@@ -48,6 +49,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  TransformSentencesBlock,
   VerbTableBlock,
   ChartBlock,
   ChartDataPoint,
@@ -2341,22 +2343,95 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
 }
 
 function ColumnsProps({ block }: { block: ColumnsBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
 
+  const normalizedColumnBgColors = Array.from(
+    { length: block.columns },
+    (_, idx) => block.columnBgColors?.[idx] ?? ""
+  );
+
+  const normalizeHex = (color: string): string | null => {
+    const trimmed = color.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+    if (!match) return null;
+    const raw = match[1];
+    if (raw.length === 3) {
+      return `#${raw
+        .split("")
+        .map((c) => `${c}${c}`)
+        .join("")
+        .toUpperCase()}`;
+    }
+    return `#${raw.toUpperCase()}`;
+  };
+
+  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const normalized = normalizeHex(hex);
+    if (!normalized) return null;
+    return {
+      r: parseInt(normalized.slice(1, 3), 16),
+      g: parseInt(normalized.slice(3, 5), 16),
+      b: parseInt(normalized.slice(5, 7), 16),
+    };
+  };
+
+  const rgbToHex = (r: number, g: number, b: number): string => {
+    const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+    return `#${[clamp(r), clamp(g), clamp(b)]
+      .map((v) => v.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase()}`;
+  };
+
+  const mixWithWhite = (hex: string, ratio: number): string | null => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return null;
+    return rgbToHex(
+      rgb.r + (255 - rgb.r) * ratio,
+      rgb.g + (255 - rgb.g) * ratio,
+      rgb.b + (255 - rgb.b) * ratio
+    );
+  };
+
+  /** Darken a color by mixing with black — used to auto-derive border from bg */
+  const darkenColor = (hex: string, ratio: number): string => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    return rgbToHex(rgb.r * (1 - ratio), rgb.g * (1 - ratio), rgb.b * (1 - ratio));
+  };
+
+  const buildBrandToneSet = (base: string): string[] => {
+    const normalized = normalizeHex(base);
+    if (!normalized) return [];
+    const steps = [0, 0.08, 0.16, 0.25, 0.35, 0.46, 0.58, 0.72, 0.86, 0.96];
+    return steps
+      .map((step) => (step === 0 ? normalized : mixWithWhite(normalized, step)))
+      .filter((c): c is string => !!c);
+  };
+
+  const brandPrimary = state.brandProfile.primaryColor;
+  const brandAccent = state.brandProfile.accentColor || state.brandProfile.primaryColor;
+  const stoneShades = buildBrandToneSet("#78716C");
+  const primaryTones = buildBrandToneSet(brandPrimary);
+  const accentTones = buildBrandToneSet(brandAccent);
+  const toneRows = [
+    { key: "primary", label: t("colorPrimary"), tones: primaryTones },
+    { key: "accent", label: t("colorAccent"), tones: accentTones },
+    { key: "stone", label: t("colorStone"), tones: stoneShades },
+  ];
+
   const setColumnCount = (count: number) => {
-    // Adjust the children array: keep existing columns, add empty ones or trim
     const newChildren = [...block.children];
     while (newChildren.length < count) {
       newChildren.push([]);
     }
-    // Only trim empty trailing columns — keep content
     while (newChildren.length > count) {
       const last = newChildren[newChildren.length - 1];
       if (last.length === 0) {
         newChildren.pop();
       } else {
-        // Move orphaned blocks into the last kept column
         const overflow = newChildren.splice(count);
         newChildren[count - 1] = [
           ...newChildren[count - 1],
@@ -2365,11 +2440,64 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
         break;
       }
     }
+
+    const newColumnBgColors = Array.from(
+      { length: count },
+      (_, idx) => block.columnBgColors?.[idx] ?? ""
+    );
+    const newColumnBorderColors = Array.from(
+      { length: count },
+      (_, idx) => block.columnBorderColors?.[idx] ?? ""
+    );
+    const fallbackBorder = block.showBorder ?? true;
+    const newColumnBorders = Array.from(
+      { length: count },
+      (_, idx) => block.columnBorders?.[idx] ?? fallbackBorder
+    );
+
     dispatch({
       type: "UPDATE_BLOCK",
       payload: {
         id: block.id,
-        updates: { columns: count, children: newChildren },
+        updates: {
+          columns: count,
+          children: newChildren,
+          columnBgColors: newColumnBgColors,
+          columnBorderColors: newColumnBorderColors,
+          columnBorders: newColumnBorders,
+        },
+      },
+    });
+  };
+
+  const normalizedColumnBorders = Array.from(
+    { length: block.columns },
+    (_, idx) => block.columnBorders?.[idx] ?? (block.showBorder ?? true)
+  );
+
+  const updateColumnBorder = (colIndex: number, checked: boolean) => {
+    const next = [...normalizedColumnBorders];
+    next[colIndex] = checked;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { columnBorders: next } },
+    });
+  };
+
+  /** Pick a column color: sets bg to the chosen shade and border to a 25% darker version */
+  const updateColumnColor = (colIndex: number, color: string) => {
+    const nextBg = [...normalizedColumnBgColors];
+    const nextBorder = Array.from(
+      { length: block.columns },
+      (_, idx) => block.columnBorderColors?.[idx] ?? ""
+    );
+    nextBg[colIndex] = color;
+    nextBorder[colIndex] = color ? darkenColor(color, 0.25) : "";
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { columnBgColors: nextBg, columnBorderColors: nextBorder },
       },
     });
   };
@@ -2390,6 +2518,150 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
               {n}
             </Button>
           ))}
+        </div>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnColors")}</Label>
+        {normalizedColumnBgColors.map((color, colIndex) => (
+          <div key={colIndex} className="space-y-2 rounded-md border border-slate-200 p-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs min-w-20">{t("columnColor", { index: colIndex + 1 })}</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t("showBorder")}</span>
+                <Switch
+                  checked={normalizedColumnBorders[colIndex]}
+                  onCheckedChange={(checked) => updateColumnBorder(colIndex, checked)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {toneRows.map((row) => (
+                <div key={`row-${colIndex}-${row.key}`} className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground w-16 shrink-0">{row.label}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {row.tones.map((tone) => (
+                      <button
+                        key={`${colIndex}-${row.key}-${tone}`}
+                        type="button"
+                        title={tone}
+                        className={`w-7 h-7 rounded border-2 transition-all cursor-pointer ${
+                          color?.toLowerCase() === tone.toLowerCase()
+                            ? "border-primary scale-110"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        style={{ backgroundColor: tone }}
+                        onClick={() => updateColumnColor(colIndex, tone)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={() => updateColumnColor(colIndex, "")}
+            >
+              {t("clearColumnColor")}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GridProps({ block }: { block: GridBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+
+  const resizeGrid = (rows: number, cols: number) => {
+    const totalCells = rows * cols;
+    const newChildren = Array.from(
+      { length: totalCells },
+      (_, idx) => block.children[idx] ?? []
+    );
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { rows, cols, children: newChildren },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
+        <div className="flex gap-1 mt-1.5">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Button
+              key={n}
+              variant={block.rows === n ? "default" : "outline"}
+              size="sm"
+              className="flex-1 h-8"
+              onClick={() => resizeGrid(n, block.cols)}
+            >
+              {n}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
+        <div className="flex gap-1 mt-1.5">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Button
+              key={n}
+              variant={block.cols === n ? "default" : "outline"}
+              size="sm"
+              className="flex-1 h-8"
+              onClick={() => resizeGrid(block.rows, n)}
+            >
+              {n}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs">{t("colGap")}</Label>
+        <div className="flex items-center gap-2 mt-1">
+          <Slider
+            min={0}
+            max={48}
+            step={4}
+            value={[block.colGap]}
+            onValueChange={([v]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { colGap: v } },
+              })
+            }
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right">{block.colGap}px</span>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">{t("rowGap")}</Label>
+        <div className="flex items-center gap-2 mt-1">
+          <Slider
+            min={0}
+            max={48}
+            step={4}
+            value={[block.rowGap]}
+            onValueChange={([v]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { rowGap: v } },
+              })
+            }
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right">{block.rowGap}px</span>
         </div>
       </div>
     </div>
@@ -2476,6 +2748,11 @@ function TextProps({ block }: { block: TextBlock }) {
           <option value="example">{t("textStyleExample")}</option>
           <option value="example-standard">{t("textStyleExampleStandard")}</option>
           <option value="example-improved">{t("textStyleExampleImproved")}</option>
+          <option value="example-primary">{t("textStyleExamplePrimary")}</option>
+          <option value="example-secondary">{t("textStyleExampleSecondary")}</option>
+          <option value="frame">{t("textStyleFrame")}</option>
+          <option value="frame-primary">{t("textStyleFramePrimary")}</option>
+          <option value="frame-secondary">{t("textStyleFrameSecondary")}</option>
           <option value="fragen">{t("textStyleFragen")}</option>
           <option value="hinweis">{t("textStyleHinweis")}</option>
           <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
@@ -4289,6 +4566,187 @@ function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
   );
 }
 
+function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+    const newSentences = lines.map((line, i) => {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+      return {
+        id: `ts${Date.now()}-${i}`,
+        beginning: parts[0],
+        ...(parts[1] ? { solution: parts[1] } : {}),
+      };
+    });
+    const sentences = csvMode === "append"
+      ? [...block.sentences, ...newSentences]
+      : newSentences;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences } },
+    });
+    setCsvText("");
+  };
+
+  const updateSentence = (index: number, updates: Partial<{ beginning: string; solution: string }>) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: `ts${Date.now()}`, beginning: "" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (index: number) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("transformSentencesHelp")}
+        </p>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="space-y-1">
+            <div className="flex items-center gap-1">
+              <div className="flex-1">
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`sentences.${i}.beginning`}
+                  baseValue={item.beginning}
+                  onBaseChange={(v) => updateSentence(i, { beginning: v })}
+                  className="h-8 text-xs"
+                  placeholder={t("transformSentencePlaceholder")}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeSentence(i)}
+                disabled={block.sentences.length <= 1}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="pl-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.solution`}
+                baseValue={item.solution ?? ""}
+                onBaseChange={(v) => updateSentence(i, { solution: v || undefined })}
+                className="h-7 text-xs text-muted-foreground"
+                placeholder={t("transformSentenceSolutionPlaceholder")}
+              />
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addSentence} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelpTransformSentences")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholderTransformSentences")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VerbTableProps({ block }: { block: VerbTableBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -4333,6 +4791,33 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
         />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showConjugations")}</Label>
       </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showInfinitive ?? true}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showInfinitive: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showInfinitive")}</Label>
+      </div>
+      {(block.showInfinitive ?? true) && (
+        <div>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("infinitiveOverride")}</Label>
+          <Input
+            value={block.infinitiveOverride ?? ""}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { infinitiveOverride: e.target.value || undefined } },
+              })
+            }
+            placeholder={t("infinitiveOverridePlaceholder")}
+          />
+        </div>
+      )}
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
@@ -6645,9 +7130,34 @@ export function PropertiesPanel() {
   const t = useTranslations("properties");
   const tc = useTranslations("common");
 
-  const selectedBlock = state.blocks.find(
-    (b) => b.id === state.selectedBlockId
-  );
+  const selectedBlock = React.useMemo(() => {
+    if (!state.selectedBlockId) return undefined;
+    for (const b of state.blocks) {
+      if (b.id === state.selectedBlockId) return b;
+      if (b.type === "columns") {
+        for (const col of b.children) {
+          for (const child of col) {
+            if (child.id === state.selectedBlockId) return child;
+          }
+        }
+      }
+      if (b.type === "grid") {
+        for (const cell of b.children) {
+          for (const child of cell) {
+            if (child.id === state.selectedBlockId) return child;
+          }
+        }
+      }
+      if (b.type === "accordion") {
+        for (const item of b.items) {
+          for (const child of item.children) {
+            if (child.id === state.selectedBlockId) return child;
+          }
+        }
+      }
+    }
+    return undefined;
+  }, [state.blocks, state.selectedBlockId]);
 
   const legacyVisibility: BlockVisibility = selectedBlock?.visibility ?? "both";
   const displayOn: BlockDisplayOn = {
@@ -6720,6 +7230,8 @@ export function PropertiesPanel() {
         return <WordBankProps block={selectedBlock} />;
       case "columns":
         return <ColumnsProps block={selectedBlock} />;
+      case "grid":
+        return <GridProps block={selectedBlock as GridBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
       case "article-training":
@@ -6738,6 +7250,8 @@ export function PropertiesPanel() {
         return <FixSentencesProps block={selectedBlock} />;
       case "complete-sentences":
         return <CompleteSentencesProps block={selectedBlock} />;
+      case "transform-sentences":
+        return <TransformSentencesProps block={selectedBlock} />;
       case "verb-table":
         return <VerbTableProps block={selectedBlock} />;
       case "chart":

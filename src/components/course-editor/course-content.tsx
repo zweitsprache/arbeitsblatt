@@ -73,6 +73,13 @@ function cloneBlockWithNewIds(block: WorksheetBlock): WorksheetBlock {
       } as WorksheetBlock;
     }
 
+    if (next.type === "grid") {
+      return {
+        ...next,
+        children: next.children.map((cell) => cell.map(reid)),
+      } as WorksheetBlock;
+    }
+
     if (next.type === "accordion") {
       return {
         ...next,
@@ -521,6 +528,9 @@ function ModuleEditorInner() {
         if (containerBlock.type === "columns") {
           const slot = containerBlock.children[colIndex] ?? [];
           editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
+        } else if (containerBlock.type === "grid") {
+          const slot = containerBlock.children[colIndex] ?? [];
+          editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
         } else if (containerBlock.type === "accordion") {
           const slot = containerBlock.items[colIndex]?.children ?? [];
           editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
@@ -788,6 +798,9 @@ function TopicEditorInner() {
         if (!def) return;
         const newChild = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
         if (containerBlock.type === "columns") {
+          const slot = containerBlock.children[colIndex] ?? [];
+          editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
+        } else if (containerBlock.type === "grid") {
           const slot = containerBlock.children[colIndex] ?? [];
           editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
         } else if (containerBlock.type === "accordion") {
@@ -1069,6 +1082,9 @@ function LessonEditorInner() {
         if (!def) return;
         const newChild = { ...def.defaultData, id: uuidv4() } as WorksheetBlock;
         if (containerBlock.type === "columns") {
+          const slot = containerBlock.children[colIndex] ?? [];
+          editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
+        } else if (containerBlock.type === "grid") {
           const slot = containerBlock.children[colIndex] ?? [];
           editorDispatch({ type: "DUPLICATE_IN_COLUMN", payload: { parentBlockId: blockId, colIndex, block: newChild, afterIndex: slot.length } });
         } else if (containerBlock.type === "accordion") {

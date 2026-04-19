@@ -48,6 +48,18 @@ export const LocalMediaProvider: React.FC<{ children: React.ReactNode }> = ({
     const loadMediaFiles = async () => {
       try {
         setIsLoading(true);
+        let serverFiles: LocalMediaFile[] = [];
+
+        try {
+          const response = await fetch("/api/latest/local-media/list?limit=200", { method: "GET" });
+          if (response.ok) {
+            const payload = await response.json();
+            serverFiles = (payload.media || []) as LocalMediaFile[];
+          }
+        } catch (serverError) {
+          console.warn("Failed to load server media list, using local cache:", serverError);
+        }
+
         const mediaItems = await getUserMediaItems(userId);
 
         // Convert IndexedDB items to LocalMediaFile format
@@ -72,7 +84,15 @@ export const LocalMediaProvider: React.FC<{ children: React.ReactNode }> = ({
           };
         });
 
-        setLocalMediaFiles(files);
+        const localBlobFiles = files.filter((file) => file.path.startsWith("blob:"));
+
+        // Merge server-backed files with local blob fallback files, de-duplicated by id.
+        const merged = [...serverFiles, ...localBlobFiles];
+        const deduped = merged.filter(
+          (file, index, array) => array.findIndex((f) => f.id === file.id) === index
+        );
+
+        setLocalMediaFiles(deduped);
       } catch (error) {
         console.error("Error loading media files from IndexedDB:", error);
       } finally {

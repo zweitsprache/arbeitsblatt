@@ -1,15 +1,16 @@
 import {
   useCurrentFrame,
+  useVideoConfig,
   delayRender,
   continueRender,
-  Html5Video
+  Html5Video,
+  OffthreadVideo,
 } from "remotion";
 import { ClipOverlay } from "../../../types";
 import { animationTemplates, getAnimationKey } from "../../../adaptors/default-animation-adaptors";
 import { toAbsoluteUrl } from "../../general/url-helper";
 import { useEffect, useRef, useCallback } from "react";
 import { useEditorContext } from "../../../contexts/editor-context";
-import { FPS } from "../../../../../constants";
 import { calculateObjectFitDimensions } from "../helpers/object-fit-calculator";
 
 /**
@@ -55,6 +56,7 @@ export const VideoLayerContent: React.FC<VideoLayerContentProps> = ({
   baseUrl,
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { baseUrl: contextBaseUrl } = useSafeEditorContext();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastProcessedFrameRef = useRef<CanvasImageSource | null>(null);
@@ -286,7 +288,7 @@ export const VideoLayerContent: React.FC<VideoLayerContentProps> = ({
   };
 
   // Convert videoStartTime from seconds to frames for OffthreadVideo
-  const startFromFrames = Math.round((overlay.videoStartTime || 0) * FPS);
+  const startFromFrames = Math.round((overlay.videoStartTime || 0) * fps);
   
   // If greenscreen removal is enabled, use canvas-based rendering
   if (overlay.greenscreen?.enabled) {
@@ -327,7 +329,7 @@ export const VideoLayerContent: React.FC<VideoLayerContentProps> = ({
   // Normal rendering without greenscreen removal
   return (
     <div style={containerStyle}>
-      <Html5Video
+      <OffthreadVideo
         src={videoSrc}
         trimBefore={startFromFrames}
         style={videoStyle}

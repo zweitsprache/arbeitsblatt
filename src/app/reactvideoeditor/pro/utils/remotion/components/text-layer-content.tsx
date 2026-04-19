@@ -1,12 +1,27 @@
 import React, { useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import type { FontInfo } from "@remotion/google-fonts";
-import { Flag } from "lucide-react";
+import {
+  ArrowRight,
+  CircleArrowRight,
+  BadgeAlert,
+  CircleHelp,
+  Flag,
+  Goal,
+  MessageCircle,
+  Siren,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import { TextOverlay, BlockOverlay } from "../../../types";
 import { animationTemplates } from "../../../templates/animation-templates";
 import { getAnimationKey } from "../../../adaptors/default-animation-adaptors";
 import { useLoadFontFromTextItem } from "../../text/load-font-from-text-item";
 import { normalizeVideoFontFamily } from "../../text/normalize-video-font-family";
+import {
+  extractWorksheetRows,
+  normalizeWorksheetItemTimings,
+} from "../../../../../../lib/worksheet-row-timing";
 
 interface TextLayerContentProps {
   overlay: TextOverlay | BlockOverlay;
@@ -85,6 +100,71 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
 
   const worksheetTextStyle = overlay.styles.worksheetTextStyle;
   const worksheetHtml = overlay.styles.worksheetHtml;
+  const isWhiteLikeColor = (value?: string): boolean => {
+    if (!value) return false;
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === "white" ||
+      normalized === "#fff" ||
+      normalized === "#ffffff" ||
+      normalized === "rgb(255,255,255)" ||
+      normalized === "rgb(255, 255, 255)"
+    );
+  };
+
+  const worksheetDefaultTextColors: Record<string, string> = {
+    standard: "#1a1a1a",
+    metadaten: "#1a1a1a",
+    rows: "#1a1a1a",
+    fragen: "#1a1a1a",
+    redemittel: "#1a1a1a",
+    kompetenzziele: "#1a1a1a",
+    handlungsziele: "#1a1a1a",
+    lernziel: "#1a1a1a",
+    hinweis: "#475569",
+    "hinweis-wichtig": "#0369a1",
+    "hinweis-alarm": "#990033",
+    example: "#475569",
+    "example-standard": "#990033",
+    "example-improved": "#3A4F40",
+  };
+
+  const worksheetResolvedTextColor = (() => {
+    const styleKey = worksheetTextStyle || "standard";
+    const defaultColor = worksheetDefaultTextColors[styleKey] || "#1a1a1a";
+    const currentColor = overlay.styles.color;
+
+    if (!currentColor || currentColor === "transparent" || isWhiteLikeColor(currentColor)) {
+      return defaultColor;
+    }
+
+    return currentColor;
+  })();
+
+  const hasBorderedWorksheetStyle =
+    Boolean(worksheetHtml) &&
+    (
+      worksheetTextStyle === "lernziel" ||
+      worksheetTextStyle === "hinweis" ||
+      worksheetTextStyle === "hinweis-wichtig" ||
+      worksheetTextStyle === "hinweis-alarm" ||
+      worksheetTextStyle === "example" ||
+      worksheetTextStyle === "example-standard" ||
+      worksheetTextStyle === "example-improved" ||
+      worksheetTextStyle === "rows" ||
+      worksheetTextStyle === "kompetenzziele" ||
+      worksheetTextStyle === "handlungsziele" ||
+      worksheetTextStyle === "fragen" ||
+      worksheetTextStyle === "redemittel"
+    );
+  const worksheetVerticalInsetPx = hasBorderedWorksheetStyle ? 1 : 0;
+
+  const isWorksheetRowsStyle =
+    worksheetTextStyle === "rows" ||
+    worksheetTextStyle === "kompetenzziele" ||
+    worksheetTextStyle === "handlungsziele" ||
+    worksheetTextStyle === "fragen" ||
+    worksheetTextStyle === "redemittel";
 
   // Memoize font size calculation for performance during resizing
   const fontSize = useMemo(() => {
@@ -190,7 +270,9 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
         : overlay.styles.textAlign === "right"
         ? "flex-end"
         : "flex-start",
-    overflow: "hidden",
+    overflow: hasBorderedWorksheetStyle ? "visible" : "hidden",
+    paddingTop: worksheetVerticalInsetPx,
+    paddingBottom: worksheetVerticalInsetPx,
     boxSizing: "border-box",
     position: "relative",
     userSelect: "none", // Prevent text selection during overlay interactions
@@ -221,6 +303,15 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
     userSelect: "none", // Prevent text selection during overlay interactions
     WebkitUserSelect: "none", // Safari support
     ...(isExitPhase ? exitAnimation : enterAnimation),
+  };
+
+  const worksheetTextContentStyle: React.CSSProperties = {
+    ...textStyle,
+    padding: 0,
+    color: worksheetResolvedTextColor,
+    backgroundColor: "transparent",
+    overflow: "visible",
+    textOverflow: "clip",
   };
 
   const worksheetShellStyle: React.CSSProperties = {
@@ -265,6 +356,54 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
       .replace(/\son\w+\s*=\s*(["']).*?\1/gi, "");
   };
 
+  const normalizeWorksheetHtmlSpacing = (html: string): string => {
+    const setZeroMargin = (tag: "p" | "ul" | "ol" | "li") => {
+      const regex = new RegExp(`<${tag}([^>]*)>`, "gi");
+      return (input: string) =>
+        input.replace(regex, (_match, attrs: string) => {
+          const styleMatch = attrs.match(/\sstyle\s*=\s*(["'])(.*?)\1/i);
+
+          if (styleMatch) {
+            const quote = styleMatch[1];
+            const existing = styleMatch[2];
+            const normalized = /(^|;)\s*margin\s*:/i.test(existing)
+              ? existing
+              : `${existing}${existing.trim().endsWith(";") || existing.trim().length === 0 ? "" : ";"}margin:0;`;
+            return `<${tag}${attrs.replace(styleMatch[0], ` style=${quote}${normalized}${quote}`)}>`;
+          }
+
+          return `<${tag}${attrs} style="margin:0;">`;
+        });
+    };
+
+    return [setZeroMargin("p"), setZeroMargin("ul"), setZeroMargin("ol"), setZeroMargin("li")].reduce(
+      (acc, fn) => fn(acc),
+      html
+    );
+  };
+
+  const renderRowsIcon = () => {
+    if (worksheetTextStyle === "kompetenzziele") {
+      return <Goal size={18} strokeWidth={2.2} />;
+    }
+    if (worksheetTextStyle === "handlungsziele") {
+      return <CircleArrowRight size={18} strokeWidth={2.2} />;
+    }
+    if (worksheetTextStyle === "fragen") {
+      return <CircleHelp size={18} strokeWidth={2.3} />;
+    }
+    if (worksheetTextStyle === "redemittel") {
+      return <MessageCircle size={18} strokeWidth={2.3} />;
+    }
+
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12h14" />
+        <path d="m12 5 7 7-7 7" />
+      </svg>
+    );
+  };
+
   // Procedural behaviors keyed off animation.enter for text-only effects
   const enterKey = overlay.styles.animation?.enter;
   const content = overlay.content || "Enter text...";
@@ -280,22 +419,118 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
     renderedContent = content.slice(0, visibleCount);
   } 
 
-  const htmlToRender = worksheetHtml ? sanitizeHtml(worksheetHtml) : "";
+  const htmlToRender = worksheetHtml
+    ? normalizeWorksheetHtmlSpacing(sanitizeHtml(worksheetHtml))
+    : "";
+
+  const worksheetPrimary =
+    overlay.styles.brandPrimaryColor ||
+    (overlay.styles.color && overlay.styles.color !== "transparent" ? overlay.styles.color : "#1a1a1a");
+
+  if (htmlToRender && worksheetTextStyle === "metadaten") {
+    return (
+      <div style={{ ...containerStyle, alignItems: "flex-start" }}>
+        <div style={{ ...worksheetTextContentStyle, marginBottom: "-1.5rem", color: worksheetPrimary }} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+      </div>
+    );
+  }
+
+  if (htmlToRender && (!worksheetTextStyle || worksheetTextStyle === "standard")) {
+    return (
+      <div style={{ ...containerStyle, alignItems: "flex-start" }}>
+        <div style={{ ...worksheetTextContentStyle, width: "100%" }} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+      </div>
+    );
+  }
+
+  if (htmlToRender && isWorksheetRowsStyle) {
+    const rows = extractWorksheetRows(htmlToRender);
+    const rowTimings = normalizeWorksheetItemTimings(overlay.styles.worksheetItemTimings, rows.length);
+    const visibleRows = rows
+      .map((rowHtml, rowIndex) => {
+        const startRatio = rowTimings[rowIndex]?.startRatio ?? 0;
+        const endRatio = rowTimings[rowIndex]?.endRatio ?? 1;
+        const totalFrames = Math.max(1, overlay.durationInFrames);
+        const startFrame = Math.round(startRatio * totalFrames);
+        const endFrame = Math.max(startFrame + 1, Math.round(endRatio * totalFrames));
+
+        // Rows are cumulative: after start they stay visible.
+        if (frame < startFrame) {
+          return null;
+        }
+
+        // Keep row entrance snappy: do not stretch animation across long row segments.
+        const segmentFrames = Math.max(1, endFrame - startFrame);
+        const revealDuration = Math.max(4, Math.min(12, segmentFrames));
+        const rawReveal = Math.max(0, Math.min(1, (frame - startFrame) / revealDuration));
+        const revealProgress = 1 - Math.pow(1 - rawReveal, 3);
+
+        return {
+          rowHtml,
+          rowIndex,
+          revealProgress,
+        };
+      })
+      .filter((row): row is { rowHtml: string; rowIndex: number; revealProgress: number } => row !== null);
+
+    return (
+      <div style={{ ...containerStyle, alignItems: "flex-start" }}>
+        <div style={{ width: "100%" }}>
+          {visibleRows.map((row, visibleIndex) => (
+            <div
+              key={`${overlay.id}-row-${row.rowIndex}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.375rem 0",
+                lineHeight: "1.35em",
+                borderBottom: "1px solid #d1d5db",
+                ...(visibleIndex === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
+                opacity: row.revealProgress,
+                transform: `translateY(${(1 - row.revealProgress) * 6}px)`,
+              }}
+            >
+              <div
+                style={{
+                  width: 20,
+                  minWidth: 20,
+                  height: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: worksheetPrimary,
+                }}
+              >
+                {renderRowsIcon()}
+              </div>
+              <div
+                style={{
+                  ...worksheetTextContentStyle,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: row.rowHtml }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (htmlToRender && worksheetTextStyle === "lernziel") {
-    const primary = overlay.styles.brandPrimaryColor || (overlay.styles.color && overlay.styles.color !== "transparent" ? overlay.styles.color : "#1a1a1a");
-
     return (
       <div style={containerStyle}>
         <div
           style={{
             width: "100%",
             display: "flex",
-            border: `1px solid ${primary}`,
+            border: `1px solid ${worksheetPrimary}`,
             borderRadius: 5,
             overflow: "hidden",
             fontWeight: 600,
-            color: primary,
+            color: worksheetPrimary,
             boxSizing: "border-box",
           }}
         >
@@ -306,7 +541,7 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: primary,
+              backgroundColor: worksheetPrimary,
               color: "#fff",
             }}
           >
@@ -317,10 +552,117 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
               flex: 1,
               minWidth: 0,
               padding: "0.5rem 1rem",
-              backgroundColor: "rgba(0,0,0,0.04)",
+              backgroundColor: `${worksheetPrimary}14`,
             }}
           >
-            <div style={textStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+            <div style={worksheetTextContentStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (htmlToRender && (worksheetTextStyle === "hinweis" || worksheetTextStyle === "hinweis-wichtig" || worksheetTextStyle === "hinweis-alarm")) {
+    const cfg =
+      worksheetTextStyle === "hinweis-alarm"
+        ? { border: "#990033", bg: "#99003308", icon: <Siren className="h-5 w-5" style={{ color: "#990033" }} /> }
+        : worksheetTextStyle === "hinweis-wichtig"
+          ? { border: "#0369a1", bg: "#0369a108", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
+          : { border: "#475569", bg: "#47556908", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
+
+    return (
+      <div style={containerStyle}>
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            border: `1px solid ${cfg.border}`,
+            borderRadius: 4,
+            background: cfg.bg,
+            color: cfg.border,
+          }}
+        >
+          <div
+            style={{
+              flexShrink: 0,
+              width: "2.75rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              paddingLeft: "1.5rem",
+            }}
+          >
+            {cfg.icon}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "0.5rem 0.75rem 0.5rem 0.7rem",
+            }}
+          >
+            <div style={worksheetTextContentStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (htmlToRender && worksheetTextStyle === "example") {
+    return (
+      <div style={containerStyle}>
+        <div
+          style={{
+            width: "100%",
+            border: "1px dashed #475569",
+            borderRadius: 5,
+            background: "#fff",
+            color: "#475569",
+            padding: "0.5rem 1rem",
+          }}
+        >
+          <div style={worksheetTextContentStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (htmlToRender && (worksheetTextStyle === "example-standard" || worksheetTextStyle === "example-improved")) {
+    const cfg =
+      worksheetTextStyle === "example-standard"
+        ? { color: "#990033", iconBg: "#990033", icon: <ThumbsDown className="h-4 w-4" /> }
+        : { color: "#3A4F40", iconBg: "#3A4F40", icon: <ThumbsUp className="h-4 w-4" /> };
+
+    return (
+      <div style={containerStyle}>
+        <div style={{ width: "100%", display: "flex", alignItems: "stretch", color: cfg.color }}>
+          <div
+            aria-hidden="true"
+            style={{
+              flexShrink: 0,
+              width: "2rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              background: cfg.iconBg,
+              borderRadius: "5px 0 0 5px",
+            }}
+          >
+            {cfg.icon}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              border: "1px dashed currentColor",
+              borderLeft: 0,
+              borderRadius: "0 5px 5px 0",
+              padding: "0.5rem 0.75rem 0.5rem 1.5rem",
+              background: "#fff",
+            }}
+          >
+            <div style={worksheetTextContentStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
           </div>
         </div>
       </div>
@@ -331,7 +673,7 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
     <div style={containerStyle}>
       {htmlToRender ? (
         <div style={worksheetShellStyle}>
-          <div style={textStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
+          <div style={worksheetTextContentStyle} dangerouslySetInnerHTML={{ __html: htmlToRender }} />
         </div>
       ) : (
         <div style={textStyle}>{renderedContent}</div>
