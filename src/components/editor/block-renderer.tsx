@@ -4542,6 +4542,7 @@ function AccordionRenderer({ block, mode }: { block: AccordionBlock; mode: ViewM
                 blockId={block.id}
                 colIndex={i}
                 isEmpty={(item.children ?? []).length === 0}
+                showBorder={false}
               >
                 {(item.children ?? []).map((childBlock) => (
                   <ColumnChildBlock

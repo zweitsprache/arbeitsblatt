@@ -326,46 +326,9 @@ function forEachBlockTranslationField(
       break;
     }
 
-    case "verb-table": {
-      add("verb", () => block.verb, (v) => {
-        block.verb = v;
-      });
-      for (const row of block.singularRows) {
-        add(`singularRows.${row.id}.person`, () => row.person, (v) => {
-          row.person = v;
-        });
-        add(`singularRows.${row.id}.detail`, () => row.detail, (v) => {
-          if (row.detail !== undefined) row.detail = v;
-        });
-        add(`singularRows.${row.id}.pronoun`, () => row.pronoun, (v) => {
-          row.pronoun = v;
-        });
-        add(`singularRows.${row.id}.conjugation`, () => row.conjugation, (v) => {
-          row.conjugation = v;
-        });
-        add(`singularRows.${row.id}.conjugation2`, () => row.conjugation2, (v) => {
-          if (row.conjugation2 !== undefined) row.conjugation2 = v;
-        });
-      }
-      for (const row of block.pluralRows) {
-        add(`pluralRows.${row.id}.person`, () => row.person, (v) => {
-          row.person = v;
-        });
-        add(`pluralRows.${row.id}.detail`, () => row.detail, (v) => {
-          if (row.detail !== undefined) row.detail = v;
-        });
-        add(`pluralRows.${row.id}.pronoun`, () => row.pronoun, (v) => {
-          row.pronoun = v;
-        });
-        add(`pluralRows.${row.id}.conjugation`, () => row.conjugation, (v) => {
-          row.conjugation = v;
-        });
-        add(`pluralRows.${row.id}.conjugation2`, () => row.conjugation2, (v) => {
-          if (row.conjugation2 !== undefined) row.conjugation2 = v;
-        });
-      }
+    case "verb-table":
+      // Verb conjugation tables are never translated
       break;
-    }
 
     case "dialogue": {
       add("instruction", () => block.instruction, (v) => {
