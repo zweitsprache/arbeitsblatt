@@ -387,7 +387,7 @@ export async function GET(
   // The modal inserts blank cards (empty front+back) to pad each verb group
   // to page boundaries. Strip those blanks and re-pad to CARDS_PER_PAGE so
   // the layout is always correct regardless of how the data was originally saved.
-  const settings = (worksheet.settings ?? {}) as FlashcardSettings & { singleSided?: boolean; padEmptyCards?: boolean };
+  const settings = (worksheet.settings ?? {}) as unknown as FlashcardSettings & { singleSided?: boolean; padEmptyCards?: boolean };
   const cardsPerPage = settings.padEmptyCards ? CARDS_PER_PAGE_PADDED : CARDS_PER_PAGE_FULL;
   if (settings.padEmptyCards) {
     cards = repadCards(cards, cardsPerPage);
