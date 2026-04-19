@@ -350,6 +350,8 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
 }
 
 function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
+  // Only highlight {{de:…}} markers with accent color when the worksheet is translated
+  const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
   const isExampleStandard = block.textStyle === "example-standard";
   const isExampleImproved = block.textStyle === "example-improved";
@@ -458,7 +460,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Render a single column of tiptap content (used for both original and translated) */
   const renderContent = (html: string) => {
-    const processed = injectLiIcons(prepareTiptapHtml(html, accentColor));
+    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor));
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
@@ -469,7 +471,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Split HTML into individual paragraph strings */
   const splitParagraphs = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, accentColor);
+    const prepared = prepareTiptapHtml(html, deMarkerColor);
     const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi);
     return matches || [prepared];
   };
@@ -477,7 +479,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
    *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
   const splitRowItems = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, accentColor);
+    const prepared = prepareTiptapHtml(html, deMarkerColor);
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
@@ -730,7 +732,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, accentColor)}
+            {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
       </div>
@@ -754,7 +756,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, accentColor)}
+            {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
       </div>
@@ -783,7 +785,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       </div>
       {block.comment && (
         <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-          {renderDeMarkers(block.comment, accentColor)}
+          {renderDeMarkers(block.comment, deMarkerColor)}
         </div>
       )}
     </div>
@@ -791,7 +793,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 }
 
 // ─── Email Skeleton View ─────────────────────────────────────
-function EmailSkeletonView({ block, accentColor }: { block: EmailSkeletonBlock; accentColor?: string | null }) {
+function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
   const t = useTranslations("blockRenderer");
 
   const attachments = block.attachments ?? [];
@@ -828,7 +830,7 @@ function EmailSkeletonView({ block, accentColor }: { block: EmailSkeletonBlock; 
         </div>
 
         <div className={s.emailBody}>
-          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body, accentColor) }} />
+          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
         </div>
 
       {/* Attachments */}
@@ -846,14 +848,14 @@ function EmailSkeletonView({ block, accentColor }: { block: EmailSkeletonBlock; 
       )}
       </div>
       {isStyled && block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment, accentColor)}</div>
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
       )}
     </div>
   );
 }
 
 // ─── Job Application View ────────────────────────────────────
-function JobApplicationView({ block, accentColor }: { block: JobApplicationBlock; accentColor?: string | null }) {
+function JobApplicationView({ block }: { block: JobApplicationBlock }) {
   const t = useTranslations("blockRenderer");
 
   const style = block.applicationStyle ?? "none";
@@ -912,13 +914,13 @@ function JobApplicationView({ block, accentColor }: { block: JobApplicationBlock
           <div className="flex items-start gap-4">
             <span className="font-semibold text-slate-400 w-24 shrink-0 pt-1.5">{t("jobMessage")}</span>
             <div className="flex-1 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1.5">
-              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message, accentColor) }} />
+              <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.message) }} />
             </div>
           </div>
         </div>
       </div>
       {isStyled && block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment, accentColor)}</div>
+        <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
       )}
     </div>
   );
@@ -5286,9 +5288,9 @@ export function ViewerBlockRenderer({
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
-      return <EmailSkeletonView block={block as EmailSkeletonBlock} accentColor={accentColor} />;
+      return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
     case "job-application":
-      return <JobApplicationView block={block as JobApplicationBlock} accentColor={accentColor} />;
+      return <JobApplicationView block={block as JobApplicationBlock} />;
     case "dos-and-donts":
       return <DosAndDontsView block={block as DosAndDontsBlock} />;
     case "text-comparison":
