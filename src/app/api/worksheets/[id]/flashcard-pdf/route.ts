@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { launchBrowser, fetchImageAsDataUri } from "@/lib/puppeteer";
-import { FlashcardItem, FlashcardSide } from "@/types/flashcard";
+import { FlashcardItem, FlashcardSide, FlashcardSettings } from "@/types/flashcard";
+import { resolveSubProfileHeaderFooter } from "@/types/worksheet";
+import type { BrandProfile } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
 
 import { replaceEszett } from "@/lib/locale-utils";
+
+// ─── Brand info passed through rendering ────────────────────
+interface BrandInfo {
+  logoUrl: string;
+  footerLeft: string;
+  footerRight: string;
+  googleFontsUrl: string;
+  headerFooterFont: string;
+  organization: string;
+}
 
 // ─── Layout constants (mm) ──────────────────────────────────
 const CARD_W = 74; // mm
@@ -202,7 +214,7 @@ function buildPageHtml(
   </div>`;
 }
 
-function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean, cardsPerPage: number): string {
+function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean, cardsPerPage: number, brand: BrandInfo): string {
   const totalFrontPages = Math.ceil(cards.length / cardsPerPage);
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -211,9 +223,22 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
     <img src="${logoUrl}" style="width:6mm;height:auto;" />
   </div>`;
 
-  const footerHtml = `<div style="position:absolute;bottom:0;left:0;right:0;font-size:7pt;font-family:'Encode Sans',sans-serif;color:#666;padding:0 15mm 5mm 15mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:10;">
-    <div style="text-align:left;line-height:1.4;">&copy; ${currentYear} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten</div>
-    <div style="text-align:right;line-height:1.4;">${worksheetId}<br/>${currentDate}</div>
+  // Replace template variables in footer strings
+  const replaceVars = (s: string) =>
+    s
+      .replace(/\{year\}/g, String(currentYear))
+      .replace(/\{current_year\}/g, String(currentYear))
+      .replace(/\{current_date\}/g, currentDate)
+      .replace(/\{worksheet_uuid\}/g, worksheetId)
+      .replace(/\{organization\}/g, brand.organization);
+
+  const footerLeft = brand.footerLeft ? replaceVars(brand.footerLeft) : `&copy; ${currentYear} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`;
+  const footerRight = brand.footerRight ? replaceVars(brand.footerRight) : `${worksheetId}<br/>${currentDate}`;
+
+  const footerFont = brand.headerFooterFont || "'Encode Sans', sans-serif";
+  const footerHtml = `<div style="position:absolute;bottom:0;left:0;right:0;font-size:7pt;font-family:${footerFont};color:#666;padding:0 15mm 5mm 15mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:10;">
+    <div style="text-align:left;line-height:1.4;">${footerLeft}</div>
+    <div style="text-align:right;line-height:1.4;">${footerRight}</div>
   </div>`;
 
   let pagesHtml = "";
@@ -225,13 +250,17 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
     }
   }
 
+  const fontsLink = brand.googleFontsUrl
+    ? `<link href="${brand.googleFontsUrl}" rel="stylesheet">\n<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`
+    : `<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`;
+
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+${fontsLink}
 <style>
   @page {
     size: A4 landscape;
@@ -358,7 +387,7 @@ export async function GET(
   // The modal inserts blank cards (empty front+back) to pad each verb group
   // to page boundaries. Strip those blanks and re-pad to CARDS_PER_PAGE so
   // the layout is always correct regardless of how the data was originally saved.
-  const settings = (worksheet.settings ?? {}) as { singleSided?: boolean; padEmptyCards?: boolean };
+  const settings = (worksheet.settings ?? {}) as FlashcardSettings & { singleSided?: boolean; padEmptyCards?: boolean };
   const cardsPerPage = settings.padEmptyCards ? CARDS_PER_PAGE_PADDED : CARDS_PER_PAGE_FULL;
   if (settings.padEmptyCards) {
     cards = repadCards(cards, cardsPerPage);
@@ -399,10 +428,67 @@ export async function GET(
 
   const singleSided = settings.singleSided === true;
 
-  const logoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
-  const logoSvgRaw = fs.readFileSync(logoPath, "utf-8");
-  const logoDataUri = `data:image/svg+xml,${encodeURIComponent(logoSvgRaw)}`;
-  const html = buildFullHtml(cards, logoDataUri, worksheet.id, singleSided, cardsPerPage);
+  // ── Resolve brand settings ────────────────────────────────
+  const brand: BrandInfo = {
+    logoUrl: "",
+    footerLeft: "",
+    footerRight: "",
+    googleFontsUrl: "",
+    headerFooterFont: "Encode Sans, sans-serif",
+    organization: "",
+  };
+
+  if (settings.brandProfileId) {
+    try {
+      const dbBrand = await (prisma.brandProfile as unknown as {
+        findUnique: (args: { where: { id: string }; include: { subProfiles: { orderBy: { name: "asc" } } } }) => Promise<(BrandProfile & { subProfiles: BrandProfile["subProfiles"] }) | null>;
+      }).findUnique({
+        where: { id: settings.brandProfileId },
+        include: { subProfiles: { orderBy: { name: "asc" } } },
+      });
+      if (dbBrand) {
+        let logoDataUri = "";
+        if (dbBrand.logo) {
+          try {
+            const logoPath = path.join(process.cwd(), "public", dbBrand.logo.replace(/^\//, ""));
+            const logoRaw = fs.readFileSync(logoPath, "utf-8");
+            logoDataUri = `data:image/svg+xml,${encodeURIComponent(logoRaw)}`;
+          } catch { /* ignore */ }
+        }
+
+        let footerLeft = dbBrand.footerLeft ?? "";
+        let footerRight = dbBrand.footerRight ?? "";
+
+        const subHeaders = resolveSubProfileHeaderFooter(
+          dbBrand as unknown as BrandProfile,
+          settings.subProfileId,
+          1
+        );
+        if (subHeaders) {
+          footerLeft = subHeaders.footerLeft;
+          footerRight = subHeaders.footerRight;
+        }
+
+        brand.logoUrl = logoDataUri;
+        brand.footerLeft = footerLeft;
+        brand.footerRight = footerRight;
+        brand.googleFontsUrl = dbBrand.googleFontsUrl ?? "";
+        brand.headerFooterFont = dbBrand.headerFooterFont ?? "Encode Sans, sans-serif";
+        brand.organization = dbBrand.organization ?? "";
+      }
+    } catch (err) {
+      console.warn("[Flashcard PDF] Could not load brand:", err);
+    }
+  }
+
+  // Fallback logo if brand had none
+  if (!brand.logoUrl) {
+    const fallbackLogoPath = path.join(process.cwd(), "public", "logo", "lingostar_logo_icon_flat.svg");
+    const fallbackSvgRaw = fs.readFileSync(fallbackLogoPath, "utf-8");
+    brand.logoUrl = `data:image/svg+xml,${encodeURIComponent(fallbackSvgRaw)}`;
+  }
+
+  const html = buildFullHtml(cards, brand.logoUrl, worksheet.id, singleSided, cardsPerPage, brand);
 
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);

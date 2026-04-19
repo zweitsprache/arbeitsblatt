@@ -615,7 +615,7 @@ function FlashcardEditorInner({
           placeholder={t("titlePlaceholder")}
         />
         <div className="flex-1" />
-        {worksheetType === "kartenpaare" && availableBrands.length > 0 && (
+        {availableBrands.length > 0 && (
           <Select
             value={state.settings.brandProfileId ?? ""}
             onValueChange={(value) =>
@@ -634,7 +634,7 @@ function FlashcardEditorInner({
             </SelectContent>
           </Select>
         )}
-        {worksheetType === "kartenpaare" && (() => {
+        {(() => {
           const selectedBrand = availableBrands.find((bp) => bp.id === state.settings.brandProfileId);
           const subs = selectedBrand?.subProfiles ?? [];
           if (subs.length === 0) return null;
