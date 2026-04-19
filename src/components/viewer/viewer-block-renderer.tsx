@@ -3861,9 +3861,9 @@ function VerbTableView({
   const totalCount = isSplit ? allRows.length * 2 : allRows.length;
 
   return (
-    <div className="border rounded-[4px] overflow-hidden" style={{ borderColor: primaryColor, breakInside: "avoid", pageBreakInside: "avoid" }}>
+    <div className="border rounded-[4px] overflow-hidden border-border" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
       {(block.showInfinitive ?? true) && (block.infinitiveOverride || block.verb) && (
-        <div className="font-bold py-2 px-3 border-b" style={{ color: primaryColor, borderColor: primaryColor }}>
+        <div className="font-bold py-2 px-3 border-b border-border">
           {block.infinitiveOverride || block.verb}
         </div>
       )}
