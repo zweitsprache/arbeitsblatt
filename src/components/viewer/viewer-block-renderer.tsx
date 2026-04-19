@@ -343,7 +343,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
       <Tag className={sizes[block.level]} style={style}>
         <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>{renderDeMarkers(originalBlock.content, deMarkerColor)}</span>
         <span style={{ fontWeight: 400 }}> | </span>
-        <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{block.content}</span>
+        <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(block.content, deMarkerColor)}</span>
       </Tag>
     );
   }
