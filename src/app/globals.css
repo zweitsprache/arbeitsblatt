@@ -1151,8 +1151,8 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.table-block td[rowspan],
-.table-block th[rowspan] {
+.table-block td[rowspan]:not([rowspan="1"]),
+.table-block th[rowspan]:not([rowspan="1"]) {
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
 }
