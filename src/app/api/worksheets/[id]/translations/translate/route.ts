@@ -59,7 +59,7 @@ TASK: Translate ALL provided strings into ${langName} (${langCode}).
 CRITICAL RULES:
 1. Preserve ALL JSON keys exactly as-is — only translate the values.
 2. Preserve HTML tags exactly (<p>, <br>, <strong>, <em>, <ul>, <li>, etc.).
-3. Preserve {{blank:...}} syntax. Translate the word inside the blank too.
+3. Preserve {{blank:...}}, {{blank*:...}}, and {{blank}} syntax. Translate the word inside the blank too. Preserve the * modifier.
 4. Preserve {{option1|option2|...}} inline choice syntax. Keep {{}} and | characters. Translate each option. The first option is always the correct answer.
 5. Preserve {{de:...}} markers — keep the German text inside as-is, translate surrounding text.
 6. Preserve ' | ' separators in fix-sentence exercises — translate each part separately.

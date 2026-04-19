@@ -1398,15 +1398,16 @@ function FillInBlankView({
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
-  const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
+  const parts = block.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
   let blankIndex = 0;
 
   return (
     <div className="leading-loose flex flex-wrap items-baseline">
       {parts.map((part, i) => {
-        const match = part.match(/\{\{blank:(.+)\}\}/);
+        const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
         if (match) {
-          const raw = match[1];
+          const noSpace = match[1] === '*';
+          const raw = match[2] || "";
           const commaIdx = raw.lastIndexOf(",");
           let correctAnswer: string;
           let widthMultiplier = 1;
@@ -1421,14 +1422,16 @@ function FillInBlankView({
           const key = `blank-${blankIndex}`;
           blankIndex++;
           const userValue = blanks[key] || "";
+          const hasAnswer = correctAnswer !== "";
           const isCorrectAnswer =
-            showResults && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
-          const isWrong = showResults && userValue.trim() !== "" && !isCorrectAnswer;
+            showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
+          const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
           const widthStyle = widthMultiplier === 0 ? { flex: 1 } as React.CSSProperties : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+          const spacingClass = noSpace ? '' : 'mx-1';
 
           if (interactive) {
             return (
-              <span key={i} className="inline-block relative mx-1">
+              <span key={i} className={`inline-block relative ${spacingClass}`}>
                 <input
                   type="text"
                   value={userValue}
@@ -1455,11 +1458,11 @@ function FillInBlankView({
               </span>
             );
           }
-          if (showSolutions) {
+          if (showSolutions && hasAnswer) {
             return (
               <span
                 key={i}
-                className="bg-green-100 text-green-800 font-semibold px-2 mx-1"
+                className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
                 style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
               >
                 {correctAnswer}
@@ -1469,7 +1472,7 @@ function FillInBlankView({
           return (
             <span
               key={i}
-              className="bg-gray-100 px-2 mx-1"
+              className={`bg-gray-100 px-2 ${spacingClass}`}
               style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
             >
               <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
@@ -1510,8 +1513,8 @@ function FillInBlankItemsView({
     if (!block.showWordBank) return [];
     const answers: string[] = [];
     for (const item of block.items) {
-      const matches = item.content.matchAll(/\{\{blank:([^,}]+)/g);
-      for (const m of matches) answers.push(m[1].trim());
+      const matches = item.content.matchAll(/\{\{blank\*?:([^,}]+)/g);
+      for (const m of matches) if (m[1].trim()) answers.push(m[1].trim());
     }
     // Shuffle based on block id (deterministic)
     const arr = [...answers];
@@ -1539,7 +1542,7 @@ function FillInBlankItemsView({
         </div>
       )}
       {block.items.map((item, idx) => {
-        const parts = item.content.split(/(\{\{blank:[^}]+\}\})/g);
+        const parts = item.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
         let blankInItem = 0;
 
         return (
@@ -1553,9 +1556,10 @@ function FillInBlankItemsView({
             </span>
             <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
               {parts.map((part, i) => {
-                const match = part.match(/\{\{blank:(.+)\}\}/);
+                const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
-                  const raw = match[1];
+                  const noSpace = match[1] === '*';
+                  const raw = match[2] || "";
                   const commaIdx = raw.lastIndexOf(",");
                   let correctAnswer: string;
                   let widthMultiplier = 1;
@@ -1570,16 +1574,18 @@ function FillInBlankItemsView({
                   const key = `blank-${idx}-${blankInItem}`;
                   blankInItem++;
                   const userValue = blanks[key] || "";
+                  const hasAnswer = correctAnswer !== "";
                   const isCorrectAnswer =
-                    showResults && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
-                  const isWrong = showResults && userValue.trim() !== "" && !isCorrectAnswer;
+                    showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
+                  const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
                   const widthStyle = widthMultiplier === 0
                     ? { flex: 1 } as React.CSSProperties
                     : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+                  const spacingClass = noSpace ? '' : 'mx-1';
 
                   if (interactive) {
                     return (
-                      <span key={i} className="inline-block relative mx-1">
+                      <span key={i} className={`inline-block relative ${spacingClass}`}>
                         <input
                           type="text"
                           value={userValue}
@@ -1598,7 +1604,7 @@ function FillInBlankItemsView({
                           style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
                           placeholder={tb("fillInBlankPlaceholder")}
                         />
-                        {showResults && isWrong && (
+                        {showResults && isWrong && hasAnswer && (
                           <span className="block text-cv-xs text-green-600 text-center mt-0.5">
                             {correctAnswer}
                           </span>
@@ -1606,11 +1612,11 @@ function FillInBlankItemsView({
                       </span>
                     );
                   }
-                  if (showSolutions) {
+                  if (showSolutions && hasAnswer) {
                     return (
                       <span
                         key={i}
-                        className="bg-green-100 text-green-800 font-semibold px-2 mx-1"
+                        className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
                         style={{ display: 'inline', verticalAlign: 'baseline', borderRadius: 4 }}
                       >
                         {correctAnswer}
@@ -1620,7 +1626,7 @@ function FillInBlankItemsView({
                   return (
                     <span
                       key={i}
-                      className="bg-gray-100 mx-1 border-b border-muted-foreground/30"
+                      className={`bg-gray-100 ${spacingClass} border-b border-muted-foreground/30`}
                       style={{ display: 'inline-block', verticalAlign: 'baseline', borderRadius: 2, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
                     >
                       &nbsp;
@@ -3929,11 +3935,11 @@ function DialogueView({
   const gapAnswers: string[] = [];
   let gapIndex = 0;
   for (const item of block.items) {
-    const matches = item.text.matchAll(/\{\{blank:([^}]+)\}\}/g);
+    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
     for (const m of matches) {
       const raw = m[1];
       const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
-      gapAnswers.push(answer);
+      if (answer) gapAnswers.push(answer);
       gapIndex++;
     }
   }
@@ -3941,11 +3947,12 @@ function DialogueView({
   // Render text with interactive gaps
   let globalGapIdx = 0;
   const renderDialogueText = (text: string) => {
-    const parts = text.split(/(\{\{blank:[^}]+\}\})/g);
+    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
     return parts.map((part, i) => {
-      const match = part.match(/\{\{blank:(.+)\}\}/);
+      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
       if (match) {
-        const raw = match[1];
+        const noSpace = match[1] === '*';
+        const raw = match[2] || "";
         const commaIdx = raw.lastIndexOf(",");
         let correctAnswer: string;
         let widthMultiplier = 1;
@@ -3960,13 +3967,15 @@ function DialogueView({
         const idx = globalGapIdx++;
         const key = `gap-${idx}`;
         const userVal = answer?.[key] ?? "";
-        const isCorrect = userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        const hasAnswer = correctAnswer !== "";
+        const isCorrect = hasAnswer && userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
         const widthStyle = widthMultiplier === 0
           ? { flex: 1 } as React.CSSProperties
           : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+        const spacingClass = noSpace ? '' : 'mx-1';
 
         return interactive ? (
-          <span key={i} className="inline-block mx-1">
+          <span key={i} className={`inline-block ${spacingClass}`}>
             <input
               type="text"
               value={userVal}
@@ -3976,7 +3985,9 @@ function DialogueView({
                 showResults
                   ? isCorrect
                     ? "border-green-500 text-green-700"
-                    : "border-red-500 text-red-700"
+                    : hasAnswer
+                      ? "border-red-500 text-red-700"
+                      : "border-gray-400"
                   : "border-gray-400 focus:border-primary"
               }`}
               style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
@@ -3985,10 +3996,10 @@ function DialogueView({
         ) : (
           <span
             key={i}
-            className={`inline-block px-2 py-0.5 text-center mx-1 ${showSolutions ? "text-green-600 text-cv-xs font-medium" : ""}`}
+            className={`inline-block px-2 py-0.5 text-center ${spacingClass} ${showSolutions && hasAnswer ? "text-green-600 text-cv-xs font-medium" : ""}`}
             style={{ borderBottom: '1px dashed var(--color-muted-foreground)', ...widthStyle }}
           >
-            {showSolutions ? correctAnswer : "\u00A0"}
+            {showSolutions && hasAnswer ? correctAnswer : "\u00A0"}
           </span>
         );
       }

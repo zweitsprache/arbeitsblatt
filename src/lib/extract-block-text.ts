@@ -18,10 +18,10 @@ function stripHtml(html: string): string {
 }
 
 /**
- * Extract fill-in-blank content, replacing {{blank:answer}} with the answer.
+ * Extract fill-in-blank content, replacing {{blank:answer}} / {{blank*:answer}} with the answer.
  */
 function expandBlanks(content: string): string {
-  return content.replace(/\{\{blank:([^}]+)\}\}/g, (_m, answer) => answer);
+  return content.replace(/\{\{blank\*?:?([^}]*)\}\}/g, (_m, answer) => answer);
 }
 
 /**

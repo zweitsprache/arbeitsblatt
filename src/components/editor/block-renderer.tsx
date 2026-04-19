@@ -1221,15 +1221,16 @@ function FillInBlankRenderer({
   interactive: boolean;
 }) {
   const t = useTranslations("blockRenderer");
-  // Parse {{blank:answer}} patterns
-  const parts = block.content.split(/(\{\{blank:[^}]+\}\})/g);
+  // Parse {{blank:answer}}, {{blank}}, {{blank*:answer}} patterns
+  const parts = block.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
 
   return (
     <div className="leading-relaxed flex flex-wrap items-baseline">
       {parts.map((part, i) => {
-        const match = part.match(/\{\{blank:(.+)\}\}/);
+        const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
         if (match) {
-          const raw = match[1];
+          const noSpace = match[1] === '*';
+          const raw = match[2] || "";
           const commaIdx = raw.lastIndexOf(",");
           let answer: string;
           let widthMultiplier = 1;
@@ -1244,21 +1245,22 @@ function FillInBlankRenderer({
           const widthStyle = widthMultiplier === 0
             ? { flex: 1 } as React.CSSProperties
             : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+          const spacingClass = noSpace ? '' : 'mx-1';
           return interactive ? (
             <input
               key={i}
               type="text"
               placeholder={t("fillInBlankPlaceholder")}
-              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline`}
+              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
               style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
             />
           ) : (
             <span
               key={i}
-              className={`inline-block bg-gray-100 rounded px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
+              className={`inline-block bg-gray-100 rounded px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
               style={widthStyle}
             >
-              {answer}
+              {answer || '\u00A0'}
             </span>
           );
         }
@@ -1328,8 +1330,8 @@ function FillInBlankItemsRenderer({
     if (!block.showWordBank) return [];
     const answers: string[] = [];
     for (const item of block.items) {
-      const matches = item.content.matchAll(/\{\{blank:([^,}]+)/g);
-      for (const m of matches) answers.push(m[1].trim());
+      const matches = item.content.matchAll(/\{\{blank\*?:([^,}]+)/g);
+      for (const m of matches) if (m[1].trim()) answers.push(m[1].trim());
     }
     return answers;
   }, [block.items, block.showWordBank]);
@@ -1346,8 +1348,8 @@ function FillInBlankItemsRenderer({
         </div>
       )}
       {block.items.map((item, idx) => {
-        // Parse {{blank:answer}} patterns
-        const parts = item.content.split(/(\{\{blank:[^}]+\}\})/g);
+        // Parse {{blank:answer}}, {{blank}}, {{blank*:answer}} patterns
+        const parts = item.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
 
         return (
           <div
@@ -1364,9 +1366,10 @@ function FillInBlankItemsRenderer({
             </span>
             <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
               {parts.map((part, i) => {
-                const match = part.match(/\{\{blank:(.+)\}\}/);
+                const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
-                  const raw = match[1];
+                  const noSpace = match[1] === '*';
+                  const raw = match[2] || "";
                   const commaIdx = raw.lastIndexOf(",");
                   let answer: string;
                   let widthMultiplier = 1;
@@ -1381,21 +1384,22 @@ function FillInBlankItemsRenderer({
                   const widthStyle = widthMultiplier === 0
                     ? { flex: 1 } as React.CSSProperties
                     : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+                  const spacingClass = noSpace ? '' : 'mx-1';
                   return interactive ? (
                     <input
                       key={i}
                       type="text"
                       placeholder={t("fillInBlankPlaceholder")}
-                      className="border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline"
+                      className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
                       style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
                     />
                   ) : (
                     <span
                       key={i}
-                      className="inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs"
+                      className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
                       style={widthStyle}
                     >
-                      {answer}
+                      {answer || '\u00A0'}
                     </span>
                   );
                 }
@@ -3886,21 +3890,22 @@ function DialogueRenderer({
   // Collect gap answers for word bank
   const gapAnswers: string[] = [];
   for (const item of block.items) {
-    const matches = item.text.matchAll(/\{\{blank:([^}]+)\}\}/g);
+    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
     for (const m of matches) {
       const raw = m[1];
       const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
-      gapAnswers.push(answer);
+      if (answer) gapAnswers.push(answer);
     }
   }
 
   // Render text with gaps
   const renderDialogueText = (text: string) => {
-    const parts = text.split(/(\{\{blank:[^}]+\}\})/g);
+    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
     return parts.map((part, i) => {
-      const match = part.match(/\{\{blank:(.+)\}\}/);
+      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
       if (match) {
-        const raw = match[1];
+        const noSpace = match[1] === '*';
+        const raw = match[2] || "";
         // Parse optional width: {{blank:answer,N}}
         const commaIdx = raw.lastIndexOf(",");
         let answer: string;
@@ -3916,21 +3921,22 @@ function DialogueRenderer({
         const widthStyle = widthMultiplier === 0
           ? { flex: 1 } as React.CSSProperties
           : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+        const spacingClass = noSpace ? '' : 'mx-1';
         return interactive ? (
           <input
             key={i}
             type="text"
             placeholder="…"
-            className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center mx-1 focus:outline-none focus:border-primary inline`}
+            className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
             style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
           />
         ) : (
           <span
             key={i}
-            className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center mx-1 text-muted-foreground text-xs`}
+            className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
             style={widthStyle}
           >
-            {answer}
+            {answer || '\u00A0'}
           </span>
         );
       }

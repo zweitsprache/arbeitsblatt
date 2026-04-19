@@ -372,6 +372,8 @@ Rules:
 Rule:
 
 - Blanks use `{{blank:correctAnswer}}` syntax.
+- `{{blank}}` creates a blank gap with no solution (no auto-correction).
+- `{{blank*:correctAnswer}}` adds no space before the gap (useful for prefixes/suffixes like `ge{{blank*:macht}}`).
 
 ### `fill-in-blank-items`
 

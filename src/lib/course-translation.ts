@@ -42,7 +42,7 @@ const SNIPPET_BREAK_AI_INSTRUCTIONS =
   "HTML content. Translate text only, preserve all HTML tags exactly. CRITICAL: preserve every <hr data-snippet-break=\"\"> tag exactly as-is — do not remove, alter, or close it differently. These are item separators and must remain intact.";
 
 const BLANK_AI_INSTRUCTIONS =
-  "Translate text, keep {{blank:...}} syntax. Translate word inside blank: too.";
+  "Translate text, keep {{blank:...}} and {{blank*:...}} and {{blank}} syntax. Translate word inside blank: too. Preserve the * modifier.";
 
 const INLINE_CHOICE_AI_INSTRUCTIONS =
   "Translate text and options in {{...|...}}. Keep {{}} and | syntax. First option = correct.";
@@ -646,11 +646,11 @@ export function getAiInstructions(
     return HTML_AI_INSTRUCTIONS;
   }
   // Fill-in-blank markers
-  if (value.includes("{{blank:")) {
+  if (value.includes("{{blank")) {
     return BLANK_AI_INSTRUCTIONS;
   }
   // Inline choice markers
-  if (/\{\{[^}]+\|[^}]+\}\}/.test(value) && !value.includes("{{blank:")) {
+  if (/\{\{[^}]+\|[^}]+\}\}/.test(value) && !value.includes("{{blank")) {
     return INLINE_CHOICE_AI_INSTRUCTIONS;
   }
   // Fix-sentences separators
