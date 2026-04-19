@@ -144,6 +144,8 @@ export function PrintPreview({
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 30));
   const handleResetZoom = () => setZoom(140);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(5000);
 
   const noWorksheet = !state.worksheetId;
   const previewPageWidth = state.settings.orientation === "landscape" ? 1123 : 794;
@@ -247,18 +249,28 @@ export function PrintPreview({
               {iframeSrc && (
                 <div
                   className="mx-auto overflow-hidden"
-                  style={{ width: `${previewPageWidth * zoom / 100}px`, maxWidth: "100%" }}
+                  style={{ width: `${previewPageWidth * zoom / 100}px`, height: `${iframeHeight * zoom / 100}px`, maxWidth: "100%" }}
                 >
                   <iframe
+                    ref={iframeRef}
                     src={iframeSrc}
                     className="border-0"
                     scrolling="no"
-                    onLoad={() => setLoading(false)}
+                    onLoad={() => {
+                      setLoading(false);
+                      try {
+                        const doc = iframeRef.current?.contentDocument;
+                        if (doc) {
+                          const h = doc.documentElement.scrollHeight;
+                          if (h > 0) setIframeHeight(h);
+                        }
+                      } catch { /* cross-origin guard */ }
+                    }}
                     style={{
                       transform: `scale(${zoom / 100})`,
                       transformOrigin: "top left",
                       width: previewPageWidth,
-                      height: 5000,
+                      height: iframeHeight,
                     }}
                   />
                 </div>
