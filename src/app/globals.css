@@ -1151,6 +1151,12 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.table-block td[rowspan],
+.table-block th[rowspan] {
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
 .table-block th {
   background-color: #f1f5f9;
   font-weight: 600;
