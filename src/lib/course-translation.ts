@@ -190,21 +190,10 @@ function forEachBlockTranslationField(
       break;
     }
 
-    case "fill-in-blank": {
-      add("content", () => block.content, (v) => {
-        block.content = v;
-      });
+    case "fill-in-blank":
+    case "fill-in-blank-items":
+      // Fill-in-blank blocks contain German learning exercises — never translated
       break;
-    }
-
-    case "fill-in-blank-items": {
-      for (const item of block.items) {
-        add(`items.${item.id}.content`, () => item.content, (v) => {
-          item.content = v;
-        });
-      }
-      break;
-    }
 
     case "matching": {
       add("instruction", () => block.instruction, (v) => {
@@ -330,20 +319,9 @@ function forEachBlockTranslationField(
       // Verb conjugation tables are never translated
       break;
 
-    case "dialogue": {
-      add("instruction", () => block.instruction, (v) => {
-        block.instruction = v;
-      });
-      for (const item of block.items) {
-        add(`items.${item.id}.speaker`, () => item.speaker, (v) => {
-          item.speaker = v;
-        });
-        add(`items.${item.id}.text`, () => item.text, (v) => {
-          item.text = v;
-        });
-      }
+    case "dialogue":
+      // Dialogue blocks contain German learning exercises — never translated
       break;
-    }
 
     case "article-training": {
       add("instruction", () => block.instruction, (v) => {
