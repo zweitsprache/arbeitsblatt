@@ -463,6 +463,7 @@ export interface FixSentencesBlock extends BlockBase {
   type: "fix-sentences";
   instruction: string;
   sentences: FixSentenceItem[];
+  showFirstAsExample?: boolean;
 }
 
 // ─── Complete Sentences block ───────────────────────────────

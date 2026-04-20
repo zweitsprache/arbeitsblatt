@@ -4394,6 +4394,19 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
         </Button>
       </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }

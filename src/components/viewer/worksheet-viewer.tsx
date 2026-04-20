@@ -13,8 +13,11 @@ import { useTranslations } from "next-intl";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
-const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
+const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "ps", "ur", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
+/** Language codes that use Arabic script and need Noto Sans Arabic */
+const ARABIC_SCRIPT_LOCALES = new Set(["ar", "fa", "ps", "ur"]);
 const NOTO_SANS_STYLESHEET = "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap";
+const NOTO_SANS_ARABIC_STYLESHEET = "https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap";
 
 export function WorksheetViewer({
   title,
@@ -138,7 +141,10 @@ export function WorksheetViewer({
   const translationFontOverride = isTranslated
     ? resolveTranslationFontOverride(resolvedProfile, contentLocale)
     : null;
-  const activeBodyFont = nonEmpty(translationFontOverride?.fontFamily, baseBodyFont);
+  const isArabicScript = ARABIC_SCRIPT_LOCALES.has(contentLocale);
+  const activeBodyFont = isArabicScript && !translationFontOverride?.fontFamily?.trim()
+    ? `"Noto Sans Arabic", ${baseBodyFont}`
+    : nonEmpty(translationFontOverride?.fontFamily, baseBodyFont);
   const headlineFont = nonEmpty(brandFonts.headlineFont, baseBodyFont);
   const fontStylesheetUrls = Array.from(
     new Set(
@@ -146,6 +152,7 @@ export function WorksheetViewer({
         nonEmpty(brandFonts.googleFontsUrl, staticBrandFonts.googleFontsUrl),
         nonEmpty(translationFontOverride?.googleFontsUrl ?? undefined),
         isNonLatin ? NOTO_SANS_STYLESHEET : "",
+        isArabicScript ? NOTO_SANS_ARABIC_STYLESHEET : "",
       ].filter(Boolean),
     ),
   );

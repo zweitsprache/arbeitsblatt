@@ -268,7 +268,7 @@ export function EditorToolbar() {
 
   // Available translation languages for this worksheet (from settings)
   const worksheetTranslationLangs = state.settings.translationLanguages ?? [];
-  const LANG_LABELS: Record<string, string> = { de: "Deutsch (Original)", en: "Englisch", uk: "Ukrainisch", fr: "Französisch", es: "Spanisch", it: "Italienisch", pt: "Portugiesisch", tr: "Türkisch", pl: "Polnisch", ar: "Arabisch", ru: "Russisch", hu: "Ungarisch", ps: "Paschtu", fa: "Farsi/Dari", cs: "Tschechisch", ur: "Urdu" };
+  const LANG_LABELS: Record<string, string> = { de: "Deutsch", en: "Englisch", uk: "Ukrainisch", fr: "Französisch", es: "Spanisch", it: "Italienisch", pt: "Portugiesisch", tr: "Türkisch", pl: "Polnisch", ar: "Arabisch", ru: "Russisch", hu: "Ungarisch", ps: "Paschtu", fa: "Farsi/Dari", cs: "Tschechisch", ur: "Urdu" };
 
   return (
     <>
@@ -590,19 +590,15 @@ export function EditorToolbar() {
         open={pdfLocaleDialog.open}
         onOpenChange={(open) => setPdfLocaleDialog((prev) => ({ ...prev, open }))}
       >
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("pdfLocaleTitle")}</DialogTitle>
-            <DialogDescription>
-              {worksheetTranslationLangs.length > 0 && pdfLocaleDialog.mode !== "cover"
-                ? "Wähle optional eine Übersetzungssprache, dann den Länderkontext zum Herunterladen."
-                : t("pdfLocaleDescription")}
-            </DialogDescription>
+            <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
           </DialogHeader>
           {worksheetTranslationLangs.length > 0 && pdfLocaleDialog.mode !== "cover" && (
             <div className="space-y-2 pt-1">
               <Label className="text-sm font-medium">{t("translatedLanguages")}</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {["de", ...worksheetTranslationLangs.slice().sort((a, b) => (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de"))].map((code) => (
                   <button
                     key={code}
@@ -621,53 +617,70 @@ export function EditorToolbar() {
             </div>
           )}
 
-          {/* Translated language selected: single download button (DE/CH irrelevant for non-German) */}
-          <div className="flex gap-3 pt-2">
-            <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => handleLocaleClick("DE")}
-            >
-              {"🇩🇪 Deutschland (ß)"}
-            </Button>
-            <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => handleLocaleClick("CH")}
-            >
-              {"🇨🇭 Schweiz (ss)"}
-            </Button>
-            <Button className="flex-1 gap-2" variant="outline"
-              onClick={() => handleLocaleClick("NEUTRAL")}
-            >
-              {"🌐 Neutral"}
-            </Button>
+          <div className="space-y-2 pt-1">
+            <Label className="text-sm font-medium">{t("countryContext")}</Label>
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => handleLocaleClick("DE")}
+                className="rounded-sm border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Deutschland
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLocaleClick("CH")}
+                className="rounded-sm border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Schweiz
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLocaleClick("NEUTRAL")}
+                className="rounded-sm border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Neutral
+              </button>
+            </div>
           </div>
 
           {pdfLocaleDialog.mode !== "cover" && (
-          <div className="space-y-2 pt-2 border-t">
+          <div className="space-y-2 pt-2">
             <Label className="text-sm font-medium">{t("pdfContent")}</Label>
-            <div className="flex gap-2">
-              <Button
-                variant={pdfOutputMode === "worksheet" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                type="button"
                 onClick={() => setPdfOutputMode("worksheet")}
+                className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  pdfOutputMode === "worksheet"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {t("pdfWorksheetOnly")}
-              </Button>
-              <Button
-                variant={pdfOutputMode === "solutions" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
+              </button>
+              <button
+                type="button"
                 onClick={() => setPdfOutputMode("solutions")}
+                className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  pdfOutputMode === "solutions"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {t("pdfSolutionsOnly")}
-              </Button>
-              <Button
-                variant={pdfOutputMode === "both" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
+              </button>
+              <button
+                type="button"
                 onClick={() => setPdfOutputMode("both")}
+                className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  pdfOutputMode === "both"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {t("pdfBoth")}
-              </Button>
+              </button>
             </div>
           </div>
           )}

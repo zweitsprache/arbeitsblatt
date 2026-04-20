@@ -3398,6 +3398,7 @@ function FixSentencesView({
   onAnswer,
   showResults,
   showSolutions = false,
+  accentColor,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -3406,6 +3407,7 @@ function FixSentencesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
@@ -3476,6 +3478,7 @@ function FixSentencesView({
             showResults &&
             displayParts.length === correctParts.length &&
             displayParts.every((p, idx) => p === correctParts[idx]);
+          const isExample = i === 0 && !!block.showFirstAsExample;
 
           return (
             <div
@@ -3493,6 +3496,17 @@ function FixSentencesView({
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
+                  {isExample ? (
+                    <div
+                      style={{
+                        fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
+                        color: accentColor || 'var(--color-primary)',
+                        fontSize: '1.15em',
+                      }}
+                    >
+                      {correctParts.join(" ")}
+                    </div>
+                  ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {displayParts.map((part, pi) => (
                       <div key={pi} className="flex items-center gap-0.5">
@@ -3546,12 +3560,13 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  {isPrint && showSolutions ? (
+                  )}
+                  {!isExample && isPrint && showSolutions ? (
                     <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
-                  ) : isPrint ? (
+                  ) : !isExample && isPrint ? (
                     <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ) : null}
-                  {showResults && !isFullyCorrect && (
+                  {!isExample && showResults && !isFullyCorrect && (
                     <p className="text-cv-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
                     </p>
@@ -5218,6 +5233,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          accentColor={accentColor}
         />
       );
     case "complete-sentences":

@@ -25,23 +25,23 @@ interface TranslationStatus {
   targetLanguages: string[];
 }
 
-/** All supported target languages with human-readable labels and flag codes. */
-const AVAILABLE_LANGUAGES: { code: string; label: string; flagCode: string }[] = [
-  { code: "en", label: "Englisch", flagCode: "gb" },
-  { code: "hu", label: "Ungarisch", flagCode: "hu" },
-  { code: "ps", label: "Paschtu", flagCode: "af" },
-  { code: "fa", label: "Farsi/Dari", flagCode: "ir" },
-  { code: "cs", label: "Tschechisch", flagCode: "cz" },
-  { code: "ur", label: "Urdu", flagCode: "pk" },
-  { code: "uk", label: "Ukrainisch", flagCode: "ua" },
-  { code: "fr", label: "Französisch", flagCode: "fr" },
-  { code: "es", label: "Spanisch", flagCode: "es" },
-  { code: "it", label: "Italienisch", flagCode: "it" },
-  { code: "pt", label: "Portugiesisch", flagCode: "pt" },
-  { code: "tr", label: "Türkisch", flagCode: "tr" },
-  { code: "pl", label: "Polnisch", flagCode: "pl" },
-  { code: "ar", label: "Arabisch", flagCode: "sa" },
-  { code: "ru", label: "Russisch", flagCode: "ru" },
+/** All supported target languages with human-readable labels, sorted A-Z. */
+const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
+  { code: "ar", label: "Arabisch" },
+  { code: "en", label: "Englisch" },
+  { code: "fa", label: "Farsi/Dari" },
+  { code: "fr", label: "Französisch" },
+  { code: "it", label: "Italienisch" },
+  { code: "ps", label: "Paschtu" },
+  { code: "pl", label: "Polnisch" },
+  { code: "pt", label: "Portugiesisch" },
+  { code: "ru", label: "Russisch" },
+  { code: "es", label: "Spanisch" },
+  { code: "cs", label: "Tschechisch" },
+  { code: "tr", label: "Türkisch" },
+  { code: "uk", label: "Ukrainisch" },
+  { code: "hu", label: "Ungarisch" },
+  { code: "ur", label: "Urdu" },
 ];
 
 const LANGUAGE_LABELS: Record<string, string> = Object.fromEntries(
@@ -179,24 +179,18 @@ export function WorksheetTranslationDialog() {
             <p className="text-sm font-medium">{t("targetLanguages")}</p>
             <p className="text-xs text-muted-foreground">{t("targetLanguagesHelp")}</p>
             <div className="flex flex-wrap gap-2">
-              {AVAILABLE_LANGUAGES.map(({ code, label, flagCode }) => {
+              {AVAILABLE_LANGUAGES.map(({ code, label }) => {
                 const isSelected = selectedLangs.includes(code);
                 return (
                   <button
                     key={code}
                     onClick={() => toggleLanguage(code)}
-                    className={`flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-input bg-background text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`/flags/${flagCode}.svg`}
-                      alt=""
-                      className="inline-block h-[0.9em] w-[1.2em] rounded-[1px] object-cover"
-                    />
                     {label}
                   </button>
                 );
