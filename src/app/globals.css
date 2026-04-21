@@ -178,6 +178,25 @@
   line-height: 1;
 }
 
+/* Numbered items: headings inside rich text items are always margin-less */
+.numbered-items-richtext h1,
+.numbered-items-richtext .tiptap h1,
+.numbered-items-richtext h2,
+.numbered-items-richtext .tiptap h2,
+.numbered-items-richtext h3,
+.numbered-items-richtext .tiptap h3 {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.25 !important;
+}
+
+.numbered-items-richtext p,
+.numbered-items-richtext .tiptap p {
+  line-height: 1.3;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 .tiptap-bilingual-translated .tiptap h1,
 .tiptap-bilingual-translated .tiptap h2,
 .tiptap-bilingual-translated .tiptap h3,
@@ -242,6 +261,12 @@
 .tiptap-rows.tiptap p:first-child,
 .tiptap-rows .ProseMirror p:first-child {
   border-top: 1px solid #d1d5db !important;
+}
+
+/* Hide empty trailing paragraph in rows style — target ProseMirror's is-empty marker in editor,
+   and suppress visually empty last rows in rendered output */
+.tiptap-rows .ProseMirror p.is-empty:last-child {
+  display: none !important;
 }
 
 /* Kompetenzziele: goal icon */

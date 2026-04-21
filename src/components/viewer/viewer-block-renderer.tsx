@@ -476,11 +476,15 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     );
   };
 
-  /** Split HTML into individual paragraph strings */
+  /** Split HTML into individual paragraph strings, dropping trailing empty ones */
   const splitParagraphs = (html: string): string[] => {
     const prepared = prepareTiptapHtml(html, deMarkerColor, deMarkerFont);
-    const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi);
-    return matches || [prepared];
+    const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi) ?? [prepared];
+    // Drop trailing empty paragraphs (<p></p> or <p><br></p>)
+    while (matches.length > 1 && /^<p[^>]*>(<br\s*\/?>)?<\/p>$/i.test(matches[matches.length - 1])) {
+      matches.pop();
+    }
+    return matches;
   };
 
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
@@ -490,12 +494,18 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
-    return rows.map((row) => {
+    const mapped = rows.map((row) => {
       if (!/^<li\b/i.test(row)) return row;
       const liInner = row.replace(/^<li\b[^>]*>/i, "").replace(/<\/li>$/i, "").trim();
       if (/^<p\b/i.test(liInner)) return liInner;
       return `<p>${liInner}</p>`;
     });
+
+    // Drop trailing empty paragraphs
+    while (mapped.length > 1 && /^<p[^>]*>(<br\s*\/?>)?<\/p>$/i.test(mapped[mapped.length - 1])) {
+      mapped.pop();
+    }
+    return mapped;
   };
 
   /** Wrap content in bilingual 2-column grid if active */
@@ -4211,29 +4221,9 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
   const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, dir?: string) => (
     <div dir={dir} className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
       <div
-        className="tiptap max-w-none text-foreground font-normal"
+        className="numbered-items-richtext tiptap max-w-none text-foreground font-normal"
         dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
       />
-    </div>
-  );
-
-  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-        gap: "0 1rem",
-        alignItems: "start",
-        direction: "ltr",
-      }}
-    >
-      {renderNumberedItemContent(originalContent, undefined, undefined, "ltr")}
-      {renderNumberedItemContent(
-        translatedContent,
-        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
-        "tiptap-bilingual-translated",
-        isRtl ? "rtl" : undefined
-      )}
     </div>
   );
 
@@ -4243,16 +4233,36 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
         {block.items.map((item, i) => {
           const originalItem = originalBlock?.items[i];
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+          const num = String(block.startNumber + i).padStart(2, "0");
           return (
-            <div key={item.id} className={s.numberedItemRow}>
-              <span className={s.accentBadge}>{String(block.startNumber + i).padStart(2, "0")}</span>
-              <div className={s.numberedItemContent}>
-                {showBilingual ? (
-                  renderBilingualColumns(originalItem.content, item.content)
-                ) : (
-                  renderNumberedItemContent(item.content)
-                )}
-              </div>
+            <div
+              key={item.id}
+              className={s.numberedItemRow}
+              style={showBilingual ? { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 1em" } : undefined}
+            >
+              {showBilingual ? (
+                <>
+                  {/* Left col: badge + original */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                    <span className={s.accentBadge} style={{ flexShrink: 0, alignSelf: "center" }}>{num}</span>
+                    {renderNumberedItemContent(originalItem.content, undefined, undefined, "ltr")}
+                  </div>
+                  {/* Right col: translation */}
+                  {renderNumberedItemContent(
+                    item.content,
+                    effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined,
+                    "tiptap-bilingual-translated",
+                    isRtl ? "rtl" : undefined
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className={s.accentBadge}>{num}</span>
+                  <div className={s.numberedItemContent}>
+                    {renderNumberedItemContent(item.content)}
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
@@ -4265,36 +4275,75 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
       {block.items.map((item, i) => {
         const originalItem = originalBlock?.items[i];
         const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+        const num = String(block.startNumber + i).padStart(2, '0');
+        const badgeColor = textWhite ? '#fff' : '#000';
+        if (showBilingual) {
+          return (
+            <div
+              key={item.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+                gap: "0 1em",
+                borderRadius: `${radius}px`,
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+                direction: "ltr",
+                alignItems: "stretch",
+              }}
+            >
+              {/* Left col: badge (full bg) + original (light bg) */}
+              <div style={{ display: "flex", alignItems: "stretch", borderRadius: `4px 0 0 4px`, overflow: "hidden" }}>
+                <div style={{
+                  backgroundColor: block.bgColor,
+                  color: badgeColor,
+                  fontWeight: "bold",
+                  lineHeight: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0.375rem 0.35rem",
+                  minWidth: "30px",
+                  flexShrink: 0,
+                }}>
+                  {num}
+                </div>
+                <div style={{ backgroundColor: surfaceBg, flex: 1, padding: "0.375rem 0.75rem" }}>
+                  {renderNumberedItemContent(originalItem.content, undefined, undefined, "ltr")}
+                </div>
+              </div>
+              {/* Right col: translation (light bg) */}
+              <div style={{ backgroundColor: surfaceBg, borderRadius: `0 ${radius}px ${radius}px 0`, padding: "0.375rem 0.75rem" }}>
+                {renderNumberedItemContent(
+                  item.content,
+                  effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined,
+                  "tiptap-bilingual-translated",
+                  isRtl ? "rtl" : undefined
+                )}
+              </div>
+            </div>
+          );
+        }
         return (
           <div
             key={item.id}
             className="flex gap-0"
-            style={hasBg ? {
+            style={{
               backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
               breakInside: "avoid",
               pageBreakInside: "avoid",
-            } : undefined}
+            }}
           >
             <div
               className="shrink-0 w-[30px] flex items-center justify-center font-bold"
-              style={{
-                backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
-                color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
-                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
-              }}
+              style={{ backgroundColor: block.bgColor, color: badgeColor, borderRadius: `${radius}px 0 0 ${radius}px`, lineHeight: 1 }}
             >
-              {String(block.startNumber + i).padStart(2, '0')}
+              {num}
             </div>
-            {showBilingual ? (
-              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-                {renderBilingualColumns(originalItem.content, item.content)}
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-                {renderNumberedItemContent(item.content)}
-              </div>
-            )}
+            <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+              {renderNumberedItemContent(item.content)}
+            </div>
           </div>
         );
       })}
