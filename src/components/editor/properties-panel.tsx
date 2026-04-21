@@ -4756,6 +4756,19 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
           </Button>
         </div>
       </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }

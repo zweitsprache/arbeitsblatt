@@ -482,6 +482,7 @@ export interface TransformSentencesBlock extends BlockBase {
   type: "transform-sentences";
   instruction: string;
   sentences: TransformSentenceItem[];
+  showFirstAsExample?: boolean;
 }
 
 export interface TransformSentenceItem {

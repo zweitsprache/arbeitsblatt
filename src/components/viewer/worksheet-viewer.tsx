@@ -16,6 +16,8 @@ import { filterBlocksByDisplay } from "@/lib/block-visibility";
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "ps", "ur", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
 /** Language codes that use Arabic script and need Noto Sans Arabic */
 const ARABIC_SCRIPT_LOCALES = new Set(["ar", "fa", "ps", "ur"]);
+/** Language codes that are written right-to-left */
+const RTL_LOCALES = new Set(["ar", "fa", "ps", "ur", "he"]);
 const NOTO_SANS_STYLESHEET = "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap";
 const NOTO_SANS_ARABIC_STYLESHEET = "https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap";
 
@@ -137,6 +139,7 @@ export function WorksheetViewer({
   }
 
   const isNonLatin = NON_LATIN_LOCALES.has(contentLocale);
+  const isRtl = RTL_LOCALES.has(contentLocale);
   const baseBodyFont = nonEmpty(brandFonts.bodyFont, "Asap Condensed, sans-serif");
   const translationFontOverride = isTranslated
     ? resolveTranslationFontOverride(resolvedProfile, contentLocale)
@@ -373,7 +376,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -436,6 +439,7 @@ export function WorksheetViewer({
                     bodyFontSize={resolvedBodyFontSize}
                     originalBlock={originalBlockMap?.[block.id]}
                     isNonLatin={isNonLatin}
+                    isRtl={isRtl}
                     translationScale={resolvedProfile.pdfTranslationScale ?? undefined}
                   />
                   {worksheetId && mode === "online" && (

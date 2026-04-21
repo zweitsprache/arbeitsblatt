@@ -91,7 +91,19 @@ export function EditorToolbar() {
     mode?: "pdf" | "cover";
   }>({ open: false });
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
-  const [pdfLang, setPdfLang] = useState<string>("de"); // "de" = base German, other codes = translation
+  const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
+
+  const togglePdfLang = (code: string) => {
+    setPdfLangs((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        if (next.size > 1) next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
+  };
 
   // Get current brand settings with fallbacks — merge brand profile with per-worksheet overrides
   const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
@@ -111,7 +123,7 @@ export function EditorToolbar() {
     });
   };
 
-  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE", outputMode: "worksheet" | "solutions" | "both" = "worksheet") => {
+  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE", outputMode: "worksheet" | "solutions" | "both" = "worksheet", lang: string = "de") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
@@ -123,7 +135,7 @@ export function EditorToolbar() {
       params.set("orientation", state.settings.orientation || "portrait");
       if (outputMode === "solutions") params.set("solutions", "1");
       if (outputMode === "both") params.set("both", "1");
-      if (pdfLang && pdfLang !== "de") params.set("lang", pdfLang);
+      if (lang && lang !== "de") params.set("lang", lang);
       const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v3?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,10 +156,11 @@ export function EditorToolbar() {
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
       const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
+      const langSuffix = lang && lang !== "de" ? `_${lang.toUpperCase()}` : "";
       const modeSuffix = outputMode === "solutions" ? "_solutions" : outputMode === "both" ? "_complete" : "";
       a.download = preview
-        ? `${shortId}_preview_${fileSuffix}${modeSuffix}.pdf`
-        : `${shortId}_${fileSuffix}${modeSuffix}.pdf`;
+        ? `${shortId}_preview_${fileSuffix}${langSuffix}${modeSuffix}.pdf`
+        : `${shortId}_${fileSuffix}${langSuffix}${modeSuffix}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -256,13 +269,16 @@ export function EditorToolbar() {
     const mode = pdfLocaleDialog.mode;
     const preview = pdfLocaleDialog.preview ?? false;
     const outputMode = pdfOutputMode;
+    const langs = Array.from(pdfLangs);
     setPdfLocaleDialog({ open: false });
     setPdfOutputMode("worksheet");
-    setPdfLang("de");
+    setPdfLangs(new Set(["de"]));
     if (mode === "cover") {
       handleDownloadCover(locale);
     } else {
-      handleDownloadPdf(preview, locale, outputMode);
+      for (const lang of langs) {
+        await handleDownloadPdf(preview, locale, outputMode, lang);
+      }
     }
   };
 
@@ -597,15 +613,29 @@ export function EditorToolbar() {
           </DialogHeader>
           {worksheetTranslationLangs.length > 0 && pdfLocaleDialog.mode !== "cover" && (
             <div className="space-y-2 pt-1">
-              <Label className="text-sm font-medium">{t("translatedLanguages")}</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">{t("translatedLanguages")}</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allLangs = ["de", ...worksheetTranslationLangs];
+                    setPdfLangs((prev) =>
+                      prev.size === allLangs.length ? new Set(["de"]) : new Set(allLangs)
+                    );
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {pdfLangs.size === worksheetTranslationLangs.length + 1 ? t("deselectAll") : t("selectAll")}
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 {["de", ...worksheetTranslationLangs.slice().sort((a, b) => (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de"))].map((code) => (
                   <button
                     key={code}
                     type="button"
-                    onClick={() => setPdfLang(code)}
+                    onClick={() => togglePdfLang(code)}
                     className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
-                      pdfLang === code
+                      pdfLangs.has(code)
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-input bg-background text-muted-foreground hover:text-foreground"
                     }`}

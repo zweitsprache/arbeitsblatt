@@ -123,14 +123,14 @@ function deterministicShuffle<T>(items: T[], seedKey: string): T[] {
 
 // ─── German marker helper ────────────────────────────────────
 /** Parse {{de:…}} markers and render the German text in semibold + accent color */
-function renderDeMarkers(text: string, color?: string | null): React.ReactNode {
+function renderDeMarkers(text: string, color?: string | null, fontFamily?: string): React.ReactNode {
   const parts = text.split(/(\{\{de:.*?\}\})/g);
   if (parts.length === 1) return text;
   return parts.map((part, i) => {
     const m = part.match(/^\{\{de:(.*?)\}\}$/);
     if (m) {
       return (
-        <em key={i} className="not-italic font-semibold" style={color ? { color } : undefined}>
+        <em key={i} dir="ltr" className="not-italic font-semibold" style={{ ...(color ? { color } : undefined), ...(fontFamily ? { fontFamily } : undefined) }}>
           {m[1]}
         </em>
       );
@@ -323,7 +323,7 @@ function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1
   );
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, isRtl }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; isRtl?: boolean }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -341,16 +341,16 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
     const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
       <Tag className={sizes[block.level]} style={style}>
-        <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>{renderDeMarkers(originalBlock.content, deMarkerColor)}</span>
+        <span dir="ltr" style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>{renderDeMarkers(originalBlock.content, deMarkerColor)}</span>
         <span style={{ fontWeight: 400 }}> | </span>
-        <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(block.content, deMarkerColor)}</span>
+        <span dir={isRtl ? "rtl" : undefined} style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(block.content, deMarkerColor, resolvedHeadlineFont)}</span>
       </Tag>
     );
   }
-  return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
+  return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor, resolvedHeadlineFont)}</Tag>;
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor, isRtl }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; isRtl?: boolean }) {
   // Only highlight {{de:…}} markers with accent color when the worksheet is translated
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
@@ -413,6 +413,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
     gap: "0 1em",
     position: "relative",
+    direction: "ltr",
   };
   const renderBilingualGrid = (
     left: React.ReactNode,
@@ -459,9 +460,14 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     </div>
   ) : null;
 
+  /** Font family for {{de:…}} markers — always the original brand font */
+  const deMarkerFont = resolvedOriginalBodyFont !== "inherit" && resolvedOriginalBodyFont !== resolvedBodyFont
+    ? resolvedOriginalBodyFont
+    : undefined;
+
   /** Render a single column of tiptap content (used for both original and translated) */
   const renderContent = (html: string) => {
-    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor));
+    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor, deMarkerFont));
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
@@ -472,7 +478,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Split HTML into individual paragraph strings */
   const splitParagraphs = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, deMarkerColor);
+    const prepared = prepareTiptapHtml(html, deMarkerColor, deMarkerFont);
     const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi);
     return matches || [prepared];
   };
@@ -480,7 +486,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
    *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
   const splitRowItems = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, deMarkerColor);
+    const prepared = prepareTiptapHtml(html, deMarkerColor, deMarkerFont);
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
@@ -510,11 +516,11 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       return renderBilingualGrid(
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
+              <div dir="ltr" style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
+              <div dir={isRtl ? "rtl" : undefined} style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
@@ -533,8 +539,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const hasListRows = /<li\b/i.test(originalHtml) || /<li\b/i.test(translatedHtml);
       if (hasListRows) {
         return renderBilingualGrid(
-          <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-          <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+          <div dir="ltr" style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+          <div dir={isRtl ? "rtl" : undefined} className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
           undefined,
           { showDivider: showBilingualDivider },
         );
@@ -547,10 +553,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const rowPadding = hasMultipleRows ? "0.25em" : "0";
       return renderBilingualGrid(Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
+              <div dir="ltr" className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
+              <div dir={isRtl ? "rtl" : undefined} className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -558,8 +564,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     }
 
     return renderBilingualGrid(
-      <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-      <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+      <div dir="ltr" style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+      <div dir={isRtl ? "rtl" : undefined} className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
       baseTextStyle,
       { showDivider: showBilingualDivider },
     );
@@ -733,7 +739,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, deMarkerColor)}
+            {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
           </div>
         )}
       </div>
@@ -757,7 +763,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, deMarkerColor)}
+            {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
           </div>
         )}
       </div>
@@ -786,7 +792,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       </div>
       {block.comment && (
         <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-          {renderDeMarkers(block.comment, deMarkerColor)}
+          {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
         </div>
       )}
     </div>
@@ -2077,21 +2083,29 @@ function GlossaryView({
   block,
   brand,
   bodyFont,
+  originalBodyFont,
   isNonLatin,
   translationScale,
 }: {
   block: GlossaryBlock;
   brand?: Brand;
   bodyFont?: string;
+  originalBodyFont?: string;
   isNonLatin?: boolean;
   translationScale?: number;
 }) {
   const colWidth = `${block.leftColWidth ?? 25}%`;
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
-  const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
+  const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
+  // Term column: always German → use original brand font
+  const termStyle: React.CSSProperties = { fontFamily: resolvedOriginalBodyFont };
+  // Definition/example columns: may be translated → use active body font
   const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
-  const defStyle: React.CSSProperties = scale ? { fontSize: `${scale}em` } : {};
+  const defStyle: React.CSSProperties = {
+    ...(isNonLatin ? { fontFamily: resolvedBodyFont } : {}),
+    ...(scale ? { fontSize: `${scale}em` } : {}),
+  };
   const hasExamples = block.pairs.some((p) => p.example);
   return (
     <div className={`space-y-2 ${s.glossary}`}>
@@ -2111,7 +2125,7 @@ function GlossaryView({
               {pair.definition}
             </span>
             {hasExamples && (
-              <span className="flex-1 text-muted-foreground" dir="auto" style={defStyle}>
+              <span className="flex-1 text-muted-foreground" dir="auto" style={{ ...defStyle, fontFamily: resolvedOriginalBodyFont }}>
                 {pair.example}
               </span>
             )}
@@ -3496,17 +3510,6 @@ function FixSentencesView({
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
-                  {isExample ? (
-                    <div
-                      style={{
-                        fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
-                        color: accentColor || 'var(--color-primary)',
-                        fontSize: '1.15em',
-                      }}
-                    >
-                      {correctParts.join(" ")}
-                    </div>
-                  ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {displayParts.map((part, pi) => (
                       <div key={pi} className="flex items-center gap-0.5">
@@ -3560,11 +3563,23 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  )}
                   {!isExample && isPrint && showSolutions ? (
                     <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
-                  ) : !isExample && isPrint ? (
-                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+                  ) : isPrint ? (
+                    <div className="relative mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }}>
+                      {isExample && (
+                        <div
+                          className="absolute bottom-0 left-0 whitespace-nowrap pointer-events-none"
+                          style={{
+                            fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
+                            color: accentColor || 'var(--color-primary)',
+                            fontSize: '0.95em',
+                          }}
+                        >
+                          {correctParts.join(" ")}
+                        </div>
+                      )}
+                    </div>
                   ) : null}
                   {!isExample && showResults && !isFullyCorrect && (
                     <p className="text-cv-xs text-green-600 mt-2">
@@ -3652,6 +3667,9 @@ function TransformSentencesView({
   answer,
   onAnswer,
   showResults,
+  accentColor,
+  bodyFont,
+  bodyFontSize,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -3659,11 +3677,14 @@ function TransformSentencesView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  accentColor?: string | null;
+  bodyFont?: string;
+  bodyFontSize?: string;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" style={{ ...(bodyFont ? { fontFamily: bodyFont } : {}), ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
@@ -3673,6 +3694,7 @@ function TransformSentencesView({
           const hasSolution = !!item.solution;
           const isCorrect = showResults && hasSolution && userVal.trim().toLowerCase() === item.solution!.trim().toLowerCase();
           const isWrong = showResults && hasSolution && userVal.trim() !== "" && !isCorrect;
+          const isExample = i === 0 && !!block.showFirstAsExample && hasSolution;
 
           return (
             <div
@@ -3685,7 +3707,23 @@ function TransformSentencesView({
                 </span>
                 <span>{item.beginning}</span>
               </div>
-              {interactive ? (
+              {isExample ? (
+                <div
+                  className="relative mt-1 ml-9 border-b border-dashed border-muted-foreground/30"
+                  style={{ width: 'calc(100% - 2.25rem)', minHeight: '14px' }}
+                >
+                  <div
+                    className="absolute bottom-0 left-0 whitespace-nowrap pointer-events-none"
+                    style={{
+                      fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
+                      color: accentColor || 'var(--color-primary)',
+                      fontSize: '0.95em',
+                    }}
+                  >
+                    {item.solution}
+                  </div>
+                </div>
+              ) : interactive ? (
                 <div className="mt-1 ml-9" style={{ width: 'calc(100% - 2.25rem)' }}>
                   <input
                     type="text"
@@ -4162,7 +4200,7 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale, isRtl }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number; isRtl?: boolean }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
@@ -4170,8 +4208,8 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
 
-  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
-    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, dir?: string) => (
+    <div dir={dir} className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
       <div
         className="tiptap max-w-none text-foreground font-normal"
         dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
@@ -4186,13 +4224,15 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
         gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
         gap: "0 1rem",
         alignItems: "start",
+        direction: "ltr",
       }}
     >
-      {renderNumberedItemContent(originalContent)}
+      {renderNumberedItemContent(originalContent, undefined, undefined, "ltr")}
       {renderNumberedItemContent(
         translatedContent,
         effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
-        "tiptap-bilingual-translated"
+        "tiptap-bilingual-translated",
+        isRtl ? "rtl" : undefined
       )}
     </div>
   );
@@ -4268,11 +4308,13 @@ function ChecklistView({
   originalBlock,
   isNonLatin,
   translationScale,
+  isRtl,
 }: {
   block: ChecklistBlock;
   originalBlock?: ChecklistBlock;
   isNonLatin?: boolean;
   translationScale?: number;
+  isRtl?: boolean;
 }) {
   const isBilingual = !!block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
@@ -4327,6 +4369,7 @@ function ChecklistView({
               ? {
                   gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
                   alignItems: "start",
+                  direction: "ltr",
                 }
               : {
                   gridTemplateColumns: "2rem minmax(0, 1fr)",
@@ -4337,8 +4380,8 @@ function ChecklistView({
             {showBilingual
               ? (
                 <>
-                  {renderChecklistColumn(originalItem)}
-                  {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
+                  <div dir="ltr">{renderChecklistColumn(originalItem)}</div>
+                  <div dir={isRtl ? "rtl" : undefined}>{renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}</div>
                 </>
               )
               : renderChecklistColumn(item)}
@@ -4983,6 +5026,7 @@ export function ViewerBlockRenderer({
   lessonLabel,
   originalBlock,
   isNonLatin = false,
+  isRtl = false,
   translationScale,
 }: {
   block: WorksheetBlock;
@@ -5003,6 +5047,7 @@ export function ViewerBlockRenderer({
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
   isNonLatin?: boolean;
+  isRtl?: boolean;
   translationScale?: number;
 }) {
   const interactive = mode === "online";
@@ -5024,11 +5069,34 @@ export function ViewerBlockRenderer({
     return undefined;
   }, [allBlocks, block]);
 
+  // Determine RTL wrapper: apply dir="rtl" only when the block content was actually
+  // translated into an RTL language.  Bilingual blocks handle RTL internally per-column,
+  // so they never need the outer wrapper.  Non-bilingual blocks only need it when their
+  // content genuinely differs from the original (i.e. was translated).
+  const isBilingualBlock = "bilingual" in block && (block as { bilingual?: boolean }).bilingual;
+  const isTranslatedBlock = !!originalBlock;
+  const hasTranslatedContent = isTranslatedBlock && (() => {
+    if (!originalBlock) return false;
+    // Compare the primary content field(s) to detect actual translation
+    const a = block as Record<string, unknown>;
+    const b = originalBlock as Record<string, unknown>;
+    if ("content" in a && "content" in b) return a.content !== b.content;
+    if ("items" in a && "items" in b) return JSON.stringify(a.items) !== JSON.stringify(b.items);
+    if ("entries" in a && "entries" in b) return JSON.stringify(a.entries) !== JSON.stringify(b.entries);
+    if ("lines" in a && "lines" in b) return JSON.stringify(a.lines) !== JSON.stringify(b.lines);
+    if ("question" in a && "question" in b) return a.question !== b.question;
+    return false;
+  })();
+  const needsRtl = isRtl && !isBilingualBlock && hasTranslatedContent;
+
+  const wrapRtl = (el: React.ReactNode) =>
+    needsRtl ? <div dir="rtl">{el}</div> : <>{el}</>;
+
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
+      return wrapRtl(<HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} isRtl={isRtl} />);
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
+      return wrapRtl(<TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} isRtl={isRtl} />);
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -5048,7 +5116,7 @@ export function ViewerBlockRenderer({
     case "writing-rows":
       return <WritingRowsView block={block} />;
     case "multiple-choice":
-      return (
+      return wrapRtl(
         <MultipleChoiceView
           block={block}
           interactive={interactive}
@@ -5103,11 +5171,12 @@ export function ViewerBlockRenderer({
         />
       );
     case "glossary":
-      return (
+      return wrapRtl(
         <GlossaryView
           block={block}
           brand={brand}
           bodyFont={bodyFont}
+          originalBodyFont={originalBodyFont}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
         />
@@ -5138,7 +5207,7 @@ export function ViewerBlockRenderer({
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
           brand={brand}
-          bodyFont={bodyFont}
+          bodyFont={originalBodyFont || bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
@@ -5217,7 +5286,7 @@ export function ViewerBlockRenderer({
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
           brand={brand}
-          bodyFont={bodyFont}
+          bodyFont={originalBodyFont || bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
@@ -5255,6 +5324,9 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          accentColor={accentColor}
+          bodyFont={originalBodyFont || bodyFont}
+          bodyFontSize={bodyFontSize}
         />
       );
     case "verb-table":
@@ -5272,7 +5344,7 @@ export function ViewerBlockRenderer({
     case "chart":
       return <ChartView block={block} />;
     case "dialogue":
-      return (
+      return wrapRtl(
         <DialogueView
           block={block}
           interactive={interactive}
@@ -5324,9 +5396,9 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return wrapRtl(<NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} isRtl={isRtl} />);
     case "checklist":
-      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return wrapRtl(<ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} isRtl={isRtl} />);
     case "accordion":
       return (
         <AccordionView
@@ -5350,9 +5422,9 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return wrapRtl(<ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />);
     case "website":
-      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return wrapRtl(<WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />);
     default:
       return null;
   }
