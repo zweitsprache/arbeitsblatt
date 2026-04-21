@@ -5127,8 +5127,8 @@ export function ViewerBlockRenderer({
   const hasTranslatedContent = isTranslatedBlock && (() => {
     if (!originalBlock) return false;
     // Compare the primary content field(s) to detect actual translation
-    const a = block as Record<string, unknown>;
-    const b = originalBlock as Record<string, unknown>;
+    const a = block as unknown as Record<string, unknown>;
+    const b = originalBlock as unknown as Record<string, unknown>;
     if ("content" in a && "content" in b) return a.content !== b.content;
     if ("items" in a && "items" in b) return JSON.stringify(a.items) !== JSON.stringify(b.items);
     if ("entries" in a && "entries" in b) return JSON.stringify(a.entries) !== JSON.stringify(b.entries);
