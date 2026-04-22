@@ -1210,7 +1210,7 @@ function ImageCardsView({ block, accentColor }: { block: ImageCardsBlock; accent
   );
 }
 
-function TextCardsView({ block }: { block: TextCardsBlock }) {
+function TextCardsView({ block, accentColor }: { block: TextCardsBlock; accentColor?: string | null }) {
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
     return deterministicShuffle(
@@ -5206,7 +5206,7 @@ export function ViewerBlockRenderer({
     case "image-cards":
       return <ImageCardsView block={block} accentColor={accentColor} />;
     case "text-cards":
-      return <TextCardsView block={block} />;
+      return <TextCardsView block={block} accentColor={accentColor} />;
     case "spacer":
       return <SpacerView block={block} />;
     case "divider":
