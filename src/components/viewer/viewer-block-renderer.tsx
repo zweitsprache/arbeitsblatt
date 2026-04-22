@@ -61,7 +61,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, CircleHelp } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, CircleHelp, ToyBrick } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -330,7 +330,6 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
   const style: React.CSSProperties = {
-    ...(block.level === 1 ? { marginBottom: -4 } : {}),
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: primaryColor,
@@ -372,8 +371,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
-  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
-  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel || isKompetenzziele || isHandlungsziele;
+  const isRows = block.textStyle === "rows";
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
 
@@ -520,17 +519,17 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const cellBase: React.CSSProperties = {
         padding: "0.375rem 0.75rem 0.375rem 1.75rem",
         position: "relative",
-        borderBottom: "1px solid #d1d5db",
+        borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
         lineHeight: "1.35em",
       };
       return renderBilingualGrid(
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div dir="ltr" style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
+              <div dir="ltr" style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div dir={isRtl ? "rtl" : undefined} style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
+              <div dir={isRtl ? "rtl" : undefined} style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
@@ -581,45 +580,6 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     );
   };
 
-  if (isLernziel) {
-    const showStacked = isBilingual && originalBlock;
-    const isOnline = mode === "online";
-    return (
-      <div
-        className={isOnline ? "flex gap-0 font-semibold border rounded-[5px] overflow-hidden" : "flex gap-0 font-semibold border rounded-sm overflow-hidden"}
-        style={{
-          borderColor: primaryColor,
-          color: primaryColor,
-          ...(isOnline ? {} : { backgroundColor: `${primaryColor}10` }),
-        }}
-      >
-        <div
-          className={isOnline ? "shrink-0 w-8 flex items-center justify-center" : "shrink-0 w-10 flex items-center justify-center"}
-          style={{ backgroundColor: primaryColor }}
-        >
-          <Flag className={isOnline ? "h-4 w-4" : "h-5 w-5"} style={{ color: "#ffffff" }} />
-        </div>
-        <div
-          className="flex-1 min-w-0 px-6 py-2"
-          style={{
-            ...baseTextStyle,
-            ...(isOnline ? {} : { backgroundColor: colorWithAlpha(primaryColor, 0.08) }),
-          }}
-        >
-          {imageEl}
-          {showStacked ? (
-            <div>
-              <div style={baseTextStyle}>{renderContent(originalBlock.content)}</div>
-              <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle }}>{renderContent(block.content)}</div>
-            </div>
-          ) : (
-            renderContent(block.content)
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (isMetadaten) {
     return (
       <div className={s.textPlain} style={{ marginBottom: "-1.5rem", ...baseTextStyle, color: primaryColor }}>
@@ -631,6 +591,62 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   if (!hasExampleBox && !hasFrameBox && !hasHinweisBox) {
     // For rows style (non-bilingual): render paragraph-by-paragraph with real DOM icon divs.
     // CSS ::before background-image is not rendered by Chromium's PDF engine.
+    if (isFragen && !isBilingual) {
+      const paras = splitRowItems(block.content);
+      return (
+        <div className={s.textPlain} style={baseTextStyle}>
+          {imageEl}
+          {paras.map((para, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
+                breakInside: "avoid" as const,
+                pageBreakInside: "avoid" as const,
+              }}
+            >
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+                <CircleHelp className="h-5 w-5" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (isRedemittel && !isBilingual) {
+      const paras = splitRowItems(block.content);
+      return (
+        <div className={s.textPlain} style={baseTextStyle}>
+          {imageEl}
+          {paras.map((para, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
+                breakInside: "avoid" as const,
+                pageBreakInside: "avoid" as const,
+              }}
+            >
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+                <MessageCircle className="h-5 w-5" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     if (isRows && !isBilingual) {
       const paras = splitRowItems(block.content);
       return (
@@ -640,19 +656,19 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
             <div
               key={i}
               style={{
-                padding: "0.375rem 0 0.375rem 1.75rem",
-                position: "relative",
-                borderBottom: "1px solid #d1d5db",
-                lineHeight: "1.35em",
-                ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
+                display: "flex",
+                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
                 breakInside: "avoid" as const,
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
                 <RowsIconSvg />
               </div>
-              <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              </div>
             </div>
           ))}
         </div>
@@ -673,7 +689,11 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       : isHinweisWichtig
       ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
       : isLernziel
-      ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
+      ? { color: primaryColor, bg: "transparent", border: primaryColor, icon: <Goal className="h-5 w-5" style={{ color: primaryColor }} /> }
+      : isKompetenzziele
+      ? { color: accentColor || "#475569", bg: `${accentColor || "#475569"}08`, border: accentColor || "#475569", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accentColor || "#475569"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg> }
+      : isHandlungsziele
+      ? { color: accentColor || "#475569", bg: `${accentColor || "#475569"}08`, border: accentColor || "#475569", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accentColor || "#475569"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg> }
       : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
     // For alarm/wichtig in bilingual mode, render each language as a full hint box
@@ -681,13 +701,13 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     const useFullBilingualHintBoxes =
       isBilingual && !!originalBlock && (isHinweisWichtig || isHinweisAlarm);
     const bilingualHintIconStyle: React.CSSProperties | undefined =
-      isBilingual ? { paddingLeft: "0.75rem", width: "2.1rem" } : undefined;
+      isBilingual ? { paddingLeft: "0.25rem", width: "1.5rem" } : undefined;
 
     if (useFullBilingualHintBoxes) {
       return renderBilingualGrid(
           <div
             className={s.hintBox}
-            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+            style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
             <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
@@ -699,7 +719,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           </div>,
           <div
             className={s.hintBox}
-            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+            style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
             <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
@@ -717,7 +737,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     return (
       <div
         className={s.hintBox}
-        style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+        style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
       >
         <div className={s.hintIcon} style={bilingualHintIconStyle}>
           {hinweisConfig.icon}
@@ -787,13 +807,12 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         style={{
           "--block-color": borderTextColor,
           "--example-radius": mode === "online" ? "5px" : "4px",
-          "--example-icon-width": mode === "online" ? "2rem" : "2.5rem",
           fontFamily: resolvedBodyFont,
           ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
         } as React.CSSProperties}
       >
         <div className={s.exampleSplitIcon} aria-hidden="true">
-          {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
+          {isExampleStandard ? <ThumbsDown className="h-5 w-5" /> : <ThumbsUp className="h-5 w-5" />}
         </div>
         <div className={s.exampleSplitBody}>
           {imageEl}
@@ -987,15 +1006,29 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
 
   if (showBilingual) {
     return (
-      <div className="flex flex-col gap-3">
+      <div>
         {Array.from({ length: count }).map((_, i) => {
           const deHtml = deItems[i] ?? "";
           const trHtml = trItems[i] ?? "";
           return (
-            <div key={i} className="snippet-item-row grid grid-cols-2 gap-4 items-stretch">
-              <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
+            <div
+              key={i}
+              className={`snippet-item-row grid grid-cols-2 gap-4 items-stretch ${s.snippetCard}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "1rem",
+                borderTop: i === 0 ? "1px solid color-mix(in srgb, currentColor 30%, transparent)" : undefined,
+                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+              }}
+            >
+              <div className="relative flex items-stretch" style={{ display: "flex", alignItems: "stretch" }}>
+                <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+                  <ToyBrick className="h-5 w-5" />
+                </div>
                 <div
                   className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
+                  style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
                   dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(deHtml) }}
                 />
                 {!isPrint && (
@@ -1013,12 +1046,11 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
                   </button>
                 )}
               </div>
-              <div className={`snippet-item-card flex flex-col border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
-                <div
-                  className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
-                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
-                />
-              </div>
+              <div
+                className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
+                style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
+                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
+              />
             </div>
           );
         })}
@@ -1027,14 +1059,24 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div>
       {deItems.map((html, i) => (
         <div
           key={i}
-          className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${!isPrint ? "group hover:bg-slate-50 transition-colors" : ""} ${s.snippetCard}`}
+          className={`snippet-item-card relative flex items-stretch ${!isPrint ? "group" : ""} ${s.snippetCard}`}
+          style={{
+            display: "flex",
+            alignItems: "stretch",
+            borderTop: i === 0 ? "1px solid color-mix(in srgb, currentColor 30%, transparent)" : undefined,
+            borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+          }}
         >
+          <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+            <ToyBrick className="h-5 w-5" />
+          </div>
           <div
             className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
+            style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
             dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(html) }}
           />
           {!isPrint && (
@@ -1102,7 +1144,7 @@ function ImageView({ block }: { block: ImageBlock }) {
   );
 }
 
-function ImageCardsView({ block }: { block: ImageCardsBlock }) {
+function ImageCardsView({ block, accentColor }: { block: ImageCardsBlock; accentColor?: string | null }) {
   // Shuffle word bank items for display (memoized to maintain consistency)
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
@@ -1150,11 +1192,11 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
                 />
               </div>
             )}
-            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
+            <div className={block.showWritingLines ? "px-4 pb-2" : "p-2 text-center bg-muted/50"} style={block.showWritingLines && accentColor ? { backgroundColor: `${accentColor}0d` } : undefined}>
               {block.showWritingLines ? (
-                <div className="space-y-0.5 pb-1">
+                <div className="space-y-0.5 pt-2 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: `1px dashed ${accentColor || 'var(--color-muted-foreground)'}`, opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -1215,11 +1257,11 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
             <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
               {item.text && <span>{item.text}</span>}
             </div>
-            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
+            <div className={block.showWritingLines ? "px-4 pb-2" : "p-2 text-center bg-muted/50"} style={block.showWritingLines && accentColor ? { backgroundColor: `${accentColor}0d` } : undefined}>
               {block.showWritingLines ? (
-                <div className="space-y-0 pb-1">
+                <div className="space-y-0 pt-2 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: `1px dashed ${accentColor || 'var(--color-muted-foreground)'}`, opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -1333,7 +1375,7 @@ function MultipleChoiceView({
           const isCorrect = opt.isCorrect;
 
           let optionClass =
-            "flex items-center gap-3 p-3 rounded border transition-colors";
+            "flex items-center rounded border transition-colors";
 
           if (showResults) {
             if (isCorrect) {
@@ -1365,13 +1407,17 @@ function MultipleChoiceView({
                 }
               }}
             >
-              <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem" }}>
+                <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
               {interactive ? (
                 <div
-                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
+                  className={`rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
                     ${isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                  style={{ width: 20, height: 20 }}
                 >
                   {isSelected && (
                     <div className="h-2 w-2 rounded-full bg-white" />
@@ -1389,6 +1435,7 @@ function MultipleChoiceView({
               {showResults && isSelected && !isCorrect && (
                 <span className="text-cv-xs font-medium text-red-600">{t("incorrectResult")}</span>
               )}
+              </div>
             </div>
           );
         })}
@@ -1418,7 +1465,7 @@ function FillInBlankView({
   let blankIndex = 0;
 
   return (
-    <div className="leading-loose flex flex-wrap items-baseline">
+    <div className="rounded border border-border" style={{ padding: "0.5rem 0.75rem", lineHeight: 2.4 }}>
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
         if (match) {
@@ -1479,7 +1526,7 @@ function FillInBlankView({
               <span
                 key={i}
                 className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
-                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
+                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'baseline', height: '1.3em', borderRadius: 4 }}
               >
                 {correctAnswer}
               </span>
@@ -1489,9 +1536,9 @@ function FillInBlankView({
             <span
               key={i}
               className={`bg-gray-100 px-2 ${spacingClass}`}
-              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+              style={{ display: 'inline-flex', alignItems: 'baseline', verticalAlign: 'baseline', position: 'relative', top: '-2px', padding: '0.675em 0.5em', lineHeight: 1, borderRadius: 3, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
             >
-              <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
+              <span className="text-muted-foreground" style={{ fontSize: '0.7em' }}>
                 {String(blankIndex).padStart(2, "0")}
               </span>
             </span>
@@ -1547,7 +1594,7 @@ function FillInBlankItemsView({
   }, [block.items, block.showWordBank, block.id]);
 
   return (
-    <div>
+    <div className="space-y-2">
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
@@ -1564,13 +1611,15 @@ function FillInBlankItemsView({
         return (
           <div
             key={item.id || idx}
-            className="flex items-center border-b last:border-b-0"
-            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+            className="flex items-center rounded border border-border"
+            style={{ minHeight: "36px" }}
           >
-            <span className={NUMBER_BADGE_CLASS}>
-              {String(idx + 1).padStart(2, "0")}
-            </span>
-            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
+            <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem" }}>
+              <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+            </div>
+            <span style={{ flex: 1, minWidth: 0, padding: "0.3rem 0.75rem 0.3rem 0.5rem", lineHeight: 1.7 }}>
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1588,6 +1637,7 @@ function FillInBlankItemsView({
                     correctAnswer = raw.trim();
                   }
                   const key = `blank-${idx}-${blankInItem}`;
+                  const blankNum = blankInItem + 1;
                   blankInItem++;
                   const userValue = blanks[key] || "";
                   const hasAnswer = correctAnswer !== "";
@@ -1642,10 +1692,12 @@ function FillInBlankItemsView({
                   return (
                     <span
                       key={i}
-                      className={`bg-gray-100 ${spacingClass} border-b border-muted-foreground/30`}
-                      style={{ display: 'inline-block', verticalAlign: 'baseline', borderRadius: 2, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+                      className={`bg-gray-100 px-2 ${spacingClass}`}
+                      style={{ display: 'inline-flex', alignItems: 'baseline', verticalAlign: 'baseline', position: 'relative', top: '-2px', padding: '0.675em 0.5em', lineHeight: 1, borderRadius: 3, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
                     >
-                      &nbsp;
+                      <span className="text-muted-foreground" style={{ fontSize: '0.7em' }}>
+                        {String(blankNum).padStart(2, "0")}
+                      </span>
                     </span>
                   );
                 }
@@ -1761,48 +1813,50 @@ function MatchingView({
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
-          <div>
+          <div className="space-y-2">
             {block.pairs.map((pair, i) => (
               <div
                 key={pair.id}
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                className="flex items-center rounded border border-border"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="flex-1">{pair.left}</span>
-                {showSolutions ? (
-                  <span
-                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0"
-                  >
-                    {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
+                <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <span className="flex-1">{pair.left}</span>
+                  <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                ) : (
-                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
-                )}
+                  {showSolutions ? (
+                    <span className="font-bold text-white bg-green-500 rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                      {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
+                    </span>
+                  ) : (
+                    <div className={CONTROL_BOX_CLASS} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
           {/* Right column — shuffled */}
-          <div>
+          <div className="space-y-2">
             {shuffledRight.map((pair, i) => (
               <div
                 key={`r-${pair.id}`}
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                className="flex items-center rounded border border-border"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                {showSolutions ? (
-                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
-                    {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
+                <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  {showSolutions ? (
+                    <span className="font-bold text-white bg-green-500 rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                      {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
+                    </span>
+                  ) : (
+                    <div className={CONTROL_BOX_CLASS} />
+                  )}
+                  <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
+                    {String.fromCharCode(65 + i)}
                   </span>
-                ) : (
-                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
-                )}
-                <span className="flex-1">{pair.right}</span>
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String.fromCharCode(65 + i)}
-                </span>
+                  <span className="flex-1 text-right">{pair.right}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -2127,6 +2181,7 @@ function GlossaryView({
           <div
             key={pair.id}
             className="glossary-row flex items-start gap-4 py-1 border-b"
+            style={{ lineHeight: "1.58" }}
           >
             <span className={`font-medium ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth, ...termStyle }}>
               {pair.term}
@@ -5149,7 +5204,7 @@ export function ViewerBlockRenderer({
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
-      return <ImageCardsView block={block} />;
+      return <ImageCardsView block={block} accentColor={accentColor} />;
     case "text-cards":
       return <TextCardsView block={block} />;
     case "spacer":

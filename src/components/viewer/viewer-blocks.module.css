@@ -34,7 +34,7 @@
   min-width: 20px;
   min-height: 20px;
   border-radius: 3px;
-  border: 2px solid #9ca3af;
+  border: 1.5px solid currentColor;
   background: transparent;
 }
 
@@ -89,7 +89,7 @@
 .hintBox {
   display: flex;
   gap: 0;
-  border: 1px solid var(--block-color);
+  border: 1px solid var(--block-border, var(--block-color));
   border-radius: 4px;
   background: var(--block-bg, transparent);
   color: var(--block-color);
@@ -97,17 +97,17 @@
 
 .hintIcon {
   flex-shrink: 0;
-  width: 2.75rem;
+  width: 2rem;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding-left: 1.5rem;
+  padding-left: 0.625rem;
 }
 
 .hintBody {
   flex: 1;
   min-width: 0;
-  padding: 0.5rem 0.75rem 0.5rem 0.7rem;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
 }
 
 .exampleBox {
@@ -128,36 +128,31 @@
 
 .exampleSplit {
   display: flex;
-  align-items: stretch;
+  border: 1px dashed var(--block-color);
+  border-radius: var(--example-radius, 4px);
   color: var(--block-color);
 }
 
 .exampleSplitIcon {
   flex-shrink: 0;
-  width: var(--example-icon-width, 2.5rem);
+  width: 2rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  border-radius: var(--example-radius, 4px) 0 0 var(--example-radius, 4px);
+  justify-content: flex-start;
+  padding-left: 0.625rem;
 }
 
 .exampleSplitBody {
   flex: 1;
   min-width: 0;
-  border: 1px dashed currentColor;
-  border-left: 0;
-  border-radius: 0 var(--example-radius, 4px) var(--example-radius, 4px) 0;
-  padding: 0.5rem 0.75rem 0.5rem 1.5rem;
-  background: #fff;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+  color: inherit;
 }
 
 .exampleSplitStandard .exampleSplitIcon {
-  background: #990033;
 }
 
 .exampleSplitImproved .exampleSplitIcon {
-  background: #3a4f40;
 }
 
 /* ─── Email skeleton ─────────────────────────────────────── */

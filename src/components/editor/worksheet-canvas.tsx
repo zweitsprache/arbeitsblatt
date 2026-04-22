@@ -137,7 +137,9 @@ export function WorksheetCanvas({
                       {index === 0 && isDragging && (
                         <DropIndicator isActive={showAbove} />
                       )}
-                      <div className={index > 0 ? "mt-2" : ""}>
+                      <div
+                        style={index > 0 ? { marginTop: "var(--block-gap)" } : undefined}
+                      >
                         <SortableBlock
                           block={block}
                           mode={state.viewMode}
