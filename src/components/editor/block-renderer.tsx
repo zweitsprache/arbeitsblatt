@@ -1364,7 +1364,7 @@ function FillInBlankItemsRenderer({
             <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
               {String(idx + 1).padStart(2, "0")}
             </span>
-            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
+            <span className="flex-1" style={{ lineHeight: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1397,7 +1397,7 @@ function FillInBlankItemsRenderer({
                     <span
                       key={i}
                       className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
-                      style={widthStyle}
+                      style={{ ...widthStyle, verticalAlign: 'middle' }}
                     >
                       {answer || '\u00A0'}
                     </span>

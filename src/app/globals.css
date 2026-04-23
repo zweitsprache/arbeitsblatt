@@ -108,7 +108,7 @@
    --block-gap : visual gap between blocks  (intentionally wider)
    --para-gap  : visual gap between <p> elements AND tight-top blocks */
 :root {
-  --block-gap: 2rem;
+  --block-gap: 1.75rem;
   --para-gap:  1.5rem;
 }
 
