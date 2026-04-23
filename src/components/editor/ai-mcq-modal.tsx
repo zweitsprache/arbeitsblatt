@@ -216,6 +216,7 @@ export function AiMcqModal({
               id: crypto.randomUUID(),
               type: "multiple-choice",
               visibility: "both",
+              instruction: "Choose the correct answer.",
               question: q.question,
               options,
               allowMultiple: false,

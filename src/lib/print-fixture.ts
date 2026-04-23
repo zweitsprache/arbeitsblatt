@@ -117,6 +117,7 @@ export const printFixtureBlocks: WorksheetBlock[] = [
   {
     id: "fixture-multiple-choice",
     type: "multiple-choice",
+    instruction: "Choose the correct answer.",
     question: "Which route should own the production print HTML?",
     allowMultiple: false,
     options: [
