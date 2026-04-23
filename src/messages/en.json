@@ -1242,7 +1242,7 @@
     "csvNoData": "No data found",
     "csvReplace": "Replace existing",
     "dashed": "Dashed",
-    "dialogueGapHelp": "Use {{blank:answer}} for gaps. Add ,N for width (e.g. {{blank:answer,3}} = 3x wide, {{blank:answer,0}} = full row)",
+    "dialogueGapHelp": "Use '{{blank:answer}}' for gaps. Add ,N for width (e.g. '{{blank:answer,3}}' = 3x wide, '{{blank:answer,0}}' = full row)",
     "dialogueItems": "Dialogue lines",
     "dialogueSpeaker": "Speaker",
     "falseLabelProp": "False column",

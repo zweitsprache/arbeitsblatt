@@ -1242,7 +1242,7 @@
     "csvNoData": "Keine Daten gefunden",
     "csvReplace": "Bestehende ersetzen",
     "dashed": "Gestrichelt",
-    "dialogueGapHelp": "{{blank:Antwort}} für Lücken. Mit ,N die Breite angeben (z.B. {{blank:Antwort,3}} = 3x breit, {{blank:Antwort,0}} = ganze Zeile)",
+    "dialogueGapHelp": "Verwende '{{blank:Antwort}}' für Lücken. Mit ,N die Breite angeben (z.B. '{{blank:Antwort,3}}' = 3x breit, '{{blank:Antwort,0}}' = ganze Zeile)",
     "dialogueItems": "Dialogzeilen",
     "dialogueSpeaker": "Sprecher",
     "falseLabelProp": "Falsch-Spalte",

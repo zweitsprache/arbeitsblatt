@@ -2162,15 +2162,11 @@ function OpenResponseView({
 }
 
 function WordBankView({ block }: { block: WordBankBlock }) {
-  const tb = useTranslations("blockRenderer");
   return (
-    <div className="border-2 border-dashed border-muted-foreground/20 rounded p-4">
-      <p className="text-cv-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-        {tb("wordBank")}
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+      <div className="flex flex-1 flex-wrap gap-2">
         {block.words.map((word, i) => (
-          <span key={i} className={s.wordChip}>
+          <span key={i} className="px-3 py-0.5 rounded border border-border text-[10px]">
             {word}
           </span>
         ))}
@@ -2661,6 +2657,11 @@ function OrderItemsView({
         {displayItems.map((item, i) => {
           if (!item) return null;
           const isCorrect = item.correctPosition === i + 1;
+          const indicatorClass = !showResults
+            ? CONTROL_BOX_CLASS
+            : isCorrect
+              ? CONTROL_BOX_FILLED_CLASS
+              : `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`;
 
           return (
             <div
@@ -2670,7 +2671,8 @@ function OrderItemsView({
               <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                 {String.fromCharCode(97 + i)}
               </span>
-              <span className={`flex-1 ${isCorrect ? "text-green-700" : ""}`}>{item.text}</span>
+              <div className={indicatorClass} />
+              <span className="flex-1">{item.text}</span>
               {!isPrint && (
                 <div className="flex items-center gap-1">
                   <button
@@ -3077,9 +3079,9 @@ function SortingCategoriesView({
   };
 
   const getItemById = (id: string) => block.items.find((item) => item.id === id);
-  const getItemNumber = (id: string) => {
+  const getItemLetter = (id: string) => {
     const index = block.items.findIndex((item) => item.id === id);
-    return index >= 0 ? index + 1 : 0;
+    return index >= 0 ? String.fromCharCode(97 + index) : "";
   };
   const SORT_ROW_CLASS = "flex h-[37px] items-center gap-3 border-b";
 
@@ -3114,10 +3116,11 @@ function SortingCategoriesView({
                     {cat.correctItems.map((itemId) => {
                       const item = block.items.find((it) => it.id === itemId);
                       return item ? (
-                            <div key={itemId} className={`${SORT_ROW_CLASS} text-green-800 font-semibold text-cv-sm`}>
+                            <div key={itemId} className={`${SORT_ROW_CLASS} text-cv-sm`}>
                               <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                                {String(getItemNumber(item.id)).padStart(2, "0")}
+                                {getItemLetter(item.id)}
                               </span>
+                              <div className={CONTROL_BOX_FILLED_CLASS} />
                               <span className="flex-1">{item.text}</span>
                             </div>
                       ) : null;
@@ -3128,8 +3131,9 @@ function SortingCategoriesView({
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
                       <div key={i} className={SORT_ROW_CLASS}>
                         <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                          {String(i + 1).padStart(2, "0")}
+                          {String.fromCharCode(97 + i)}
                         </span>
+                        <div className={CONTROL_BOX_CLASS} />
                         <span
                           className="flex-1 inline-block"
                           style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, minWidth: 80 }}
@@ -3202,18 +3206,20 @@ function SortingCategoriesView({
                   const item = getItemById(itemId);
                   if (!item) return null;
                   const isCorrect = cat.correctItems.includes(item.id);
-                  let bgClass = "";
-                  if (showResults) {
-                    bgClass = isCorrect ? "bg-green-50" : "bg-red-50";
-                  }
+                  const indicatorClass = !showResults
+                    ? CONTROL_BOX_CLASS
+                    : isCorrect
+                      ? CONTROL_BOX_FILLED_CLASS
+                      : `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`;
                   return (
                     <div
                       key={item.id}
-                        className={`${SORT_ROW_CLASS} transition-colors ${bgClass}`}
+                        className={`${SORT_ROW_CLASS} transition-colors`}
                     >
                       <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                        {String(getItemNumber(item.id)).padStart(2, "0")}
+                        {getItemLetter(item.id)}
                       </span>
+                      <div className={indicatorClass} />
                       <span className="flex-1">{item.text}</span>
                       {!showResults && (
                         <button
@@ -3923,7 +3929,7 @@ function DialogueView({
   onAnswer,
   showResults,
   showSolutions = false,
-  primaryColor,
+  accentColor,
 }: {
   block: DialogueBlock;
   interactive: boolean;
@@ -3931,28 +3937,28 @@ function DialogueView({
   onAnswer: (a: Record<string, string>) => void;
   showResults: boolean;
   showSolutions?: boolean;
-  primaryColor: string;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("blockRenderer");
 
   const speakerIconMap: Record<string, React.ReactNode> = {
     triangle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <polygon points="12,3 22,21 2,21" />
       </svg>
     ),
     square: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <rect x="3" y="3" width="18" height="18" rx="2" />
       </svg>
     ),
     diamond: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <polygon points="12,2 22,12 12,22 2,12" />
       </svg>
     ),
     circle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
         <circle cx="12" cy="12" r="10" />
       </svg>
     ),
@@ -4008,14 +4014,14 @@ function DialogueView({
               value={userVal}
               onChange={(e) => onAnswer({ ...answer, [key]: e.target.value })}
               placeholder="…"
-              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline ${
+              className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none inline ${
                 showResults
                   ? isCorrect
-                    ? "border-green-500 text-green-700"
+                    ? "text-green-700"
                     : hasAnswer
-                      ? "border-red-500 text-red-700"
-                      : "border-gray-400"
-                  : "border-gray-400 focus:border-primary"
+                      ? "text-red-700"
+                      : "text-muted-foreground"
+                  : "focus:ring-1 focus:ring-primary/50"
               }`}
               style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
             />
@@ -4023,8 +4029,8 @@ function DialogueView({
         ) : (
           <span
             key={i}
-            className={`inline-block px-2 py-0.5 text-center ${spacingClass} ${showSolutions && hasAnswer ? "text-green-600 text-cv-xs font-medium" : ""}`}
-            style={{ borderBottom: '1px dashed var(--color-muted-foreground)', ...widthStyle }}
+            className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacingClass} ${showSolutions && hasAnswer ? "bg-green-100 text-green-700 text-cv-xs font-medium" : "bg-gray-100"}`}
+            style={{ minHeight: "1.25rem", ...widthStyle }}
           >
             {showSolutions && hasAnswer ? correctAnswer : "\u00A0"}
           </span>
@@ -4035,18 +4041,19 @@ function DialogueView({
   };
 
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        <p className="text-cv-base text-muted-foreground">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
-        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+          <span className={`${INSTRUCTION_BADGE_CLASS} shrink-0`}>W</span>
+          <div className="flex flex-1 flex-wrap gap-2">
             {[...gapAnswers]
               .sort(() => Math.random() - 0.5)
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[10px]">
                   {text}
                 </span>
               ))}
@@ -4054,16 +4061,16 @@ function DialogueView({
         </div>
       )}
       {/* Dialogue items */}
-      <div className="space-y-0">
+      <div>
         {block.items.map((item, i) => (
-          <div key={item.id} className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}>
-            <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+          <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
+            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="text-cv-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
+            <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
               {speakerIconMap[item.icon] || speakerIconMap.circle}
             </span>
-            <div className="flex-1 flex flex-wrap items-baseline">
+            <div className="flex flex-1 flex-wrap items-center leading-5">
               {renderDialogueText(item.text)}
             </div>
           </div>
@@ -4387,13 +4394,13 @@ function AccordionView({
   const answers = (answer as Record<string, unknown> | undefined) || {};
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0">
       {block.items.map((item, i) => (
-        <div key={item.id} className="border border-border rounded-sm overflow-hidden course-content">
+        <div key={item.id} className="overflow-hidden course-content">
           <button
             type="button"
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+            className={`flex h-[37px] w-full items-center gap-2 border-b border-border pl-0 pr-3 text-left ${i === 0 || openIndex === i - 1 ? "border-t" : ""}`.trim()}
           >
             {block.showNumbers && (
               <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
@@ -4408,7 +4415,7 @@ function AccordionView({
             </span>
           </button>
           {openIndex === i && (
-            <div className="px-5 py-4 space-y-4">
+            <div className="pl-0 pr-3 py-2 space-y-2">
               {(item.children ?? []).map((childBlock) => (
                 <ViewerBlockRenderer
                   key={childBlock.id}
@@ -5292,7 +5299,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-          primaryColor={primaryColor}
+          accentColor={accentColor}
         />
       );
     case "numbered-label":

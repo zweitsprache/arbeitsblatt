@@ -1702,17 +1702,13 @@ function OpenResponseRenderer({
 
 // ─── Word Bank ──────────────────────────────────────────────
 function WordBankRenderer({ block }: { block: WordBankBlock }) {
-  const t = useTranslations("blockRenderer");
   return (
-    <div className="border-2 border-dashed border-muted-foreground/30 rounded-sm p-4">
-      <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-        {t("wordBank")}
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+      <div className="flex flex-1 flex-wrap gap-2">
         {block.words.map((word, i) => (
           <span
             key={i}
-            className="px-3 py-1 bg-muted rounded-full text-base font-medium"
+            className="px-3 py-0.5 rounded border border-border text-[10px]"
           >
             {word}
           </span>
@@ -3900,22 +3896,22 @@ function DialogueRenderer({
 
   const speakerIconMap: Record<string, React.ReactNode> = {
     triangle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <polygon points="12,3 22,21 2,21" />
       </svg>
     ),
     square: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <rect x="3" y="3" width="18" height="18" rx="2" />
       </svg>
     ),
     diamond: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
         <polygon points="12,2 22,12 12,22 2,12" />
       </svg>
     ),
     circle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
         <circle cx="12" cy="12" r="10" />
       </svg>
     ),
@@ -3961,14 +3957,14 @@ function DialogueRenderer({
             key={i}
             type="text"
             placeholder="…"
-            className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
+            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacingClass} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
             style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
           />
         ) : (
           <span
             key={i}
-            className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
-            style={widthStyle}
+            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${spacingClass} text-muted-foreground text-xs`}
+            style={{ minHeight: "1.25rem", ...widthStyle }}
           >
             {answer || '\u00A0'}
           </span>
@@ -3979,21 +3975,24 @@ function DialogueRenderer({
   };
 
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        <p className="text-base text-muted-foreground">{block.instruction}</p>
+        <div className="flex min-h-[37px] items-center gap-3 border-b py-2 font-semibold text-[var(--color-primary)]">
+          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">A</span>
+          <p>{block.instruction}</p>
+        </div>
       )}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
-        <div className="rounded p-3 border border-dashed border-muted-foreground/30">
-          <div className="text-xs text-muted-foreground mb-2 font-medium">{t("wordBank")}</div>
-          <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">W</span>
+          <div className="flex flex-1 flex-wrap gap-2">
             {getDeterministicPreviewOrder(
               gapAnswers,
               (text, index) => `${text}:${index}`
             )
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-xs">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[10px]">
                   {text}
                 </span>
               ))}
@@ -4001,16 +4000,16 @@ function DialogueRenderer({
         </div>
       )}
       {/* Dialogue items */}
-      <div className="space-y-0">
+      <div>
         {block.items.map((item, i) => (
-          <div key={item.id} className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}>
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+          <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
+            <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="text-xs font-bold text-muted-foreground bg-white border border-border box-border w-6 h-6 rounded flex items-center justify-center shrink-0">
+            <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
               {speakerIconMap[item.icon] || speakerIconMap.circle}
             </span>
-            <div className="flex-1 flex flex-wrap items-baseline">
+            <div className="flex flex-1 flex-wrap items-center leading-5">
               {renderDialogueText(item.text)}
             </div>
           </div>
@@ -4545,13 +4544,20 @@ function AccordionRenderer({ block, mode }: { block: AccordionBlock; mode: ViewM
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0">
       {block.items.map((item, i) => (
-        <div key={item.id} className="relative group border border-border rounded-sm overflow-hidden">
-          <button
-            type="button"
+        <div key={item.id} className="relative group overflow-hidden">
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setOpenIndex(openIndex === i ? null : i);
+              }
+            }}
+            className={`flex h-[37px] w-full items-center gap-2 border-b border-border pl-0 pr-3 text-left ${i === 0 || openIndex === i - 1 ? "border-t" : ""}`.trim()}
           >
             {block.showNumbers && (
               <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
@@ -4565,6 +4571,7 @@ function AccordionRenderer({ block, mode }: { block: AccordionBlock; mode: ViewM
               className="flex-1 bg-transparent border-none outline-none font-medium placeholder:text-muted-foreground/50"
             />
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); removeItem(i); }}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
             >
@@ -4575,9 +4582,9 @@ function AccordionRenderer({ block, mode }: { block: AccordionBlock; mode: ViewM
             ) : (
               <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
-          </button>
+          </div>
           {openIndex === i && (
-            <div className="px-3 py-3">
+            <div className="pl-0 pr-2 py-2">
               <DroppableColumn
                 blockId={block.id}
                 colIndex={i}
