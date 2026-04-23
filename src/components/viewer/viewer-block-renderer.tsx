@@ -74,8 +74,9 @@ function getBrandFonts(brand: string) {
 }
 
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
-const NUMBER_BADGE_CLASS = "flex h-5 w-5 min-w-5 items-center justify-center rounded-[3px] bg-slate-100 text-slate-700 ring-1 ring-slate-100 font-bold leading-none text-cv-micro";
-const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
+const NUMBER_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-100 font-bold leading-none tabular-nums pl-px text-cv-micro`;
+const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
+const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 text-[var(--color-primary)] ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 
 // Inline <svg> bullet marker for viewer/print lists.
@@ -190,15 +191,14 @@ function TaskContainer({
           </div>
           )}
           {instruction && (
-            <p
-              className="font-normal pb-1"
-              style={{
-                color: accentColor || "var(--color-primary)",
-                ...(instructionStyle || {}),
-              }}
-            >
-              {instruction}
-            </p>
+            <InstructionRow
+              instruction={instruction}
+              accentColor={accentColor}
+              showBadge={false}
+              withDivider={false}
+              rowClassName="pb-1"
+              style={instructionStyle}
+            />
           )}
         </div>
       )}
@@ -208,6 +208,40 @@ function TaskContainer({
       >
         {children}
       </div>
+    </div>
+  );
+}
+
+function InstructionRow({
+  instruction,
+  accentColor,
+  showBadge = true,
+  withDivider = true,
+  rowClassName,
+  trailingContent,
+  style,
+}: {
+  instruction: React.ReactNode;
+  accentColor?: string | null;
+  showBadge?: boolean;
+  withDivider?: boolean;
+  rowClassName?: string;
+  trailingContent?: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 font-semibold ${withDivider ? "py-2 border-b" : ""} ${rowClassName || ""}`.trim()}
+      style={{
+        color: accentColor || "var(--color-primary)",
+        ...(style || {}),
+      }}
+    >
+      <div className={`flex items-center ${showBadge ? "gap-3" : ""} flex-1`.trim()}>
+        {showBadge && <span className={INSTRUCTION_BADGE_CLASS}>A</span>}
+        <p>{instruction}</p>
+      </div>
+      {trailingContent}
     </div>
   );
 }
@@ -1285,6 +1319,7 @@ function MultipleChoiceView({
   onAnswer,
   showResults,
   showSolutions = false,
+  accentColor,
 }: {
   block: MultipleChoiceBlock;
   interactive: boolean;
@@ -1292,9 +1327,11 @@ function MultipleChoiceView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
+  const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
 
   const handleSelect = (optId: string) => {
     if (!interactive || showResults) return;
@@ -1309,36 +1346,38 @@ function MultipleChoiceView({
   };
 
   return (
-    <div className="space-y-3">
-      <p className="font-medium">{block.question}</p>
-      <div className="space-y-2">
+    <div>
+      <InstructionRow instruction={instructionText} accentColor={accentColor} />
+      <div className="flex min-h-[37px] items-center border-b font-medium text-foreground">
+        {block.question}
+      </div>
+      <div>
         {block.options.map((opt, i) => {
           const isSelected = selected.includes(opt.id);
           const isCorrect = opt.isCorrect;
 
-          let optionClass =
-            "flex items-center gap-3 p-3 rounded border transition-colors";
+          let rowClass = "flex items-center gap-3 py-2 border-b";
 
           if (showResults) {
             if (isCorrect) {
-              optionClass += " border-green-500 bg-green-50";
+              rowClass += " bg-green-50";
             } else if (isSelected && !isCorrect) {
-              optionClass += " border-red-500 bg-red-50";
-            } else {
-              optionClass += " border-border";
+              rowClass += " bg-red-50";
             }
-          } else if (interactive) {
-            optionClass += isSelected
-              ? " border-primary bg-primary/5"
-              : " border-border hover:border-primary/40 cursor-pointer";
-          } else {
-            optionClass += " border-border";
           }
+
+          const indicatorClass = !isSelected
+            ? CONTROL_BOX_CLASS
+            : showResults && !isCorrect
+              ? `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`
+              : interactive && !showResults
+                ? `${CONTROL_BOX_CLASS} bg-primary text-primary`
+                : CONTROL_BOX_FILLED_CLASS;
 
           return (
             <div
               key={opt.id}
-              className={optionClass}
+              className={`${rowClass} ${interactive && !showResults ? "cursor-pointer" : ""}`.trim()}
               onClick={() => handleSelect(opt.id)}
               role={interactive ? "button" : undefined}
               tabIndex={interactive && !showResults ? 0 : undefined}
@@ -1349,22 +1388,13 @@ function MultipleChoiceView({
                 }
               }}
             >
-              <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                 {String(i + 1).padStart(2, "0")}
               </span>
-              {interactive ? (
-                <div
-                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
-                    ${isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
-                >
-                  {isSelected && (
-                    <div className="h-2 w-2 rounded-full bg-white" />
-                  )}
-                </div>
-              ) : showSolutions && isCorrect ? (
+              {showSolutions && isCorrect && !interactive ? (
                 <div className={CONTROL_BOX_FILLED_CLASS} />
               ) : (
-                <div className={CONTROL_BOX_CLASS} />
+                <div className={indicatorClass} />
               )}
               <span className={`flex-1${showSolutions && isCorrect ? ' text-green-800 font-semibold' : ''}`}>{opt.text}</span>
               {showResults && isCorrect && (
@@ -1495,6 +1525,7 @@ function FillInBlankItemsView({
   showResults,
   showSolutions = false,
   mode = "online",
+  accentColor,
 }: {
   block: FillInBlankItemsBlock;
   interactive: boolean;
@@ -1503,10 +1534,12 @@ function FillInBlankItemsView({
   showResults: boolean;
   showSolutions?: boolean;
   mode?: ViewMode;
+  accentColor?: string | null;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
   const isPrint = mode === "print";
+  const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
 
   // Extract answers for word bank
   const wordBankAnswers = useMemo(() => {
@@ -1532,8 +1565,9 @@ function FillInBlankItemsView({
 
   return (
     <div>
+      <InstructionRow instruction={instructionText} accentColor={accentColor} />
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
+        <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
             <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-cv-sm">
               {word}
@@ -1548,13 +1582,12 @@ function FillInBlankItemsView({
         return (
           <div
             key={item.id || idx}
-            className="flex items-center border-b last:border-b-0"
-            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+            className="flex min-h-[37px] items-center gap-3 border-b py-2"
           >
-            <span className={NUMBER_BADGE_CLASS}>
+            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
               {String(idx + 1).padStart(2, "0")}
             </span>
-            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
+            <span className="flex-1 flex flex-wrap items-center leading-5">
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1593,14 +1626,14 @@ function FillInBlankItemsView({
                           onChange={(e) =>
                             onAnswer({ ...blanks, [key]: e.target.value })
                           }
-                          className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline transition-colors
+                          className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none inline transition-colors
                             ${showResults
                               ? isCorrectAnswer
-                                ? "border-green-500 text-green-700"
+                                ? "text-green-700"
                                 : isWrong
-                                  ? "border-red-500 text-red-700"
+                                  ? "text-red-700"
                                   : "border-muted-foreground/40"
-                              : "border-muted-foreground/40 focus:border-primary"}`}
+                              : "focus:ring-1 focus:ring-primary/50"}`}
                           style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
                           placeholder={tb("fillInBlankPlaceholder")}
                         />
@@ -1617,7 +1650,7 @@ function FillInBlankItemsView({
                       <span
                         key={i}
                         className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
-                        style={{ display: 'inline', verticalAlign: 'baseline', borderRadius: 4 }}
+                        style={{ display: 'inline-block', verticalAlign: 'middle', borderRadius: 3, lineHeight: '1.25rem', minHeight: '1.25rem' }}
                       >
                         {correctAnswer}
                       </span>
@@ -1626,8 +1659,8 @@ function FillInBlankItemsView({
                   return (
                     <span
                       key={i}
-                      className={`bg-gray-100 ${spacingClass} border-b border-muted-foreground/30`}
-                      style={{ display: 'inline-block', verticalAlign: 'baseline', borderRadius: 2, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+                      className={`bg-gray-100 ${spacingClass}`}
+                      style={{ display: 'inline-block', verticalAlign: 'middle', borderRadius: 3, lineHeight: '1.25rem', minHeight: '1.25rem', ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
                     >
                       &nbsp;
                     </span>
@@ -1650,6 +1683,7 @@ function MatchingView({
   onAnswer,
   showResults,
   showSolutions = false,
+  accentColor,
 }: {
   block: MatchingBlock;
   interactive: boolean;
@@ -1657,6 +1691,7 @@ function MatchingView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
@@ -1690,31 +1725,6 @@ function MatchingView({
     return map;
   }, [selections]);
 
-  // Colors for matched pairs
-  const matchColors = [
-    { bg: "bg-blue-100", border: "border-blue-400", badge: "bg-blue-500" },
-    { bg: "bg-purple-100", border: "border-purple-400", badge: "bg-purple-500" },
-    { bg: "bg-slate-100", border: "border-slate-400", badge: "bg-slate-500" },
-    { bg: "bg-teal-100", border: "border-teal-400", badge: "bg-teal-500" },
-    { bg: "bg-pink-100", border: "border-pink-400", badge: "bg-pink-500" },
-    { bg: "bg-indigo-100", border: "border-indigo-400", badge: "bg-indigo-500" },
-    { bg: "bg-orange-100", border: "border-orange-400", badge: "bg-orange-500" },
-    { bg: "bg-emerald-100", border: "border-emerald-400", badge: "bg-emerald-500" },
-  ];
-
-  // Assign a color index to each matched left id
-  const colorAssignments = useMemo(() => {
-    const map: Record<string, number> = {};
-    let idx = 0;
-    for (const pair of block.pairs) {
-      if (selections[pair.id]) {
-        map[pair.id] = idx % matchColors.length;
-        idx++;
-      }
-    }
-    return map;
-  }, [selections, block.pairs, matchColors.length]);
-
   const handleLeftClick = (leftId: string) => {
     if (!interactive) return;
     if (activeLeftId === leftId) {
@@ -1739,9 +1749,9 @@ function MatchingView({
   // ── Print / non-interactive mode: row-based layout like T/F and Order ──
   if (!interactive) {
     return (
-      <div className="space-y-2">
+      <div>
         {block.instruction && (
-          <p className="text-muted-foreground">{block.instruction}</p>
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
@@ -1749,21 +1759,16 @@ function MatchingView({
             {block.pairs.map((pair, i) => (
               <div
                 key={pair.id}
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
-                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+                className="flex items-center gap-3 py-2 border-b"
               >
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex-1">{pair.left}</span>
                 {showSolutions ? (
-                  <span
-                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0"
-                  >
-                    {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
-                  </span>
+                  <div className={CONTROL_BOX_FILLED_CLASS} />
                 ) : (
-                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                  <div className={CONTROL_BOX_CLASS} />
                 )}
               </div>
             ))}
@@ -1773,20 +1778,17 @@ function MatchingView({
             {shuffledRight.map((pair, i) => (
               <div
                 key={`r-${pair.id}`}
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
-                style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
+                className="flex items-center gap-3 py-2 border-b"
               >
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String.fromCharCode(97 + i)}
+                </span>
                 {showSolutions ? (
-                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
-                    {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
-                  </span>
+                  <div className={CONTROL_BOX_FILLED_CLASS} />
                 ) : (
-                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                  <div className={CONTROL_BOX_CLASS} />
                 )}
                 <span className="flex-1">{pair.right}</span>
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String.fromCharCode(65 + i)}
-                </span>
               </div>
             ))}
           </div>
@@ -1797,9 +1799,9 @@ function MatchingView({
 
   // ── Online / interactive mode ──
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        <p className="text-muted-foreground">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       {interactive && !showResults && (
         <p className="text-cv-xs text-muted-foreground">
@@ -1812,43 +1814,39 @@ function MatchingView({
           {block.pairs.map((pair, i) => {
             const isMatched = !!selections[pair.id];
             const isActive = activeLeftId === pair.id;
-            const colorIdx = colorAssignments[pair.id];
-            const color = colorIdx !== undefined ? matchColors[colorIdx] : null;
             const isCorrect = selections[pair.id] === pair.id;
 
-            let borderClass = "border-border";
-            let bgClass = "";
+            let rowClass = "";
             if (showResults && isMatched) {
-              borderClass = isCorrect ? "border-green-500" : "border-red-500";
-              bgClass = isCorrect ? "bg-green-50" : "bg-red-50";
+              rowClass = isCorrect ? "bg-green-50" : "bg-red-50";
             } else if (isActive) {
-              borderClass = "border-primary ring-2 ring-primary/30";
-              bgClass = "bg-primary/5";
-            } else if (color) {
-              borderClass = color.border;
-              bgClass = color.bg;
+              rowClass = "bg-primary/5";
             }
 
+            const indicatorClass = !isMatched
+              ? CONTROL_BOX_CLASS
+              : showResults && !isCorrect
+                ? `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`
+                : CONTROL_BOX_FILLED_CLASS;
+
             return (
-              <button
-                type="button"
+              <div
                 key={pair.id}
-                onClick={() => handleLeftClick(pair.id)}
-                disabled={!interactive || showResults}
-                className={`w-full flex items-center gap-3 p-3 rounded border transition-all text-left
-                  ${borderClass} ${bgClass}
-                  ${interactive && !showResults ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
+                className={`flex items-center gap-3 py-2 border-b ${rowClass}`}
               >
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="flex-1">{pair.left}</span>
-                {color && !showResults && (
-                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-cv-micro font-bold flex items-center justify-center shrink-0`}>
-                    {colorIdx !== undefined ? colorIdx + 1 : ""}
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleLeftClick(pair.id)}
+                  disabled={!interactive || showResults}
+                  className={`flex-1 text-left ${interactive && !showResults ? "cursor-pointer" : "cursor-default"}`}
+                >
+                  {pair.left}
+                </button>
+                <div className={indicatorClass} />
+              </div>
             );
           })}
         </div>
@@ -1857,40 +1855,38 @@ function MatchingView({
           {shuffledRight.map((pair, i) => {
             const matchedByLeftId = rightToLeft[pair.id];
             const isMatched = !!matchedByLeftId;
-            const colorIdx = matchedByLeftId ? colorAssignments[matchedByLeftId] : undefined;
-            const color = colorIdx !== undefined ? matchColors[colorIdx] : null;
 
-            let borderClass = "border-border";
-            let bgClass = "";
+            let rowClass = "";
             if (showResults && isMatched) {
               const isCorrect = matchedByLeftId === pair.id;
-              borderClass = isCorrect ? "border-green-500" : "border-red-500";
-              bgClass = isCorrect ? "bg-green-50" : "bg-red-50";
-            } else if (color) {
-              borderClass = color.border;
-              bgClass = color.bg;
+              rowClass = isCorrect ? "bg-green-50" : "bg-red-50";
             }
 
+            const isCorrect = matchedByLeftId === pair.id;
+            const indicatorClass = !isMatched
+              ? CONTROL_BOX_CLASS
+              : showResults && !isCorrect
+                ? `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`
+                : CONTROL_BOX_FILLED_CLASS;
+
             return (
-              <button
-                type="button"
+              <div
                 key={`r-${pair.id}`}
-                onClick={() => handleRightClick(pair.id)}
-                disabled={!interactive || showResults || !activeLeftId}
-                className={`w-full flex items-center gap-3 p-3 rounded border transition-all text-left
-                  ${borderClass} ${bgClass}
-                  ${interactive && !showResults && activeLeftId ? "cursor-pointer hover:border-primary/40" : "cursor-default"}`}
+                className={`flex items-center gap-3 py-2 border-b ${rowClass}`}
               >
-                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String.fromCharCode(65 + i)}
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String.fromCharCode(97 + i)}
                 </span>
-                <span className="flex-1">{pair.right}</span>
-                {color && !showResults && (
-                  <span className={`w-5 h-5 rounded-full ${color.badge} text-white text-cv-micro font-bold flex items-center justify-center shrink-0`}>
-                    {colorIdx !== undefined ? colorIdx + 1 : ""}
-                  </span>
-                )}
-              </button>
+                <div className={indicatorClass} />
+                <button
+                  type="button"
+                  onClick={() => handleRightClick(pair.id)}
+                  disabled={!interactive || showResults || !activeLeftId}
+                  className={`flex-1 text-left ${interactive && !showResults && activeLeftId ? "cursor-pointer" : "cursor-default"}`}
+                >
+                  {pair.right}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -1910,12 +1906,14 @@ function TwoColumnFillView({
   answer,
   onAnswer,
   showSolutions = false,
+  accentColor,
 }: {
   block: TwoColumnFillBlock;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showSolutions?: boolean;
+  accentColor?: string | null;
 }) {
   const answers = (answer as Record<string, string> | undefined) || {};
 
@@ -1943,9 +1941,9 @@ function TwoColumnFillView({
   // Print / non-interactive mode
   if (!interactive) {
     return (
-      <div className="space-y-2">
+      <div>
         {block.instruction && (
-          <p className="text-muted-foreground">{block.instruction}</p>
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
         {/* Word Bank */}
         {block.showWordBank && shuffledWordBank.length > 0 && (
@@ -1964,9 +1962,12 @@ function TwoColumnFillView({
             <React.Fragment key={item.id}>
               {/* Left cell */}
               <div
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                className="flex items-center gap-3 py-2 border-b last:border-b-0"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 {block.fillSide === "left" ? (
                   hasHandwriting(item.left) ? (
                     <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -1981,7 +1982,7 @@ function TwoColumnFillView({
               </div>
               {/* Right cell */}
               <div
-                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+                className="flex items-center gap-3 py-2 border-b last:border-b-0"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
                 {block.fillSide === "right" ? (
@@ -2005,9 +2006,9 @@ function TwoColumnFillView({
 
   // Online / interactive mode
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        <p className="text-muted-foreground">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       {/* Word Bank */}
       {block.showWordBank && shuffledWordBank.length > 0 && (
@@ -2026,9 +2027,12 @@ function TwoColumnFillView({
           <React.Fragment key={item.id}>
             {/* Left cell */}
             <div
-              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              className="flex items-center gap-3 py-2 border-b last:border-b-0"
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
               {block.fillSide === "left" ? (
                 hasHandwriting(item.left) ? (
                   <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -2047,7 +2051,7 @@ function TwoColumnFillView({
             </div>
             {/* Right cell */}
             <div
-              className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
+              className="flex items-center gap-3 py-2 border-b last:border-b-0"
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
               {block.fillSide === "right" ? (
@@ -2257,17 +2261,21 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <TaskContainer
-      showPill={showPill}
-      taskNumber={taskNumber}
-      lessonLabel={lessonLabel}
-      instruction={block.instruction || "Kreuzen Sie die richtige Antwort an."}
-      instructionStyle={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
-      accentColor={accentColor}
-    >
-      <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+    <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <div>
-        <div className="flex items-center gap-3 py-2 border-b">
+        {block.instruction && (
+          <InstructionRow
+            instruction={block.instruction}
+            accentColor={accentColor}
+            trailingContent={(
+              <>
+                <div className="w-20" aria-hidden="true" />
+                <div className="w-20" aria-hidden="true" />
+              </>
+            )}
+          />
+        )}
+        <div className="flex min-h-[37px] items-center gap-3 py-2 border-b">
           <div className="flex-1 font-bold text-foreground">{block.statementColumnHeader || ""}</div>
           <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.trueLabel || tc("true")}</div>
           <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.falseLabel || tc("false")}</div>
@@ -2299,7 +2307,7 @@ function TrueFalseMatrixView({
             };
 
             return (
-              <div key={stmt.id} className="flex items-center gap-3 py-2 border-b last:border-b-0">
+              <div key={stmt.id} className="flex items-center gap-3 py-2 border-b">
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(stmtIndex + 1).padStart(2, "0")}
                 </span>
@@ -2341,7 +2349,6 @@ function TrueFalseMatrixView({
         </div>
       </div>
     </div>
-    </TaskContainer>
   );
 }
 
@@ -2580,9 +2587,7 @@ function OrderItemsView({
   onAnswer,
   showResults,
   showSolutions = false,
-  showPill = true,
-  taskNumber,
-  lessonLabel,
+  accentColor,
 }: {
   block: OrderItemsBlock;
   mode: ViewMode;
@@ -2591,9 +2596,7 @@ function OrderItemsView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
-  showPill?: boolean;
-  taskNumber?: number;
-  lessonLabel?: string;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
@@ -2650,10 +2653,9 @@ function OrderItemsView({
   };
 
   return (
-    <TaskContainer showPill={showPill} taskNumber={taskNumber} lessonLabel={lessonLabel}>
-    <div className="space-y-2 text-cv-sm">
+    <div>
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       <div>
         {displayItems.map((item, i) => {
@@ -2663,10 +2665,10 @@ function OrderItemsView({
           return (
             <div
               key={item.id}
-              className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              className="flex h-[37px] items-center gap-3 border-b"
             >
               <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
+                {String.fromCharCode(97 + i)}
               </span>
               <span className={`flex-1 ${isCorrect ? "text-green-700" : ""}`}>{item.text}</span>
               {!isPrint && (
@@ -2694,7 +2696,6 @@ function OrderItemsView({
         })}
       </div>
     </div>
-    </TaskContainer>
   );
 }
 
@@ -3023,6 +3024,7 @@ function SortingCategoriesView({
   onAnswer,
   showResults,
   showSolutions = false,
+  accentColor,
 }: {
   block: SortingCategoriesBlock;
   interactive: boolean;
@@ -3030,6 +3032,7 @@ function SortingCategoriesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
@@ -3074,21 +3077,26 @@ function SortingCategoriesView({
   };
 
   const getItemById = (id: string) => block.items.find((item) => item.id === id);
+  const getItemNumber = (id: string) => {
+    const index = block.items.findIndex((item) => item.id === id);
+    return index >= 0 ? index + 1 : 0;
+  };
+  const SORT_ROW_CLASS = "flex h-[37px] items-center gap-3 border-b";
 
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
     // Compute max items per category for writing lines
     const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
     return (
-      <div className="space-y-3">
+      <div>
         {block.instruction && (
-          <p className="font-medium">{block.instruction}</p>
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b">
           {shuffledItems.map((item) => (
             <span
               key={item.id}
-              className="px-3 py-1 rounded border border-border"
+              className="px-3 py-0.5 rounded border border-border text-[10px]"
             >
               {item.text}
             </span>
@@ -3096,24 +3104,39 @@ function SortingCategoriesView({
         </div>
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
           {block.categories.map((cat) => (
-            <div key={cat.id} className="rounded border border-border overflow-hidden">
-              <div className="bg-muted px-3 py-2">
+                <div key={cat.id} className="rounded overflow-hidden">
+              <div className="h-[37px] border-b flex items-center">
                 <span className="font-semibold">{cat.label}</span>
               </div>
-              <div className="px-2 pt-1 pb-4 min-h-[100px]">
+              <div>
                 {showSolutions ? (
-                  <div className="space-y-1 pt-1">
+                  <div>
                     {cat.correctItems.map((itemId) => {
                       const item = block.items.find((it) => it.id === itemId);
                       return item ? (
-                        <div key={itemId} className="text-green-800 font-semibold text-cv-sm">{item.text}</div>
+                            <div key={itemId} className={`${SORT_ROW_CLASS} text-green-800 font-semibold text-cv-sm`}>
+                              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                                {String(getItemNumber(item.id)).padStart(2, "0")}
+                              </span>
+                              <span className="flex-1">{item.text}</span>
+                            </div>
                       ) : null;
                     })}
                   </div>
                 ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 && (
-                  <div className="space-y-0.5">
+                  <div>
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
-                      <div key={i} className="h-9" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+                      <div key={i} className={SORT_ROW_CLASS}>
+                        <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span
+                          className="flex-1 inline-block"
+                          style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, minWidth: 80 }}
+                        >
+                          &nbsp;
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -3126,17 +3149,17 @@ function SortingCategoriesView({
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       {/* Unsorted items */}
       {displayUnsorted.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b">
           {displayUnsorted.map((item) => (
             <span
               key={item.id}
-              className={`px-3 py-1 rounded border border-border cursor-grab transition-colors
+              className={`px-3 py-0.5 rounded border border-border text-[10px] cursor-grab transition-colors
                 ${dragItem === item.id ? "bg-primary/10 border-primary" : "hover:bg-accent"}`}
               draggable
               onDragStart={() => setDragItem(item.id)}
@@ -3154,7 +3177,7 @@ function SortingCategoriesView({
           return (
             <div
               key={cat.id}
-              className="rounded border border-border overflow-hidden transition-shadow"
+                  className="rounded overflow-hidden transition-shadow"
               onDragOver={(e) => {
                 e.preventDefault();
                 e.currentTarget.classList.add("ring-2", "ring-primary");
@@ -3171,29 +3194,30 @@ function SortingCategoriesView({
                 }
               }}
             >
-              <div className="bg-muted px-3 py-2">
+                <div className="h-[37px] border-b flex items-center">
                 <span className="font-semibold">{cat.label}</span>
               </div>
-              <div className="p-2 space-y-1.5 min-h-[60px]">
+              <div className="min-h-[60px]">
                 {catItemIds.map((itemId) => {
                   const item = getItemById(itemId);
                   if (!item) return null;
                   const isCorrect = cat.correctItems.includes(item.id);
-                  let borderClass = "border-border";
-                  let bgClass = "bg-card";
+                  let bgClass = "";
                   if (showResults) {
-                    borderClass = isCorrect ? "border-green-500" : "border-red-500";
                     bgClass = isCorrect ? "bg-green-50" : "bg-red-50";
                   }
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-2 p-2 rounded border transition-colors ${borderClass} ${bgClass}`}
+                        className={`${SORT_ROW_CLASS} transition-colors ${bgClass}`}
                     >
+                      <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                        {String(getItemNumber(item.id)).padStart(2, "0")}
+                      </span>
                       <span className="flex-1">{item.text}</span>
                       {!showResults && (
                         <button
-                          className="p-0.5 hover:bg-muted rounded text-muted-foreground"
+                          className="p-0.5 hover:bg-muted rounded text-muted-foreground shrink-0"
                           onClick={() => removeFromCategory(cat.id, item.id)}
                           aria-label={t("removeFromCategory")}
                         >
@@ -3259,13 +3283,8 @@ function UnscrambleWordsView({
   onAnswer,
   showResults,
   showSolutions = false,
-  showPill = true,
-  taskNumber,
-  lessonLabel,
-  brand,
   bodyFont,
   bodyFontSize,
-  isNonLatin = false,
   accentColor,
 }: {
   block: UnscrambleWordsBlock;
@@ -3275,13 +3294,8 @@ function UnscrambleWordsView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
-  showPill?: boolean;
-  taskNumber?: number;
-  lessonLabel?: string;
-  brand?: Brand;
   bodyFont?: string;
   bodyFontSize?: string;
-  isNonLatin?: boolean;
   accentColor?: string | null;
 }) {
   const isPrint = mode === "print";
@@ -3319,15 +3333,14 @@ function UnscrambleWordsView({
     : block.words;
 
   return (
-    <TaskContainer
-      showPill={showPill}
-      taskNumber={taskNumber}
-      lessonLabel={lessonLabel}
-      instruction={block.instruction}
-      instructionStyle={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
-      accentColor={accentColor}
-    >
-      <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+    <div className="text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+      {block.instruction && (
+        <InstructionRow
+          instruction={block.instruction}
+          accentColor={accentColor}
+          style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+        />
+      )}
       <div>
         {orderedWords.map((item, i) => {
           const scrambled = scrambleWordDeterministic(
@@ -3346,7 +3359,7 @@ function UnscrambleWordsView({
           return (
             <div
               key={item.id}
-              className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              className="flex min-h-[37px] items-center gap-3 py-2 border-b"
             >
               <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                 {String(i + 1).padStart(2, "0")}
@@ -3369,7 +3382,7 @@ function UnscrambleWordsView({
                     onChange={(e) =>
                       handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
-                    className={`w-full border-b-2 bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
+                    className={`w-full border-b bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
                       isCorrect
                         ? "border-green-500 text-green-700"
                         : isWrong
@@ -3385,7 +3398,6 @@ function UnscrambleWordsView({
         })}
       </div>
     </div>
-    </TaskContainer>
   );
 }
 
@@ -3637,6 +3649,7 @@ function TransformSentencesView({
   answer,
   onAnswer,
   showResults,
+  accentColor,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -3644,13 +3657,15 @@ function TransformSentencesView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  accentColor?: string | null;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const TRANSFORM_ROW_CLASS = "flex h-[37px] items-center gap-3 border-b";
 
   return (
-    <div className="space-y-2">
+    <div>
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
       )}
       <div>
         {block.sentences.map((item, i) => {
@@ -3662,37 +3677,49 @@ function TransformSentencesView({
           return (
             <div
               key={item.id}
-              className="py-2 border-b last:border-b-0"
+              className=""
             >
-              <div className="flex items-center gap-3">
+              <div className={TRANSFORM_ROW_CLASS}>
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span>{item.beginning}</span>
               </div>
               {interactive ? (
-                <div className="mt-1 ml-9" style={{ width: 'calc(100% - 2.25rem)' }}>
-                  <input
-                    type="text"
-                    value={userVal}
-                    onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
-                    disabled={showResults}
-                    className={`w-full border-b border-dashed bg-transparent px-2 py-0.5 focus:outline-none ${
-                      showResults
-                        ? isCorrect
-                          ? "border-green-500 text-green-700"
-                          : isWrong
-                            ? "border-red-500 text-red-700"
-                            : "border-muted-foreground/30"
-                        : "border-muted-foreground/30 focus:border-primary"
-                    }`}
-                  />
-                  {showResults && isWrong && hasSolution && (
-                    <span className="text-cv-xs text-green-600 mt-0.5 block">{item.solution}</span>
-                  )}
+                <div className={TRANSFORM_ROW_CLASS}>
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0 opacity-0`} aria-hidden="true">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={userVal}
+                      onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
+                      disabled={showResults}
+                      className={`w-full border-b border-dashed bg-transparent px-2 py-0.5 focus:outline-none ${
+                        showResults
+                          ? isCorrect
+                            ? "border-green-500 text-green-700"
+                            : isWrong
+                              ? "border-red-500 text-red-700"
+                              : "border-muted-foreground/30"
+                          : "border-muted-foreground/30 focus:border-primary"
+                      }`}
+                    />
+                    {showResults && isWrong && hasSolution && (
+                      <span className="text-cv-xs text-green-600 mt-0.5 block">{item.solution}</span>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="mt-1 ml-9 border-b border-dashed border-muted-foreground/30 min-h-[14px]" style={{ width: 'calc(100% - 2.25rem)' }} />
+                <div className={TRANSFORM_ROW_CLASS}>
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0 opacity-0`} aria-hidden="true">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
+                    &nbsp;
+                  </span>
+                </div>
               )}
             </div>
           );
@@ -5043,6 +5070,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          accentColor={accentColor}
         />
       );
     case "fill-in-blank":
@@ -5066,6 +5094,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           mode={mode}
+          accentColor={accentColor}
         />
       );
     case "matching":
@@ -5077,6 +5106,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          accentColor={accentColor}
         />
       );
     case "two-column-fill":
@@ -5087,6 +5117,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showSolutions={showSolutions}
+          accentColor={accentColor}
         />
       );
     case "glossary":
@@ -5152,9 +5183,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-          showPill={block.showPill !== false}
-          taskNumber={taskNumber}
-          lessonLabel={lessonLabel}
+          accentColor={accentColor}
         />
       );
     case "inline-choices":
@@ -5188,6 +5217,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          accentColor={accentColor}
         />
       );
     case "unscramble-words":
@@ -5200,13 +5230,8 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-          showPill={block.showPill !== false}
-          taskNumber={taskNumber}
-          lessonLabel={lessonLabel}
-          brand={brand}
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
-          isNonLatin={isNonLatin}
           accentColor={accentColor}
         />
       );
@@ -5241,6 +5266,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          accentColor={accentColor}
         />
       );
     case "verb-table":

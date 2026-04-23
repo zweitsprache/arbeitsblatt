@@ -134,6 +134,12 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
 
     return {
       content: BLOCK_LIBRARY.filter((b) => b.category === "content" && filter(b)),
+      images: BLOCK_LIBRARY.filter((b) => b.category === "images" && filter(b)),
+      vocabulary: BLOCK_LIBRARY.filter((b) => b.category === "vocabulary" && filter(b)),
+      mockup: BLOCK_LIBRARY.filter((b) => b.category === "mockup" && filter(b)),
+      numbering: BLOCK_LIBRARY.filter((b) => b.category === "numbering" && filter(b)),
+      memoryAids: BLOCK_LIBRARY.filter((b) => b.category === "memory-aids" && filter(b)),
+      multimedia: BLOCK_LIBRARY.filter((b) => b.category === "multimedia" && filter(b)),
       layout: BLOCK_LIBRARY.filter((b) => b.category === "layout" && filter(b)),
       interactive: BLOCK_LIBRARY.filter((b) => b.category === "interactive" && filter(b)),
       aiTools: BLOCK_LIBRARY.filter((b) => b.category === "ai-tools" && filter(b)),
@@ -164,6 +170,120 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
               </div>
               <div className="space-y-1.5">
                 {categories.content.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Image blocks */}
+          {categories.images.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("imagesCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.images.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Vocabulary blocks */}
+          {categories.vocabulary.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("vocabularyCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.vocabulary.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mockup blocks */}
+          {categories.mockup.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("mockupCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.mockup.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Numbering blocks */}
+          {categories.numbering.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("numberingCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.numbering.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Memory aids blocks */}
+          {categories.memoryAids.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("memoryAidsCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.memoryAids.map((def) => (
+                  <div
+                    key={def.type}
+                    onDoubleClick={() => onAddBlock(def.type)}
+                  >
+                    <DraggableBlockItem definition={def} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Multimedia blocks */}
+          {categories.multimedia.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                {t("multimediaCategory")}
+              </div>
+              <div className="space-y-1.5">
+                {categories.multimedia.map((def) => (
                   <div
                     key={def.type}
                     onDoubleClick={() => onAddBlock(def.type)}
@@ -233,7 +353,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
           )}
 
           {/* No results */}
-          {categories.content.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
+          {categories.content.length === 0 && categories.images.length === 0 && categories.vocabulary.length === 0 && categories.mockup.length === 0 && categories.numbering.length === 0 && categories.memoryAids.length === 0 && categories.multimedia.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">{t("noBlocksFound")}</p>
           )}
         </div>

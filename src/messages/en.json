@@ -502,11 +502,17 @@
   },
   "blockSidebar": {
     "aiToolsCategory": "AI Tools",
-    "contentCategory": "Content",
+    "contentCategory": "Text",
+    "imagesCategory": "Images and Graphics",
     "interactiveCategory": "Interactive",
     "layoutCategory": "Layout",
+    "memoryAidsCategory": "Memory Aids",
+    "multimediaCategory": "Multimedia",
+    "mockupCategory": "Mockup",
+    "numberingCategory": "Numbering",
     "noBlocksFound": "No blocks found",
-    "searchPlaceholder": "Search block…"
+    "searchPlaceholder": "Search block…",
+    "vocabularyCategory": "Vocabulary"
   },
   "canvas": {
     "dragBlocksHere": "Drag blocks here",

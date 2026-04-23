@@ -714,6 +714,16 @@
   margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
+/* Keep inter-block spacing in screen print-preview aligned with PDF output */
+.print-worksheet-root.print-skin-final .worksheet-block + .worksheet-block {
+  margin-top: var(--print-block-gap, 1.5rem);
+}
+
+/* After a page break, next block starts at page-top baseline in preview too */
+.print-worksheet-root.print-skin-final .worksheet-block-page-break + .worksheet-block {
+  margin-top: 0 !important;
+}
+
 .print-worksheet-root .print-body-content {
   --print-list-row-py: 0.375rem;
   --print-list-text-pad-left: 0;

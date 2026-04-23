@@ -197,6 +197,7 @@ export interface MultipleChoiceOption {
 
 export interface MultipleChoiceBlock extends BlockBase {
   type: "multiple-choice";
+  instruction: string;
   question: string;
   options: MultipleChoiceOption[];
   allowMultiple: boolean;
@@ -217,6 +218,7 @@ export interface FillInBlankItem {
 
 export interface FillInBlankItemsBlock extends BlockBase {
   type: "fill-in-blank-items";
+  instruction: string;
   items: FillInBlankItem[];
   showWordBank: boolean;
 }
@@ -1234,7 +1236,7 @@ export interface BlockDefinition {
   labelKey: string; // i18n key in "blocks" namespace
   descriptionKey: string; // i18n key in "blocks" namespace
   icon: string; // lucide icon name
-  category: "layout" | "content" | "interactive" | "ai-tools";
+  category: "layout" | "content" | "images" | "vocabulary" | "mockup" | "numbering" | "memory-aids" | "multimedia" | "interactive" | "ai-tools";
   /** Per-locale fallback translations (label + description). English uses label/description fields. */
   translations?: Record<string, { label: string; description: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1282,7 +1284,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "image",
     descriptionKey: "imageDesc",
     icon: "Image",
-    category: "content",
+    category: "images",
     translations: { de: { label: "Bild", description: "Bilder und Abbildungen einfügen" } },
     defaultData: {
       type: "image",
@@ -1298,7 +1300,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "imageCards",
     descriptionKey: "imageCardsDesc",
     icon: "LayoutGrid",
-    category: "content",
+    category: "images",
     translations: { de: { label: "Bildkarten", description: "Bilder im Raster mit Beschriftung" } },
     defaultData: {
       type: "image-cards",
@@ -1437,6 +1439,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Multiple Choice", description: "Fragen mit Antwortoptionen" } },
     defaultData: {
       type: "multiple-choice",
+      instruction: "Choose the correct answer.",
       question: "Enter your question here",
       options: [
         { id: "opt1", text: "Option A", isCorrect: true },
@@ -1474,6 +1477,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Lückentext (Sätze)", description: "Nummerierte Sätze mit Lücken zum Ausfüllen" } },
     defaultData: {
       type: "fill-in-blank-items",
+      instruction: "Complete the sentences.",
       items: [
         { id: "fib1", content: "The {{blank:cat}} sat on the mat." },
         { id: "fib2", content: "She {{blank:goes}} to school every day." },
@@ -1776,7 +1780,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "glossary",
     descriptionKey: "glossaryDesc",
     icon: "BookOpen",
-    category: "content",
+    category: "vocabulary",
     translations: { de: { label: "Glossar", description: "Begriffe und Definitionen" } },
     defaultData: {
       type: "glossary",
@@ -1818,7 +1822,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "chart",
     descriptionKey: "chartDesc",
     icon: "BarChart3",
-    category: "content",
+    category: "images",
     translations: { de: { label: "Diagramm", description: "Balken-, Kreis- oder Liniendiagramm" } },
     defaultData: {
       type: "chart",
@@ -1865,7 +1869,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "numberedLabel",
     descriptionKey: "numberedLabelDesc",
     icon: "Hash",
-    category: "content",
+    category: "numbering",
     translations: { de: { label: "Nummerierung", description: "Fortlaufende Nummerierung mit optionalem Text" } },
     defaultData: {
       type: "numbered-label",
@@ -1927,7 +1931,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "textSnippet",
     descriptionKey: "textSnippetDesc",
     icon: "ClipboardCopy",
-    category: "content",
+    category: "vocabulary",
     translations: { de: { label: "Textbaustein", description: "Textblock mit Kopieren-Funktion" } },
     defaultData: {
       type: "text-snippet",
@@ -1942,7 +1946,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "emailSkeleton",
   descriptionKey: "emailSkeletonDesc",
   icon: "Mail",
-  category: "content",
+  category: "mockup",
   translations: { de: { label: "E-Mail", description: "Simulierte E-Mail-Nachricht" } },
   defaultData: {
     type: "email-skeleton",
@@ -1962,7 +1966,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "jobApplication",
   descriptionKey: "jobApplicationDesc",
   icon: "ClipboardList",
-  category: "content",
+  category: "mockup",
   translations: { de: { label: "Bewerbung", description: "Simuliertes Bewerbungsformular" } },
   defaultData: {
     type: "job-application",
@@ -1999,7 +2003,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "dosAndDonts",
   descriptionKey: "dosAndDontsDesc",
   icon: "ListChecks",
-  category: "content",
+  category: "memory-aids",
   translations: { de: { label: "Dos & Don'ts", description: "Empfohlene und nicht empfohlene Handlungen" } },
   defaultData: {
     type: "dos-and-donts",
@@ -2023,7 +2027,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "numberedItems",
   descriptionKey: "numberedItemsDesc",
   icon: "ListOrdered",
-  category: "content",
+  category: "numbering",
   translations: { de: { label: "Nummerierte Punkte", description: "Nummerierte Textabschnitte" } },
   defaultData: {
     type: "numbered-items",
@@ -2061,7 +2065,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "checklist",
   descriptionKey: "checklistDesc",
   icon: "CheckSquare",
-  category: "content",
+  category: "memory-aids",
   translations: { de: { label: "Checkliste", description: "Aufzählung mit Checkboxen und formatiertem Text" } },
   defaultData: {
     type: "checklist",
@@ -2136,7 +2140,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "audio",
   descriptionKey: "audioDesc",
   icon: "Volume2",
-  category: "content",
+  category: "multimedia",
   translations: { de: { label: "Audio", description: "Audioplayer mit Wiedergabesteuerung" } },
   defaultData: {
     type: "audio",
@@ -2176,7 +2180,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "website",
   descriptionKey: "websiteDesc",
   icon: "Globe",
-  category: "content",
+  category: "mockup",
   translations: { de: { label: "Website", description: "Zweispaltige Website-Karten mit Bild, Link, Kategorie und Beschreibung" } },
   defaultData: {
     type: "website",

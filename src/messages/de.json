@@ -502,11 +502,17 @@
   },
   "blockSidebar": {
     "aiToolsCategory": "KI Tools",
-    "contentCategory": "Inhalt",
+    "contentCategory": "Text",
+    "imagesCategory": "Bilder und Grafik",
     "interactiveCategory": "Interaktiv",
     "layoutCategory": "Layout",
+    "memoryAidsCategory": "Merkhilfen",
+    "multimediaCategory": "Multimedia",
+    "mockupCategory": "Mockup",
+    "numberingCategory": "Nummerierungen",
     "noBlocksFound": "Keine Blöcke gefunden",
-    "searchPlaceholder": "Block suchen…"
+    "searchPlaceholder": "Block suchen…",
+    "vocabularyCategory": "Wortschatz"
   },
   "canvas": {
     "dragBlocksHere": "Blöcke hierher ziehen",

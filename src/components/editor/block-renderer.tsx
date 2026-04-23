@@ -252,6 +252,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
@@ -1079,6 +1080,7 @@ function MultipleChoiceRenderer({
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
 
   const updateOptions = (newOptions: typeof block.options) => {
     dispatch({
@@ -1113,6 +1115,20 @@ function MultipleChoiceRenderer({
 
   return (
     <div className="space-y-3">
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable={!interactive}
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          if (interactive) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
       <p
         className="font-medium outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
         contentEditable={!interactive}
@@ -1279,8 +1295,10 @@ function FillInBlankItemsRenderer({
   interactive: boolean;
 }) {
   const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const activeIdx = state.activeItemIndex;
+  const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
 
   // For mutations, always use the raw (DE) block from the store so we never
   // persist CH-converted text (ß→ss) back into the canonical data.
@@ -1338,8 +1356,22 @@ function FillInBlankItemsRenderer({
 
   return (
     <div>
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable={!interactive}
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          if (interactive) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3 p-2 bg-muted/40 rounded-sm">
+        <div className="flex flex-wrap gap-2 p-2 bg-muted/40 rounded-sm">
           {wordBankAnswers.map((word, i) => (
             <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
               {word}
@@ -1354,17 +1386,17 @@ function FillInBlankItemsRenderer({
         return (
           <div
             key={item.id || idx}
-            className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+            className={`flex min-h-[37px] items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
               !interactive && activeIdx === idx
                 ? "bg-blue-50 ring-1 ring-blue-200"
                 : "hover:bg-muted/30"
             }`}
             onClick={() => handleRowClick(idx)}
           >
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+            <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
               {String(idx + 1).padStart(2, "0")}
             </span>
-            <span className="flex-1" style={{ lineHeight: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="flex-1 flex flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1390,14 +1422,14 @@ function FillInBlankItemsRenderer({
                       key={i}
                       type="text"
                       placeholder={t("fillInBlankPlaceholder")}
-                      className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
+                      className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacingClass} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
                       style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
                     />
                   ) : (
                     <span
                       key={i}
-                      className={`inline-block border-b border-dashed border-muted-foreground/30 px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
-                      style={{ ...widthStyle, verticalAlign: 'middle' }}
+                      className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacingClass} text-muted-foreground text-xs`}
+                      style={{ ...widthStyle, verticalAlign: 'middle', minHeight: '1.25rem' }}
                     >
                       {answer || '\u00A0'}
                     </span>
@@ -1464,7 +1496,7 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String.fromCharCode(65 + i)}
+                {String.fromCharCode(97 + i)}
               </span>
               <span className="flex-1">{pair.right}</span>
             </div>
@@ -1517,6 +1549,9 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
               className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
+              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               {block.fillSide === "left" ? (
                 hasHandwriting(item.left) ? (
                   <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -2129,14 +2164,14 @@ function OrderItemsRenderer({
       >
         {block.instruction}
       </div>
-      <div className="space-y-2">
+      <div>
         {sortedItems.map((item, i) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 group/item p-3 rounded-sm border border-border"
+            className="group/item flex h-[37px] items-center gap-3 border-b"
           >
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(i + 1).padStart(2, "0")}
+            <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
+              {String.fromCharCode(97 + i)}
             </span>
             <span
               contentEditable
@@ -2733,11 +2768,11 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                   {cat.label}
                 </span>
               </div>
-              <div className="p-2 space-y-1.5 min-h-[60px]">
+              <div className="min-h-[60px]">
                 {catItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-2 p-2 rounded border border-border bg-card group/item"
+                    className="group/item flex min-h-[37px] items-center gap-3 border-b px-2 py-2"
                   >
                     <span
                       contentEditable
@@ -2876,15 +2911,15 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
           return (
             <div
               key={item.id}
-              className="flex items-center gap-3 group/item p-3 rounded-sm border border-border"
+              className="group/item flex h-[37px] items-center gap-3 border-b"
             >
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="text-base tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+              <span className="text-base tracking-widest text-muted-foreground">
                 {scrambled}
               </span>
-              <span className="text-muted-foreground text-xs">→</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
               <span
                 contentEditable
                 suppressContentEditableWarning

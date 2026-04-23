@@ -6,6 +6,11 @@
 
 /* ─── Common / reusable ──────────────────────────────────── */
 
+.badgeToken {
+  --viewer-badge-size: 20px;
+  --viewer-badge-radius: 3px;
+}
+
 .blockShadow {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1);
@@ -29,18 +34,19 @@
 
 .controlBox {
   box-sizing: border-box;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  border-radius: 3px;
-  border: 1.5px solid currentColor;
-  background: transparent;
+  width: var(--viewer-badge-size, 20px);
+  height: var(--viewer-badge-size, 20px);
+  min-width: var(--viewer-badge-size, 20px);
+  min-height: var(--viewer-badge-size, 20px);
+  border-radius: var(--viewer-badge-radius, 3px);
+  border: 0;
+  box-shadow: inset 0 0 0 1px currentColor;
+  background: #fff;
 }
 
 .controlBoxFilled {
-  border-color: #22c55e;
   background: #22c55e;
+  box-shadow: inset 0 0 0 1px #22c55e;
 }
 
 .accentBadge {
