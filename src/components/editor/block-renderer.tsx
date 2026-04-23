@@ -252,7 +252,6 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
-  const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
