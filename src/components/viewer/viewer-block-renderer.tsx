@@ -4968,6 +4968,7 @@ export function ViewerBlockRenderer({
   lessonLabel,
   originalBlock,
   isNonLatin = false,
+  isRtl: _isRtl = false,
   translationScale,
 }: {
   block: WorksheetBlock;
@@ -4988,6 +4989,7 @@ export function ViewerBlockRenderer({
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
   isNonLatin?: boolean;
+  isRtl?: boolean;
   translationScale?: number;
 }) {
   const interactive = mode === "online";
