@@ -103,47 +103,9 @@
   }
 }
 
-/* ─── Spacing ─────────────────────────────────────────────── */
-/* Two rem-based values (always relative to root 16px, never to element font-size):
-   --block-gap : visual gap between blocks  (intentionally wider)
-   --para-gap  : visual gap between <p> elements AND tight-top blocks */
-:root {
-  --block-gap: 1.75rem;
-  --para-gap:  1.5rem;
-}
-
 /* ─── Tiptap rich text editor ─────────────────────────────── */
 .tiptap {
   outline: none;
-}
-
-/* p-to-p spacing. */
-.tiptap p {
-  margin-top: 0;
-  margin-bottom: var(--para-gap);
-}
-.tiptap p:last-child {
-  margin-bottom: 0;
-}
-
-/* Block-to-block spacing — pure CSS, no inline styles needed.
-   Normal gap uses --block-gap; tight-top collapses to --para-gap. */
-.worksheet-blocks-container .worksheet-block + .worksheet-block {
-  margin-top: var(--block-gap);
-}
-.worksheet-blocks-container .worksheet-block + [data-tight="true"] {
-  margin-top: var(--para-gap);
-}
-
-/* Headings: line-height 1 eliminates half-leading so heading height equals
-   exactly the glyph bounds — consistent visual gap regardless of font size. */
-.worksheet-block-heading h1,
-.worksheet-block-heading h2,
-.worksheet-block-heading h3,
-.tiptap h1,
-.tiptap h2,
-.tiptap h3 {
-  line-height: 1;
 }
 
 /* Snippet-break separator — amber dashed line shown only in the editor */
@@ -187,22 +149,25 @@
 .tiptap h1 {
   font-size: var(--text-cv-3xl);
   font-weight: var(--heading-h1-weight, 700);
+  line-height: 1.2;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.6rem;
 }
 
 .tiptap h2 {
   font-size: var(--text-cv-2xl);
   font-weight: var(--heading-h2-weight, 700);
+  line-height: 1.25;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.5rem;
 }
 
 .tiptap h3 {
   font-size: var(--text-cv-xl);
   font-weight: var(--heading-h3-weight, 800) !important;
+  line-height: 1.3;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 0.4rem;
 }
 
 .tiptap h1.no-margin,
@@ -211,25 +176,6 @@
   margin-top: 0;
   margin-bottom: 0;
   line-height: 1;
-}
-
-/* Numbered items: headings inside rich text items are always margin-less */
-.numbered-items-richtext h1,
-.numbered-items-richtext .tiptap h1,
-.numbered-items-richtext h2,
-.numbered-items-richtext .tiptap h2,
-.numbered-items-richtext h3,
-.numbered-items-richtext .tiptap h3 {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  line-height: 1.25 !important;
-}
-
-.numbered-items-richtext p,
-.numbered-items-richtext .tiptap p {
-  line-height: 1.3;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
 }
 
 .tiptap-bilingual-translated .tiptap h1,
@@ -296,12 +242,6 @@
 .tiptap-rows.tiptap p:first-child,
 .tiptap-rows .ProseMirror p:first-child {
   border-top: 1px solid #d1d5db !important;
-}
-
-/* Hide empty trailing paragraph in rows style — target ProseMirror's is-empty marker in editor,
-   and suppress visually empty last rows in rendered output */
-.tiptap-rows .ProseMirror p.is-empty:last-child {
-  display: none !important;
 }
 
 /* Kompetenzziele: goal icon */
@@ -525,10 +465,6 @@
   break-inside: auto;
   page-break-inside: auto;
 }
-
-/* Block gap via margin-top — set inline in React (see worksheet-viewer.tsx).
-   When the next block is tight-top, the preceding block gets marginBottom inline
-   to supply the gap, so no CSS selectors are needed. */
 
 /* Text snippets can be long, but each item should stay intact. */
 .worksheet-block-text-snippet {

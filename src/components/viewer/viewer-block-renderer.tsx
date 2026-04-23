@@ -61,7 +61,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, CircleHelp, ToyBrick } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, CircleHelp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -123,14 +123,14 @@ function deterministicShuffle<T>(items: T[], seedKey: string): T[] {
 
 // ─── German marker helper ────────────────────────────────────
 /** Parse {{de:…}} markers and render the German text in semibold + accent color */
-function renderDeMarkers(text: string, color?: string | null, fontFamily?: string): React.ReactNode {
+function renderDeMarkers(text: string, color?: string | null): React.ReactNode {
   const parts = text.split(/(\{\{de:.*?\}\})/g);
   if (parts.length === 1) return text;
   return parts.map((part, i) => {
     const m = part.match(/^\{\{de:(.*?)\}\}$/);
     if (m) {
       return (
-        <em key={i} dir="ltr" className="not-italic font-semibold" style={{ ...(color ? { color } : undefined), ...(fontFamily ? { fontFamily } : undefined) }}>
+        <em key={i} className="not-italic font-semibold" style={color ? { color } : undefined}>
           {m[1]}
         </em>
       );
@@ -323,13 +323,14 @@ function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1
   );
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, isRtl }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; isRtl?: boolean }) {
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
   const style: React.CSSProperties = {
+    ...(block.level === 1 ? { marginBottom: -4 } : {}),
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: primaryColor,
@@ -340,16 +341,16 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
     const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
       <Tag className={sizes[block.level]} style={style}>
-        <span dir="ltr" style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>{renderDeMarkers(originalBlock.content, deMarkerColor)}</span>
+        <span style={{ ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}), fontWeight: resolvedHeadingWeight }}>{renderDeMarkers(originalBlock.content, deMarkerColor)}</span>
         <span style={{ fontWeight: 400 }}> | </span>
-        <span dir={isRtl ? "rtl" : undefined} style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(block.content, deMarkerColor, resolvedHeadlineFont)}</span>
+        <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(block.content, deMarkerColor)}</span>
       </Tag>
     );
   }
-  return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor, resolvedHeadlineFont)}</Tag>;
+  return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor, isRtl }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; isRtl?: boolean }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
   // Only highlight {{de:…}} markers with accent color when the worksheet is translated
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
@@ -371,8 +372,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
-  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel || isKompetenzziele || isHandlungsziele;
-  const isRows = block.textStyle === "rows";
+  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
+  const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
 
@@ -380,7 +381,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
     if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
-    if (isFragen) return <svg width="14" height="14" viewBox="0 0 14.5 25.2" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.2,7.2C1.2,3.7,4.3.9,7.9,1.3c2.8.3,5,2.5,5.3,5.2.3,2.3-.8,4.4-2.6,5.6-2.1,1.4-3.4,3.8-3.4,6.4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><path d="M7.2,25.2h0c-.7,0-1.2-.6-1.2-1.2h0c0-.7.6-1.3,1.2-1.3h0c.7,0,1.2.6,1.2,1.2h0c0,.7-.6,1.3-1.2,1.3Z" fill="currentColor"/></svg>;
+    if (isFragen) return <CircleHelp size={14} strokeWidth={2.5} />;
     if (isRedemittel) return <MessageCircle size={14} strokeWidth={2.5} />;
     return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
   };
@@ -412,7 +413,6 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
     gap: "0 1em",
     position: "relative",
-    direction: "ltr",
   };
   const renderBilingualGrid = (
     left: React.ReactNode,
@@ -459,14 +459,9 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     </div>
   ) : null;
 
-  /** Font family for {{de:…}} markers — always the original brand font */
-  const deMarkerFont = resolvedOriginalBodyFont !== "inherit" && resolvedOriginalBodyFont !== resolvedBodyFont
-    ? resolvedOriginalBodyFont
-    : undefined;
-
   /** Render a single column of tiptap content (used for both original and translated) */
   const renderContent = (html: string) => {
-    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor, deMarkerFont));
+    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor));
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
@@ -475,36 +470,26 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     );
   };
 
-  /** Split HTML into individual paragraph strings, dropping trailing empty ones */
+  /** Split HTML into individual paragraph strings */
   const splitParagraphs = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, deMarkerColor, deMarkerFont);
-    const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi) ?? [prepared];
-    // Drop trailing empty paragraphs (<p></p> or <p><br></p>)
-    while (matches.length > 1 && /^<p[^>]*>(<br\s*\/?>)?<\/p>$/i.test(matches[matches.length - 1])) {
-      matches.pop();
-    }
-    return matches;
+    const prepared = prepareTiptapHtml(html, deMarkerColor);
+    const matches = prepared.match(/<p[^>]*>.*?<\/p>/gi);
+    return matches || [prepared];
   };
 
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
    *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
   const splitRowItems = (html: string): string[] => {
-    const prepared = prepareTiptapHtml(html, deMarkerColor, deMarkerFont);
+    const prepared = prepareTiptapHtml(html, deMarkerColor);
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
-    const mapped = rows.map((row) => {
+    return rows.map((row) => {
       if (!/^<li\b/i.test(row)) return row;
       const liInner = row.replace(/^<li\b[^>]*>/i, "").replace(/<\/li>$/i, "").trim();
       if (/^<p\b/i.test(liInner)) return liInner;
       return `<p>${liInner}</p>`;
     });
-
-    // Drop trailing empty paragraphs
-    while (mapped.length > 1 && /^<p[^>]*>(<br\s*\/?>)?<\/p>$/i.test(mapped[mapped.length - 1])) {
-      mapped.pop();
-    }
-    return mapped;
   };
 
   /** Wrap content in bilingual 2-column grid if active */
@@ -519,17 +504,17 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const cellBase: React.CSSProperties = {
         padding: "0.375rem 0.75rem 0.375rem 1.75rem",
         position: "relative",
-        borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+        borderBottom: "1px solid #d1d5db",
         lineHeight: "1.35em",
       };
       return renderBilingualGrid(
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div dir="ltr" style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}) }}>
+              <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div dir={isRtl ? "rtl" : undefined} style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}) }}>
+              <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
@@ -548,8 +533,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const hasListRows = /<li\b/i.test(originalHtml) || /<li\b/i.test(translatedHtml);
       if (hasListRows) {
         return renderBilingualGrid(
-          <div dir="ltr" style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-          <div dir={isRtl ? "rtl" : undefined} className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+          <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+          <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
           undefined,
           { showDivider: showBilingualDivider },
         );
@@ -562,10 +547,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const rowPadding = hasMultipleRows ? "0.25em" : "0";
       return renderBilingualGrid(Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
-              <div dir="ltr" className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
+              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div dir={isRtl ? "rtl" : undefined} className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
+              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -573,12 +558,51 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     }
 
     return renderBilingualGrid(
-      <div dir="ltr" style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-      <div dir={isRtl ? "rtl" : undefined} className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+      <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
+      <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
       baseTextStyle,
       { showDivider: showBilingualDivider },
     );
   };
+
+  if (isLernziel) {
+    const showStacked = isBilingual && originalBlock;
+    const isOnline = mode === "online";
+    return (
+      <div
+        className={isOnline ? "flex gap-0 font-semibold border rounded-[5px] overflow-hidden" : "flex gap-0 font-semibold border rounded-sm overflow-hidden"}
+        style={{
+          borderColor: primaryColor,
+          color: primaryColor,
+          ...(isOnline ? {} : { backgroundColor: `${primaryColor}10` }),
+        }}
+      >
+        <div
+          className={isOnline ? "shrink-0 w-8 flex items-center justify-center" : "shrink-0 w-10 flex items-center justify-center"}
+          style={{ backgroundColor: primaryColor }}
+        >
+          <Flag className={isOnline ? "h-4 w-4" : "h-5 w-5"} style={{ color: "#ffffff" }} />
+        </div>
+        <div
+          className="flex-1 min-w-0 px-6 py-2"
+          style={{
+            ...baseTextStyle,
+            ...(isOnline ? {} : { backgroundColor: colorWithAlpha(primaryColor, 0.08) }),
+          }}
+        >
+          {imageEl}
+          {showStacked ? (
+            <div>
+              <div style={baseTextStyle}>{renderContent(originalBlock.content)}</div>
+              <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle }}>{renderContent(block.content)}</div>
+            </div>
+          ) : (
+            renderContent(block.content)
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (isMetadaten) {
     return (
@@ -591,62 +615,6 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   if (!hasExampleBox && !hasFrameBox && !hasHinweisBox) {
     // For rows style (non-bilingual): render paragraph-by-paragraph with real DOM icon divs.
     // CSS ::before background-image is not rendered by Chromium's PDF engine.
-    if (isFragen && !isBilingual) {
-      const paras = splitRowItems(block.content);
-      return (
-        <div className={s.textPlain} style={baseTextStyle}>
-          {imageEl}
-          {paras.map((para, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
-                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
-                breakInside: "avoid" as const,
-                pageBreakInside: "avoid" as const,
-              }}
-            >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
-                <svg width="20" height="20" viewBox="0 0 14.5 25.2" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.2,7.2C1.2,3.7,4.3.9,7.9,1.3c2.8.3,5,2.5,5.3,5.2.3,2.3-.8,4.4-2.6,5.6-2.1,1.4-3.4,3.8-3.4,6.4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><path d="M7.2,25.2h0c-.7,0-1.2-.6-1.2-1.2h0c0-.7.6-1.3,1.2-1.3h0c.7,0,1.2.6,1.2,1.2h0c0,.7-.6,1.3-1.2,1.3Z" fill="currentColor"/></svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (isRedemittel && !isBilingual) {
-      const paras = splitRowItems(block.content);
-      return (
-        <div className={s.textPlain} style={baseTextStyle}>
-          {imageEl}
-          {paras.map((para, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
-                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
-                breakInside: "avoid" as const,
-                pageBreakInside: "avoid" as const,
-              }}
-            >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
-                <MessageCircle className="h-5 w-5" />
-              </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
     if (isRows && !isBilingual) {
       const paras = splitRowItems(block.content);
       return (
@@ -656,19 +624,19 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
             <div
               key={i}
               style={{
-                display: "flex",
-                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
-                ...(i === 0 ? { borderTop: "1px solid color-mix(in srgb, currentColor 30%, transparent)" } : {}),
+                padding: "0.375rem 0 0.375rem 1.75rem",
+                position: "relative",
+                borderBottom: "1px solid #d1d5db",
+                lineHeight: "1.35em",
+                ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
                 breakInside: "avoid" as const,
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
                 <RowsIconSvg />
               </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
-              </div>
+              <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
             </div>
           ))}
         </div>
@@ -689,11 +657,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       : isHinweisWichtig
       ? { color: "#0369a1", bg: "#0369a108", border: "#0369a1", icon: <BadgeAlert className="h-5 w-5" style={{ color: "#0369a1" }} /> }
       : isLernziel
-      ? { color: primaryColor, bg: "transparent", border: primaryColor, icon: <Goal className="h-5 w-5" style={{ color: primaryColor }} /> }
-      : isKompetenzziele
-      ? { color: accentColor || "#475569", bg: `${accentColor || "#475569"}08`, border: accentColor || "#475569", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accentColor || "#475569"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg> }
-      : isHandlungsziele
-      ? { color: accentColor || "#475569", bg: `${accentColor || "#475569"}08`, border: accentColor || "#475569", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accentColor || "#475569"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg> }
+      ? { color: "#166534", bg: "transparent", border: "#166534", icon: <Goal className="h-5 w-5" style={{ color: "#166534" }} /> }
       : { color: "#475569", bg: "#47556908", border: "#475569", icon: <ArrowRight className="h-5 w-5" style={{ color: "#475569" }} /> };
 
     // For alarm/wichtig in bilingual mode, render each language as a full hint box
@@ -701,13 +665,13 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     const useFullBilingualHintBoxes =
       isBilingual && !!originalBlock && (isHinweisWichtig || isHinweisAlarm);
     const bilingualHintIconStyle: React.CSSProperties | undefined =
-      isBilingual ? { paddingLeft: "0.25rem", width: "1.5rem" } : undefined;
+      isBilingual ? { paddingLeft: "0.75rem", width: "2.1rem" } : undefined;
 
     if (useFullBilingualHintBoxes) {
       return renderBilingualGrid(
           <div
             className={s.hintBox}
-            style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
             <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
@@ -719,7 +683,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           </div>,
           <div
             className={s.hintBox}
-            style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+            style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
           >
             <div className={s.hintIcon} style={bilingualHintIconStyle}>
               {hinweisConfig.icon}
@@ -737,7 +701,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     return (
       <div
         className={s.hintBox}
-        style={{ "--block-color": hinweisConfig.color, "--block-border": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
+        style={{ "--block-color": hinweisConfig.border, "--block-bg": hinweisConfig.bg } as React.CSSProperties}
       >
         <div className={s.hintIcon} style={bilingualHintIconStyle}>
           {hinweisConfig.icon}
@@ -769,7 +733,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
+            {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
       </div>
@@ -793,7 +757,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
         {block.comment && (
           <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-            {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
+            {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
       </div>
@@ -807,12 +771,13 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         style={{
           "--block-color": borderTextColor,
           "--example-radius": mode === "online" ? "5px" : "4px",
+          "--example-icon-width": mode === "online" ? "2rem" : "2.5rem",
           fontFamily: resolvedBodyFont,
           ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
         } as React.CSSProperties}
       >
         <div className={s.exampleSplitIcon} aria-hidden="true">
-          {isExampleStandard ? <ThumbsDown className="h-5 w-5" /> : <ThumbsUp className="h-5 w-5" />}
+          {isExampleStandard ? <ThumbsDown className="h-4 w-4" /> : <ThumbsUp className="h-4 w-4" />}
         </div>
         <div className={s.exampleSplitBody}>
           {imageEl}
@@ -821,7 +786,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       </div>
       {block.comment && (
         <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
-          {renderDeMarkers(block.comment, deMarkerColor, resolvedOriginalBodyFont)}
+          {renderDeMarkers(block.comment, deMarkerColor)}
         </div>
       )}
     </div>
@@ -1006,29 +971,15 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
 
   if (showBilingual) {
     return (
-      <div>
+      <div className="flex flex-col gap-3">
         {Array.from({ length: count }).map((_, i) => {
           const deHtml = deItems[i] ?? "";
           const trHtml = trItems[i] ?? "";
           return (
-            <div
-              key={i}
-              className={`snippet-item-row grid grid-cols-2 gap-4 items-stretch ${s.snippetCard}`}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-                borderTop: i === 0 ? "1px solid color-mix(in srgb, currentColor 30%, transparent)" : undefined,
-                borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
-              }}
-            >
-              <div className="relative flex items-stretch" style={{ display: "flex", alignItems: "stretch" }}>
-                <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
-                  <ToyBrick className="h-5 w-5" />
-                </div>
+            <div key={i} className="snippet-item-row grid grid-cols-2 gap-4 items-stretch">
+              <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
                 <div
                   className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
-                  style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
                   dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(deHtml) }}
                 />
                 {!isPrint && (
@@ -1046,11 +997,12 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
                   </button>
                 )}
               </div>
-              <div
-                className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
-                style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
-                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
-              />
+              <div className={`snippet-item-card flex flex-col border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
+                <div
+                  className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
+                  dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
+                />
+              </div>
             </div>
           );
         })}
@@ -1059,24 +1011,14 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-3">
       {deItems.map((html, i) => (
         <div
           key={i}
-          className={`snippet-item-card relative flex items-stretch ${!isPrint ? "group" : ""} ${s.snippetCard}`}
-          style={{
-            display: "flex",
-            alignItems: "stretch",
-            borderTop: i === 0 ? "1px solid color-mix(in srgb, currentColor 30%, transparent)" : undefined,
-            borderBottom: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
-          }}
+          className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${!isPrint ? "group hover:bg-slate-50 transition-colors" : ""} ${s.snippetCard}`}
         >
-          <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
-            <ToyBrick className="h-5 w-5" />
-          </div>
           <div
             className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
-            style={{ padding: "0.5rem 0.75rem 0.5rem 0.5rem" }}
             dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(html) }}
           />
           {!isPrint && (
@@ -1144,7 +1086,7 @@ function ImageView({ block }: { block: ImageBlock }) {
   );
 }
 
-function ImageCardsView({ block, accentColor }: { block: ImageCardsBlock; accentColor?: string | null }) {
+function ImageCardsView({ block }: { block: ImageCardsBlock }) {
   // Shuffle word bank items for display (memoized to maintain consistency)
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
@@ -1192,11 +1134,11 @@ function ImageCardsView({ block, accentColor }: { block: ImageCardsBlock; accent
                 />
               </div>
             )}
-            <div className={block.showWritingLines ? "px-4 pb-2" : "p-2 text-center bg-muted/50"} style={block.showWritingLines && accentColor ? { backgroundColor: `${accentColor}0d` } : undefined}>
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
               {block.showWritingLines ? (
-                <div className="space-y-0.5 pt-2 pb-1">
+                <div className="space-y-0.5 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: `1px dashed ${accentColor || 'var(--color-muted-foreground)'}`, opacity: 1.0 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -1210,7 +1152,7 @@ function ImageCardsView({ block, accentColor }: { block: ImageCardsBlock; accent
   );
 }
 
-function TextCardsView({ block, accentColor }: { block: TextCardsBlock; accentColor?: string | null }) {
+function TextCardsView({ block }: { block: TextCardsBlock }) {
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
     return deterministicShuffle(
@@ -1257,11 +1199,11 @@ function TextCardsView({ block, accentColor }: { block: TextCardsBlock; accentCo
             <div className={`p-3 ${sizeClasses[block.textSize ?? "base"]} ${alignClasses[block.textAlign ?? "center"]} ${block.textBold ? "font-bold" : ""} ${block.textItalic ? "italic" : ""}`}>
               {item.text && <span>{item.text}</span>}
             </div>
-            <div className={block.showWritingLines ? "px-4 pb-2" : "p-2 text-center bg-muted/50"} style={block.showWritingLines && accentColor ? { backgroundColor: `${accentColor}0d` } : undefined}>
+            <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center"}>
               {block.showWritingLines ? (
-                <div className="space-y-0 pt-2 pb-1">
+                <div className="space-y-0 pb-1">
                   {Array.from({ length: block.writingLinesCount ?? 1 }).map((_, i) => (
-                    <div key={i} className="h-6" style={{ borderBottom: `1px dashed ${accentColor || 'var(--color-muted-foreground)'}`, opacity: 1.0 }} />
+                    <div key={i} className="h-6" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ))}
                 </div>
               ) : (
@@ -1375,7 +1317,7 @@ function MultipleChoiceView({
           const isCorrect = opt.isCorrect;
 
           let optionClass =
-            "flex items-center rounded border transition-colors";
+            "flex items-center gap-3 p-3 rounded border transition-colors";
 
           if (showResults) {
             if (isCorrect) {
@@ -1407,17 +1349,13 @@ function MultipleChoiceView({
                 }
               }}
             >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem" }}>
-                <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               {interactive ? (
                 <div
-                  className={`rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
+                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
                     ${isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
-                  style={{ width: 20, height: 20 }}
                 >
                   {isSelected && (
                     <div className="h-2 w-2 rounded-full bg-white" />
@@ -1435,7 +1373,6 @@ function MultipleChoiceView({
               {showResults && isSelected && !isCorrect && (
                 <span className="text-cv-xs font-medium text-red-600">{t("incorrectResult")}</span>
               )}
-              </div>
             </div>
           );
         })}
@@ -1465,7 +1402,7 @@ function FillInBlankView({
   let blankIndex = 0;
 
   return (
-    <div className="rounded border border-border" style={{ padding: "0.5rem 0.75rem", lineHeight: 2.4 }}>
+    <div className="leading-loose flex flex-wrap items-baseline">
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
         if (match) {
@@ -1526,7 +1463,7 @@ function FillInBlankView({
               <span
                 key={i}
                 className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
-                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'baseline', height: '1.3em', borderRadius: 4 }}
+                style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4 }}
               >
                 {correctAnswer}
               </span>
@@ -1536,9 +1473,9 @@ function FillInBlankView({
             <span
               key={i}
               className={`bg-gray-100 px-2 ${spacingClass}`}
-              style={{ display: 'inline-flex', alignItems: 'baseline', verticalAlign: 'baseline', position: 'relative', top: '-2px', padding: '0.675em 0.5em', lineHeight: 1, borderRadius: 3, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
             >
-              <span className="text-muted-foreground" style={{ fontSize: '0.7em' }}>
+              <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
                 {String(blankIndex).padStart(2, "0")}
               </span>
             </span>
@@ -1594,7 +1531,7 @@ function FillInBlankItemsView({
   }, [block.items, block.showWordBank, block.id]);
 
   return (
-    <div className="space-y-2">
+    <div>
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap mb-3 p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
@@ -1611,15 +1548,13 @@ function FillInBlankItemsView({
         return (
           <div
             key={item.id || idx}
-            className="flex items-center rounded border border-border"
-            style={{ minHeight: "36px" }}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
           >
-            <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem" }}>
-              <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                {String(idx + 1).padStart(2, "0")}
-              </span>
-            </div>
-            <span style={{ flex: 1, minWidth: 0, padding: "0.3rem 0.75rem 0.3rem 0.5rem", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0 0" }}>
+            <span className={NUMBER_BADGE_CLASS}>
+              {String(idx + 1).padStart(2, "0")}
+            </span>
+            <span className="flex-1 leading-relaxed flex flex-wrap items-baseline">
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1637,7 +1572,6 @@ function FillInBlankItemsView({
                     correctAnswer = raw.trim();
                   }
                   const key = `blank-${idx}-${blankInItem}`;
-                  const blankNum = blankInItem + 1;
                   blankInItem++;
                   const userValue = blanks[key] || "";
                   const hasAnswer = correctAnswer !== "";
@@ -1692,12 +1626,10 @@ function FillInBlankItemsView({
                   return (
                     <span
                       key={i}
-                      className={`bg-gray-100 px-2 ${spacingClass}`}
-                      style={{ display: 'inline-flex', alignItems: 'baseline', verticalAlign: 'baseline', padding: '0.675em 0.5em', lineHeight: 1, borderRadius: 3, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+                      className={`bg-gray-100 ${spacingClass} border-b border-muted-foreground/30`}
+                      style={{ display: 'inline-block', verticalAlign: 'baseline', borderRadius: 2, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
                     >
-                      <span className="text-muted-foreground" style={{ fontSize: '0.7em' }}>
-                        {String(blankNum).padStart(2, "0")}
-                      </span>
+                      &nbsp;
                     </span>
                   );
                 }
@@ -1813,50 +1745,48 @@ function MatchingView({
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
-          <div className="space-y-2">
+          <div>
             {block.pairs.map((pair, i) => (
               <div
                 key={pair.id}
-                className="flex items-center rounded border border-border"
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <span className="flex-1">{pair.left}</span>
-                  <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                    {String(i + 1).padStart(2, "0")}
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{pair.left}</span>
+                {showSolutions ? (
+                  <span
+                    className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0"
+                  >
+                    {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
                   </span>
-                  {showSolutions ? (
-                    <span className="font-bold text-white bg-green-500 rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                      {(() => { const idx = shuffledRight.findIndex(sp => sp.id === pair.id); return String.fromCharCode(65 + idx); })()}
-                    </span>
-                  ) : (
-                    <div className={CONTROL_BOX_CLASS} />
-                  )}
-                </div>
+                ) : (
+                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                )}
               </div>
             ))}
           </div>
           {/* Right column — shuffled */}
-          <div className="space-y-2">
+          <div>
             {shuffledRight.map((pair, i) => (
               <div
                 key={`r-${pair.id}`}
-                className="flex items-center rounded border border-border"
+                className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <div style={{ flex: 1, minWidth: 0, padding: "0.5rem 0.75rem 0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  {showSolutions ? (
-                    <span className="font-bold text-white bg-green-500 rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                      {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
-                    </span>
-                  ) : (
-                    <div className={CONTROL_BOX_CLASS} />
-                  )}
-                  <span className="font-bold text-muted-foreground bg-muted rounded flex items-center justify-center shrink-0" style={{ width: 20, height: 20, fontSize: "0.625rem" }}>
-                    {String.fromCharCode(65 + i)}
+                {showSolutions ? (
+                  <span className="w-5 h-5 rounded-sm bg-green-500 text-white text-cv-micro font-bold flex items-center justify-center shrink-0">
+                    {(() => { const idx = block.pairs.findIndex(p => p.id === pair.id); return String(idx + 1).padStart(2, "0"); })()}
                   </span>
-                  <span className="flex-1 text-right">{pair.right}</span>
-                </div>
+                ) : (
+                  <div className="w-5 h-5 rounded border-2 border-muted-foreground/30 shrink-0" />
+                )}
+                <span className="flex-1">{pair.right}</span>
+                <span className="text-cv-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String.fromCharCode(65 + i)}
+                </span>
               </div>
             ))}
           </div>
@@ -2147,29 +2077,21 @@ function GlossaryView({
   block,
   brand,
   bodyFont,
-  originalBodyFont,
   isNonLatin,
   translationScale,
 }: {
   block: GlossaryBlock;
   brand?: Brand;
   bodyFont?: string;
-  originalBodyFont?: string;
   isNonLatin?: boolean;
   translationScale?: number;
 }) {
   const colWidth = `${block.leftColWidth ?? 25}%`;
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
-  const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
-  // Term column: always German → use original brand font
-  const termStyle: React.CSSProperties = { fontFamily: resolvedOriginalBodyFont };
-  // Definition/example columns: may be translated → use active body font
+  const termStyle: React.CSSProperties = isNonLatin ? { fontFamily: resolvedBodyFont } : {};
   const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
-  const defStyle: React.CSSProperties = {
-    ...(isNonLatin ? { fontFamily: resolvedBodyFont } : {}),
-    ...(scale ? { fontSize: `${scale}em` } : {}),
-  };
+  const defStyle: React.CSSProperties = scale ? { fontSize: `${scale}em` } : {};
   const hasExamples = block.pairs.some((p) => p.example);
   return (
     <div className={`space-y-2 ${s.glossary}`}>
@@ -2181,7 +2103,6 @@ function GlossaryView({
           <div
             key={pair.id}
             className="glossary-row flex items-start gap-4 py-1 border-b"
-            style={{ lineHeight: "1.58" }}
           >
             <span className={`font-medium ${s.glossaryTerm}`} style={{ width: colWidth, minWidth: colWidth, ...termStyle }}>
               {pair.term}
@@ -2190,7 +2111,7 @@ function GlossaryView({
               {pair.definition}
             </span>
             {hasExamples && (
-              <span className="flex-1 text-muted-foreground" dir="auto" style={{ ...defStyle, fontFamily: resolvedOriginalBodyFont }}>
+              <span className="flex-1 text-muted-foreground" dir="auto" style={defStyle}>
                 {pair.example}
               </span>
             )}
@@ -2336,12 +2257,14 @@ function TrueFalseMatrixView({
   };
 
   return (
-    <div>
-      {(block.instruction || "Kreuzen Sie die richtige Antwort an.") && (
-        <p className="font-normal mb-2" style={{ color: accentColor || "var(--color-primary)", ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
-          {block.instruction || "Kreuzen Sie die richtige Antwort an."}
-        </p>
-      )}
+    <TaskContainer
+      showPill={showPill}
+      taskNumber={taskNumber}
+      lessonLabel={lessonLabel}
+      instruction={block.instruction || "Kreuzen Sie die richtige Antwort an."}
+      instructionStyle={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+      accentColor={accentColor}
+    >
       <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <div>
         <div className="flex items-center gap-3 py-2 border-b">
@@ -2418,7 +2341,7 @@ function TrueFalseMatrixView({
         </div>
       </div>
     </div>
-    </div>
+    </TaskContainer>
   );
 }
 
@@ -3475,7 +3398,6 @@ function FixSentencesView({
   onAnswer,
   showResults,
   showSolutions = false,
-  accentColor,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -3484,7 +3406,6 @@ function FixSentencesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
-  accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
@@ -3555,7 +3476,6 @@ function FixSentencesView({
             showResults &&
             displayParts.length === correctParts.length &&
             displayParts.every((p, idx) => p === correctParts[idx]);
-          const isExample = i === 0 && !!block.showFirstAsExample;
 
           return (
             <div
@@ -3626,25 +3546,12 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  {!isExample && isPrint && showSolutions ? (
+                  {isPrint && showSolutions ? (
                     <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
                   ) : isPrint ? (
-                    <div className="relative mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }}>
-                      {isExample && (
-                        <div
-                          className="absolute bottom-0 left-0 whitespace-nowrap pointer-events-none"
-                          style={{
-                            fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
-                            color: accentColor || 'var(--color-primary)',
-                            fontSize: '0.95em',
-                          }}
-                        >
-                          {correctParts.join(" ")}
-                        </div>
-                      )}
-                    </div>
+                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ) : null}
-                  {!isExample && showResults && !isFullyCorrect && (
+                  {showResults && !isFullyCorrect && (
                     <p className="text-cv-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
                     </p>
@@ -3730,9 +3637,6 @@ function TransformSentencesView({
   answer,
   onAnswer,
   showResults,
-  accentColor,
-  bodyFont,
-  bodyFontSize,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -3740,14 +3644,11 @@ function TransformSentencesView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
-  accentColor?: string | null;
-  bodyFont?: string;
-  bodyFontSize?: string;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
 
   return (
-    <div className="space-y-2" style={{ ...(bodyFont ? { fontFamily: bodyFont } : {}), ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+    <div className="space-y-2">
       {block.instruction && (
         <p className="font-medium">{block.instruction}</p>
       )}
@@ -3757,7 +3658,6 @@ function TransformSentencesView({
           const hasSolution = !!item.solution;
           const isCorrect = showResults && hasSolution && userVal.trim().toLowerCase() === item.solution!.trim().toLowerCase();
           const isWrong = showResults && hasSolution && userVal.trim() !== "" && !isCorrect;
-          const isExample = i === 0 && !!block.showFirstAsExample && hasSolution;
 
           return (
             <div
@@ -3770,23 +3670,7 @@ function TransformSentencesView({
                 </span>
                 <span>{item.beginning}</span>
               </div>
-              {isExample ? (
-                <div
-                  className="relative mt-1 ml-9 border-b border-dashed border-muted-foreground/30"
-                  style={{ width: 'calc(100% - 2.25rem)', minHeight: '14px' }}
-                >
-                  <div
-                    className="absolute bottom-0 left-0 whitespace-nowrap pointer-events-none"
-                    style={{
-                      fontFamily: '"Shadows Into Light Two", var(--font-handwriting), cursive',
-                      color: accentColor || 'var(--color-primary)',
-                      fontSize: '0.95em',
-                    }}
-                  >
-                    {item.solution}
-                  </div>
-                </div>
-              ) : interactive ? (
+              {interactive ? (
                 <div className="mt-1 ml-9" style={{ width: 'calc(100% - 2.25rem)' }}>
                   <input
                     type="text"
@@ -4263,7 +4147,7 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale, isRtl }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number; isRtl?: boolean }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
@@ -4271,12 +4155,30 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
 
-  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, dir?: string) => (
-    <div dir={dir} className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
+    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
       <div
-        className="numbered-items-richtext tiptap max-w-none text-foreground font-normal"
+        className="tiptap max-w-none text-foreground font-normal"
         dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
       />
+    </div>
+  );
+
+  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        gap: "0 1rem",
+        alignItems: "start",
+      }}
+    >
+      {renderNumberedItemContent(originalContent)}
+      {renderNumberedItemContent(
+        translatedContent,
+        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
+        "tiptap-bilingual-translated"
+      )}
     </div>
   );
 
@@ -4286,36 +4188,16 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
         {block.items.map((item, i) => {
           const originalItem = originalBlock?.items[i];
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
-          const num = String(block.startNumber + i).padStart(2, "0");
           return (
-            <div
-              key={item.id}
-              className={s.numberedItemRow}
-              style={showBilingual ? { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 1em" } : undefined}
-            >
-              {showBilingual ? (
-                <>
-                  {/* Left col: badge + original */}
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
-                    <span className={s.accentBadge} style={{ flexShrink: 0, alignSelf: "center" }}>{num}</span>
-                    {renderNumberedItemContent(originalItem.content, undefined, undefined, "ltr")}
-                  </div>
-                  {/* Right col: translation */}
-                  {renderNumberedItemContent(
-                    item.content,
-                    effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined,
-                    "tiptap-bilingual-translated",
-                    isRtl ? "rtl" : undefined
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className={s.accentBadge}>{num}</span>
-                  <div className={s.numberedItemContent}>
-                    {renderNumberedItemContent(item.content)}
-                  </div>
-                </>
-              )}
+            <div key={item.id} className={s.numberedItemRow}>
+              <span className={s.accentBadge}>{String(block.startNumber + i).padStart(2, "0")}</span>
+              <div className={s.numberedItemContent}>
+                {showBilingual ? (
+                  renderBilingualColumns(originalItem.content, item.content)
+                ) : (
+                  renderNumberedItemContent(item.content)
+                )}
+              </div>
             </div>
           );
         })}
@@ -4328,75 +4210,36 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
       {block.items.map((item, i) => {
         const originalItem = originalBlock?.items[i];
         const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
-        const num = String(block.startNumber + i).padStart(2, '0');
-        const badgeColor = textWhite ? '#fff' : '#000';
-        if (showBilingual) {
-          return (
-            <div
-              key={item.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-                gap: "0 1em",
-                borderRadius: `${radius}px`,
-                breakInside: "avoid",
-                pageBreakInside: "avoid",
-                direction: "ltr",
-                alignItems: "stretch",
-              }}
-            >
-              {/* Left col: badge (full bg) + original (light bg) */}
-              <div style={{ display: "flex", alignItems: "stretch", borderRadius: `4px 0 0 4px`, overflow: "hidden" }}>
-                <div style={{
-                  backgroundColor: block.bgColor,
-                  color: badgeColor,
-                  fontWeight: "bold",
-                  lineHeight: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0.375rem 0.35rem",
-                  minWidth: "30px",
-                  flexShrink: 0,
-                }}>
-                  {num}
-                </div>
-                <div style={{ backgroundColor: surfaceBg, flex: 1, padding: "0.375rem 0.75rem" }}>
-                  {renderNumberedItemContent(originalItem.content, undefined, undefined, "ltr")}
-                </div>
-              </div>
-              {/* Right col: translation (light bg) */}
-              <div style={{ backgroundColor: surfaceBg, borderRadius: `0 ${radius}px ${radius}px 0`, padding: "0.375rem 0.75rem" }}>
-                {renderNumberedItemContent(
-                  item.content,
-                  effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined,
-                  "tiptap-bilingual-translated",
-                  isRtl ? "rtl" : undefined
-                )}
-              </div>
-            </div>
-          );
-        }
         return (
           <div
             key={item.id}
             className="flex gap-0"
-            style={{
+            style={hasBg ? {
               backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
               breakInside: "avoid",
               pageBreakInside: "avoid",
-            }}
+            } : undefined}
           >
             <div
               className="shrink-0 w-[30px] flex items-center justify-center font-bold"
-              style={{ backgroundColor: block.bgColor, color: badgeColor, borderRadius: `${radius}px 0 0 ${radius}px`, lineHeight: 1 }}
+              style={{
+                backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
+                color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
+                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+              }}
             >
-              {num}
+              {String(block.startNumber + i).padStart(2, '0')}
             </div>
-            <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-              {renderNumberedItemContent(item.content)}
-            </div>
+            {showBilingual ? (
+              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+                {renderBilingualColumns(originalItem.content, item.content)}
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+                {renderNumberedItemContent(item.content)}
+              </div>
+            )}
           </div>
         );
       })}
@@ -4410,13 +4253,11 @@ function ChecklistView({
   originalBlock,
   isNonLatin,
   translationScale,
-  isRtl,
 }: {
   block: ChecklistBlock;
   originalBlock?: ChecklistBlock;
   isNonLatin?: boolean;
   translationScale?: number;
-  isRtl?: boolean;
 }) {
   const isBilingual = !!block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
@@ -4471,7 +4312,6 @@ function ChecklistView({
               ? {
                   gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
                   alignItems: "start",
-                  direction: "ltr",
                 }
               : {
                   gridTemplateColumns: "2rem minmax(0, 1fr)",
@@ -4482,8 +4322,8 @@ function ChecklistView({
             {showBilingual
               ? (
                 <>
-                  <div dir="ltr">{renderChecklistColumn(originalItem)}</div>
-                  <div dir={isRtl ? "rtl" : undefined}>{renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}</div>
+                  {renderChecklistColumn(originalItem)}
+                  {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
                 </>
               )
               : renderChecklistColumn(item)}
@@ -5128,7 +4968,6 @@ export function ViewerBlockRenderer({
   lessonLabel,
   originalBlock,
   isNonLatin = false,
-  isRtl = false,
   translationScale,
 }: {
   block: WorksheetBlock;
@@ -5149,7 +4988,6 @@ export function ViewerBlockRenderer({
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
   isNonLatin?: boolean;
-  isRtl?: boolean;
   translationScale?: number;
 }) {
   const interactive = mode === "online";
@@ -5171,40 +5009,17 @@ export function ViewerBlockRenderer({
     return undefined;
   }, [allBlocks, block]);
 
-  // Determine RTL wrapper: apply dir="rtl" only when the block content was actually
-  // translated into an RTL language.  Bilingual blocks handle RTL internally per-column,
-  // so they never need the outer wrapper.  Non-bilingual blocks only need it when their
-  // content genuinely differs from the original (i.e. was translated).
-  const isBilingualBlock = "bilingual" in block && (block as { bilingual?: boolean }).bilingual;
-  const isTranslatedBlock = !!originalBlock;
-  const hasTranslatedContent = isTranslatedBlock && (() => {
-    if (!originalBlock) return false;
-    // Compare the primary content field(s) to detect actual translation
-    const a = block as unknown as Record<string, unknown>;
-    const b = originalBlock as unknown as Record<string, unknown>;
-    if ("content" in a && "content" in b) return a.content !== b.content;
-    if ("items" in a && "items" in b) return JSON.stringify(a.items) !== JSON.stringify(b.items);
-    if ("entries" in a && "entries" in b) return JSON.stringify(a.entries) !== JSON.stringify(b.entries);
-    if ("lines" in a && "lines" in b) return JSON.stringify(a.lines) !== JSON.stringify(b.lines);
-    if ("question" in a && "question" in b) return a.question !== b.question;
-    return false;
-  })();
-  const needsRtl = isRtl && !isBilingualBlock && hasTranslatedContent;
-
-  const wrapRtl = (el: React.ReactNode) =>
-    needsRtl ? <div dir="rtl">{el}</div> : <>{el}</>;
-
   switch (block.type) {
     case "heading":
-      return wrapRtl(<HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} isRtl={isRtl} />);
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
     case "text":
-      return wrapRtl(<TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} isRtl={isRtl} />);
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
-      return <ImageCardsView block={block} accentColor={accentColor} />;
+      return <ImageCardsView block={block} />;
     case "text-cards":
-      return <TextCardsView block={block} accentColor={accentColor} />;
+      return <TextCardsView block={block} />;
     case "spacer":
       return <SpacerView block={block} />;
     case "divider":
@@ -5218,7 +5033,7 @@ export function ViewerBlockRenderer({
     case "writing-rows":
       return <WritingRowsView block={block} />;
     case "multiple-choice":
-      return wrapRtl(
+      return (
         <MultipleChoiceView
           block={block}
           interactive={interactive}
@@ -5273,12 +5088,11 @@ export function ViewerBlockRenderer({
         />
       );
     case "glossary":
-      return wrapRtl(
+      return (
         <GlossaryView
           block={block}
           brand={brand}
           bodyFont={bodyFont}
-          originalBodyFont={originalBodyFont}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
         />
@@ -5309,7 +5123,7 @@ export function ViewerBlockRenderer({
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
           brand={brand}
-          bodyFont={originalBodyFont || bodyFont}
+          bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
@@ -5388,7 +5202,7 @@ export function ViewerBlockRenderer({
           taskNumber={taskNumber}
           lessonLabel={lessonLabel}
           brand={brand}
-          bodyFont={originalBodyFont || bodyFont}
+          bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
@@ -5404,7 +5218,6 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-          accentColor={accentColor}
         />
       );
     case "complete-sentences":
@@ -5426,9 +5239,6 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
-          accentColor={accentColor}
-          bodyFont={originalBodyFont || bodyFont}
-          bodyFontSize={bodyFontSize}
         />
       );
     case "verb-table":
@@ -5446,7 +5256,7 @@ export function ViewerBlockRenderer({
     case "chart":
       return <ChartView block={block} />;
     case "dialogue":
-      return wrapRtl(
+      return (
         <DialogueView
           block={block}
           interactive={interactive}
@@ -5498,9 +5308,9 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return wrapRtl(<NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} isRtl={isRtl} />);
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "checklist":
-      return wrapRtl(<ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} isRtl={isRtl} />);
+      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":
       return (
         <AccordionView
@@ -5524,9 +5334,9 @@ export function ViewerBlockRenderer({
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":
-      return wrapRtl(<ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />);
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":
-      return wrapRtl(<WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />);
+      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     default:
       return null;
   }

@@ -6,7 +6,7 @@ import { extractWorksheetStrings } from "@/lib/worksheet-translation";
 import { getAiInstructions } from "@/lib/course-translation";
 import { WorksheetBlock, WorksheetSettings } from "@/types/worksheet";
 
-export const maxDuration = 300;
+export const maxDuration = 120;
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -24,11 +24,6 @@ const LANGUAGE_NAMES: Record<string, string> = {
   ar: "Arabic",
   pl: "Polish",
   ru: "Russian",
-  hu: "Hungarian",
-  ps: "Pashto",
-  fa: "Farsi/Dari",
-  cs: "Czech",
-  ur: "Urdu",
 };
 
 const MAX_CHUNK_JSON_BYTES = 12000;
