@@ -318,3 +318,33 @@ model ProjectContent {
   @@index([contentId])
   @@index([projectId])
 }
+
+// ── Flashcard Collections ────────────────────────────────────────────
+
+model FlashcardCollection {
+  id          String                    @id @default(cuid())
+  userId      String
+  slug        String                    @unique
+  title       String
+  description String?
+  published   Boolean                   @default(true)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  sets        FlashcardCollectionSet[]
+
+  @@index([slug])
+  @@index([userId])
+}
+
+model FlashcardCollectionSet {
+  id           String                @id @default(cuid())
+  collectionId String
+  worksheetId  String
+  order        Int
+  addedAt      DateTime              @default(now())
+  collection   FlashcardCollection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, worksheetId])
+  @@index([collectionId])
+  @@index([worksheetId])
+}

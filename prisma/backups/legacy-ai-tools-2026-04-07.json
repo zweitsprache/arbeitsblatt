@@ -1,0 +1,69 @@
+[
+  {
+    "id": "cmnoqk6pf000004jserxx8k4u",
+    "title": "Untitled AI Tool",
+    "slug": "eDvUaKf96C",
+    "description": "Bewerbungsbrief G| enerator",
+    "fields": [],
+    "promptTemplate": "",
+    "settings": {
+      "model": "claude-sonnet-4-20250514",
+      "maxTokens": 4096,
+      "temperature": 0.7
+    },
+    "published": false,
+    "thumbnail": null,
+    "createdAt": "2026-04-07T14:50:03.891",
+    "updatedAt": "2026-04-07T14:50:23.262",
+    "folderId": null,
+    "userId": "fd489602-d6aa-454e-832c-45468c2e09b7"
+  },
+  {
+    "id": "cmmb3kmgm0000bb4grs7impv8",
+    "title": "Untitled AI Tool",
+    "slug": "FC1QjTZ42_",
+    "description": "adsfasdfasdf",
+    "fields": [
+      {
+        "id": "d5900416-4497-422c-9c20-34989c39d59a",
+        "type": "text",
+        "label": "Field 1",
+        "required": false,
+        "placeholder": "",
+        "variableName": "field_1"
+      },
+      {
+        "id": "222aadac-6023-4671-be1b-bbdd65639ae9",
+        "type": "select",
+        "label": "Field 2",
+        "options": [
+          {
+            "id": "f5093c90-1e12-43be-bb6a-a6f0e52c2471",
+            "label": "Option 1",
+            "value": "option_1"
+          },
+          {
+            "id": "b3a946a7-afce-4a20-8e22-74d2bc2f938a",
+            "label": "Option 2",
+            "value": "option_2"
+          }
+        ],
+        "required": false,
+        "placeholder": "",
+        "variableName": "field_2"
+      }
+    ],
+    "promptTemplate": "",
+    "settings": {
+      "model": "claude-sonnet-4-20250514",
+      "maxTokens": 4096,
+      "temperature": 0.7
+    },
+    "published": true,
+    "thumbnail": null,
+    "createdAt": "2026-03-03T21:05:50.518",
+    "updatedAt": "2026-03-03T21:07:21.143",
+    "folderId": null,
+    "userId": "fd489602-d6aa-454e-832c-45468c2e09b7"
+  }
+]

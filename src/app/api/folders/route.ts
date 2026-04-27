@@ -8,25 +8,38 @@ export async function GET(req: NextRequest) {
   if (result instanceof NextResponse) return result;
   const { userId } = result;
 
-  const parentId = req.nextUrl.searchParams.get("parentId");
+  try {
+    // Claim legacy/unassigned folders so they reappear after DB recovery.
+    await prisma.folder.updateMany({
+      where: { userId: null },
+      data: { userId },
+    });
 
-  const folders = await prisma.folder.findMany({
-    where: {
-      userId,
-      parentId: parentId || null,
-    },
-    orderBy: { name: "asc" },
-    include: {
-      _count: {
-        select: {
-          children: true,
-          worksheets: true,
+    const parentIdParam = req.nextUrl.searchParams.get("parentId");
+    const parentId = parentIdParam?.trim() || null;
+
+    const folders = await prisma.folder.findMany({
+      where: {
+        userId,
+        parentId,
+      },
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: {
+            children: true,
+            worksheets: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return NextResponse.json(folders);
+    return NextResponse.json(folders);
+  } catch (error) {
+    console.error("GET /api/folders error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 // POST /api/folders — create a new folder

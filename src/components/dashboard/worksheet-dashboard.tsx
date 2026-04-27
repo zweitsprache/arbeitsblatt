@@ -120,14 +120,22 @@ export function WorksheetDashboard() {
         authFetch(`/api/folders?parentId=${folderId || ""}`),
         authFetch(`/api/worksheets?folderId=${folderParam}`),
       ]);
-      if (!foldersRes.ok || !worksheetsRes.ok) {
-        console.error("Failed to fetch contents: HTTP", foldersRes.ok ? worksheetsRes.status : foldersRes.status);
-        return;
+
+      if (foldersRes.ok) {
+        const nextFolders: FolderItem[] = await foldersRes.json();
+        setFolders(nextFolders);
+      } else {
+        const details = await foldersRes.text().catch(() => "");
+        console.warn("Failed to fetch folders:", foldersRes.status, details);
       }
-      const foldersData = await foldersRes.json();
-      const worksheetsData = await worksheetsRes.json();
-      setFolders(foldersData);
-      setWorksheets(worksheetsData);
+
+      if (worksheetsRes.ok) {
+        const nextWorksheets: WorksheetItem[] = await worksheetsRes.json();
+        setWorksheets(nextWorksheets);
+      } else {
+        const details = await worksheetsRes.text().catch(() => "");
+        console.warn("Failed to fetch worksheets:", worksheetsRes.status, details);
+      }
     } catch (err) {
       console.error("Failed to fetch contents:", err);
     } finally {

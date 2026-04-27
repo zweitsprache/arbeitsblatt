@@ -10,45 +10,60 @@ export async function GET(req: NextRequest) {
   if (result instanceof NextResponse) return result;
   const { userId } = result;
 
-  const folderId = req.nextUrl.searchParams.get("folderId");
-  const search = req.nextUrl.searchParams.get("search");
-  const type = req.nextUrl.searchParams.get("type");
+  try {
+    const folderIdParam = req.nextUrl.searchParams.get("folderId");
+    const searchParam = req.nextUrl.searchParams.get("search");
+    const typeParam = req.nextUrl.searchParams.get("type");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { userId };
+    const hasFolderFilter = folderIdParam !== null;
+    const folderId = folderIdParam?.trim() || null;
+    const search = searchParam?.trim() || null;
+    const type = typeParam?.trim() || null;
 
-  // Filter by type (default to "worksheet" for backwards compatibility)
-  if (type) {
-    where.type = type;
-  } else {
-    where.type = "worksheet";
+    // Claim legacy/unassigned worksheets so they reappear after DB recovery.
+    await prisma.worksheet.updateMany({
+      where: { userId: null },
+      data: { userId },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = { userId };
+
+    // Filter by type (default to "worksheet" for backwards compatibility)
+    where.type = type || "worksheet";
+
+    if (search) {
+      where.title = { contains: search, mode: "insensitive" };
+    } else if (hasFolderFilter) {
+      if (folderId === "root" || folderId === null) {
+        where.folderId = null;
+      } else {
+        where.folderId = folderId;
+      }
+    }
+
+    const worksheets = await prisma.worksheet.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        slug: true,
+        published: true,
+        blocks: true,
+        settings: true,
+        folderId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return NextResponse.json(worksheets);
+  } catch (error) {
+    console.error("GET /api/worksheets error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  if (search) {
-    where.title = { contains: search, mode: "insensitive" };
-  } else if (folderId === "root") {
-    where.folderId = null;
-  } else if (folderId) {
-    where.folderId = folderId;
-  }
-
-  const worksheets = await prisma.worksheet.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      slug: true,
-      published: true,
-      blocks: true,
-      settings: true,
-      folderId: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-  return NextResponse.json(worksheets);
 }
 
 // POST /api/worksheets — create a new worksheet

@@ -12,12 +12,23 @@ export async function GET(
   const { userId } = result;
 
   const { id } = await params;
-  const worksheet = await prisma.worksheet.findUnique({
-    where: { id, userId },
+  let worksheet = await prisma.worksheet.findFirst({
+    where: {
+      id,
+      OR: [{ userId }, { userId: null }],
+    },
   });
   if (!worksheet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  if (worksheet.userId === null) {
+    worksheet = await prisma.worksheet.update({
+      where: { id },
+      data: { userId },
+    });
+  }
+
   return NextResponse.json(worksheet);
 }
 
@@ -34,11 +45,21 @@ export async function PUT(
   const body = await req.json();
 
   // Verify ownership
-  const existing = await prisma.worksheet.findUnique({
-    where: { id, userId },
+  const existing = await prisma.worksheet.findFirst({
+    where: {
+      id,
+      OR: [{ userId }, { userId: null }],
+    },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.userId === null) {
+    await prisma.worksheet.update({
+      where: { id },
+      data: { userId },
+    });
   }
 
   const data: Record<string, unknown> = {};
@@ -73,11 +94,21 @@ export async function DELETE(
   const { id } = await params;
 
   // Verify ownership
-  const existing = await prisma.worksheet.findUnique({
-    where: { id, userId },
+  const existing = await prisma.worksheet.findFirst({
+    where: {
+      id,
+      OR: [{ userId }, { userId: null }],
+    },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.userId === null) {
+    await prisma.worksheet.update({
+      where: { id },
+      data: { userId },
+    });
   }
 
   await prisma.worksheet.delete({ where: { id } });
