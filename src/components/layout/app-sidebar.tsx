@@ -69,6 +69,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/editor/flashcards", labelKey: "newFlashcards", icon: Plus },
       { href: "/flashcards", labelKey: "flashcardLibrary", icon: Library },
+      { href: "/collections", labelKey: "collectionLibrary", icon: FolderKanban },
     ],
   },
   {

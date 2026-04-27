@@ -1512,6 +1512,7 @@
     "accountSettings": "Account Settings",
     "cardLibrary": "Card library",
     "cards": "Cards",
+    "collectionLibrary": "Collections",
     "collapse": "Collapse",
     "courseLibrary": "Course library",
     "courses": "Courses",
@@ -1681,13 +1682,17 @@
   },
   "collectionViewer": {
     "browseSets": "Browse Sets",
-    "learningMode": "Learning Mode",
+    "card": "Card",
+    "clickToFlip": "Click to flip",
+    "flashcardSetCount": "{count} flashcard sets",
+    "hideSets": "Hide Sets",
     "individual": "Individual",
+    "learningMode": "Learning Mode",
+    "loading": "Loading...",
+    "noCardsAvailable": "No cards available",
+    "selectSetToStartLearning": "Select a set to start learning",
     "sequential": "Sequential",
     "set": "Set",
-    "card": "Card",
-    "showSets": "Show Sets",
-    "hideSets": "Hide Sets",
-    "clickToFlip": "Click to flip"
+    "showSets": "Show Sets"
   }
 }

@@ -1512,6 +1512,7 @@
     "accountSettings": "Kontoeinstellungen",
     "cardLibrary": "Karten-Bibliothek",
     "cards": "Karten",
+    "collectionLibrary": "Sammlungen",
     "collapse": "Einklappen",
     "courseLibrary": "Kurs-Bibliothek",
     "courses": "Kurse",
@@ -1681,13 +1682,17 @@
   },
   "collectionViewer": {
     "browseSets": "Sets durchsuchen",
-    "learningMode": "Lernmodus",
+    "card": "Karte",
+    "clickToFlip": "Klicken zum Umdrehen",
+    "flashcardSetCount": "{count} Lernkarten-Sets",
+    "hideSets": "Sets verbergen",
     "individual": "Einzeln",
+    "learningMode": "Lernmodus",
+    "loading": "Lädt...",
+    "noCardsAvailable": "Keine Karten verfügbar",
+    "selectSetToStartLearning": "Wähle ein Set, um zu lernen",
     "sequential": "Nacheinander",
     "set": "Set",
-    "card": "Karte",
-    "showSets": "Sets anzeigen",
-    "hideSets": "Sets verbergen",
-    "clickToFlip": "Klicken zum Umdrehen"
+    "showSets": "Sets anzeigen"
   }
 }

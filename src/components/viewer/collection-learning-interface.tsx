@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Flashcard {
   id: string;
@@ -37,8 +38,17 @@ export function CollectionLearningInterface({
   selectedSetId,
   mode,
 }: CollectionLearningInterfaceProps) {
+  const t = useTranslations("collectionViewer");
+  const tc = useTranslations("common");
+
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+
+  // Reset card state when the selected set or learning mode changes.
+  useEffect(() => {
+    setCardIndex(0);
+    setIsFlipped(false);
+  }, [selectedSetId, mode]);
 
   // Get current set
   const currentSet = useMemo(() => {
@@ -78,14 +88,14 @@ export function CollectionLearningInterface({
       <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border">
         <p className="text-gray-600">
           {mode === "individual"
-            ? "Select a set to start learning"
-            : "No cards available"}
+            ? t("selectSetToStartLearning")
+            : t("noCardsAvailable")}
         </p>
       </div>
     );
   }
 
-  const currentCard = allCards[cardIndex];
+  const currentCard = allCards[cardIndex] ?? allCards[0];
   const hasMore = cardIndex < allCards.length - 1;
   const hasPrev = cardIndex > 0;
 
@@ -97,14 +107,14 @@ export function CollectionLearningInterface({
           <div className="text-sm text-gray-600">
             {mode === "sequential" ? (
               <>
-                Set {currentCard.setOrder + 1} • {currentCard.setTitle}
+                {t("set")} {currentCard.setOrder + 1} • {currentCard.setTitle}
               </>
             ) : (
               <>{currentCard.setTitle}</>
             )}
           </div>
           <div className="text-sm font-medium text-gray-900">
-            Card {cardIndex + 1} of {allCards.length}
+            {t("card")} {cardIndex + 1} / {allCards.length}
           </div>
         </div>
       </div>
@@ -112,11 +122,10 @@ export function CollectionLearningInterface({
       {/* Flashcard */}
       <div
         onClick={() => setIsFlipped(!isFlipped)}
-        className="cursor-pointer min-h-64 sm:min-h-96 bg-white border-2 border-gray-200 rounded-lg p-4 sm:p-8 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
+        className="cursor-pointer min-h-64 sm:min-h-96 bg-white border-2 border-gray-200 rounded-lg px-10 py-4 sm:px-16 sm:py-8 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
       >
         <div className="text-center max-w-full overflow-hidden">
-          <div className="text-xs text-gray-500 mb-4">Click to flip</div>
-          <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 break-words">
+          <div className="text-lg sm:text-3xl md:text-4xl font-normal leading-snug text-gray-900 break-words">
             {isFlipped ? currentCard.back.text : currentCard.front.text}
           </div>
         </div>
@@ -135,7 +144,7 @@ export function CollectionLearningInterface({
           className="flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Previous</span>
+          <span className="hidden sm:inline">{tc("previous")}</span>
         </Button>
 
         <div className="text-xs text-gray-600 text-center flex-1">
@@ -152,7 +161,7 @@ export function CollectionLearningInterface({
           disabled={!hasMore}
           className="flex items-center gap-2"
         >
-          <span className="hidden sm:inline">Next</span>
+          <span className="hidden sm:inline">{tc("next")}</span>
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

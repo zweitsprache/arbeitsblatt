@@ -6,6 +6,7 @@ import { CollectionSetsList } from "./collection-sets-list";
 import { CollectionLearningInterface } from "./collection-learning-interface";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Grid } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface CollectionSet {
   id: string;
@@ -37,6 +38,7 @@ interface CollectionViewerProps {
 }
 
 export function CollectionViewer({ collection }: CollectionViewerProps) {
+  const t = useTranslations("collectionViewer");
   const [mode, setMode] = useState<"sequential" | "individual">("individual");
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -75,7 +77,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
 
         <div className="border-t pt-4">
           <div className="space-y-2 mb-4">
-            <label className="text-sm font-medium text-gray-700">Learning Mode</label>
+            <label className="text-sm font-medium text-gray-700">{t("learningMode")}</label>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -84,7 +86,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
                 className="flex-1 text-xs gap-1"
               >
                 <Grid className="w-3 h-3" />
-                Individual
+                {t("individual")}
               </Button>
               <Button
                 size="sm"
@@ -93,7 +95,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
                 className="flex-1 text-xs gap-1"
               >
                 <BookOpen className="w-3 h-3" />
-                Sequential
+                {t("sequential")}
               </Button>
             </div>
           </div>
@@ -121,7 +123,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
                 className="flex-1 text-xs gap-1"
               >
                 <Grid className="w-3 h-3" />
-                Individual
+                {t("individual")}
               </Button>
               <Button
                 size="sm"
@@ -130,7 +132,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
                 className="flex-1 text-xs gap-1"
               >
                 <BookOpen className="w-3 h-3" />
-                Sequential
+                {t("sequential")}
               </Button>
             </div>
 
@@ -140,7 +142,7 @@ export function CollectionViewer({ collection }: CollectionViewerProps) {
                 className="w-full text-sm"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
-                {isMobileMenuOpen ? "Hide Sets" : "Show Sets"}
+                {isMobileMenuOpen ? t("hideSets") : t("showSets")}
               </Button>
             )}
           </div>

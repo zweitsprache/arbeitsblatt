@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface CollectionSet {
   id: string;
@@ -23,9 +24,11 @@ export function CollectionSetsList({
   selectedSetId,
   onSelectSet,
 }: CollectionSetsListProps) {
+  const t = useTranslations("collectionViewer");
+
   return (
     <div className="space-y-3">
-      <h2 className="font-semibold text-lg text-gray-900">Browse Sets</h2>
+      <h2 className="font-semibold text-lg text-gray-900">{t("browseSets")}</h2>
       <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {sets.map((set) => (
           <Button
@@ -40,10 +43,10 @@ export function CollectionSetsList({
           >
             <span className="flex flex-col w-full">
               <span className="text-xs text-gray-500 mb-1">
-                Set {set.order + 1}
+                {t("set")} {set.order + 1}
               </span>
               <span className="font-medium truncate">
-                {set.worksheet?.title || "Loading..."}
+                {set.worksheet?.title || t("loading")}
               </span>
             </span>
           </Button>
