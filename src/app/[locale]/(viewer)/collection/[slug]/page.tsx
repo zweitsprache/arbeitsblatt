@@ -62,20 +62,7 @@ export default async function CollectionPage({
       id: collection.id,
       title: collection.title,
       description: collection.description,
-      sets: (setsWithWorksheets || []).map(
-        (set: {
-          id: string;
-          order: number;
-          worksheet: {
-            id: string;
-            title: string;
-            blocks: Array<{
-              id: string;
-              front: { text: string; image?: string };
-              back: { text: string; image?: string };
-            }>;
-          };
-        }) => ({
+      sets: setsWithWorksheets.map((set) => ({
           id: set.id,
           order: set.order,
           worksheet: set.worksheet
@@ -85,8 +72,7 @@ export default async function CollectionPage({
                 blocks: set.worksheet.blocks,
               }
             : undefined,
-        })
-      ),
+        })),
     };
 
     return (
