@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { CollectionViewer } from "@/components/viewer/collection-viewer";
+import { prisma } from "@/lib/prisma";
 
 interface CollectionPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -13,25 +14,55 @@ export default async function CollectionPage({
   setRequestLocale(locale);
 
   try {
-    // Fetch collection from API
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const response = await fetch(
-      `${baseUrl}/api/collections/public/${slug}`,
-      { cache: "no-store" }
-    );
+    const collection = await prisma.flashcardCollection.findUnique({
+      where: { slug },
+      include: {
+        sets: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
 
-    if (!response.ok) {
+    if (!collection || !collection.published) {
       notFound();
     }
 
-    const collection = await response.json();
+    const setsWithWorksheets = await Promise.all(
+      collection.sets.map(async (set) => {
+        const worksheet = await prisma.worksheet.findUnique({
+          where: { id: set.worksheetId },
+          select: {
+            id: true,
+            title: true,
+            blocks: true,
+          },
+        });
+
+        return {
+          ...set,
+          worksheet: worksheet
+            ? {
+                id: worksheet.id,
+                title: worksheet.title,
+                blocks: Array.isArray(worksheet.blocks)
+                  ? (worksheet.blocks as Array<{
+                      id: string;
+                      front: { text: string; image?: string };
+                      back: { text: string; image?: string };
+                    }>)
+                  : [],
+              }
+            : undefined,
+        };
+      })
+    );
 
     // Transform the API response to match the component's expected structure
     const transformedCollection = {
       id: collection.id,
       title: collection.title,
       description: collection.description,
-      sets: (collection.sets || []).map(
+      sets: (setsWithWorksheets || []).map(
         (set: {
           id: string;
           order: number;
