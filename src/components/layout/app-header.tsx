@@ -40,10 +40,11 @@ export function AppHeader() {
         className="flex items-center hover:opacity-80 transition-opacity"
       >
         <Image
-          src="/logo/arbeitsblatt_logo_full_brand.svg"
+          src="/logo/didaktiv_logo_brand.svg"
           alt="Arbeitsblatt"
           width={140}
           height={28}
+          className="h-6 w-auto"
         />
       </Link>
 

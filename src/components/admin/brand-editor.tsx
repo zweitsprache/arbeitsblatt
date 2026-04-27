@@ -119,6 +119,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     textBaseSize: "",
     primaryColor: "#1a1a1a",
     accentColor: "",
+    interactiveColor: "#0ea5e9",
     logo: "",
     iconLogo: "",
     favicon: "",
@@ -135,7 +136,9 @@ export function BrandEditor({ brandId }: { brandId: string }) {
 
   const fetchBrand = useCallback(async () => {
     try {
-      const res = await authFetch(`/api/brands/${brandId}`);
+      const res = await authFetch(`/api/brands/${brandId}?ts=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data: BrandProfile = await res.json();
         setBrand(data);
@@ -159,6 +162,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           textBaseSize: stripPx(data.textBaseSize),
           primaryColor: data.primaryColor,
           accentColor: data.accentColor || "",
+          interactiveColor: typeof data.interactiveColor === "string" ? data.interactiveColor : "",
           logo: data.logo,
           iconLogo: data.iconLogo || "",
           favicon: data.favicon || "",
@@ -263,6 +267,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
             ? Number(form.pdfTranslationScale)
             : null,
         accentColor: form.accentColor || null,
+        ...(form.interactiveColor ? { interactiveColor: form.interactiveColor } : {}),
         iconLogo: form.iconLogo || null,
         favicon: form.favicon || null,
         pageTitle: form.pageTitle || null,
@@ -274,11 +279,22 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        const saved: BrandProfile = await res.json();
-        setBrand(saved);
-        setGameSettings((saved.gameSettings as BrandGameSettings) ?? {});
+      if (!res.ok) {
+        let errorMessage = `Failed to save brand (${res.status})`;
+        try {
+          const body = await res.json();
+          if (body?.error) errorMessage = String(body.error);
+        } catch {
+          // ignore parse errors and keep generic message
+        }
+        console.error("Brand save failed:", errorMessage);
+        alert(errorMessage);
+        return;
       }
+
+      const saved: BrandProfile = await res.json();
+      setBrand(saved);
+      setGameSettings((saved.gameSettings as BrandGameSettings) ?? {});
     } finally {
       setSaving(false);
     }
@@ -705,7 +721,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
       <h2 className="text-lg font-semibold mb-3">{t("colors")}</h2>
       <Card className="mb-6">
         <CardContent className="p-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <Label>{t("primaryColor")}</Label>
               <div className="flex items-center gap-2 mt-1">
@@ -736,6 +752,23 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   value={form.accentColor}
                   onChange={(e) => update("accentColor", e.target.value)}
                   placeholder="#000000"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>{t("interactiveColor")}</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={form.interactiveColor || "#0ea5e9"}
+                  onChange={(e) => update("interactiveColor", e.target.value)}
+                  className="h-9 w-9 rounded border cursor-pointer"
+                />
+                <Input
+                  value={form.interactiveColor || ""}
+                  onChange={(e) => update("interactiveColor", e.target.value)}
+                  placeholder="#0ea5e9"
                   className="flex-1"
                 />
               </div>

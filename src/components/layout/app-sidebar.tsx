@@ -25,15 +25,15 @@ import {
   Dices,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import React, { useState } from "react";
+import React from "react";
 import { useIsAdmin } from "@/lib/auth/use-is-admin";
+import { cn } from "@/lib/utils";
 import { Building2, FolderKanban, Palette } from "lucide-react";
 
 interface NavItem {
@@ -155,19 +155,184 @@ const adminSection: NavSection = {
   ],
 };
 
-function SectionTitle({ icon: Icon, children, collapsed }: { icon: React.ComponentType<{ className?: string }>, children: React.ReactNode, collapsed: boolean }) {
-  if (collapsed) return null;
+function isItemActive(pathname: string, item: NavItem) {
+  if (item.labelKey === "worksheetLibrary") {
+    return pathname === "/";
+  }
+
+  if (item.labelKey === "flashcardLibrary") {
+    return pathname === "/flashcards";
+  }
+
+  if (item.labelKey === "newWorksheet") {
+    return (
+      pathname === "/editor" ||
+      (pathname.startsWith("/editor/") &&
+        !pathname.startsWith("/editor/flashcards") &&
+        !pathname.startsWith("/editor/ebook") &&
+        !pathname.startsWith("/editor/covers"))
+    );
+  }
+
+  if (item.href === "/") {
+    return pathname === "/";
+  }
+
+  return pathname.startsWith(item.href);
+}
+
+function SectionTitle({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-2 mx-3 mt-4 mb-1.5 px-2.5 py-1 text-[10px] font-bold text-white/40 uppercase tracking-[0.1em]">
+    <div className="mx-3 mb-1 mt-5 flex items-center gap-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
       <Icon className="h-3.5 w-3.5" />
       {children}
     </div>
   );
 }
 
-export function AppSidebar() {
+function CollapsedSectionDivider() {
+  return <div className="mx-3 my-2 h-px bg-slate-200" aria-hidden="true" />;
+}
+
+interface AppSidebarProps {
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}
+
+function getNavItemClassName({
+  collapsed,
+  isActive,
+  disabled,
+}: {
+  collapsed: boolean;
+  isActive?: boolean;
+  disabled?: boolean;
+}) {
+  return cn(
+    "group relative flex items-center text-sm font-medium transition-colors",
+    collapsed
+      ? "h-10 w-10 justify-center rounded-lg"
+      : "min-h-10 w-full justify-start gap-3 rounded-xl px-3 py-2.5",
+    disabled && "cursor-not-allowed",
+    collapsed && !disabled && !isActive && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+    collapsed && isActive && "bg-slate-900 text-white shadow-sm",
+    collapsed && disabled && "text-slate-300",
+    !collapsed && !disabled && !isActive && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    !collapsed && isActive && "bg-slate-900 text-white shadow-sm",
+    !collapsed && disabled && "text-slate-300",
+  );
+}
+
+function SidebarNavItem({
+  item,
+  collapsed,
+  isActive,
+  label,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  isActive: boolean;
+  label: string;
+}) {
+  const content = (
+    <>
+      {!collapsed && (
+        <item.icon
+          className={cn(
+            "shrink-0",
+            isActive ? "h-4.5 w-4.5" : "h-4 w-4",
+          )}
+        />
+      )}
+      {collapsed && isActive && (
+        <span className="absolute left-1 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-white/80" />
+      )}
+      {collapsed && <item.icon className="h-4 w-4 shrink-0" />}
+      {!collapsed && <span className="truncate">{label}</span>}
+    </>
+  );
+
+  if (item.disabled) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={getNavItemClassName({ collapsed, disabled: true })}>
+            {content}
+          </span>
+        </TooltipTrigger>
+        {collapsed && (
+          <TooltipContent side="right" className="border-slate-200 bg-slate-950 text-slate-100">
+            {label}
+          </TooltipContent>
+        )}
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          href={item.href}
+          className={getNavItemClassName({ collapsed, isActive })}
+          aria-current={isActive ? "page" : undefined}
+        >
+          {content}
+        </Link>
+      </TooltipTrigger>
+      {collapsed && (
+        <TooltipContent side="right" className="border-slate-200 bg-slate-950 text-slate-100">
+          {label}
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
+function SidebarSection({
+  title,
+  icon,
+  items,
+  pathname,
+  collapsed,
+  t,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+  pathname: string;
+  collapsed: boolean;
+  t: ReturnType<typeof useTranslations<"sidebar">>;
+}) {
+  return (
+    <div>
+      {collapsed ? <CollapsedSectionDivider /> : <SectionTitle icon={icon}>{title}</SectionTitle>}
+      <nav className={cn("space-y-1", collapsed ? "px-2" : "px-3")}> 
+        {items.map((item) => (
+          <SidebarNavItem
+            key={item.labelKey}
+            item={item}
+            collapsed={collapsed}
+            isActive={isItemActive(pathname, item)}
+            label={t(item.labelKey)}
+          />
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+export function AppSidebar({
+  collapsed,
+  onCollapsedChange,
+}: AppSidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const t = useTranslations("sidebar");
   const isAdminUser = useIsAdmin();
 
@@ -178,152 +343,72 @@ export function AppSidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <aside
-        className={`shrink-0 transition-all duration-200 pt-3 pb-8 pl-4 ${
-          collapsed ? "w-[calc(3.5rem+0.75rem)]" : "w-[calc(20rem+0.75rem)]"
-        }`}
+        className={cn(
+          "shrink-0 pb-8 pl-4 pt-3 transition-all duration-200",
+          collapsed ? "w-[5.25rem] pr-3" : "w-[20rem] pr-4",
+        )}
       >
-        <div className="bg-pink-950 text-white flex flex-col h-full min-h-0 rounded-sm border border-border shadow-sm">
-        {/* Nav items */}
-        <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
-          {/* Dashboard section */}
-          <SectionTitle icon={LayoutDashboard} collapsed={collapsed}>
-            {t("dashboard")}
-          </SectionTitle>
-          <nav className="px-3 pb-1 space-y-1">
-            {topItems.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
 
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
-                        ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
-                        }
-                        ${collapsed ? "justify-center px-0" : ""}
-                      `}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{t(item.labelKey)}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right">
-                      {t(item.labelKey)}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
-          </nav>
-
-          {/* Sections */}
-          {allSections.map((section) => (
-            <div key={section.titleKey}>
-              <SectionTitle icon={section.icon} collapsed={collapsed}>
-                {t(section.titleKey)}
-              </SectionTitle>
-              <nav className="px-3 pb-1 space-y-1">
-                {section.items.map((item) => {
-                  let isActive: boolean;
-                  if (item.labelKey === "worksheetLibrary") {
-                    isActive = pathname === "/";
-                  } else if (item.labelKey === "flashcardLibrary") {
-                    isActive = pathname === "/flashcards";
-                  } else if (item.labelKey === "newWorksheet") {
-                    // Exact match or /editor/[id] but not /editor/flashcards or /editor/ebook or /editor/covers
-                    isActive =
-                      pathname === "/editor" ||
-                      (pathname.startsWith("/editor/") &&
-                        !pathname.startsWith("/editor/flashcards") &&
-                        !pathname.startsWith("/editor/ebook") &&
-                        !pathname.startsWith("/editor/covers"));
-                  } else {
-                    isActive = pathname.startsWith(item.href);
-                  }
-
-                  if (item.disabled) {
-                    return (
-                      <Tooltip key={item.labelKey}>
-                        <TooltipTrigger asChild>
-                          <span
-                            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-40 cursor-not-allowed bg-white/10 text-white/80
-                              ${collapsed ? "justify-center px-0" : ""}
-                            `}
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!collapsed && <span>{t(item.labelKey)}</span>}
-                          </span>
-                        </TooltipTrigger>
-                        {collapsed && (
-                          <TooltipContent side="right">
-                            {t(item.labelKey)}
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    );
-                  }
-
-                  return (
-                    <Tooltip key={item.labelKey}>
-                      <TooltipTrigger asChild>
-                        <Link
-                          href={item.href}
-                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all
-                            ${
-                              isActive
-                                ? "bg-primary text-primary-foreground shadow-sm"
-                                : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
-                            }
-                            ${collapsed ? "justify-center px-0" : ""}
-                          `}
-                        >
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          {!collapsed && <span>{t(item.labelKey)}</span>}
-                        </Link>
-                      </TooltipTrigger>
-                      {collapsed && (
-                        <TooltipContent side="right">
-                          {t(item.labelKey)}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  );
-                })}
+          <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
+            <div className={cn(collapsed ? "py-3 space-y-1" : "py-4 space-y-2")}> 
+              <nav className={cn("space-y-1", collapsed ? "px-2" : "px-3")}>
+                {topItems.map((item) => (
+                  <SidebarNavItem
+                    key={item.href}
+                    item={item}
+                    collapsed={collapsed}
+                    isActive={isItemActive(pathname, item)}
+                    label={t(item.labelKey)}
+                  />
+                ))}
               </nav>
-            </div>
-          ))}
-        </ScrollArea>
 
-        {/* Bottom items */}
-        <div className="mt-auto">
-          <Separator className="border-white/10" />
-          <nav className="p-3 space-y-1">
-            {/* Collapse toggle */}
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all w-full text-white/50 hover:text-white/80 hover:bg-white/5
-                ${collapsed ? "justify-center px-0" : ""}
-              `}
-            >
+              {allSections.map((section) => (
+                <SidebarSection
+                  key={section.titleKey}
+                  title={t(section.titleKey)}
+                  icon={section.icon}
+                  items={section.items}
+                  pathname={pathname}
+                  collapsed={collapsed}
+                  t={t}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="mt-auto border-t border-slate-200 bg-slate-50/70">
+            <div className={cn(collapsed ? "px-2 py-3" : "p-3")}>
               {collapsed ? (
-                <ChevronRight className="h-4 w-4 shrink-0" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => onCollapsedChange(false)}
+                      aria-label={t("expand")}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="border-slate-200 bg-slate-950 text-slate-100">
+                    {t("expand")}
+                  </TooltipContent>
+                </Tooltip>
               ) : (
-                <>
+                <button
+                  type="button"
+                  onClick={() => onCollapsedChange(true)}
+                  aria-label={t("collapse")}
+                  className="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900"
+                >
                   <ChevronLeft className="h-4 w-4 shrink-0" />
                   <span>{t("collapse")}</span>
-                </>
+                </button>
               )}
-            </button>
-          </nav>
-        </div>
+            </div>
+          </div>
         </div>
       </aside>
     </TooltipProvider>

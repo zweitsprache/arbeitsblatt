@@ -5,8 +5,12 @@ export async function authFetch(
   url: string,
   init?: RequestInit
 ): Promise<Response> {
+  const method = (init?.method || "GET").toUpperCase();
+  const shouldDisableCache = method === "GET" && init?.cache === undefined;
+
   const res = await fetch(url, {
     ...init,
+    ...(shouldDisableCache ? { cache: "no-store" as RequestCache } : {}),
     credentials: "include",
   });
   if (res.status === 401) {

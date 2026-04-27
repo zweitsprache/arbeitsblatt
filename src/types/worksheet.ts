@@ -208,6 +208,7 @@ export interface FillInBlankBlock extends BlockBase {
   type: "fill-in-blank";
   // Text with blanks marked as {{blank:answer}}
   content: string;
+  instruction?: string;
 }
 
 // ─── Fill-in-blank items block ──────────────────────────────
@@ -334,7 +335,7 @@ export type ArticleAnswer = "der" | "das" | "die";
 
 export interface ArticleTrainingBlock extends BlockBase {
   type: "article-training";
-  instruction: string;
+  instruction?: string;
   showWritingLine: boolean;
   items: {
     id: string;
@@ -418,6 +419,7 @@ export interface WordSearchBlock extends BlockBase {
   gridRows: number;
   grid: string[][]; // generated letter grid
   showWordList: boolean;
+  instruction?: string;
 }
 
 // ─── Sorting Categories block ───────────────────────────────
@@ -875,6 +877,7 @@ export interface BrandProfile {
   // Colors
   primaryColor: string;
   accentColor?: string | null;
+  interactiveColor: string;
 
   // Assets
   logo: string;
@@ -1056,6 +1059,7 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     googleFontsUrl: fonts.googleFontsUrl,
     translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
+    interactiveColor: "#0ea5e9",
     logo: settings.logo,
     iconLogo: BRAND_ICON_LOGOS[slug] ?? BRAND_ICON_LOGOS["edoomio"],
     organization: settings.organization,
@@ -1632,7 +1636,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Wörterrätsel", description: "Versteckte Wörter im Buchstabengitter finden" } },
     defaultData: {
       type: "word-search",
-      words: ["HELLO", "WORLD", "SEARCH", "FIND"],
+      words: ["Hello", "World", "Search", "Find"],
       gridCols: 24,
       gridRows: 12,
       grid: [],

@@ -61,7 +61,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, CircleHelp } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -76,8 +76,11 @@ function getBrandFonts(brand: string) {
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
 const NUMBER_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-100 font-bold leading-none tabular-nums pl-px text-cv-micro`;
 const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
-const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 text-[var(--color-primary)] ${s.controlBox}`;
+const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
+const CONSISTENT_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b";
+const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[37px] items-center gap-3 border-b";
+const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b font-bold";
 
 // Inline <svg> bullet marker for viewer/print lists.
 // CSS background-image markers are unreliable in Chromium PDF output.
@@ -220,6 +223,7 @@ function InstructionRow({
   rowClassName,
   trailingContent,
   style,
+  mode,
 }: {
   instruction: React.ReactNode;
   accentColor?: string | null;
@@ -228,7 +232,9 @@ function InstructionRow({
   rowClassName?: string;
   trailingContent?: React.ReactNode;
   style?: React.CSSProperties;
+  mode?: ViewMode;
 }) {
+  const isOnline = mode === "online";
   return (
     <div
       className={`flex items-center gap-3 font-semibold ${withDivider ? "py-2 border-b" : ""} ${rowClassName || ""}`.trim()}
@@ -238,7 +244,13 @@ function InstructionRow({
       }}
     >
       <div className={`flex items-center ${showBadge ? "gap-3" : ""} flex-1`.trim()}>
-        {showBadge && <span className={INSTRUCTION_BADGE_CLASS}>A</span>}
+        {showBadge && (
+          isOnline ? (
+            <span className="font-bold w-6 text-left">A</span>
+          ) : (
+            <span className={INSTRUCTION_BADGE_CLASS}>A</span>
+          )
+        )}
         <p>{instruction}</p>
       </div>
       {trailingContent}
@@ -406,17 +418,26 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
-  const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
+  const hasHinweisBox = isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
 
-  const RowsIconSvg = () => {
-    const p = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const HintRowIcon = () => {
+    const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
     if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
-    if (isFragen) return <CircleHelp size={14} strokeWidth={2.5} />;
-    if (isRedemittel) return <MessageCircle size={14} strokeWidth={2.5} />;
+    if (isRedemittel) return <MessageCircle size={20} strokeWidth={2} />;
+    if (isFragen) return <MessageCircleQuestion size={20} strokeWidth={2} />;
+    return <ArrowRight size={20} strokeWidth={2} />;
+  };
+
+  const RowsIconSvg = () => {
+    const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+    if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
+    if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
+    if (isFragen) return <MessageCircleQuestion size={20} strokeWidth={2} />;
+    if (isRedemittel) return <MessageCircle size={20} strokeWidth={2} />;
     return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
   };
 
@@ -647,6 +668,40 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   }
 
   if (!hasExampleBox && !hasFrameBox && !hasHinweisBox) {
+    // Hinweis / redemittel / handlungsziele / kompetenzziele: hintBox icon+text layout, top+bottom border only
+    if ((isHinweis || isRedemittel || isHandlungsziele || isKompetenzziele) && !isBilingual) {
+      const borderColor = isHinweis ? "#475569" : "#d1d5db";
+      const iconColor = isHinweis ? "#475569" : "#475569";
+      const paras = isHinweis ? [block.content] : splitRowItems(block.content);
+      return (
+        <div className={s.textPlain} style={baseTextStyle}>
+          {imageEl}
+          {paras.map((para, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                gap: 0,
+                borderBottom: `1px solid ${borderColor}`,
+                ...(i === 0 ? { borderTop: `1px solid ${borderColor}` } : {}),
+                breakInside: "avoid" as const,
+                pageBreakInside: "avoid" as const,
+              }}
+            >
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: iconColor }}>
+                <HintRowIcon />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.75rem 0.375rem 0.5rem" }}>
+                {isHinweis
+                  ? renderContent(para)
+                  : <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     // For rows style (non-bilingual): render paragraph-by-paragraph with real DOM icon divs.
     // CSS ::before background-image is not rendered by Chromium's PDF engine.
     if (isRows && !isBilingual) {
@@ -658,19 +713,20 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
             <div
               key={i}
               style={{
-                padding: "0.375rem 0 0.375rem 1.75rem",
-                position: "relative",
+                display: "flex",
+                gap: 0,
                 borderBottom: "1px solid #d1d5db",
-                lineHeight: "1.35em",
                 ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
                 breakInside: "avoid" as const,
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)", width: 14, height: 14 }}>
+              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
                 <RowsIconSvg />
               </div>
-              <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.75rem 0.375rem 0.5rem" }}>
+                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              </div>
             </div>
           ))}
         </div>
@@ -1011,7 +1067,7 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
           const trHtml = trItems[i] ?? "";
           return (
             <div key={i} className="snippet-item-row grid grid-cols-2 gap-4 items-stretch">
-              <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${s.snippetCard}`}>
+              <div className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm px-4 py-1.5 bg-slate-50/50 ${s.snippetCard}`}>
                 <div
                   className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
                   dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(deHtml) }}
@@ -1031,7 +1087,7 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
                   </button>
                 )}
               </div>
-              <div className={`snippet-item-card flex flex-col border border-slate-200 rounded-sm p-4 bg-white ${s.snippetCard}`}>
+              <div className={`snippet-item-card flex flex-col border border-slate-200 rounded-sm px-4 py-1.5 bg-white ${s.snippetCard}`}>
                 <div
                   className={`tiptap max-w-none flex-1 ${s.tiptapFlush}`}
                   dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(trHtml) }}
@@ -1049,7 +1105,7 @@ function TextSnippetView({ block, mode }: { block: TextSnippetBlock; mode: ViewM
       {deItems.map((html, i) => (
         <div
           key={i}
-          className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm p-4 bg-slate-50/50 ${!isPrint ? "group hover:bg-slate-50 transition-colors" : ""} ${s.snippetCard}`}
+          className={`snippet-item-card relative flex flex-col border border-slate-200 rounded-sm px-4 py-1.5 bg-slate-50/50 ${!isPrint ? "group hover:bg-slate-50 transition-colors" : ""} ${s.snippetCard}`}
         >
           <div
             className={`tiptap max-w-none flex-1 ${s.tiptapFlush} ${!isPrint ? "pr-6" : ""}`}
@@ -1137,7 +1193,7 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
-              <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-[16px]">
                 {item.text}
               </span>
             ))}
@@ -1217,7 +1273,7 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledItems.map((item) => (
-              <span key={item.id} className="px-2 py-0.5 bg-background rounded border">
+              <span key={item.id} className="px-2 py-0.5 bg-background rounded border text-[16px]">
                 {item.caption}
               </span>
             ))}
@@ -1314,6 +1370,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
 
 function MultipleChoiceView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
@@ -1322,6 +1379,7 @@ function MultipleChoiceView({
   accentColor,
 }: {
   block: MultipleChoiceBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -1332,6 +1390,7 @@ function MultipleChoiceView({
   const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
   const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
+  const isOnline = mode === "online";
 
   const handleSelect = (optId: string) => {
     if (!interactive || showResults) return;
@@ -1347,8 +1406,18 @@ function MultipleChoiceView({
 
   return (
     <div>
-      <InstructionRow instruction={instructionText} accentColor={accentColor} />
-      <div className="flex min-h-[37px] items-center border-b font-medium text-foreground">
+      {isOnline ? (
+        <div
+          className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+          style={{ color: accentColor || "var(--color-primary)" }}
+        >
+          <span className="w-6 text-left shrink-0">01</span>
+          <p>{instructionText}</p>
+        </div>
+      ) : (
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+      )}
+      <div className="flex min-h-[49px] items-center border-b font-medium text-foreground">
         {block.question}
       </div>
       <div>
@@ -1356,7 +1425,7 @@ function MultipleChoiceView({
           const isSelected = selected.includes(opt.id);
           const isCorrect = opt.isCorrect;
 
-          let rowClass = "flex items-center gap-3 py-2 border-b";
+          let rowClass = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
 
           if (showResults) {
             if (isCorrect) {
@@ -1371,7 +1440,7 @@ function MultipleChoiceView({
             : showResults && !isCorrect
               ? `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`
               : interactive && !showResults
-                ? `${CONTROL_BOX_CLASS} bg-primary text-primary`
+                ? `${CONTROL_BOX_CLASS} ${s.controlBoxActive}`
                 : CONTROL_BOX_FILLED_CLASS;
 
           return (
@@ -1388,9 +1457,15 @@ function MultipleChoiceView({
                 }
               }}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              {isOnline ? (
+                <span className="w-6 text-left shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              )}
               {showSolutions && isCorrect && !interactive ? (
                 <div className={CONTROL_BOX_FILLED_CLASS} />
               ) : (
@@ -1418,6 +1493,9 @@ function FillInBlankView({
   onAnswer,
   showResults,
   showSolutions = false,
+  mode = "online",
+  accentColor,
+  interactiveColor,
 }: {
   block: FillInBlankBlock;
   interactive: boolean;
@@ -1425,14 +1503,33 @@ function FillInBlankView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  mode?: ViewMode;
+  accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
-  const parts = block.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const isOnline = mode === "online";
+  const parts = block.content.split(/(\{\{blank\*?(?::[^}]*)?\}\}|\{\{(?:[^|*}]*\|)?\*[^}]*\}\})/g);
   let blankIndex = 0;
 
   return (
-    <div className="leading-loose flex flex-wrap items-baseline">
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
+      )}
+      <div className="leading-loose mt-3">
       {parts.map((part, i) => {
         const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
         if (match) {
@@ -1461,7 +1558,7 @@ function FillInBlankView({
 
           if (interactive) {
             return (
-              <span key={i} className={`inline-block relative ${spacingClass}`}>
+              <span key={i} className={`inline-block relative ${spacingClass}`} style={{ verticalAlign: 'middle' }}>
                 <input
                   type="text"
                   value={userValue}
@@ -1469,16 +1566,20 @@ function FillInBlankView({
                   onChange={(e) =>
                     onAnswer({ ...blanks, [key]: e.target.value })
                   }
-                  className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center focus:outline-none inline transition-colors
+                  className={`h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none inline transition-colors
                     ${showResults
                       ? isCorrectAnswer
-                        ? "border-green-500 text-green-700"
+                        ? "bg-green-50 text-green-700"
                         : isWrong
-                          ? "border-red-500 text-red-700"
-                          : "border-muted-foreground/40"
-                      : "border-muted-foreground/40 focus:border-primary"}`}
-                  style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
-                  placeholder={tb("fillInBlankPlaceholder")}
+                          ? "bg-red-50 text-red-700"
+                          : ""
+                      : ""}`}
+                  style={{
+                    ...(widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }),
+                    ...(!showResults ? {
+                      backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10),
+                    } : {}),
+                  }}
                 />
                 {showResults && isWrong && (
                   <span className="block text-cv-xs text-green-600 text-center mt-0.5">
@@ -1511,8 +1612,92 @@ function FillInBlankView({
             </span>
           );
         }
+        // New-style blank: {{prefix|*answer|suffix}} or {{*answer}} or {{prefix|*answer}} or {{*answer|suffix}}
+        const newMatch = part.match(/\{\{([^|*}]*\|)?\*([^|},]*)(?:,([\d.]+))?(?:\|([^}]*))?\}\}/);
+        if (newMatch) {
+          const prefix = newMatch[1] ? newMatch[1].slice(0, -1) : "";
+          const correctAnswer = newMatch[2].trim();
+          const widthMultiplier = newMatch[3] ? Number(newMatch[3]) : 1;
+          const suffix = newMatch[4] ?? "";
+          const key = `blank-${blankIndex}`;
+          blankIndex++;
+          const userValue = blanks[key] || "";
+          const hasAnswer = correctAnswer !== "";
+          const isCorrectAnswer =
+            showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
+          const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
+
+          // Border radius helpers
+          const inputRadius = `${prefix ? "0" : "4px"} ${suffix ? "0" : "4px"} ${suffix ? "0" : "4px"} ${prefix ? "0" : "4px"}`;
+          const inputTextAlign: React.CSSProperties['textAlign'] = prefix && suffix ? 'center' : suffix ? 'right' : 'left';
+          const makePrefixStyle = (): React.CSSProperties => ({ display: 'inline-flex', alignItems: 'center', alignSelf: 'stretch', background: '#f3f4f6', borderRadius: '4px 0 0 4px', padding: '0 6px', whiteSpace: 'nowrap' });
+          const makeSuffixStyle = (): React.CSSProperties => ({ display: 'inline-flex', alignItems: 'center', alignSelf: 'stretch', background: '#f3f4f6', borderRadius: '0 4px 4px 0', padding: '0 6px', whiteSpace: 'nowrap' });
+
+          if (interactive) {
+            return (
+              <span key={i} className="inline-flex items-stretch mx-1 relative h-8" style={{ verticalAlign: 'middle' }}>
+                {prefix && <span style={makePrefixStyle()}>{prefix}</span>}
+                <input
+                  type="text"
+                  value={userValue}
+                  disabled={showResults}
+                  onChange={(e) => onAnswer({ ...blanks, [key]: e.target.value })}
+                  className={`h-8 bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors
+                    ${showResults
+                      ? isCorrectAnswer
+                        ? "bg-green-50 text-green-700"
+                        : isWrong
+                          ? "bg-red-50 text-red-700"
+                          : ""
+                      : ""}`}
+                  style={{
+                    borderRadius: inputRadius,
+                    textAlign: inputTextAlign,
+                    ...(widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }),
+                    ...(!showResults ? { backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10) } : {}),
+                  }}
+                />
+                {showResults && isWrong && (
+                  <span className="absolute left-0 right-0 top-full text-cv-xs text-green-600 text-center mt-0.5">
+                    {correctAnswer}
+                  </span>
+                )}
+                {suffix && <span style={makeSuffixStyle()}>{suffix}</span>}
+              </span>
+            );
+          }
+          if (showSolutions && hasAnswer) {
+            return (
+              <span key={i} className="inline-flex items-stretch mx-1" style={{ verticalAlign: 'middle' }}>
+                {prefix && <span style={makePrefixStyle()}>{prefix}</span>}
+                <span
+                  className="bg-green-100 text-green-800 font-semibold px-2"
+                  style={{ display: 'inline-flex', alignItems: 'center', height: '1.3em', borderRadius: inputRadius }}
+                >
+                  {correctAnswer}
+                </span>
+                {suffix && <span style={makeSuffixStyle()}>{suffix}</span>}
+              </span>
+            );
+          }
+          return (
+            <span key={i} className="inline-flex items-stretch mx-1" style={{ verticalAlign: 'middle' }}>
+              {prefix && <span style={makePrefixStyle()}>{prefix}</span>}
+              <span
+                className="bg-gray-100 px-2"
+                style={{ display: 'inline-flex', alignItems: 'center', height: '1.3em', borderRadius: inputRadius, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+              >
+                <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
+                  {String(blankIndex).padStart(2, "0")}
+                </span>
+              </span>
+              {suffix && <span style={makeSuffixStyle()}>{suffix}</span>}
+            </span>
+          );
+        }
         return <span key={i}>{part}</span>;
       })}
+      </div>
     </div>
   );
 }
@@ -1526,6 +1711,7 @@ function FillInBlankItemsView({
   showSolutions = false,
   mode = "online",
   accentColor,
+  interactiveColor,
 }: {
   block: FillInBlankItemsBlock;
   interactive: boolean;
@@ -1535,11 +1721,14 @@ function FillInBlankItemsView({
   showSolutions?: boolean;
   mode?: ViewMode;
   accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
   const isPrint = mode === "print";
   const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
+  const isOnline = mode === "online";
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
 
   // Extract answers for word bank
   const wordBankAnswers = useMemo(() => {
@@ -1565,7 +1754,17 @@ function FillInBlankItemsView({
 
   return (
     <div>
-      <InstructionRow instruction={instructionText} accentColor={accentColor} />
+      {isOnline ? (
+        <div
+          className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+          style={{ color: accentColor || "var(--color-primary)" }}
+        >
+          <span className="w-6 text-left shrink-0">01</span>
+          <p>{instructionText}</p>
+        </div>
+      ) : (
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+      )}
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
           {wordBankAnswers.map((word, i) => (
@@ -1582,11 +1781,17 @@ function FillInBlankItemsView({
         return (
           <div
             key={item.id || idx}
-            className="flex min-h-[37px] items-center gap-3 border-b py-2"
+            className="flex min-h-[49px] items-center gap-3 border-b"
           >
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(idx + 1).padStart(2, "0")}
-            </span>
+            {isOnline ? (
+              <span className="w-6 text-left shrink-0">
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+            ) : (
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+            )}
             <span className="flex-1 flex flex-wrap items-center leading-5">
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
@@ -1626,16 +1831,18 @@ function FillInBlankItemsView({
                           onChange={(e) =>
                             onAnswer({ ...blanks, [key]: e.target.value })
                           }
-                          className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none inline transition-colors
+                          className={`h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none inline transition-colors
                             ${showResults
                               ? isCorrectAnswer
-                                ? "text-green-700"
+                                ? "bg-green-50 text-green-700"
                                 : isWrong
-                                  ? "text-red-700"
-                                  : "border-muted-foreground/40"
-                              : "focus:ring-1 focus:ring-primary/50"}`}
-                          style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
-                          placeholder={tb("fillInBlankPlaceholder")}
+                                  ? "bg-red-50 text-red-700"
+                                  : ""
+                              : ""}`}
+                          style={{
+                            ...(widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }),
+                            ...(!showResults ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : {}),
+                          }}
                         />
                         {showResults && isWrong && hasAnswer && (
                           <span className="block text-cv-xs text-green-600 text-center mt-0.5">
@@ -1678,6 +1885,7 @@ function FillInBlankItemsView({
 
 function MatchingView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
@@ -1686,6 +1894,7 @@ function MatchingView({
   accentColor,
 }: {
   block: MatchingBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -1694,6 +1903,7 @@ function MatchingView({
   accentColor?: string | null;
 }) {
   const t = useTranslations("viewer");
+  const isOnline = mode === "online";
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
 
   // Stable shuffle based on block id (deterministic)
@@ -1751,7 +1961,17 @@ function MatchingView({
     return (
       <div>
         {block.instruction && (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+          isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className="w-6 text-left shrink-0">01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          )
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
@@ -1759,7 +1979,7 @@ function MatchingView({
             {block.pairs.map((pair, i) => (
               <div
                 key={pair.id}
-                className="flex items-center gap-3 py-2 border-b"
+                className={CONSISTENT_ROW_CLASS_PRINT}
               >
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
@@ -1778,7 +1998,7 @@ function MatchingView({
             {shuffledRight.map((pair, i) => (
               <div
                 key={`r-${pair.id}`}
-                className="flex items-center gap-3 py-2 border-b"
+                className={CONSISTENT_ROW_CLASS_PRINT}
               >
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String.fromCharCode(97 + i)}
@@ -1801,16 +2021,21 @@ function MatchingView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
-      )}
-      {interactive && !showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {activeLeftId ? t("matchingInstructionActive") : t("matchingInstructionDefault")}
-        </p>
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       <div className="grid grid-cols-2 gap-4">
         {/* Left side */}
-        <div className="space-y-2">
+        <div>
           {block.pairs.map((pair, i) => {
             const isMatched = !!selections[pair.id];
             const isActive = activeLeftId === pair.id;
@@ -1832,11 +2057,17 @@ function MatchingView({
             return (
               <div
                 key={pair.id}
-                className={`flex items-center gap-3 py-2 border-b ${rowClass}`}
+                className={`${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} ${rowClass}`}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                {isOnline ? (
+                  <span className="w-6 text-left shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => handleLeftClick(pair.id)}
@@ -1845,13 +2076,13 @@ function MatchingView({
                 >
                   {pair.left}
                 </button>
-                <div className={indicatorClass} />
+                {!isOnline && <div className={indicatorClass} />}
               </div>
             );
           })}
         </div>
         {/* Right side — shuffled answers */}
-        <div className="space-y-2">
+        <div>
           {shuffledRight.map((pair, i) => {
             const matchedByLeftId = rightToLeft[pair.id];
             const isMatched = !!matchedByLeftId;
@@ -1872,12 +2103,18 @@ function MatchingView({
             return (
               <div
                 key={`r-${pair.id}`}
-                className={`flex items-center gap-3 py-2 border-b ${rowClass}`}
+                className={`${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} ${rowClass}`}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String.fromCharCode(97 + i)}
-                </span>
-                <div className={indicatorClass} />
+                {isOnline ? (
+                  <span className="w-6 text-left shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                    {String.fromCharCode(97 + i)}
+                  </span>
+                )}
+                {!isOnline && <div className={indicatorClass} />}
                 <button
                   type="button"
                   onClick={() => handleRightClick(pair.id)}
@@ -1902,6 +2139,7 @@ function MatchingView({
 
 function TwoColumnFillView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
@@ -1909,6 +2147,7 @@ function TwoColumnFillView({
   accentColor,
 }: {
   block: TwoColumnFillBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -1916,6 +2155,7 @@ function TwoColumnFillView({
   accentColor?: string | null;
 }) {
   const answers = (answer as Record<string, string> | undefined) || {};
+  const isOnline = mode === "online";
 
   const handleChange = (itemId: string, value: string) => {
     if (!interactive) return;
@@ -1943,14 +2183,24 @@ function TwoColumnFillView({
     return (
       <div>
         {block.instruction && (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+          isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className="w-6 text-left shrink-0">01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          )
         )}
         {/* Word Bank */}
         {block.showWordBank && shuffledWordBank.length > 0 && (
           <div className="rounded p-3 border border-dashed border-muted-foreground/30">
             <div className="flex flex-wrap gap-2">
               {shuffledWordBank.map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[16px]">
                   {text}
                 </span>
               ))}
@@ -1962,19 +2212,25 @@ function TwoColumnFillView({
             <React.Fragment key={item.id}>
               {/* Left cell */}
               <div
-                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                className="flex min-h-[49px] items-center gap-3 border-b"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                {isOnline ? (
+                  <span className="w-6 text-left shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                )}
                 {block.fillSide === "left" ? (
                   hasHandwriting(item.left) ? (
                     <span className="flex-1">{renderHandwriting(item.left)}</span>
                   ) : showSolutions ? (
                     <span className="flex-1 text-green-600 font-medium">{item.left}</span>
                   ) : (
-                    <span className="flex-1 border-b border-dashed border-muted-foreground/30" style={{ minHeight: "1.5em" }}>&nbsp;</span>
+                    <span className="flex-1 inline-block h-8 rounded" style={{ minWidth: 80 }}>&nbsp;</span>
                   )
                 ) : (
                   <span className="flex-1">{item.left}</span>
@@ -1982,7 +2238,7 @@ function TwoColumnFillView({
               </div>
               {/* Right cell */}
               <div
-                className="flex items-center gap-3 py-2 border-b last:border-b-0"
+                className="flex min-h-[49px] items-center gap-3 border-b"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
                 {block.fillSide === "right" ? (
@@ -1991,7 +2247,7 @@ function TwoColumnFillView({
                   ) : showSolutions ? (
                     <span className="flex-1 text-green-600 font-medium">{item.right}</span>
                   ) : (
-                    <span className="flex-1 border-b border-dashed border-muted-foreground/30" style={{ minHeight: "1.5em" }}>&nbsp;</span>
+                    <span className="flex-1 inline-block h-8 rounded" style={{ minWidth: 80 }}>&nbsp;</span>
                   )
                 ) : (
                   <span className="flex-1">{item.right}</span>
@@ -2008,14 +2264,24 @@ function TwoColumnFillView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       {/* Word Bank */}
       {block.showWordBank && shuffledWordBank.length > 0 && (
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
           <div className="flex flex-wrap gap-2">
             {shuffledWordBank.map((text, i) => (
-              <span key={i} className="px-2 py-0.5 bg-background rounded border">
+              <span key={i} className="px-2 py-0.5 bg-background rounded border text-[16px]">
                 {text}
               </span>
             ))}
@@ -2027,22 +2293,28 @@ function TwoColumnFillView({
           <React.Fragment key={item.id}>
             {/* Left cell */}
             <div
-              className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              className="flex min-h-[49px] items-center gap-3 border-b"
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              {isOnline ? (
+                <span className="w-6 text-left shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              )}
               {block.fillSide === "left" ? (
                 hasHandwriting(item.left) ? (
                   <span className="flex-1">{renderHandwriting(item.left)}</span>
                 ) : (
                   <input
                     type="text"
-                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-cv-sm px-1 py-0.5 focus:border-primary"
+                    className="flex-1 h-8 rounded bg-transparent outline-none text-cv-sm px-2 py-0.5 focus:outline-none transition-colors"
+                    style={isOnline ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : undefined}
                     value={answers[item.id] || ""}
                     onChange={(e) => handleChange(item.id, e.target.value)}
-                    placeholder="…"
                   />
                 )
               ) : (
@@ -2051,7 +2323,7 @@ function TwoColumnFillView({
             </div>
             {/* Right cell */}
             <div
-              className="flex items-center gap-3 py-2 border-b last:border-b-0"
+              className="flex min-h-[49px] items-center gap-3 border-b"
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
               {block.fillSide === "right" ? (
@@ -2060,10 +2332,10 @@ function TwoColumnFillView({
                 ) : (
                   <input
                     type="text"
-                    className="flex-1 border-b border-dashed border-muted-foreground/40 bg-transparent outline-none text-cv-sm px-1 py-0.5 focus:border-primary"
+                    className="flex-1 h-8 rounded bg-transparent outline-none text-cv-sm px-2 py-0.5 focus:outline-none transition-colors"
+                    style={isOnline ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : undefined}
                     value={answers[item.id] || ""}
                     onChange={(e) => handleChange(item.id, e.target.value)}
-                    placeholder="…"
                   />
                 )
               ) : (
@@ -2163,10 +2435,10 @@ function OpenResponseView({
 
 function WordBankView({ block }: { block: WordBankBlock }) {
   return (
-    <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+    <div className="flex min-h-[49px] flex-wrap items-center gap-2 border-b">
       <div className="flex flex-1 flex-wrap gap-2">
         {block.words.map((word, i) => (
-          <span key={i} className="px-3 py-0.5 rounded border border-border text-[10px]">
+          <span key={i} className="px-2 py-0.5 bg-background rounded border text-[16px]">
             {word}
           </span>
         ))}
@@ -2221,6 +2493,7 @@ function renderTfBlanks(text: string): React.ReactNode {
 
 function TrueFalseMatrixView({
   block,
+  mode,
   interactive,
   showSolutions = false,
   showPill = true,
@@ -2233,6 +2506,7 @@ function TrueFalseMatrixView({
   accentColor,
 }: {
   block: TrueFalseMatrixBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -2250,6 +2524,7 @@ function TrueFalseMatrixView({
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
+  const isOnline = mode === "online";
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -2260,21 +2535,37 @@ function TrueFalseMatrixView({
     <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <div>
         {block.instruction && (
-          <InstructionRow
-            instruction={block.instruction}
-            accentColor={accentColor}
-            trailingContent={(
-              <>
+          isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className="w-6 text-left shrink-0">01</span>
+              <div className="flex items-center gap-3 flex-1">
+                <p className="flex-1">{block.instruction}</p>
                 <div className="w-20" aria-hidden="true" />
                 <div className="w-20" aria-hidden="true" />
-              </>
-            )}
-          />
+              </div>
+            </div>
+          ) : (
+            <InstructionRow
+              instruction={block.instruction}
+              accentColor={accentColor}
+              mode={mode}
+              trailingContent={(
+                <>
+                  <div className="w-20" aria-hidden="true" />
+                  <div className="w-20" aria-hidden="true" />
+                </>
+              )}
+            />
+          )
         )}
-        <div className="flex min-h-[37px] items-center gap-3 py-2 border-b">
+        <div className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+          <span className="w-6 shrink-0" aria-hidden="true" />
           <div className="flex-1 font-bold text-foreground">{block.statementColumnHeader || ""}</div>
-          <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.trueLabel || tc("true")}</div>
-          <div className="w-20 text-center font-medium text-muted-foreground text-xs uppercase">{block.falseLabel || tc("false")}</div>
+          <div className="w-20 text-center font-medium text-muted-foreground text-[14px] uppercase">{block.trueLabel || tc("true")}</div>
+          <div className="w-20 text-center font-medium text-muted-foreground text-[14px] uppercase">{block.falseLabel || tc("false")}</div>
         </div>
         <div>
           {(() => {
@@ -2303,10 +2594,16 @@ function TrueFalseMatrixView({
             };
 
             return (
-              <div key={stmt.id} className="flex items-center gap-3 py-2 border-b">
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(stmtIndex + 1).padStart(2, "0")}
-                </span>
+              <div key={stmt.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+                {isOnline ? (
+                  <span className="w-6 text-left shrink-0">
+                    {String(stmtIndex + 1).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                    {String(stmtIndex + 1).padStart(2, "0")}
+                  </span>
+                )}
                 <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                 <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
@@ -2350,22 +2647,31 @@ function TrueFalseMatrixView({
 
 function ArticleTrainingView({
   block,
+  mode = "online",
   interactive,
   answer,
   onAnswer,
   showResults,
   showSolutions = false,
+  accentColor,
+  interactiveColor,
 }: {
   block: ArticleTrainingBlock;
+  mode?: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const t = useTranslations("viewer");
-  const answers = (answer as Record<string, ArticleAnswer | null> | undefined) || {};
+  const answers = (answer as Record<string, string | null> | undefined) || {};
   const articles: ArticleAnswer[] = ["der", "das", "die"];
+  const isOnline = mode === "online";
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
 
   const handleSelect = (itemId: string, value: ArticleAnswer) => {
     if (!interactive) return;
@@ -2373,73 +2679,93 @@ function ArticleTrainingView({
   };
 
   return (
-    <div className="space-y-2">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="w-[28px] p-2 border-b"></th>
-            {articles.map((a) => (
-              <th key={a} className="w-14 p-2 border-b text-center font-medium text-muted-foreground">{a}</th>
-            ))}
-            <th className="text-left py-2 px-2 border-b font-bold text-foreground"></th>
-            {block.showWritingLine && (
-              <th className="text-left py-2 px-2 border-b font-bold text-muted-foreground"></th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {block.items.map((item, idx) => {
-            const selected = answers[item.id];
-            const isCorrect = selected === item.correctArticle;
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
+      )}
+      <div>
+        {/* header row */}
+        <div className={`${ROW_CLASS} font-medium text-muted-foreground`}>
+          <span className="w-6 shrink-0" />
+          {articles.map((a) => (
+            <span key={a} className="w-14 shrink-0 text-center">{a}</span>
+          ))}
+          <span className="flex-1" />
+          {block.showWritingLine && <span className="flex-1" />}
+        </div>
+        {block.items.map((item, idx) => {
+          const selected = answers[item.id] as ArticleAnswer | null;
+          const isCorrect = selected === item.correctArticle;
+          const writingVal = (answers[`${item.id}_writing`] as string) || "";
 
-            return (
-              <tr key={item.id} className="border-b last:border-b-0">
-                <td className="p-2 text-center">
-                  <span className={NUMBER_BADGE_CLASS}>
-                    {String(idx + 1).padStart(2, "0")}
-                  </span>
-                </td>
-                {articles.map((a) => (
-                  <td key={a} className="p-2 text-center">
-                    {interactive ? (
-                      <button
-                        className={`${CONTROL_BOX_CLASS} inline-flex transition-colors
-                          ${selected === a
-                            ? showResults
-                              ? item.correctArticle === a
-                                ? s.controlBoxFilled
-                                : "border-red-500 bg-red-500 text-white"
-                              : "border-primary bg-primary text-white"
-                            : "border-muted-foreground/30 hover:border-primary/50"
-                          }`}
-                        onClick={() => handleSelect(item.id, a)}
-                      >
-                        {selected === a && "✓"}
-                      </button>
-                    ) : showSolutions && item.correctArticle === a ? (
-                      <div className={`${CONTROL_BOX_FILLED_CLASS} mx-auto`} />
-                    ) : (
-                      <div className={`${CONTROL_BOX_CLASS} mx-auto`} />
-                    )}
-                  </td>
-                ))}
-                <td className="py-2 px-2">
-                  <span className="flex-1">{item.text}</span>
-                </td>
-                {block.showWritingLine && (
-                  <td className="py-2 px-2">
-                    {showSolutions ? (
-                      <span className="text-green-800 font-semibold text-cv-sm">{item.correctArticle} {item.text}</span>
-                    ) : (
-                      <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
-                    )}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          return (
+            <div key={item.id} className={ROW_CLASS}>
+              {isOnline ? (
+                <span className="w-6 text-left shrink-0">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+              )}
+              {articles.map((a) => (
+                <div key={a} className="w-14 shrink-0 flex items-center justify-center">
+                  {interactive ? (
+                    <button
+                      className={`${CONTROL_BOX_CLASS} transition-colors
+                        ${selected === a
+                          ? showResults
+                            ? item.correctArticle === a
+                              ? s.controlBoxFilled
+                              : "border-red-500 bg-red-500 text-white"
+                            : s.controlBoxActive
+                          : "border-muted-foreground/30 hover:border-primary/50"
+                        }`}
+                      onClick={() => handleSelect(item.id, a)}
+                    >
+                      {selected === a && "✓"}
+                    </button>
+                  ) : showSolutions && item.correctArticle === a ? (
+                    <div className={CONTROL_BOX_FILLED_CLASS} />
+                  ) : (
+                    <div className={CONTROL_BOX_CLASS} />
+                  )}
+                </div>
+              ))}
+              <span className="flex-1">{item.text}</span>
+              {block.showWritingLine && (
+                <div className="flex-1">
+                  {isOnline && interactive ? (
+                    <input
+                      type="text"
+                      value={writingVal}
+                      disabled={showResults}
+                      onChange={(e) => onAnswer({ ...answers, [`${item.id}_writing`]: e.target.value })}
+                      className="h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors w-full"
+                      style={{ backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10) }}
+                    />
+                  ) : showSolutions ? (
+                    <span className="text-green-800 font-semibold text-cv-sm">{item.correctArticle} {item.text}</span>
+                  ) : (
+                    <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
       {showResults && (
         <p className="text-cv-xs text-muted-foreground">
           {t("resultCount", { correct: block.items.filter((item) => answers[item.id] === item.correctArticle).length, total: block.items.length })}
@@ -2596,6 +2922,7 @@ function OrderItemsView({
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
+  const isOnline = mode === "online";
   // Local state for when no external answer/onAnswer is provided (e.g. course viewer)
   const [localOrder, setLocalOrder] = React.useState<string[]>([]);
   const externalOrder = (answer as string[] | undefined) || [];
@@ -2651,7 +2978,17 @@ function OrderItemsView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       <div>
         {displayItems.map((item, i) => {
@@ -2666,17 +3003,24 @@ function OrderItemsView({
           return (
             <div
               key={item.id}
-              className="flex h-[37px] items-center gap-3 border-b"
+              className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String.fromCharCode(97 + i)}
-              </span>
-              <div className={indicatorClass} />
+              {isOnline ? (
+                <span className="w-6 text-left shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              )}
+              {isPrint && <div className={indicatorClass} />}
               <span className="flex-1">{item.text}</span>
               {!isPrint && (
                 <div className="flex items-center gap-1">
                   <button
                     className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                    style={{ color: "var(--viewer-interactive-color, var(--color-primary))" }}
                     onClick={() => moveItem(i, -1)}
                     disabled={i === 0}
                     aria-label={t("moveUp")}
@@ -2685,6 +3029,7 @@ function OrderItemsView({
                   </button>
                   <button
                     className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                    style={{ color: "var(--viewer-interactive-color, var(--color-primary))" }}
                     onClick={() => moveItem(i, 1)}
                     disabled={i === displayItems.length - 1}
                     aria-label={t("moveDown")}
@@ -2936,15 +3281,18 @@ function WordSearchView({
   interactive,
   answer,
   onAnswer,
+  accentColor,
 }: {
   block: WordSearchBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
+  accentColor?: string | null;
 }) {
   const selectedCells = (answer as string[] | undefined) || [];
   const isPrint = mode === "print";
+  const isOnline = mode === "online";
 
   const toggleCell = (key: string) => {
     if (!interactive) return;
@@ -2957,14 +3305,24 @@ function WordSearchView({
   if (block.grid.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
+      )}
       {block.showWordList && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-[49px] flex-wrap items-center gap-2">
           {block.words.map((word, i) => (
-            <span
-              key={i}
-              className="px-2 py-0.5 bg-muted rounded font-medium uppercase"
-            >
+            <span key={i} className="px-2 py-0.5 bg-background rounded border text-[16px]">
               {word}
             </span>
           ))}
@@ -2998,7 +3356,7 @@ function WordSearchView({
                   return (
                     <td
                       key={ci}
-                      className={`text-center font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-semibold'}
+                      className={`text-center font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-medium'}
                         ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
                         ${isSelected ? "bg-primary/20 text-primary" : ""}`}
                       style={cellStyle}
@@ -3021,6 +3379,7 @@ function WordSearchView({
 // ─── Sorting Categories View ──────────────────────────────
 function SortingCategoriesView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
@@ -3029,6 +3388,7 @@ function SortingCategoriesView({
   accentColor,
 }: {
   block: SortingCategoriesBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
@@ -3039,6 +3399,7 @@ function SortingCategoriesView({
   const t = useTranslations("viewer");
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
   const [dragItem, setDragItem] = useState<string | null>(null);
+  const isOnline = mode === "online";
 
   const sortedItemIds = Object.values(userSorting).flat();
 
@@ -3079,46 +3440,41 @@ function SortingCategoriesView({
   };
 
   const getItemById = (id: string) => block.items.find((item) => item.id === id);
-  const getItemLetter = (id: string) => {
-    const index = block.items.findIndex((item) => item.id === id);
-    return index >= 0 ? String.fromCharCode(97 + index) : "";
-  };
-  const SORT_ROW_CLASS = "flex h-[37px] items-center gap-3 border-b";
+  const SORT_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
 
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
-    // Compute max items per category for writing lines
-    const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
     return (
       <div>
         {block.instruction && (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
-        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b">
+        <div className="flex min-h-[49px] flex-wrap items-center gap-2 border-b">
           {shuffledItems.map((item) => (
             <span
               key={item.id}
-              className="px-3 py-0.5 rounded border border-border text-[10px]"
+              className="px-2 py-0.5 bg-background rounded border text-[16px]"
             >
               {item.text}
             </span>
           ))}
         </div>
-        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+        <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
           {block.categories.map((cat) => (
                 <div key={cat.id} className="rounded overflow-hidden">
-              <div className="h-[37px] border-b flex items-center">
+              <div className="min-h-[49px] border-b flex items-center">
                 <span className="font-semibold">{cat.label}</span>
               </div>
               <div>
                 {showSolutions ? (
                   <div>
-                    {cat.correctItems.map((itemId) => {
+                    {cat.correctItems.map((itemId, rowIndex) => {
                       const item = block.items.find((it) => it.id === itemId);
                       return item ? (
                             <div key={itemId} className={`${SORT_ROW_CLASS} text-cv-sm`}>
                               <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                                {getItemLetter(item.id)}
+                                {String(rowIndex + 1).padStart(2, "0")}
                               </span>
                               <div className={CONTROL_BOX_FILLED_CLASS} />
                               <span className="flex-1">{item.text}</span>
@@ -3130,13 +3486,18 @@ function SortingCategoriesView({
                   <div>
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
                       <div key={i} className={SORT_ROW_CLASS}>
-                        <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                          {String.fromCharCode(97 + i)}
-                        </span>
-                        <div className={CONTROL_BOX_CLASS} />
+                        {isOnline ? (
+                          <span className="w-6 text-left shrink-0">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                        ) : (
+                          <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                        )}
                         <span
-                          className="flex-1 inline-block"
-                          style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, minWidth: 80 }}
+                          className="flex-1 inline-block h-8 rounded"
+                          style={{ opacity: 1.0, minWidth: 80 }}
                         >
                           &nbsp;
                         </span>
@@ -3155,15 +3516,25 @@ function SortingCategoriesView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       {/* Unsorted items */}
       {displayUnsorted.length > 0 && (
-        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b">
+        <div className="flex min-h-[49px] flex-wrap items-center gap-2 border-b">
           {displayUnsorted.map((item) => (
             <span
               key={item.id}
-              className={`px-3 py-0.5 rounded border border-border text-[10px] cursor-grab transition-colors
+              className={`px-2 py-0.5 bg-background rounded border text-[16px] cursor-grab transition-colors
                 ${dragItem === item.id ? "bg-primary/10 border-primary" : "hover:bg-accent"}`}
               draggable
               onDragStart={() => setDragItem(item.id)}
@@ -3175,7 +3546,7 @@ function SortingCategoriesView({
         </div>
       )}
       {/* Category boxes */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+      <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
         {block.categories.map((cat) => {
           const catItemIds = userSorting[cat.id] || [];
           return (
@@ -3198,11 +3569,11 @@ function SortingCategoriesView({
                 }
               }}
             >
-                <div className="h-[37px] border-b flex items-center">
+                <div className="min-h-[49px] border-b flex items-center">
                 <span className="font-semibold">{cat.label}</span>
               </div>
               <div className="min-h-[60px]">
-                {catItemIds.map((itemId) => {
+                {catItemIds.map((itemId, rowIndex) => {
                   const item = getItemById(itemId);
                   if (!item) return null;
                   const isCorrect = cat.correctItems.includes(item.id);
@@ -3216,9 +3587,15 @@ function SortingCategoriesView({
                       key={item.id}
                         className={`${SORT_ROW_CLASS} transition-colors`}
                     >
-                      <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                        {getItemLetter(item.id)}
-                      </span>
+                      {isOnline ? (
+                        <span className="w-6 text-left shrink-0">
+                          {String(rowIndex + 1).padStart(2, "0")}
+                        </span>
+                      ) : (
+                        <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                          {String(rowIndex + 1).padStart(2, "0")}
+                        </span>
+                      )}
                       <div className={indicatorClass} />
                       <span className="flex-1">{item.text}</span>
                       {!showResults && (
@@ -3238,6 +3615,38 @@ function SortingCategoriesView({
                     </div>
                   );
                 })}
+                {(block.showWritingLines ?? true) && maxItemsPerCat > catItemIds.length && (
+                  <div>
+                    {Array.from({ length: maxItemsPerCat - catItemIds.length }).map((_, offset) => {
+                      const slotIndex = catItemIds.length + offset;
+                      return (
+                        <div key={`empty-${cat.id}-${slotIndex}`} className={SORT_ROW_CLASS}>
+                          {isOnline ? (
+                            <span className="w-6 text-left shrink-0">
+                              {String(slotIndex + 1).padStart(2, "0")}
+                            </span>
+                          ) : (
+                            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                              {String(slotIndex + 1).padStart(2, "0")}
+                            </span>
+                          )}
+                          <span
+                            className="flex-1 inline-block h-8 rounded"
+                            style={{
+                              opacity: 1.0,
+                              minWidth: 80,
+                              ...(isOnline
+                                ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" }
+                                : {}),
+                            }}
+                          >
+                            &nbsp;
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -3292,6 +3701,7 @@ function UnscrambleWordsView({
   bodyFont,
   bodyFontSize,
   accentColor,
+  interactiveColor,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -3303,9 +3713,12 @@ function UnscrambleWordsView({
   bodyFont?: string;
   bodyFontSize?: string;
   accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const isPrint = mode === "print";
   const fontFamily = bodyFont || "inherit";
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const isOnline = mode === "online";
   const [localAnswers, setLocalAnswers] = React.useState<Record<string, string>>({});
   const externalAnswers = (answer as Record<string, string> | undefined) || {};
   const userAnswers = answer !== undefined ? externalAnswers : localAnswers;
@@ -3341,11 +3754,25 @@ function UnscrambleWordsView({
   return (
     <div className="text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       {block.instruction && (
-        <InstructionRow
-          instruction={block.instruction}
-          accentColor={accentColor}
-          style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
-        />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{
+              color: accentColor || "var(--color-primary)",
+              ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+            }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow
+            instruction={block.instruction}
+            accentColor={accentColor}
+            style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+            mode={mode}
+          />
+        )
       )}
       <div>
         {orderedWords.map((item, i) => {
@@ -3365,11 +3792,17 @@ function UnscrambleWordsView({
           return (
             <div
               key={item.id}
-              className="flex min-h-[37px] items-center gap-3 py-2 border-b"
+              className="flex min-h-[49px] items-center gap-3 border-b"
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              {isOnline ? (
+                <span className="w-6 text-left shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              )}
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
@@ -3377,7 +3810,7 @@ function UnscrambleWordsView({
               {isPrint && showSolutions ? (
                 <span className="flex-1 text-green-800 font-semibold">{item.word}</span>
               ) : isPrint ? (
-                <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
+                <span className="flex-1 inline-block h-8 rounded" style={{ minWidth: 80 }}>
                   &nbsp;
                 </span>
               ) : (
@@ -3388,14 +3821,16 @@ function UnscrambleWordsView({
                     onChange={(e) =>
                       handleAnswer({ ...userAnswers, [item.id]: e.target.value })
                     }
-                    className={`w-full border-b bg-transparent px-1 py-0.5 focus:outline-none transition-colors ${
+                    className={`w-full h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors ${
                       isCorrect
-                        ? "border-green-500 text-green-700"
+                        ? "bg-green-50 text-green-700"
                         : isWrong
-                          ? "border-red-500 text-red-700"
-                          : "border-muted-foreground/40 focus:border-primary"
+                          ? "bg-red-50 text-red-700"
+                          : ""
                     }`}
-                    placeholder="..."
+                    style={!isCorrect && !isWrong ? {
+                      backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                    } : undefined}
                   />
                 </div>
               )}
@@ -3518,6 +3953,7 @@ function FixSentencesView({
                           <div className="flex flex-col gap-0">
                             <button
                               className="p-0 hover:bg-muted rounded disabled:opacity-30"
+                              style={{ color: "var(--viewer-interactive-color, var(--color-primary))" }}
                               onClick={() => movePart(item.id, pi, -1)}
                               disabled={pi === 0}
                               aria-label={t("moveUp")}
@@ -3534,6 +3970,7 @@ function FixSentencesView({
                             </button>
                             <button
                               className="p-0 hover:bg-muted rounded disabled:opacity-30"
+                              style={{ color: "var(--viewer-interactive-color, var(--color-primary))" }}
                               onClick={() => movePart(item.id, pi, 1)}
                               disabled={pi === displayParts.length - 1}
                               aria-label={t("moveDown")}
@@ -3606,36 +4043,62 @@ function CompleteSentencesView({
   interactive,
   answer,
   onAnswer,
+  accentColor,
+  interactiveColor,
 }: {
   block: CompleteSentencesBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
+  accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const isOnline = mode === "online";
+  const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
 
   return (
-    <div className="space-y-2">
+    <div>
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       <div>
         {block.sentences.map((item, i) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 py-2 border-b last:border-b-0"
+            className={ROW_CLASS}
           >
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            {isOnline ? (
+              <span className="w-6 text-left shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            ) : (
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            )}
             <span className="shrink-0">{item.beginning}</span>
             {interactive ? (
               <input
                 type="text"
                 value={userAnswers[item.id] || ""}
                 onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
-                className="flex-1 border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 focus:outline-none focus:border-primary"
+                className="flex-1 h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors"
+                style={{
+                  backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10),
+                }}
               />
             ) : (
               <div className="flex-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
@@ -3656,6 +4119,7 @@ function TransformSentencesView({
   onAnswer,
   showResults,
   accentColor,
+  interactiveColor,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -3664,14 +4128,27 @@ function TransformSentencesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
-  const TRANSFORM_ROW_CLASS = "flex h-[37px] items-center gap-3 border-b";
+  const isOnline = mode === "online";
+  const TRANSFORM_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
 
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       <div>
         {block.sentences.map((item, i) => {
@@ -3686,31 +4163,37 @@ function TransformSentencesView({
               className=""
             >
               <div className={TRANSFORM_ROW_CLASS}>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                {isOnline ? (
+                  <span className="w-6 text-left shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                ) : (
+                  <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                )}
                 <span>{item.beginning}</span>
               </div>
               {interactive ? (
                 <div className={TRANSFORM_ROW_CLASS}>
-                  <span className={`${NUMBER_BADGE_CLASS} shrink-0 opacity-0`} aria-hidden="true">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
                   <div className="flex-1">
                     <input
                       type="text"
                       value={userVal}
                       onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
                       disabled={showResults}
-                      className={`w-full border-b border-dashed bg-transparent px-2 py-0.5 focus:outline-none ${
+                      className={`w-full h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors ${
                         showResults
                           ? isCorrect
-                            ? "border-green-500 text-green-700"
+                            ? "border-green-500 bg-green-50 text-green-700"
                             : isWrong
-                              ? "border-red-500 text-red-700"
-                              : "border-muted-foreground/30"
-                          : "border-muted-foreground/30 focus:border-primary"
+                              ? "border-red-500 bg-red-50 text-red-700"
+                              : "border-muted-foreground/40 bg-transparent"
+                          : "border-muted-foreground/40 focus:border-primary"
                       }`}
+                      style={!showResults && isOnline ? {
+                        backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                      } : undefined}
                     />
                     {showResults && isWrong && hasSolution && (
                       <span className="text-cv-xs text-green-600 mt-0.5 block">{item.solution}</span>
@@ -3719,10 +4202,10 @@ function TransformSentencesView({
                 </div>
               ) : (
                 <div className={TRANSFORM_ROW_CLASS}>
-                  <span className={`${NUMBER_BADGE_CLASS} shrink-0 opacity-0`} aria-hidden="true">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1 inline-block" style={{ borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}>
+                  <span
+                    className="flex-1 inline-block h-8 rounded"
+                    style={{ opacity: 1.0, minWidth: 80 }}
+                  >
                     &nbsp;
                   </span>
                 </div>
@@ -3744,6 +4227,8 @@ function VerbTableView({
   onAnswer,
   showResults,
   primaryColor = "#1a1a1a",
+  accentColor,
+  interactiveColor,
 }: {
   block: VerbTableBlock;
   mode: ViewMode;
@@ -3752,12 +4237,16 @@ function VerbTableView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   primaryColor?: string;
+  accentColor?: string | null;
+  interactiveColor?: string;
 }) {
   const t = useTranslations("viewer");
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isSplit = block.splitConjugation ?? false;
   const showGlobal = block.showConjugations ?? false;
-  const isPrint = mode === "print";
+  const isOnline = mode === "online";
+  const resolvedInteractiveColor = interactiveColor || primaryColor || "#0ea5e9";
+  const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
 
   const shouldShowAnswer = (override: "show" | "hide" | null | undefined): boolean => {
     if (override === "show") return true;
@@ -3782,98 +4271,70 @@ function VerbTableView({
     const isCorrect2 = showResults && isSplit && userVal2.trim().toLowerCase() === (row.conjugation2 || "").trim().toLowerCase();
     const isWrong2 = showResults && isSplit && userVal2.trim() !== "" && !isCorrect2;
 
+    const inputClass = (wrong: boolean, correct: boolean) =>
+      `w-full h-8 rounded px-2 py-0.5 leading-none focus:outline-none transition-colors ${
+        showResults
+          ? correct
+            ? "bg-green-50 text-green-700"
+            : wrong
+              ? "bg-red-50 text-red-700"
+              : "bg-transparent"
+          : ""
+      }`;
+
     return (
-      <div key={row.id} className="flex items-center gap-3 py-1 px-3 border-b last:border-b-0">
-        {/* Person */}
-        <span
-          className="text-muted-foreground uppercase shrink-0"
-          style={{ fontSize: '0.7em', width: '15%' }}
-        >
-          {row.person}
-        </span>
-        {/* Detail (formell/informell) */}
-        <span
-          className="text-muted-foreground shrink-0"
-          style={{ fontSize: '0.7em', width: '15%' }}
-        >
-          {row.detail || ""}
-        </span>
-        {/* Pronoun */}
-        <span className="font-bold shrink-0" style={{ width: '15%' }}>
-          {row.pronoun}
-        </span>
-        {/* Conjugation 1 */}
-        <span style={{ width: isSplit ? '27.5%' : '55%' }}>
-          {showConj1 ? (
-            <span className="font-bold" style={{ color: primaryColor }}>{row.conjugation}</span>
-          ) : interactive ? (
-            <span>
-              <input
-                type="text"
-                value={userVal}
-                onChange={(e) => handleChange(row.id, "conjugation", e.target.value)}
-                disabled={showResults}
-                className={`w-full border rounded px-2 py-1 outline-none ${
-                  showResults
-                    ? isCorrect
-                      ? "border-green-500 bg-green-50 text-green-700"
-                      : isWrong
-                        ? "border-red-500 bg-red-50 text-red-700"
-                        : "border-border"
-                    : "border-border focus:border-primary"
-                }`}
-                placeholder="…"
-              />
-              {showResults && isWrong && (
-                <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation}</span>
-              )}
-            </span>
-          ) : (
-            <span
-              className="bg-gray-100 rounded"
-              style={{ display: 'inline-block', verticalAlign: 'text-bottom', height: '1.3em', minWidth: '80px' }}
-            >
-              &nbsp;
-            </span>
-          )}
-        </span>
-        {/* Conjugation 2 (split) */}
-        {isSplit && (
-          <span style={{ width: '27.5%' }}>
-            {showConj2 ? (
-              <span className="font-bold" style={{ color: primaryColor }}>{row.conjugation2}</span>
+      <div key={row.id} className={ROW_CLASS}>
+        <span className="w-16 shrink-0 text-[11px] text-muted-foreground uppercase">{row.person}</span>
+        <span className="w-20 shrink-0 text-[11px] text-muted-foreground">{row.detail ?? ""}</span>
+        <span className="w-28 shrink-0 font-bold">{row.pronoun}</span>
+        <div className={`flex-1 flex ${isSplit ? "gap-2" : ""}`}>
+          {/* Conjugation 1 */}
+          <div className="flex-1">
+            {showConj1 ? (
+              <span className="font-bold" style={{ color: accentColor || primaryColor }}>{row.conjugation}</span>
             ) : interactive ? (
-              <span>
+              <>
                 <input
                   type="text"
-                  value={userVal2}
-                  onChange={(e) => handleChange(row.id, "conjugation2", e.target.value)}
+                  value={userVal}
+                  onChange={(e) => handleChange(row.id, "conjugation", e.target.value)}
                   disabled={showResults}
-                  className={`w-full border rounded px-2 py-1 outline-none ${
-                    showResults
-                      ? isCorrect2
-                        ? "border-green-500 bg-green-50 text-green-700"
-                        : isWrong2
-                          ? "border-red-500 bg-red-50 text-red-700"
-                          : "border-border"
-                      : "border-border focus:border-primary"
-                  }`}
-                  placeholder="…"
+                  className={inputClass(isWrong, isCorrect)}
+                  style={!showResults ? { backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10) } : undefined}
                 />
-                {showResults && isWrong2 && (
-                  <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation2}</span>
+                {showResults && isWrong && (
+                  <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation}</span>
                 )}
-              </span>
+              </>
             ) : (
-              <span
-                className="bg-gray-100 rounded"
-                style={{ display: 'inline-block', verticalAlign: 'text-bottom', height: '1.3em', minWidth: '80px' }}
-              >
-                &nbsp;
-              </span>
+              <div className="border-b border-muted-foreground/30 h-6 min-w-[80px]" />
             )}
-          </span>
-        )}
+          </div>
+          {/* Conjugation 2 (split) */}
+          {isSplit && (
+            <div className="flex-1">
+              {showConj2 ? (
+                <span className="font-bold" style={{ color: accentColor || primaryColor }}>{row.conjugation2}</span>
+              ) : interactive ? (
+                <>
+                  <input
+                    type="text"
+                    value={userVal2}
+                    onChange={(e) => handleChange(row.id, "conjugation2", e.target.value)}
+                    disabled={showResults}
+                    className={inputClass(isWrong2, isCorrect2)}
+                    style={!showResults ? { backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10) } : undefined}
+                  />
+                  {showResults && isWrong2 && (
+                    <span className="text-cv-xs text-green-600 mt-0.5 block">{row.conjugation2}</span>
+                  )}
+                </>
+              ) : (
+                <div className="border-b border-muted-foreground/30 h-6 min-w-[80px]" />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -3894,24 +4355,34 @@ function VerbTableView({
   const totalCount = isSplit ? allRows.length * 2 : allRows.length;
 
   return (
-    <div className="border rounded-[4px] overflow-hidden border-border" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+    <div>
       {(block.showInfinitive ?? true) && (block.infinitiveOverride || block.verb) && (
-        <div className="font-bold py-2 px-3 border-b border-border">
-          {block.infinitiveOverride || block.verb}
-        </div>
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || primaryColor }}
+          >
+            <span className="w-6 shrink-0 text-left">01</span>
+            <span>{block.infinitiveOverride || block.verb}</span>
+          </div>
+        ) : (
+          <InstructionRow
+            instruction={block.infinitiveOverride || block.verb || ""}
+            accentColor={accentColor}
+            mode={mode}
+          />
+        )
       )}
-      <div>
-        {/* Singular */}
-        <div className="text-muted-foreground font-bold uppercase border-b border-border px-3 flex items-center" style={{ height: '37.5px' }}>
-          Singular
-        </div>
-        {block.singularRows.map((row) => renderRow(row))}
-        {/* Plural */}
-        <div className="text-muted-foreground font-bold uppercase border-b border-border px-3 flex items-center" style={{ height: '37.5px' }}>
-          Plural
-        </div>
-        {block.pluralRows.map((row) => renderRow(row))}
+      {/* Singular */}
+      <div className={`${ROW_CLASS} font-semibold text-xs uppercase text-muted-foreground`}>
+        Singular
       </div>
+      {block.singularRows.map((row) => renderRow(row))}
+      {/* Plural */}
+      <div className={`${ROW_CLASS} font-semibold text-xs uppercase text-muted-foreground`}>
+        Plural
+      </div>
+      {block.pluralRows.map((row) => renderRow(row))}
       {showResults && (
         <p className="text-cv-xs text-muted-foreground mt-2">
           {t("resultCount", { correct: correctCount, total: totalCount })}
@@ -3924,6 +4395,7 @@ function VerbTableView({
 // ─── Dialogue View ───────────────────────────────────────────
 function DialogueView({
   block,
+  mode,
   interactive,
   answer,
   onAnswer,
@@ -3932,6 +4404,7 @@ function DialogueView({
   accentColor,
 }: {
   block: DialogueBlock;
+  mode: ViewMode;
   interactive: boolean;
   answer: Record<string, string>;
   onAnswer: (a: Record<string, string>) => void;
@@ -3940,6 +4413,7 @@ function DialogueView({
   accentColor?: string | null;
 }) {
   const t = useTranslations("blockRenderer");
+  const isOnline = mode === "online";
 
   const speakerIconMap: Record<string, React.ReactNode> = {
     triangle: (
@@ -4043,17 +4517,27 @@ function DialogueView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <span className="w-6 text-left shrink-0">01</span>
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+        )
       )}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
-        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+        <div className="flex min-h-[49px] flex-wrap items-center gap-2 border-b">
           <span className={`${INSTRUCTION_BADGE_CLASS} shrink-0`}>W</span>
           <div className="flex flex-1 flex-wrap gap-2">
             {[...gapAnswers]
               .sort(() => Math.random() - 0.5)
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[10px]">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[16px]">
                   {text}
                 </span>
               ))}
@@ -4063,10 +4547,16 @@ function DialogueView({
       {/* Dialogue items */}
       <div>
         {block.items.map((item, i) => (
-          <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(i + 1).padStart(2, "0")}
-            </span>
+          <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+            {isOnline ? (
+              <span className="w-6 text-left shrink-0">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            ) : (
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            )}
             <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
               {speakerIconMap[item.icon] || speakerIconMap.circle}
             </span>
@@ -4309,7 +4799,7 @@ function ChecklistView({
         alignItems: "start",
         ...(options?.withDivider
           ? {
-              borderLeft: "1px solid #e5e7eb",
+              borderLeft: "1px solid var(--border)",
               paddingLeft: "1rem",
             }
           : {}),
@@ -4333,7 +4823,7 @@ function ChecklistView({
   );
 
   return (
-    <div className={s.checklistRows}>
+    <div>
       {block.items.map((item, index) => {
         const originalItem = originalBlock?.items.find((candidate) => candidate.id === item.id);
         const showBilingual = isBilingual && !!originalItem;
@@ -4341,24 +4831,17 @@ function ChecklistView({
         return (
           <div
             key={item.id}
-            className={s.checklistRow}
-            style={showBilingual
-              ? {
-                  gridTemplateColumns: "2rem minmax(0, 1fr) minmax(0, 1fr)",
-                  alignItems: "start",
-                }
-              : {
-                  gridTemplateColumns: "2rem minmax(0, 1fr)",
-                  alignItems: "start",
-                }}
+            className={CONSISTENT_ROW_CLASS}
           >
-            <span className={s.accentBadge}>{String(index + 1).padStart(2, "0")}</span>
+            <span className="w-6 text-left shrink-0">
+              {String(index + 1).padStart(2, "0")}
+            </span>
             {showBilingual
               ? (
-                <>
+                <div style={{ flex: 1, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", columnGap: "1rem" }}>
                   {renderChecklistColumn(originalItem)}
                   {renderChecklistColumn(item, effectiveScale ? { fontSize: `${effectiveScale}em` } : undefined, { withDivider: true })}
-                </>
+                </div>
               )
               : renderChecklistColumn(item)}
           </div>
@@ -4377,6 +4860,7 @@ function AccordionView({
   showResults,
   showSolutions = false,
   primaryColor,
+  interactiveColor,
   allBlocks,
   brand = "edoomio",
 }: {
@@ -4387,6 +4871,7 @@ function AccordionView({
   showResults: boolean;
   showSolutions?: boolean;
   primaryColor?: string;
+  interactiveColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
 }) {
@@ -4400,7 +4885,7 @@ function AccordionView({
           <button
             type="button"
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className={`flex h-[37px] w-full items-center gap-2 border-b border-border pl-0 pr-3 text-left ${i === 0 || openIndex === i - 1 ? "border-t" : ""}`.trim()}
+            className={`flex min-h-[49px] w-full items-center gap-2 border-b border-border pl-0 pr-3 text-left ${i === 0 || openIndex === i - 1 ? "border-t" : ""}`.trim()}
           >
             {block.showNumbers && (
               <span className="shrink-0 font-black">{String(i + 1).padStart(2, '0')}</span>
@@ -4410,7 +4895,10 @@ function AccordionView({
               {openIndex === i ? (
                 <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
               ) : (
-                <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Plus
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  style={mode === "online" && interactiveColor ? { color: interactiveColor } : undefined}
+                />
               )}
             </span>
           </button>
@@ -4428,6 +4916,7 @@ function AccordionView({
                   showResults={showResults}
                   showSolutions={showSolutions}
                   primaryColor={primaryColor}
+                  interactiveColor={interactiveColor}
                   allBlocks={allBlocks}
                   brand={brand}
                 />
@@ -4735,32 +5224,34 @@ function StaticScheduleTable({
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
-    padding: "4px 8px",
-    lineHeight: "1.35rem",
-    verticalAlign: "top",
+    paddingTop: 6,
+    paddingRight: 12,
+    paddingBottom: 6,
+    paddingLeft: 12,
+    verticalAlign: "middle",
     boxSizing: "border-box",
   };
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     textAlign: "left",
     color: "inherit",
-    fontSize: "0.8em",
-    fontWeight: 400,
+    fontSize: "0.875rem",
+    fontWeight: 500,
     textTransform: "uppercase",
-    lineHeight: "1.35rem",
-    height: "2rem",
-    verticalAlign: "top",
+    paddingTop: 6,
+    paddingRight: 12,
+    paddingBottom: 6,
+    paddingLeft: 12,
+    verticalAlign: "middle",
     boxSizing: "border-box",
   };
 
   return (
     <>
       <style>{`
-        .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;box-sizing:border-box;}
-        .scheduleNew tbody tr:last-child td{border-bottom:none;}
-        .scheduleNew thead tr th{border-top:none;}
-        .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
+        .scheduleNew{width:100%;border-collapse:collapse;border-top:1px solid var(--border);}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid var(--border);height:49px;vertical-align:middle;box-sizing:border-box;}
+        .scheduleNew thead tr th{height:49px;border-bottom:1px solid var(--border);font-weight:500;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
@@ -4801,11 +5292,11 @@ function StaticScheduleTable({
               <tr key={item.id}>
                 {showDate && <td style={rowCellStyle}>{weekday}</td>}
                 {showDate && <td style={rowCellStyle}>{formatted}</td>}
-                <td style={rowCellStyle}>{formatScheduleCellTime(item.start)}</td>
-                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 0 }}>–</td>
-                <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
+                <td style={{ ...rowCellStyle, paddingLeft: 0 }}>{formatScheduleCellTime(item.start)}</td>
+                <td style={{ ...rowCellStyle, textAlign: "center" }}>–</td>
+                <td style={{ ...rowCellStyle, paddingLeft: 0 }}>{formatScheduleCellTime(item.end)}</td>
                 {showRoom && <td style={rowCellStyle}>{item.room}</td>}
-                <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
+                <td style={rowCellStyle}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
                       <div style={{ fontWeight: 700 }}>{originalItem.title}</div>
@@ -4992,6 +5483,7 @@ export function ViewerBlockRenderer({
   showSolutions = false,
   primaryColor = "#1a1a1a",
   accentColor,
+  interactiveColor,
   headlineFont,
   headingWeights,
   allBlocks,
@@ -5013,6 +5505,7 @@ export function ViewerBlockRenderer({
   showSolutions?: boolean;
   primaryColor?: string;
   accentColor?: string | null;
+  interactiveColor?: string;
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number };
   allBlocks?: WorksheetBlock[];
@@ -5072,6 +5565,7 @@ export function ViewerBlockRenderer({
       return (
         <MultipleChoiceView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -5089,6 +5583,9 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          mode={mode}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "fill-in-blank-items":
@@ -5102,12 +5599,14 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           mode={mode}
           accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "matching":
       return (
         <MatchingView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -5120,6 +5619,7 @@ export function ViewerBlockRenderer({
       return (
         <TwoColumnFillView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -5154,6 +5654,7 @@ export function ViewerBlockRenderer({
       return (
         <TrueFalseMatrixView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
@@ -5173,11 +5674,14 @@ export function ViewerBlockRenderer({
       return (
         <ArticleTrainingView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "order-items":
@@ -5213,12 +5717,14 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          accentColor={accentColor}
         />
       );
     case "sorting-categories":
       return (
         <SortingCategoriesView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer ?? undefined}
           onAnswer={onAnswer || noop}
@@ -5240,6 +5746,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "fix-sentences":
@@ -5262,6 +5769,8 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "transform-sentences":
@@ -5274,6 +5783,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "verb-table":
@@ -5286,6 +5796,8 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           primaryColor={primaryColor}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
         />
       );
     case "chart":
@@ -5294,6 +5806,7 @@ export function ViewerBlockRenderer({
       return (
         <DialogueView
           block={block}
+          mode={mode}
           interactive={interactive}
           answer={answer as Record<string, string>}
           onAnswer={onAnswer || noop}
@@ -5356,6 +5869,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           primaryColor={primaryColor}
+          interactiveColor={interactiveColor}
           allBlocks={allBlocks}
           brand={brand}
         />

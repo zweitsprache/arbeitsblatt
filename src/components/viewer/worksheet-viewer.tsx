@@ -93,6 +93,7 @@ export function WorksheetViewer({
   const pageWidth = settings.pageSize === "a4"
     ? (isLandscape ? 1123 : 794)
     : (isLandscape ? 1056 : 816);
+  const onlinePageWidth = pageWidth + 260;
 
   // Resolve brand profile: prefer prop, then static fallback, then apply per-worksheet overrides
   const resolvedProfile = applyBrandOverrides(
@@ -377,7 +378,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} />
                         </div>
                       ))}
                     </div>
@@ -390,10 +391,10 @@ export function WorksheetViewer({
       ) : (
         /* Online mode */
         <div
-          className="mx-auto py-8 px-4"
-          style={{ maxWidth: pageWidth }}
+          className="mx-auto py-8 px-10 md:px-16 lg:px-24"
+          style={{ maxWidth: onlinePageWidth }}
         >
-          <div className="bg-background rounded-xl shadow-sm border p-8 mb-4">
+          <div className="bg-background rounded-xl shadow-sm border py-8 px-12 md:px-20 lg:px-24 mb-4">
             <div className="flex items-center gap-3 mb-1">
               <Image
                 src="/logo/arbeitsblatt_logo_icon.svg"
@@ -415,9 +416,16 @@ export function WorksheetViewer({
             )}
           </div>
 
-          <div className="bg-background rounded-xl shadow-sm border p-8">
+          <div className="bg-background rounded-xl shadow-sm border py-8 px-12 md:px-20 lg:px-24">
             {/* Blocks */}
-            <div className="worksheet-blocks-container" style={{ fontFamily: activeBodyFont }}>
+            <div
+              className="worksheet-blocks-container flex flex-col gap-5"
+              style={{
+                fontFamily: activeBodyFont,
+                fontSize: "clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)",
+                ["--viewer-interactive-color" as string]: resolvedProfile.interactiveColor || "#0ea5e9",
+              }}
+            >
               {visibleBlocks.map((block) => (
                 <div
                   key={block.id}
@@ -433,12 +441,13 @@ export function WorksheetViewer({
                     onAnswer={(value) => updateAnswer(block.id, value)}
                     showResults={showResults}
                     primaryColor={brandFonts.primaryColor}
+                    interactiveColor={resolvedProfile.interactiveColor}
                     headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
                     bodyFont={activeBodyFont}
                     originalBodyFont={baseBodyFont}
-                    bodyFontSize={resolvedBodyFontSize}
+                    bodyFontSize="clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)"
                     originalBlock={originalBlockMap?.[block.id]}
                     isNonLatin={isNonLatin}
                     isRtl={isRtl}

@@ -38,10 +38,17 @@
   height: var(--viewer-badge-size, 20px);
   min-width: var(--viewer-badge-size, 20px);
   min-height: var(--viewer-badge-size, 20px);
+  color: var(--viewer-interactive-color, var(--color-primary));
   border-radius: var(--viewer-badge-radius, 3px);
   border: 0;
   box-shadow: inset 0 0 0 1px currentColor;
   background: #fff;
+}
+
+.controlBoxActive {
+  box-shadow: inset 0 0 0 1px var(--viewer-interactive-color, var(--color-primary));
+  background: var(--viewer-interactive-color, var(--color-primary));
+  color: #fff;
 }
 
 .controlBoxFilled {
@@ -85,6 +92,13 @@
 
 .textPlain {
   overflow: hidden;
+}
+
+/* Restore breathing room at the bottom of standard (non-rows) text blocks.
+   Rows-style blocks use border-bottom divs as direct children (not .tiptap),
+   so this only applies when tiptap is the direct child. */
+.textPlain > :global(.tiptap) {
+  padding-bottom: 0.5rem;
 }
 
 .styledBorder {

@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
         translationFontOverrides: body.translationFontOverrides,
         primaryColor: body.primaryColor,
         accentColor: body.accentColor,
+        interactiveColor: body.interactiveColor,
         logo: body.logo,
         iconLogo: body.iconLogo,
         favicon: body.favicon,

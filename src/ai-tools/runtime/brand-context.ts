@@ -38,6 +38,7 @@ export async function resolveAiToolBrandProfile(context: unknown): Promise<AiToo
     pageTitle: brandProfile.pageTitle,
     primaryColor: brandProfile.primaryColor,
     accentColor: brandProfile.accentColor,
+    interactiveColor: brandProfile.interactiveColor,
   };
 }
 
@@ -52,6 +53,7 @@ export function getBrandPromptContext(brandProfile?: AiToolBrandProfile) {
     `- Page title: ${brandProfile.pageTitle || ""}`,
     `- Primary color: ${brandProfile.primaryColor}`,
     `- Accent color: ${brandProfile.accentColor || ""}`,
+    `- Interactive color: ${brandProfile.interactiveColor}`,
     `- Brand slug: ${brandProfile.slug}`,
   ]
     .filter(Boolean)

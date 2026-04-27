@@ -208,6 +208,7 @@ model BrandProfile {
   // Colors
   primaryColor String  @default("#1a1a1a")
   accentColor  String?
+  interactiveColor String @default("#0ea5e9")
 
   // Assets
   logo     String  @default("") // URL or base64 data URL

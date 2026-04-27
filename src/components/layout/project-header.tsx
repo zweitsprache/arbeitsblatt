@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
 /** Fallback logo when client has no custom brand logo */
-const DEFAULT_LOGO = "/logo/arbeitsblatt_logo_full_brand.svg";
+const DEFAULT_LOGO = "/logo/didaktiv_logo_brand.svg";
 
 const localeLabels: Record<string, string> = {
   de: "DE",
@@ -39,7 +39,7 @@ export function ProjectHeader({ brandLogo, projectName }: ProjectHeaderProps) {
       <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1 flex items-center">
-            <img src={logo} alt={projectName} className="h-8 w-auto" />
+            <img src={logo} alt={projectName} className="h-7 w-auto" />
           </div>
           <div className="flex items-center gap-1">
             <div className="flex items-center rounded-sm border bg-background/50 overflow-hidden">
@@ -69,7 +69,7 @@ export function ProjectHeader({ brandLogo, projectName }: ProjectHeaderProps) {
 
       {/* Desktop header — same style as course viewer top bar */}
       <div className="hidden lg:flex items-center gap-2 px-6 2xl:px-8 py-5 text-cv-xs text-muted-foreground shrink-0 bg-white border-b">
-        <img src={logo} alt={projectName} className="h-8 w-auto mr-2" />
+        <img src={logo} alt={projectName} className="h-7 w-auto mr-2" />
         <div className="ml-auto flex items-center gap-3">
           <div className="flex items-center gap-1">
             <div className="flex items-center rounded-sm border bg-background/50 overflow-hidden">

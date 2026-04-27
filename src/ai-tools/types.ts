@@ -9,6 +9,7 @@ export interface AiToolBrandProfile {
   pageTitle?: string | null;
   primaryColor: string;
   accentColor?: string | null;
+  interactiveColor: string;
 }
 
 export type AiToolCardKind =
