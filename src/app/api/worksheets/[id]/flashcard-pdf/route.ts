@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { launchBrowser, fetchImageAsDataUri } from "@/lib/puppeteer";
-import { FlashcardItem, FlashcardSide, FlashcardSettings } from "@/types/flashcard";
+import { FlashcardGlobalTextStyle, FlashcardItem, FlashcardSide, FlashcardSettings } from "@/types/flashcard";
 import { resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import type { BrandProfile } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
 
 import { replaceEszett } from "@/lib/locale-utils";
+import { normalizeToHtml, hasMarkdownSyntax, hasHtmlMarkup } from "@/lib/markdown-to-html";
 
 // ─── Brand info passed through rendering ────────────────────
 interface BrandInfo {
@@ -79,7 +80,18 @@ function escapeHtmlBackPage(str: string): string {
     .join("<br>");
 }
 
-function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: string, row: number, col: number, pageSide: "front" | "back"): string {
+function renderCardCell(
+  side: FlashcardSide,
+  globalTextStyle: FlashcardGlobalTextStyle,
+  isCuttingLine: boolean,
+  logoUrl: string,
+  row: number,
+  col: number,
+  pageSide: "front" | "back",
+  cardW = CARD_W,
+  cardH = CARD_H,
+  cols = COLS
+): string {
   let borderStyle = "";
   if (isCuttingLine) {
     const borderColor = pageSide === "back" ? "transparent" : "#ccc";
@@ -91,8 +103,8 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
 
   let imageHtml = "";
   if (side.image) {
-    const SUB_W = 66;
-    const SUB_H = 37.125;
+    const SUB_W = cardW - 8;
+    const SUB_H = cardH * 0.55;
     const arStr = side.imageAspectRatio ?? "1:1";
     const [aw, ah] = arStr.split(":").map(Number);
     const ar = aw / ah;
@@ -111,36 +123,42 @@ function renderCardCell(side: FlashcardSide, isCuttingLine: boolean, logoUrl: st
   const justifyMap = { top: "flex-start", center: "center", bottom: "flex-end" };
   const justify = justifyMap[side.textPosition ?? "center"];
 
-  const fontSize = side.fontSize ?? 11;
+  const fontSize = side.fontSize ?? globalTextStyle.fontSize ?? 11;
   const fontWeightVal = side.fontWeight === "bold" ? 700 : 400;
-  const textColor = side.textColor || "#000";
+  const textColor = side.textColor || globalTextStyle.textColor || "#000";
+  const textAlign = side.textAlign || globalTextStyle.textAlign || "center";
 
   // Detect if text is HTML (from TipTap rich text editor) or plain text (legacy format)
-  const isHtmlContent = side.text ? /^<[a-z][\s\S]*>/i.test(side.text.trim()) : false;
-  const hasTextContent = side.text && side.text.replace(/<[^>]*>/g, "").trim() !== "";
+  const rawText = side.text ?? "";
+  const isHtmlContent = hasHtmlMarkup(rawText);
+  const isMarkdown = !isHtmlContent && hasMarkdownSyntax(rawText);
+  const hasTextContent = rawText.replace(/<[^>]*>/g, "").trim() !== "";
 
   let textInner = "";
   if (hasTextContent) {
     if (isHtmlContent) {
       // Rich text HTML — pass through directly, apply base styles via wrapper
-      textInner = side.text!;
+      textInner = rawText;
+    } else if (isMarkdown) {
+      // Raw Markdown stored before normalization fix — convert now
+      textInner = normalizeToHtml(rawText);
     } else {
       // Legacy plain text with {{hl}}/{{sup}}/{{verb}} markers
-      textInner = pageSide === "back" ? escapeHtmlBackPage(side.text!) : escapeHtmlFrontPage(side.text!);
+      textInner = pageSide === "back" ? escapeHtmlBackPage(rawText) : escapeHtmlFrontPage(rawText);
     }
   }
 
   const textHtml = hasTextContent
-    ? `<div style="font-size:${fontSize}pt;${isHtmlContent ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${textInner}</div>`
+    ? `<div style="font-size:${fontSize}pt;${isHtmlContent || isMarkdown ? "" : `font-weight:${fontWeightVal};`}color:${textColor};line-height:1.3;text-align:${textAlign};word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 2mm;border-radius:0.75mm;position:relative;z-index:1;">${textInner}</div>`
     : "";
 
   const logoHtml = pageSide === "front"
     ? `<img src="${logoUrl}" style="position:absolute;top:3mm;right:3mm;width:4.5mm;height:4.5mm;opacity:1;display:block;z-index:2;" />`
     : "";
 
-  return `<div style="position:relative;width:${CARD_W}mm;height:${CARD_H}mm;${borderStyle}box-sizing:border-box;overflow:hidden;">
+  return `<div style="position:relative;width:${cardW}mm;height:${cardH}mm;${borderStyle}box-sizing:border-box;overflow:hidden;">
     ${logoHtml}
-    <div style="position:absolute;top:0;left:4mm;width:66mm;height:${CARD_H}mm;display:flex;flex-direction:column;align-items:center;justify-content:${justify};overflow:hidden;border-radius:1mm;">
+    <div style="position:absolute;top:0;left:4mm;width:${cardW - 8}mm;height:${cardH}mm;display:flex;flex-direction:column;align-items:center;justify-content:${justify};overflow:hidden;border-radius:1mm;">
       ${imageHtml}
       ${textHtml}
     </div>
@@ -151,6 +169,7 @@ function buildPageHtml(
   cards: FlashcardItem[],
   pageIndex: number,
   side: "front" | "back",
+  globalTextStyle: FlashcardGlobalTextStyle,
   logoUrl: string,
   headerHtml: string,
   footerHtml: string,
@@ -185,7 +204,7 @@ function buildPageHtml(
           }
           gridHtml += `<div style="width:${CARD_W}mm;height:${CARD_H}mm;${emptyBorder}box-sizing:border-box;"></div>`;
         } else {
-          gridHtml += renderCardCell(sideData, isCuttingLine, logoUrl, row, col, side);
+          gridHtml += renderCardCell(sideData, globalTextStyle, isCuttingLine, logoUrl, row, col, side, CARD_W, CARD_H, COLS);
         }
       } else {
         // Empty cell
@@ -214,7 +233,15 @@ function buildPageHtml(
   </div>`;
 }
 
-function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: string, singleSided: boolean, cardsPerPage: number, brand: BrandInfo): string {
+function buildFullHtml(
+  cards: FlashcardItem[],
+  globalTextStyle: FlashcardGlobalTextStyle,
+  logoUrl: string,
+  worksheetId: string,
+  singleSided: boolean,
+  cardsPerPage: number,
+  brand: BrandInfo
+): string {
   const totalFrontPages = Math.ceil(cards.length / cardsPerPage);
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -244,9 +271,9 @@ function buildFullHtml(cards: FlashcardItem[], logoUrl: string, worksheetId: str
   let pagesHtml = "";
 
   for (let i = 0; i < totalFrontPages; i++) {
-    pagesHtml += buildPageHtml(cards, i, "front", logoUrl, headerHtml, footerHtml, cardsPerPage);
+    pagesHtml += buildPageHtml(cards, i, "front", globalTextStyle, logoUrl, headerHtml, footerHtml, cardsPerPage);
     if (!singleSided) {
-      pagesHtml += buildPageHtml(cards, i, "back", logoUrl, headerHtml, footerHtml, cardsPerPage);
+      pagesHtml += buildPageHtml(cards, i, "back", globalTextStyle, logoUrl, headerHtml, footerHtml, cardsPerPage);
     }
   }
 
@@ -288,12 +315,20 @@ ${fontsLink}
   img {
     display: block;
   }
-  /* Rich text (TipTap) content inside cards */
+  /* Rich text (TipTap / imported Markdown) content inside cards */
   p { margin: 0 0 0.4em 0; }
   p:last-child { margin-bottom: 0; }
+  strong, b { font-weight: 700; }
+  em, i { font-style: italic; }
+  s, del { text-decoration: line-through; }
+  u { text-decoration: underline; }
+  code { font-family: monospace; font-size: 0.9em; }
   mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
-  sup { font-size: 0.65em; }
-  sub { font-size: 0.65em; }
+  sup { font-size: 0.65em; vertical-align: super; }
+  sub { font-size: 0.65em; vertical-align: sub; }
+  ul { list-style: disc inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  ol { list-style: decimal inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  li { margin: 0; }
 </style>
 </head>
 <body>
@@ -358,6 +393,176 @@ function repadCards(cards: FlashcardItem[], pageSize: number): FlashcardItem[] {
   return result;
 }
 
+  // ─── Portrait layout constants (A4 portrait, 2×4 grid) ─────
+  const P_CARD_W = 85;  // mm
+  const P_CARD_H = 55;  // mm
+  const P_COLS = 2;
+  const P_ROWS = 4;
+  const P_PAGE_W = 210;
+  const P_PAGE_H = 297;
+
+  function buildPageHtmlPortrait(
+    cards: FlashcardItem[],
+    pageIndex: number,
+    side: "front" | "back",
+    globalTextStyle: FlashcardGlobalTextStyle,
+    logoUrl: string,
+    headerHtml: string,
+    footerHtml: string
+  ): string {
+    const perPage = P_COLS * P_ROWS;
+    const start = pageIndex * perPage;
+    const pageCards = cards.slice(start, start + perPage);
+    const isCuttingLine = true;
+
+    let gridHtml = "";
+    for (let row = 0; row < P_ROWS; row++) {
+      gridHtml += `<div style="display:flex;">`;
+      for (let col = 0; col < P_COLS; col++) {
+        const effectiveCol = side === "back" ? P_COLS - 1 - col : col;
+        const idx = row * P_COLS + effectiveCol;
+        const card = pageCards[idx];
+
+        if (card) {
+          const sideData = side === "front" ? card.front : card.back;
+          const hasText = sideData.text && sideData.text.replace(/<[^>]*>/g, "").trim() !== "";
+          const isBlank = !hasText && !sideData.image;
+          if (isBlank) {
+            let emptyBorder = "";
+            if (isCuttingLine) {
+              const borderColor = side === "back" ? "transparent" : "#ccc";
+              const b = `0.5px dashed ${borderColor}`;
+              emptyBorder = `border-right:${b};border-bottom:${b};`;
+              if (col === 0) emptyBorder += `border-left:${b};`;
+              if (row === 0) emptyBorder += `border-top:${b};`;
+            }
+            gridHtml += `<div style="width:${P_CARD_W}mm;height:${P_CARD_H}mm;${emptyBorder}box-sizing:border-box;"></div>`;
+          } else {
+            gridHtml += renderCardCell(sideData, globalTextStyle, isCuttingLine, logoUrl, row, col, side, P_CARD_W, P_CARD_H, P_COLS);
+          }
+        } else {
+          let emptyBorder = "";
+          if (isCuttingLine) {
+            const borderColor = side === "back" ? "transparent" : "#ccc";
+            const b = `0.5px dashed ${borderColor}`;
+            emptyBorder = `border-right:${b};border-bottom:${b};`;
+            if (col === 0) emptyBorder += `border-left:${b};`;
+            if (row === 0) emptyBorder += `border-top:${b};`;
+          }
+          gridHtml += `<div style="width:${P_CARD_W}mm;height:${P_CARD_H}mm;${emptyBorder}box-sizing:border-box;"></div>`;
+        }
+      }
+      gridHtml += `</div>`;
+    }
+
+    return `<div class="page">
+      ${headerHtml}
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:${P_PAGE_W}mm;height:${P_PAGE_H}mm;">
+        <div style="display:flex;flex-direction:column;">
+          ${gridHtml}
+        </div>
+      </div>
+      ${footerHtml}
+    </div>`;
+  }
+
+  function buildFullHtmlPortrait(
+    cards: FlashcardItem[],
+    globalTextStyle: FlashcardGlobalTextStyle,
+    logoUrl: string,
+    worksheetId: string,
+    singleSided: boolean,
+    brand: BrandInfo
+  ): string {
+    const perPage = P_COLS * P_ROWS;
+    const totalFrontPages = Math.ceil(cards.length / perPage);
+    const currentYear = new Date().getFullYear();
+    const currentDate = new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    const replaceVars = (s: string) =>
+      s
+        .replace(/\{year\}/g, String(currentYear))
+        .replace(/\{current_year\}/g, String(currentYear))
+        .replace(/\{current_date\}/g, currentDate)
+        .replace(/\{worksheet_uuid\}/g, worksheetId)
+        .replace(/\{organization\}/g, brand.organization);
+
+    const footerLeft = brand.footerLeft ? replaceVars(brand.footerLeft) : `&copy; ${currentYear} lingostar | Marcel Allenspach<br/>Alle Rechte vorbehalten`;
+    const footerRight = brand.footerRight ? replaceVars(brand.footerRight) : `${worksheetId}<br/>${currentDate}`;
+
+    const footerFont = brand.headerFooterFont || "'Encode Sans', sans-serif";
+    const headerHtml = `<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;padding:10mm 12mm 0 12mm;z-index:10;">
+      <img src="${logoUrl}" style="width:6mm;height:auto;" />
+    </div>`;
+    const footerHtml = `<div style="position:absolute;bottom:0;left:0;right:0;font-size:7pt;font-family:${footerFont};color:#666;padding:0 12mm 5mm 12mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:10;">
+      <div style="text-align:left;line-height:1.4;">${footerLeft}</div>
+      <div style="text-align:right;line-height:1.4;">${footerRight}</div>
+    </div>`;
+
+    let pagesHtml = "";
+    for (let i = 0; i < totalFrontPages; i++) {
+      pagesHtml += buildPageHtmlPortrait(cards, i, "front", globalTextStyle, logoUrl, headerHtml, footerHtml);
+      if (!singleSided) {
+        pagesHtml += buildPageHtmlPortrait(cards, i, "back", globalTextStyle, logoUrl, headerHtml, footerHtml);
+      }
+    }
+
+    const fontsLink = brand.googleFontsUrl
+      ? `<link href="${brand.googleFontsUrl}" rel="stylesheet">\n<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`
+      : `<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`;
+
+    return `<!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  ${fontsLink}
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    * { margin: 0; padding: 0; }
+    html, body {
+      width: ${P_PAGE_W}mm;
+      margin: 0;
+      padding: 0;
+      font-family: "Encode Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      width: ${P_PAGE_W}mm;
+      height: ${P_PAGE_H}mm;
+      page-break-after: always;
+      overflow: hidden;
+      position: relative;
+    }
+    .page:last-child { page-break-after: auto; }
+    img { display: block; }
+    /* Rich text (TipTap / imported Markdown) content inside cards */
+    p { margin: 0 0 0.4em 0; }
+    p:last-child { margin-bottom: 0; }
+    strong, b { font-weight: 700; }
+    em, i { font-style: italic; }
+    s, del { text-decoration: line-through; }
+    u { text-decoration: underline; }
+    code { font-family: monospace; font-size: 0.9em; }
+    mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
+    sup { font-size: 0.65em; vertical-align: super; }
+    sub { font-size: 0.65em; vertical-align: sub; }
+    ul { list-style: disc inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+    ol { list-style: decimal inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+    li { margin: 0; }
+  </style>
+  </head>
+  <body>
+  ${pagesHtml}
+  </body>
+  </html>`;
+  }
+
 // GET /api/worksheets/[id]/flashcard-pdf
 export async function GET(
   _req: NextRequest,
@@ -369,6 +574,7 @@ export async function GET(
 
   const { id } = await params;
   const locale = (_req.nextUrl.searchParams.get("locale") || "DE").toUpperCase() as "DE" | "CH";
+  const layout = (_req.nextUrl.searchParams.get("layout") || "landscape") as "landscape" | "portrait";
   const isSwiss = locale === "CH";
 
   const worksheet = await prisma.worksheet.findFirst({
@@ -427,6 +633,11 @@ export async function GET(
   }
 
   const singleSided = settings.singleSided === true;
+  const globalTextStyle: FlashcardGlobalTextStyle = {
+    fontSize: settings.globalTextStyle?.fontSize ?? 11,
+    textAlign: settings.globalTextStyle?.textAlign ?? "center",
+    textColor: settings.globalTextStyle?.textColor ?? "#000000",
+  };
 
   // ── Resolve brand settings ────────────────────────────────
   const brand: BrandInfo = {
@@ -488,7 +699,9 @@ export async function GET(
     brand.logoUrl = `data:image/svg+xml,${encodeURIComponent(fallbackSvgRaw)}`;
   }
 
-  const html = buildFullHtml(cards, brand.logoUrl, worksheet.id, singleSided, cardsPerPage, brand);
+  const html = layout === "portrait"
+    ? buildFullHtmlPortrait(cards, globalTextStyle, brand.logoUrl, worksheet.id, singleSided, brand)
+    : buildFullHtml(cards, globalTextStyle, brand.logoUrl, worksheet.id, singleSided, cardsPerPage, brand);
 
   try {
     console.log(`[Flashcard PDF] Generating PDF for ${cards.length} cards`);
@@ -518,7 +731,7 @@ export async function GET(
 
     const pdfBuffer = await page.pdf({
       format: "A4",
-      landscape: true,
+      landscape: layout !== "portrait",
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       printBackground: true,
       displayHeaderFooter: false,
@@ -528,12 +741,13 @@ export async function GET(
     await browser.close();
 
     const finalPdfBytes = new Uint8Array(pdfBuffer);
-    const frontPages = Math.ceil(cards.length / cardsPerPage);
+    const perPage = layout === "portrait" ? P_COLS * P_ROWS : cardsPerPage;
+    const frontPages = Math.ceil(cards.length / perPage);
     const totalPages = singleSided ? frontPages : frontPages * 2;
     console.log(`[Flashcard PDF] Generated ${finalPdfBytes.length} bytes, ${totalPages} pages (singleSided=${singleSided})`);
 
     const shortId = worksheet.id.slice(0, 16);
-    const filename = `${shortId}_${locale}.pdf`;
+    const filename = `${shortId}_${locale}_${layout}.pdf`;
 
     return new NextResponse(Buffer.from(finalPdfBytes), {
       headers: {

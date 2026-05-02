@@ -9,6 +9,7 @@
 .badgeToken {
   --viewer-badge-size: 20px;
   --viewer-badge-radius: 3px;
+  --viewer-control-size: 16px;
 }
 
 .blockShadow {
@@ -34,10 +35,10 @@
 
 .controlBox {
   box-sizing: border-box;
-  width: var(--viewer-badge-size, 20px);
-  height: var(--viewer-badge-size, 20px);
-  min-width: var(--viewer-badge-size, 20px);
-  min-height: var(--viewer-badge-size, 20px);
+  width: var(--viewer-control-size, 16px);
+  height: var(--viewer-control-size, 16px);
+  min-width: var(--viewer-control-size, 16px);
+  min-height: var(--viewer-control-size, 16px);
   color: var(--viewer-interactive-color, var(--color-primary));
   border-radius: var(--viewer-badge-radius, 3px);
   border: 0;
@@ -297,14 +298,17 @@
 
 .lineDotListItem {
   position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 32.5px;
   margin: 0;
   padding: 0.3rem 0 0.3rem 2rem;
   line-height: 1.35em;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: var(--viewer-divider-style, 1px solid var(--border));
 }
 
 .lineDotListItem:first-child {
-  border-top: 1px solid #e5e7eb;
+  border-top: var(--viewer-divider-style, 1px solid var(--border));
 }
 
 .lineDotListItem::before {

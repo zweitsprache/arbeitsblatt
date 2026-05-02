@@ -98,7 +98,7 @@ function renderCardSlot(
 
   // ─── Landscape-1: simplified full-width text-only slot ─────
   if (dims.perPage === 1) {
-    const isHtmlContent = card.text ? /^<[a-z][\s\S]*>/i.test(card.text.trim()) : false;
+    const isHtmlContent = card.text ? /<\/?[a-z][\s\S]*?>/i.test(card.text) : false;
     const hasTextContent = card.text && card.text.replace(/<[^>]*>/g, "").trim() !== "";
     const textSizeClass =
       card.textSize === "sm" ? "text-sm" :
@@ -184,7 +184,7 @@ function renderCardSlot(
 
   // Text area — position depends on textPosition
   // Detect if text is HTML (from TipTap rich text editor) or plain text (legacy)
-  const isHtmlContent = card.text ? /^<[a-z][\s\S]*>/i.test(card.text.trim()) : false;
+  const isHtmlContent = card.text ? /<\/?[a-z][\s\S]*?>/i.test(card.text) : false;
   const hasTextContent = card.text && card.text.replace(/<[^>]*>/g, "").trim() !== "";
   let textHTML = "";
   if (hasTextContent) {
@@ -403,12 +403,20 @@ function buildFullHtml(
     height: 1px;
   }
   img { display: block; }
-  /* Rich text (TipTap) content inside cards */
+  /* Rich text (TipTap / imported Markdown) content inside cards */
   p { margin: 0 0 0.4em 0; }
   p:last-child { margin-bottom: 0; }
+  strong, b { font-weight: 700; }
+  em, i { font-style: italic; }
+  s, del { text-decoration: line-through; }
+  u { text-decoration: underline; }
+  code { font-family: monospace; font-size: 0.9em; }
   mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
-  sup { font-size: 0.65em; }
-  sub { font-size: 0.65em; }
+  sup { font-size: 0.65em; vertical-align: super; }
+  sub { font-size: 0.65em; vertical-align: sub; }
+  ul { list-style: disc inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  ol { list-style: decimal inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  li { margin: 0; }
 </style>
 </head>
 <body>

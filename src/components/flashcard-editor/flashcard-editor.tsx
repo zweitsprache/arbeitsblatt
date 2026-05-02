@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { FlashcardProvider, useFlashcardEditor, FlashcardLocaleMode } from "@/store/flashcard-store";
-import { FlashcardDocument, FlashcardItem, FlashcardSide } from "@/types/flashcard";
+import { FlashcardDocument, FlashcardGlobalTextStyle, FlashcardItem, FlashcardSide } from "@/types/flashcard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,9 @@ import {
   AlignVerticalJustifyEnd,
   ImageDown,
   ALargeSmall,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { FlashcardRichTextEditor } from "./flashcard-rich-text-editor";
 import { CsvImportModal } from "./csv-import-modal";
@@ -67,6 +70,7 @@ function FlashcardSideEditor({
   sideKey,
   localeMode,
   chOverrides,
+  globalTextStyle,
   onChange,
   onSetChOverride,
   onClearChOverride,
@@ -77,6 +81,7 @@ function FlashcardSideEditor({
   sideKey: "front" | "back";
   localeMode: FlashcardLocaleMode;
   chOverrides?: Record<string, Record<string, string>>;
+  globalTextStyle: FlashcardGlobalTextStyle;
   onChange: (side: FlashcardSide) => void;
   onSetChOverride: (cardId: string, fieldPath: string, value: string) => void;
   onClearChOverride: (cardId: string, fieldPath: string) => void;
@@ -144,6 +149,9 @@ function FlashcardSideEditor({
   const effectiveImage = localeMode === "CH"
     ? getEffectiveValue(side.image || "", cardId, `${sideKey}.image`, localeMode, chOverrides)
     : side.image;
+  const effectiveFontSize = side.fontSize ?? globalTextStyle.fontSize;
+  const effectiveTextAlign = side.textAlign ?? globalTextStyle.textAlign;
+  const effectiveTextColor = side.textColor ?? globalTextStyle.textColor;
 
   return (
     <div className="flex-1 space-y-2">
@@ -244,9 +252,11 @@ function FlashcardSideEditor({
             }}
           >
             <div
-              className="text-center leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words [&_p]:m-0"
+              className="leading-tight bg-white/85 px-1.5 py-0.5 rounded-sm max-w-[90%] break-words [&_p]:m-0"
               style={{
-                fontSize: `${Math.max(7, Math.round(((side.fontSize ?? 11) / 11) * 12))}px`,
+                fontSize: `${Math.max(7, Math.round((effectiveFontSize / 11) * 12))}px`,
+                textAlign: effectiveTextAlign,
+                color: effectiveTextColor,
               }}
               dangerouslySetInnerHTML={{ __html: effectiveText }}
             />
@@ -322,14 +332,73 @@ function FlashcardSideEditor({
           {/* Text size slider */}
           <ALargeSmall className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Slider
-            value={[side.fontSize ?? 11]}
+            value={[effectiveFontSize]}
             min={6}
             max={120}
             step={1}
             onValueChange={([value]) => onChange({ ...side, fontSize: value })}
             className="flex-1"
           />
-          <span className="text-[10px] text-muted-foreground w-10 text-right">{side.fontSize ?? 11}pt</span>
+          <span className="text-[10px] text-muted-foreground w-10 text-right">{effectiveFontSize}pt</span>
+          {side.fontSize !== undefined && (
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground hover:text-foreground underline"
+              onClick={() => onChange({ ...side, fontSize: undefined })}
+            >
+              {t("useGlobal")}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground shrink-0">{t("textAlign")}</span>
+          {(["left", "center", "right"] as const).map((align) => {
+            const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
+            return (
+              <button
+                key={align}
+                type="button"
+                className={`p-1 rounded transition-colors ${
+                  effectiveTextAlign === align
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+                onClick={() => onChange({ ...side, textAlign: align })}
+                title={t(`textAlign_${align}`)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            );
+          })}
+          {side.textAlign !== undefined && (
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground hover:text-foreground underline"
+              onClick={() => onChange({ ...side, textAlign: undefined })}
+            >
+              {t("useGlobal")}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground shrink-0">{t("textColor")}</span>
+          <input
+            type="color"
+            value={effectiveTextColor}
+            className="h-6 w-8 rounded border border-border bg-transparent p-0"
+            onChange={(e) => onChange({ ...side, textColor: e.target.value })}
+            aria-label={t("textColor")}
+          />
+          <span className="text-[10px] text-muted-foreground">{effectiveTextColor}</span>
+          {side.textColor !== undefined && (
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground hover:text-foreground underline"
+              onClick={() => onChange({ ...side, textColor: undefined })}
+            >
+              {t("useGlobal")}
+            </button>
+          )}
         </div>
         <FlashcardRichTextEditor
           content={getEffectiveValue(side.text, cardId, `${sideKey}.text`, localeMode, chOverrides)}
@@ -379,6 +448,7 @@ function FlashcardRow({
   singleSided,
   localeMode,
   chOverrides,
+  globalTextStyle,
   frontLabel,
   backLabel,
   onSelect,
@@ -394,6 +464,7 @@ function FlashcardRow({
   singleSided: boolean;
   localeMode: FlashcardLocaleMode;
   chOverrides?: Record<string, Record<string, string>>;
+  globalTextStyle: FlashcardGlobalTextStyle;
   frontLabel: string;
   backLabel: string;
   onSelect: () => void;
@@ -460,6 +531,7 @@ function FlashcardRow({
           sideKey="front"
           localeMode={localeMode}
           chOverrides={chOverrides}
+          globalTextStyle={globalTextStyle}
           onChange={(front) => onUpdate({ front })}
           onSetChOverride={onSetChOverride}
           onClearChOverride={onClearChOverride}
@@ -474,6 +546,7 @@ function FlashcardRow({
               sideKey="back"
               localeMode={localeMode}
               chOverrides={chOverrides}
+              globalTextStyle={globalTextStyle}
               onChange={(back) => onUpdate({ back })}
               onSetChOverride={onSetChOverride}
               onClearChOverride={onClearChOverride}
@@ -495,6 +568,7 @@ function FlashcardEditorInner({
   const t = useTranslations("flashcardEditor");
   const tc = useTranslations("common");
   const availableBrands = useAvailableBrands();
+  const globalTextStyle = state.settings.globalTextStyle;
 
   const frontLabel = worksheetType === "kartenpaare" ? "Item A" : t("front");
   const backLabel = worksheetType === "kartenpaare" ? "Item B" : t("back");
@@ -504,6 +578,7 @@ function FlashcardEditorInner({
     open: boolean;
     mode?: "cover" | "pdf";
   }>({ open: false });
+    const [pdfDialog, setPdfDialog] = useState<{ open: boolean; layout: "landscape" | "portrait" }>({ open: false, layout: "landscape" });
   const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   const handleDownloadCover = useCallback(async (locale: "DE" | "CH" = "DE") => {
@@ -537,7 +612,7 @@ function FlashcardEditorInner({
     }
   }, [state.worksheetId, t]);
 
-  const handleDownloadPdf = useCallback(async (locale: "DE" | "CH" = "DE") => {
+  const handleDownloadPdf = useCallback(async (locale: "DE" | "CH" = "DE", layout: "landscape" | "portrait" = "landscape") => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
@@ -546,7 +621,7 @@ function FlashcardEditorInner({
     try {
       const apiPath = worksheetType === "kartenpaare"
         ? `/api/worksheets/${state.worksheetId}/kartenpaare-pdf`
-        : `/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}`;
+        : `/api/worksheets/${state.worksheetId}/flashcard-pdf?locale=${locale}&layout=${layout}`;
       const res = await authFetch(apiPath);
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}`;
@@ -675,6 +750,59 @@ function FlashcardEditorInner({
           </TooltipTrigger>
           <TooltipContent side="bottom">{t("csvImportTooltip")}</TooltipContent>
         </Tooltip>
+        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/20 px-2 py-1">
+          <span className="text-[10px] text-muted-foreground">{t("globalStyle")}</span>
+          <ALargeSmall className="h-3.5 w-3.5 text-muted-foreground" />
+          <Slider
+            value={[globalTextStyle.fontSize]}
+            min={6}
+            max={120}
+            step={1}
+            onValueChange={([value]) =>
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                payload: { globalTextStyle: { ...globalTextStyle, fontSize: value } },
+              })
+            }
+            className="w-24"
+          />
+          <span className="w-8 text-right text-[10px] text-muted-foreground">{globalTextStyle.fontSize}</span>
+          {(["left", "center", "right"] as const).map((align) => {
+            const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight;
+            return (
+              <button
+                key={align}
+                type="button"
+                className={`p-1 rounded transition-colors ${
+                  globalTextStyle.textAlign === align
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_SETTINGS",
+                    payload: { globalTextStyle: { ...globalTextStyle, textAlign: align } },
+                  })
+                }
+                title={t(`textAlign_${align}`)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            );
+          })}
+          <input
+            type="color"
+            value={globalTextStyle.textColor}
+            className="h-6 w-8 rounded border border-border bg-transparent p-0"
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                payload: { globalTextStyle: { ...globalTextStyle, textColor: e.target.value } },
+              })
+            }
+            aria-label={t("textColor")}
+          />
+        </div>
         {/* DE / CH locale toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
           <Button
@@ -756,7 +884,7 @@ function FlashcardEditorInner({
                 if (worksheetType === "kartenpaare") {
                   handleDownloadPdf("DE");
                 } else {
-                  setLocaleDialog({ open: true, mode: "pdf" });
+                  setPdfDialog({ open: true, layout: "landscape" });
                 }
               }}
               disabled={isGeneratingPdf || !state.worksheetId || state.cards.length === 0}
@@ -821,6 +949,7 @@ function FlashcardEditorInner({
                   singleSided={state.settings.singleSided}
                   localeMode={state.localeMode}
                   chOverrides={state.settings.chOverrides}
+                  globalTextStyle={globalTextStyle}
                   frontLabel={frontLabel}
                   backLabel={backLabel}
                   onSelect={() =>
@@ -865,9 +994,9 @@ function FlashcardEditorInner({
         onImport={(cards) => dispatch({ type: "BULK_ADD_CARDS", payload: cards })}
       />
 
-      {/* Locale Picker Dialog */}
+      {/* Cover locale picker */}
       <Dialog
-        open={localeDialog.open}
+        open={localeDialog.open && localeDialog.mode === "cover"}
         onOpenChange={(open) => setLocaleDialog((prev) => ({ ...prev, open }))}
       >
         <DialogContent className="sm:max-w-xs">
@@ -876,30 +1005,76 @@ function FlashcardEditorInner({
             <DialogDescription>{t("pdfLocaleDescription")}</DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-2">
-            <Button
-              className="flex-1 gap-2"
-              variant="outline"
-              onClick={() => {
-                const mode = localeDialog.mode;
-                setLocaleDialog({ open: false });
-                if (mode === "cover") handleDownloadCover("DE");
-                else handleDownloadPdf("DE");
-              }}
-            >
+            <Button className="flex-1 gap-2" variant="outline" onClick={() => { setLocaleDialog({ open: false }); handleDownloadCover("DE"); }}>
               🇩🇪 Deutschland (ß)
             </Button>
-            <Button
-              className="flex-1 gap-2"
-              variant="outline"
-              onClick={() => {
-                const mode = localeDialog.mode;
-                setLocaleDialog({ open: false });
-                if (mode === "cover") handleDownloadCover("CH");
-                else handleDownloadPdf("CH");
-              }}
-            >
+            <Button className="flex-1 gap-2" variant="outline" onClick={() => { setLocaleDialog({ open: false }); handleDownloadCover("CH"); }}>
               🇨🇭 Schweiz (ss)
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF layout + locale picker */}
+      <Dialog open={pdfDialog.open} onOpenChange={(open) => setPdfDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("pdfLayoutTitle")}</DialogTitle>
+            <DialogDescription>{t("pdfLayoutDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            {/* Layout selector */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPdfDialog((prev) => ({ ...prev, layout: "landscape" }))}
+                className={`flex-1 flex flex-col items-center gap-2 rounded-lg border-2 p-3 text-sm transition-colors ${pdfDialog.layout === "landscape" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+              >
+                {/* Landscape card icon */}
+                <svg width="40" height="29" viewBox="0 0 40 29" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+                  <rect x="0.5" y="0.5" width="39" height="28" rx="2.5" stroke="currentColor"/>
+                  <line x1="13.5" y1="1" x2="13.5" y2="28" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="26.5" y1="1" x2="26.5" y2="28" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="1" y1="9.5" x2="39" y2="9.5" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="1" y1="19.5" x2="39" y2="19.5" stroke="currentColor" strokeDasharray="2 2"/>
+                </svg>
+                <span className="font-medium">{t("pdfLayoutLandscape")}</span>
+                <span className="text-xs text-muted-foreground">3 × 3</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPdfDialog((prev) => ({ ...prev, layout: "portrait" }))}
+                className={`flex-1 flex flex-col items-center gap-2 rounded-lg border-2 p-3 text-sm transition-colors ${pdfDialog.layout === "portrait" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+              >
+                {/* Portrait card icon */}
+                <svg width="29" height="40" viewBox="0 0 29 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+                  <rect x="0.5" y="0.5" width="28" height="39" rx="2.5" stroke="currentColor"/>
+                  <line x1="1" y1="10.5" x2="28" y2="10.5" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="1" y1="20.5" x2="28" y2="20.5" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="1" y1="30.5" x2="28" y2="30.5" stroke="currentColor" strokeDasharray="2 2"/>
+                  <line x1="14.5" y1="1" x2="14.5" y2="39" stroke="currentColor" strokeDasharray="2 2"/>
+                </svg>
+                <span className="font-medium">{t("pdfLayoutPortrait")}</span>
+                <span className="text-xs text-muted-foreground">2 × 4</span>
+              </button>
+            </div>
+            {/* Locale buttons */}
+            <div className="flex gap-3">
+              <Button
+                className="flex-1 gap-2"
+                variant="outline"
+                onClick={() => { setPdfDialog({ open: false, layout: pdfDialog.layout }); handleDownloadPdf("DE", pdfDialog.layout); }}
+              >
+                🇩🇪 Deutschland (ß)
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                variant="outline"
+                onClick={() => { setPdfDialog({ open: false, layout: pdfDialog.layout }); handleDownloadPdf("CH", pdfDialog.layout); }}
+              >
+                🇨🇭 Schweiz (ss)
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

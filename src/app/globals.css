@@ -61,6 +61,7 @@
 
 :root {
   --radius: 0.625rem;
+  --viewer-divider-style: 1px solid var(--border);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -852,6 +853,25 @@
   margin-left: calc(-1 * var(--print-list-icon-lane)) !important;
   width: calc(100% + var(--print-list-icon-lane)) !important;
   border-bottom: var(--print-list-divider) !important;
+}
+
+/* Dos/Don'ts lists define their own item separators; opt out of generic print list dividers. */
+.print-worksheet-root .print-body-content .lineDotList {
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+.print-worksheet-root .print-body-content .lineDotList > .lineDotListItem {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 32.5px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 2rem !important;
+}
+
+.print-worksheet-root .print-body-content .lineDotList > .lineDotListItem::after {
+  content: none !important;
 }
 
 @media print {

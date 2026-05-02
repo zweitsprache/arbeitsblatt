@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Palette, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Palette, Plus, MoreVertical, Pencil, Trash2, Copy } from "lucide-react";
 import type { BrandProfile } from "@/types/worksheet";
 
 export function BrandsDashboard() {
@@ -31,6 +31,7 @@ export function BrandsDashboard() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [creating, setCreating] = useState(false);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const fetchBrands = useCallback(async () => {
     try {
@@ -66,6 +67,25 @@ export function BrandsDashboard() {
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    setDuplicating(id);
+    try {
+      const res = await authFetch(`/api/brands/${id}/duplicate`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        fetchBrands();
+      } else {
+        const { error } = await res.json();
+        alert(error);
+      }
+    } catch (err) {
+      console.error("duplicate brand error:", err);
+    } finally {
+      setDuplicating(null);
     }
   };
 
@@ -134,6 +154,13 @@ export function BrandsDashboard() {
                       <Pencil className="h-4 w-4 mr-2" />
                       {t("edit")}
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDuplicate(brand.id)}
+                    disabled={duplicating === brand.id}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    {duplicating === brand.id ? t("duplicating") : t("duplicateBrand")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"

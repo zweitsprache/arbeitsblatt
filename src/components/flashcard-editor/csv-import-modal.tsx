@@ -1,26 +1,59 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { v4 as uuidv4 } from "uuid";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { AlertCircle, FileText, Upload } from "lucide-react";
 import { FlashcardItem } from "@/types/flashcard";
+import { normalizeToHtml } from "@/lib/markdown-to-html";
 
 interface CsvImportModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (cards: FlashcardItem[]) => void;
+}
+
+function parseDelimitedLine(line: string, separator: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === separator && !inQuotes) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  parts.push(current);
+  return parts;
 }
 
 function parseCSV(text: string): { cards: FlashcardItem[]; errors: string[] } {
@@ -32,7 +65,6 @@ function parseCSV(text: string): { cards: FlashcardItem[]; errors: string[] } {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Try semicolon first, then tab, then comma
     let separator: string;
     if (line.includes("\t")) {
       separator = "\t";
@@ -41,18 +73,17 @@ function parseCSV(text: string): { cards: FlashcardItem[]; errors: string[] } {
     } else if (line.includes(",")) {
       separator = ",";
     } else {
-      // Single value — use as front, leave back empty
       cards.push({
         id: uuidv4(),
-        front: { text: line },
+        front: { text: normalizeToHtml(line) },
         back: { text: "" },
       });
       continue;
     }
 
-    const parts = line.split(separator);
-    const front = parts[0]?.trim() ?? "";
-    const back = parts[1]?.trim() ?? "";
+    const parts = parseDelimitedLine(line, separator);
+    const front = normalizeToHtml(parts[0]?.trim() ?? "");
+    const back = normalizeToHtml(parts[1]?.trim() ?? "");
 
     if (!front && !back) {
       errors.push(`${i + 1}`);
@@ -69,11 +100,11 @@ function parseCSV(text: string): { cards: FlashcardItem[]; errors: string[] } {
   return { cards, errors };
 }
 
-export function CsvImportModal({
-  open,
-  onOpenChange,
-  onImport,
-}: CsvImportModalProps) {
+function stripTags(value: string): string {
+  return value.replace(/<[^>]*>/g, "").trim();
+}
+
+export function CsvImportModal({ open, onOpenChange, onImport }: CsvImportModalProps) {
   const t = useTranslations("flashcardEditor");
   const [csvText, setCsvText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +123,7 @@ export function CsvImportModal({
       }
     };
     reader.readAsText(file);
+
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -137,7 +169,7 @@ export function CsvImportModal({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.tsv,.txt"
+              accept=".csv,.tsv,.txt,.md,.markdown,.html,.htm"
               className="hidden"
               onChange={handleFileUpload}
             />
@@ -154,7 +186,6 @@ export function CsvImportModal({
             )}
           </div>
 
-          {/* Preview */}
           {cards.length > 0 && (
             <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
               <table className="w-full text-sm">
@@ -169,14 +200,14 @@ export function CsvImportModal({
                   {cards.slice(0, 50).map((card, i) => (
                     <tr key={card.id} className="hover:bg-muted/30">
                       <td className="px-3 py-1.5 text-xs text-muted-foreground">{i + 1}</td>
-                      <td className="px-3 py-1.5 truncate max-w-[200px]">{card.front.text}</td>
-                      <td className="px-3 py-1.5 truncate max-w-[200px]">{card.back.text || "–"}</td>
+                      <td className="px-3 py-1.5 truncate max-w-[200px]">{stripTags(card.front.text)}</td>
+                      <td className="px-3 py-1.5 truncate max-w-[200px]">{stripTags(card.back.text) || "-"}</td>
                     </tr>
                   ))}
                   {cards.length > 50 && (
                     <tr>
                       <td colSpan={3} className="px-3 py-1.5 text-xs text-muted-foreground text-center">
-                        … {t("csvImportMore", { count: cards.length - 50 })}
+                        ... {t("csvImportMore", { count: cards.length - 50 })}
                       </td>
                     </tr>
                   )}

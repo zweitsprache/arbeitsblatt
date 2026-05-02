@@ -7,6 +7,7 @@ import { resolveSubProfileHeaderFooter } from "@/types/worksheet";
 import type { BrandProfile } from "@/types/worksheet";
 import fs from "fs";
 import path from "path";
+import { normalizeToHtml, hasMarkdownSyntax, hasHtmlMarkup } from "@/lib/markdown-to-html";
 
 // ─── Brand info passed through rendering ────────────────────
 interface BrandInfo {
@@ -108,8 +109,10 @@ function renderContentCell(
     imageHtml = `<img src="${side.image}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:${imgW}mm;height:${imgH}mm;object-fit:cover;" />`;
   }
 
-  const isHtmlContent = side.text ? /^<[a-z][\s\S]*>/i.test(side.text.trim()) : false;
-  const hasTextContent = side.text && side.text.replace(/<[^>]*>/g, "").trim() !== "";
+  const rawText = side.text ?? "";
+  const isHtmlContent = hasHtmlMarkup(rawText);
+  const isMarkdown = !isHtmlContent && hasMarkdownSyntax(rawText);
+  const hasTextContent = rawText.replace(/<[^>]*>/g, "").trim() !== "";
 
   const fontSize = side.fontSize ?? 10;
   const fontWeightVal = side.fontWeight === "bold" ? 700 : 400;
@@ -120,9 +123,11 @@ function renderContentCell(
   let textHtml = "";
   if (hasTextContent) {
     const textInner = isHtmlContent
-      ? side.text!
-      : escapeHtml(side.text!);
-    textHtml = `<div class="card-content" style="font-size:${fontSize}pt;${isHtmlContent ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 1.5mm;border-radius:0.5mm;position:relative;z-index:1;">${textInner}</div>`;
+      ? rawText
+      : isMarkdown
+        ? normalizeToHtml(rawText)
+        : escapeHtml(rawText);
+    textHtml = `<div class="card-content" style="font-size:${fontSize}pt;${isHtmlContent || isMarkdown ? "" : `font-weight:${fontWeightVal};color:${textColor};`}line-height:1.3;text-align:center;word-break:break-word;max-width:100%;background:rgba(255,255,255,0.85);padding:1mm 1.5mm;border-radius:0.5mm;position:relative;z-index:1;">${textInner}</div>`;
   }
 
   const SMALL_ICON = 3.5;
@@ -332,9 +337,17 @@ ${fontsLink}
   .card-content p:last-child { margin-bottom: 0; }
   .footer-col p { margin: 0; }
   .footer-col > * { margin: 0; }
+  strong, b { font-weight: 700; }
+  em, i { font-style: italic; }
+  s, del { text-decoration: line-through; }
+  u { text-decoration: underline; }
+  code { font-family: monospace; font-size: 0.9em; }
   mark { background: #fef08a; padding: 0 1px; border-radius: 1px; }
-  sup { font-size: 0.65em; }
-  sub { font-size: 0.65em; }
+  sup { font-size: 0.65em; vertical-align: super; }
+  sub { font-size: 0.65em; vertical-align: sub; }
+  ul { list-style: disc inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  ol { list-style: decimal inside; padding-left: 4px; margin: 0 0 0.4em 0; }
+  li { margin: 0; }
 </style>
 </head>
 <body>

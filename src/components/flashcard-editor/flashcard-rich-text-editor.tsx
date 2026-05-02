@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { normalizeToHtml } from "@/lib/markdown-to-html";
 
 interface FlashcardRichTextEditorProps {
   content: string;
@@ -94,6 +95,8 @@ export function FlashcardRichTextEditor({
   const tf = useTranslations("flashcardEditor");
   const resolvedPlaceholder = placeholder ?? tf("textPlaceholder");
 
+  const normalizedContent = normalizeToHtml(content);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -121,9 +124,15 @@ export function FlashcardRichTextEditor({
       Subscript,
       Superscript,
     ],
-    content,
+    content: normalizedContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+    },
+    onCreate: ({ editor }) => {
+      // If the raw content was Markdown, emit the normalized HTML to upgrade the store
+      if (normalizedContent !== content) {
+        onChange(editor.getHTML());
+      }
     },
     editorProps: {
       attributes: {
@@ -136,8 +145,13 @@ export function FlashcardRichTextEditor({
   // Sync external content changes (e.g. locale switch)
   useEffect(() => {
     if (!editor) return;
-    if (!editor.isFocused && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false });
+    const normalized = normalizeToHtml(content);
+    if (!editor.isFocused && normalized !== editor.getHTML()) {
+      editor.commands.setContent(normalized, { emitUpdate: false });
+      // Persist normalized HTML if it differs from the raw stored value
+      if (normalized !== content) {
+        onChange(normalized);
+      }
     }
   }, [content, editor]);
 

@@ -79,7 +79,7 @@ const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 const CONSISTENT_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b";
-const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[37px] items-center gap-3 border-b";
+const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[32.5px] items-center gap-3 border-b";
 const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b font-bold";
 
 // Inline <svg> bullet marker for viewer/print lists.
@@ -4595,9 +4595,9 @@ function DosAndDontsView({ block }: { block: DosAndDontsBlock }) {
       {block.showTitles !== false && (
         <p className={s.dosDontsTitle}>{title}</p>
       )}
-      <ul className={s.lineDotList}>
+      <ul className={`${s.lineDotList} lineDotList`}>
         {items.map((item) => (
-          <li key={item.id} className={s.lineDotListItem}>{item.text}</li>
+          <li key={item.id} className={`${s.lineDotListItem} lineDotListItem`}>{item.text}</li>
         ))}
       </ul>
     </div>
@@ -4775,16 +4775,20 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
 function ChecklistView({
   block,
   originalBlock,
+  mode,
   isNonLatin,
   translationScale,
 }: {
   block: ChecklistBlock;
   originalBlock?: ChecklistBlock;
+  mode: ViewMode;
   isNonLatin?: boolean;
   translationScale?: number;
 }) {
   const isBilingual = !!block.bilingual && !!originalBlock;
+  const isPrint = mode === "print";
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const rowClass = isPrint ? CONSISTENT_ROW_CLASS_PRINT : CONSISTENT_ROW_CLASS;
 
   const renderChecklistColumn = (
     item: ChecklistBlock["items"][number],
@@ -4796,7 +4800,7 @@ function ChecklistView({
         display: "grid",
         gridTemplateColumns: "20px minmax(0, 1fr)",
         columnGap: "1rem",
-        alignItems: "start",
+        alignItems: isPrint ? "center" : "start",
         ...(options?.withDivider
           ? {
               borderLeft: "1px solid var(--border)",
@@ -4805,7 +4809,12 @@ function ChecklistView({
           : {}),
       }}
     >
-      <div className={CONTROL_BOX_CLASS} style={{ marginTop: "0.15rem" }} />
+      <div
+        className={CONTROL_BOX_CLASS}
+        style={isPrint
+          ? { width: 16, height: 16, minWidth: 16, minHeight: 16 }
+          : { marginTop: "0.15rem" }}
+      />
       <div className={`${s.checklistText} tiptap-compact`} style={style}>
         <div
           className="tiptap max-w-none"
@@ -4831,7 +4840,8 @@ function ChecklistView({
         return (
           <div
             key={item.id}
-            className={CONSISTENT_ROW_CLASS}
+            className={rowClass}
+            style={{ borderBottom: "var(--viewer-divider-style, 1px solid var(--border))" }}
           >
             <span className="w-6 text-left shrink-0">
               {String(index + 1).padStart(2, "0")}
@@ -5249,9 +5259,10 @@ function StaticScheduleTable({
   return (
     <>
       <style>{`
-        .scheduleNew{width:100%;border-collapse:collapse;border-top:1px solid var(--border);}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid var(--border);height:49px;vertical-align:middle;box-sizing:border-box;}
-        .scheduleNew thead tr th{height:49px;border-bottom:1px solid var(--border);font-weight:500;}
+        .scheduleNew{width:100%;border-collapse:collapse;border-top:var(--viewer-divider-style, 1px solid var(--border));}
+        .scheduleNew th,.scheduleNew td{border-bottom:var(--viewer-divider-style, 1px solid var(--border));vertical-align:middle;box-sizing:border-box;}
+        .scheduleNew tbody td{height:37px;}
+        .scheduleNew thead tr th{height:49px;border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:500;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
@@ -5858,7 +5869,7 @@ export function ViewerBlockRenderer({
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "checklist":
-      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":
       return (
         <AccordionView

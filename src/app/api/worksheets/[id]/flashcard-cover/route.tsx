@@ -158,6 +158,24 @@ function renderInlineMarkers(
   return elements;
 }
 
+function htmlToPlainText(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+function normalizeCardTextForCover(value: string): string {
+  return /<\/?[a-z][\s\S]*?>/i.test(value) ? htmlToPlainText(value) : value;
+}
+
 // ─── Mini-card component for satori ─────────────────────────
 
 function MiniCard({
@@ -170,7 +188,7 @@ function MiniCard({
   iconDataUri: string;
 }) {
   const fontSize = 13;
-  const text = sideData.text || "";
+  const text = normalizeCardTextForCover(sideData.text || "");
 
   return (
     <div
