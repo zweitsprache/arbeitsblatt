@@ -1128,6 +1128,17 @@
   }
 
   /* Print-safe line-dot list marker using CSS gradients instead of SVG background assets. */
+
+  /* Schedule block print styles */
+  /* Align time cells to top vertically and override inline middle alignment */
+  .print-worksheet-root .scheduleNew tbody td:nth-child(n+3):nth-child(-n+5) {
+    vertical-align: top !important;
+  }
+
+  /* Remove left padding from Zeit header (3rd th element in header row) */
+  .print-worksheet-root .scheduleNew thead th:nth-child(3) {
+    padding-left: 0 !important;
+  }
 }
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide {

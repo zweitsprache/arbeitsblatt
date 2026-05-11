@@ -1708,7 +1708,7 @@ function WordBankRenderer({ block }: { block: WordBankBlock }) {
         {block.words.map((word, i) => (
           <span
             key={i}
-            className="px-3 py-0.5 rounded border border-border text-[10px]"
+            className="px-3 py-0.5 rounded border border-border text-cv-sm"
           >
             {word}
           </span>
@@ -5221,6 +5221,19 @@ function StaticScheduleTable({
     verticalAlign: "top",
     boxSizing: "border-box",
   };
+  const headerTimeStyle: React.CSSProperties = {
+    ...headerCellStyle,
+    paddingLeft: 0,
+  };
+  const dashStyle: React.CSSProperties = {
+    whiteSpace: "nowrap",
+    padding: "4px 0",
+    lineHeight: "1.35rem",
+    verticalAlign: "top",
+    textAlign: "center",
+    boxSizing: "border-box",
+    width: "auto",
+  };
 
   return (
     <>
@@ -5236,7 +5249,7 @@ function StaticScheduleTable({
           {showDate && <col style={{ width: "1%" }} />}
           {showDate && <col style={{ width: "1%" }} />}
           <col style={{ width: "1%" }} />
-          <col style={{ width: "1%" }} />
+          <col style={{ width: "auto" }} />
           <col style={{ width: "1%" }} />
           {showRoom && <col style={{ width: "1%" }} />}
           <col />
@@ -5245,7 +5258,7 @@ function StaticScheduleTable({
           <thead>
             <tr>
               {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
-              <th colSpan={3} style={headerCellStyle}>Zeit</th>
+              <th colSpan={3} style={headerTimeStyle}>Zeit</th>
               {showRoom && <th style={headerCellStyle}>Raum</th>}
               <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
             </tr>
@@ -5259,9 +5272,9 @@ function StaticScheduleTable({
               <tr key={item.id}>
                 {showDate && <td style={rowCellStyle}>{weekday}</td>}
                 {showDate && <td style={rowCellStyle}>{formatted}</td>}
-                <td style={rowCellStyle}>{formatScheduleCellTime(item.start)}</td>
-                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 0 }}>–</td>
-                <td style={rowCellStyle}>{formatScheduleCellTime(item.end)}</td>
+                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 3 }}>{formatScheduleCellTime(item.start)}</td>
+                <td style={dashStyle}>–</td>
+                <td style={{ ...rowCellStyle, paddingLeft: 3, paddingRight: 0 }}>{formatScheduleCellTime(item.end)}</td>
                 {showRoom && <td style={rowCellStyle}>{item.room}</td>}
                 <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
                   <div style={{ fontWeight: 700 }}>{item.title}</div>
