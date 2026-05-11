@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
+
+function toInputJson(value: Prisma.JsonValue): Prisma.InputJsonValue | Prisma.JsonNullValueInput {
+  return value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
+}
 
 // POST /api/brands/[id]/duplicate — duplicate a brand profile (admin only)
 export async function POST(
@@ -34,6 +39,8 @@ export async function POST(
         ...rest,
         name: `${source.name} (Copy)`,
         slug,
+        translationFontOverrides: toInputJson(source.translationFontOverrides),
+        gameSettings: toInputJson(source.gameSettings),
       },
     });
 
