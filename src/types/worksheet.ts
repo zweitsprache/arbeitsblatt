@@ -182,12 +182,19 @@ export interface TableBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
-export const BRAND_ICON_LOGOS: Record<string, string> = {
+const BRAND_ICON_LOGOS_BASE: Record<string, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
   "agi-frauenfeld": "/logo/logo-stadt-frauenfeld.svg",
   "treffpunkt-schweiz": "/brands/treffpunkt_icon.svg",
 };
+
+export const BRAND_ICON_LOGOS: Record<string, string> = new Proxy(BRAND_ICON_LOGOS_BASE, {
+  get(target, prop, receiver) {
+    if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+    return target[prop] ?? target.edoomio;
+  },
+});
 
 // ─── Multiple-choice block ──────────────────────────────────
 export interface MultipleChoiceOption {
@@ -976,7 +983,7 @@ export interface BrandFonts {
 }
 
 /** @deprecated Use BrandProfile from API. Kept as static fallback. */
-export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = {
+const DEFAULT_BRAND_SETTINGS_BASE: Record<string, BrandSettings> = {
   edoomio: {
     logo: "/logo/arbeitsblatt_logo_full_brand.svg",
     organization: "",
@@ -1015,8 +1022,15 @@ export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = {
   },
 };
 
+export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = new Proxy(DEFAULT_BRAND_SETTINGS_BASE, {
+  get(target, prop, receiver) {
+    if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+    return target[prop] ?? target.edoomio;
+  },
+});
+
 /** @deprecated Use BrandProfile from API. Kept as static fallback. */
-export const BRAND_FONTS: Record<string, BrandFonts> = {
+const BRAND_FONTS_BASE: Record<string, BrandFonts> = {
   edoomio: {
     bodyFont: "Asap Condensed, sans-serif",
     headlineFont: "Asap Condensed, sans-serif",
@@ -1059,13 +1073,22 @@ export const BRAND_FONTS: Record<string, BrandFonts> = {
   },
 };
 
+export const BRAND_FONTS: Record<string, BrandFonts> = new Proxy(BRAND_FONTS_BASE, {
+  get(target, prop, receiver) {
+    if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+    return target[prop] ?? target.edoomio;
+  },
+});
+
 /**
  * Build a BrandProfile from the static fallback constants.
  * Used when the DB profile is not yet loaded.
  */
 export function getStaticBrandProfile(slug: string): BrandProfile {
-  const fonts = BRAND_FONTS[slug] ?? BRAND_FONTS["edoomio"];
-  const settings = DEFAULT_BRAND_SETTINGS[slug] ?? DEFAULT_BRAND_SETTINGS["edoomio"];
+  const fonts = BRAND_FONTS[slug];
+  const settings = DEFAULT_BRAND_SETTINGS[slug];
+  const hasKnownIcon = Object.prototype.hasOwnProperty.call(BRAND_ICON_LOGOS_BASE, slug);
+  const inferredBrandIcon = `/brands/${slug}_icon.svg`;
   return {
     id: "",
     name: slug,
@@ -1080,8 +1103,8 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
     interactiveColor: "#0ea5e9",
-    logo: settings.logo,
-    iconLogo: BRAND_ICON_LOGOS[slug] ?? BRAND_ICON_LOGOS["edoomio"],
+    logo: hasKnownIcon ? settings.logo : inferredBrandIcon,
+    iconLogo: hasKnownIcon ? BRAND_ICON_LOGOS[slug] : inferredBrandIcon,
     organization: settings.organization,
     teacher: settings.teacher,
     headerRight: settings.headerRight,
