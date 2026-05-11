@@ -186,6 +186,7 @@ export const BRAND_ICON_LOGOS: Record<string, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
   "agi-frauenfeld": "/logo/logo-stadt-frauenfeld.svg",
+  "treffpunkt-schweiz": "/brands/treffpunkt_icon.svg",
 };
 
 // ─── Multiple-choice block ──────────────────────────────────
@@ -1003,6 +1004,15 @@ export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = {
     footerCenter: "",
     footerRight: "",
   },
+  "treffpunkt-schweiz": {
+    logo: "/brands/treffpunkt_icon.svg",
+    organization: "",
+    teacher: "",
+    headerRight: "",
+    footerLeft: "",
+    footerCenter: "",
+    footerRight: "",
+  },
 };
 
 /** @deprecated Use BrandProfile from API. Kept as static fallback. */
@@ -1036,6 +1046,16 @@ export const BRAND_FONTS: Record<string, BrandFonts> = {
     headerFooterFont: "Encode Sans Semi Condensed, sans-serif",
     googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed:wght@100;200;300;400;500;600;700;800;900&display=swap",
     primaryColor: "#e75325",
+  },
+  "treffpunkt-schweiz": {
+    bodyFont: "Asap Condensed, sans-serif",
+    headlineFont: "Asap Condensed, sans-serif",
+    headlineWeight: 700,
+    subHeadlineFont: "Asap Condensed, sans-serif",
+    subHeadlineWeight: 700,
+    headerFooterFont: "Asap Condensed, sans-serif",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
+    primaryColor: "#1a1a1a",
   },
 };
 
