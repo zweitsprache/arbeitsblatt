@@ -167,6 +167,17 @@ const TENSE_W = REMAINING_W / 3; // ~25.33%
 // mm → pt helper
 const mm = (v: number) => v * 2.8346;
 
+function resolvePdfFontFamily(fontFamily: string | undefined, fallback: string): string {
+  const raw = (fontFamily || "").split(",")[0]?.trim().replace(/^['\"]|['\"]$/g, "").toLowerCase();
+
+  if (!raw) return fallback;
+  if (raw === "encode sans" || raw === "encode sans semi condensed") return "Encode Sans";
+  if (raw === "asap condensed") return "Asap Condensed";
+  if (raw === "merriweather") return "Merriweather";
+
+  return fallback;
+}
+
 // ─── Styles ─────────────────────────────────────────────────
 
 const s = StyleSheet.create({
@@ -1284,8 +1295,11 @@ function DeclinationTablePDF({
     month: "2-digit",
     year: "numeric",
   });
-  const bodyFont =
-    brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  const brandFonts = BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
+  const bodyFont = resolvePdfFontFamily(
+    brandFonts?.bodyFont,
+    brand === "lingostar" ? "Encode Sans" : "Asap Condensed",
+  );
 
   return (
     <Document title={title} author="lingostar">
@@ -1613,7 +1627,11 @@ function VerbPrepositionPDF({
     month: "2-digit",
     year: "numeric",
   });
-  const bodyFont = brand === "lingostar" ? "Encode Sans" : "Asap Condensed";
+  const brandFonts = BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
+  const bodyFont = resolvePdfFontFamily(
+    brandFonts?.bodyFont,
+    brand === "lingostar" ? "Encode Sans" : "Asap Condensed",
+  );
 
   return (
     <Document title={title} author="lingostar">
@@ -1778,7 +1796,10 @@ export function GrammarTablePDF({
     year: "numeric",
   });
   const brandFonts = BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
-  const bodyFont = brandFonts?.bodyFont || (brand === "lingostar" ? "Encode Sans" : "Asap Condensed");
+  const bodyFont = resolvePdfFontFamily(
+    brandFonts?.bodyFont,
+    brand === "lingostar" ? "Encode Sans" : "Asap Condensed",
+  );
 
   // Determine which tenses are active for simplified mode
   const activeTenses: VerbTense[] = simplified

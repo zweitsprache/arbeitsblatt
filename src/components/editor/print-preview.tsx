@@ -42,9 +42,11 @@ const LANG_LABELS: Record<string, string> = {
 export function PrintPreview({
   open,
   onOpenChange,
+  engine = "default",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  engine?: "default" | "pagedjs";
 }) {
   const { state, save } = useEditor();
   const t = useTranslations("printPreview");
@@ -57,6 +59,8 @@ export function PrintPreview({
   const [country, setCountry] = useState<"DE" | "CH">("DE");
   const [lang, setLang] = useState("de");
   const [showSolutions, setShowSolutions] = useState(false);
+  const [enablePagedMode, setEnablePagedMode] = useState(false);
+  const [pagedReady, setPagedReady] = useState(false);
 
   // Refs so the load effect doesn't re-fire when isDirty/save change mid-save
   const isDirtyRef = useRef(state.isDirty);
@@ -149,6 +153,75 @@ export function PrintPreview({
 
   const noWorksheet = !state.worksheetId;
   const previewPageWidth = state.settings.orientation === "landscape" ? 1123 : 794;
+  const usePagedMode = engine === "pagedjs" && enablePagedMode;
+
+  const injectPagedJsAndPaginate = useCallback(async () => {
+    if (!usePagedMode) return;
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    const win = iframe?.contentWindow as (Window & { PagedPolyfill?: { preview?: () => Promise<void> } }) | null;
+    if (!doc || !win) return;
+
+    try {
+      // Wait for fonts and images
+      if (doc.fonts?.ready) {
+        await Promise.race([
+          doc.fonts.ready,
+          new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]);
+      }
+
+      await Promise.race([
+        Promise.all(
+          Array.from(doc.images)
+            .filter((img) => !img.complete)
+            .map(
+              (img) =>
+                new Promise<void>((resolve) => {
+                  img.onload = () => resolve();
+                  img.onerror = () => resolve();
+                }),
+            ),
+        ),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+
+      // Load Paged.js polyfill
+      const existingScript = doc.querySelector<HTMLScriptElement>("script[data-pagedjs='true']");
+      if (!existingScript && !win.PagedPolyfill) {
+        await new Promise<void>((resolve, reject) => {
+          const script = doc.createElement("script");
+          script.src = "https://unpkg.com/pagedjs/dist/paged.polyfill.js";
+          script.async = true;
+          script.setAttribute("data-pagedjs", "true");
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load paged.polyfill.js"));
+          doc.head.appendChild(script);
+        });
+      }
+
+      // Wait for PagedPolyfill to be available
+      let attempts = 15;
+      while (!win.PagedPolyfill && attempts > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts--;
+      }
+
+      // Run pagination preview
+      if (win.PagedPolyfill?.preview) {
+        await Promise.race([
+          win.PagedPolyfill.preview(),
+          new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+      }
+
+      console.log("[Paged.js] Preview rendered (note: table-based layout may show blank pages)");
+      setPagedReady(true);
+    } catch (error) {
+      console.warn("[Paged.js] Pagination error (expected with table layout):", error);
+      setPagedReady(false);
+    }
+  }, [usePagedMode]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -188,11 +261,16 @@ export function PrintPreview({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="de">{LANG_LABELS.de}</SelectItem>
-                    {translationLangs.slice().sort((a, b) => (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de")).map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {LANG_LABELS[code] || code}
-                      </SelectItem>
-                    ))}
+                    {translationLangs
+                      .slice()
+                      .sort((a, b) =>
+                        (LANG_LABELS[a] ?? a).localeCompare(LANG_LABELS[b] ?? b, "de")
+                      )
+                      .map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {LANG_LABELS[code] || code}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               )}
@@ -207,8 +285,30 @@ export function PrintPreview({
                 {t("solutions")}
               </Button>
 
+              {/* Paged mode toggle (V2 only) */}
+              {engine === "pagedjs" && (
+                <Button
+                  variant={enablePagedMode ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    setLoading(true);
+                    setEnablePagedMode((prev) => !prev);
+                  }}
+                  title={t("pagedNotSupported")}
+                >
+                  {enablePagedMode ? t("pagedModeOn") : t("pagedModeOff")}
+                </Button>
+              )}
+
               {/* Reload button */}
-              <Button variant="ghost" size="sm" className="h-7 gap-1.5" onClick={handleReload} disabled={noWorksheet}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5"
+                onClick={handleReload}
+                disabled={noWorksheet}
+              >
                 <RefreshCw className="h-3 w-3" />
                 {t("reload")}
               </Button>
@@ -249,22 +349,32 @@ export function PrintPreview({
               {iframeSrc && (
                 <div
                   className="mx-auto overflow-hidden"
-                  style={{ width: `${previewPageWidth * zoom / 100}px`, height: `${iframeHeight * zoom / 100}px`, maxWidth: "100%" }}
+                  style={{
+                    width: `${(previewPageWidth * zoom) / 100}px`,
+                    height: `${(iframeHeight * zoom) / 100}px`,
+                    maxWidth: "100%",
+                  }}
                 >
                   <iframe
                     ref={iframeRef}
                     src={iframeSrc}
                     className="border-0"
                     scrolling="no"
-                    onLoad={() => {
-                      setLoading(false);
+                    onLoad={async () => {
                       try {
+                        if (usePagedMode) {
+                          await injectPagedJsAndPaginate();
+                        }
                         const doc = iframeRef.current?.contentDocument;
                         if (doc) {
                           const h = doc.documentElement.scrollHeight;
                           if (h > 0) setIframeHeight(h);
                         }
-                      } catch { /* cross-origin guard */ }
+                      } catch {
+                        // cross-origin and pagination safety guard
+                      } finally {
+                        setLoading(false);
+                      }
                     }}
                     style={{
                       transform: `scale(${zoom / 100})`,
@@ -273,6 +383,11 @@ export function PrintPreview({
                       height: iframeHeight,
                     }}
                   />
+                </div>
+              )}
+              {usePagedMode && (
+                <div className="absolute bottom-2 right-2 rounded bg-amber-100 text-amber-800 text-xs px-2 py-1 border border-amber-300">
+                  {t("pagedNotSupported")}
                 </div>
               )}
             </>

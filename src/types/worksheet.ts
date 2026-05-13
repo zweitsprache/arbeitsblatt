@@ -320,6 +320,7 @@ export interface GridBlock extends BlockBase {
   rowGap: number;
   colGap: number;
   children: WorksheetBlock[][]; // flat array of cells, length = rows * cols
+  showBorder?: boolean;
 }
 
 // ─── True/False Matrix block ─────────────────────────────────

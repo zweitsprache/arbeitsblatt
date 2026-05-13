@@ -3743,14 +3743,15 @@ function DroppableColumn({
         ${showBorder ? "border border-dashed" : "border border-transparent"}
         ${isOver ? "border-primary bg-primary/5" : showBorder ? "border-border" : ""}
         ${isEmpty ? "" : ""}`}
-      style={
-        isOver
+      style={{
+        ...(isOver
           ? undefined
           : {
               ...(bgColor ? { backgroundColor: bgColor } : {}),
               ...(showBorder && borderColor ? { borderColor } : {}),
-            }
-      }
+              ...(showBorder ? { paddingTop: "6px" } : {}),
+            }),
+      }}
     >
       {isEmpty ? (
         <p className={`text-xs text-center py-4 transition-colors ${isOver ? "text-primary opacity-70" : "text-muted-foreground opacity-50"}`}>
@@ -3808,6 +3809,7 @@ function DroppableGridCell({
   isEmpty,
   row,
   col,
+  showBorder = false,
 }: {
   blockId: string;
   cellIndex: number;
@@ -3815,6 +3817,7 @@ function DroppableGridCell({
   isEmpty: boolean;
   row: number;
   col: number;
+  showBorder?: boolean;
 }) {
   const t = useTranslations("blockRenderer");
   const { setNodeRef, isOver } = useDroppable({
@@ -3827,6 +3830,7 @@ function DroppableGridCell({
       ref={setNodeRef}
       className={`min-h-[40px] space-y-2 transition-colors
         ${isOver ? "bg-primary/5" : ""}`}
+      style={showBorder ? { paddingTop: "8px" } : {}}
     >
       {isEmpty ? (
         <p className={`text-xs text-center py-4 transition-colors ${isOver ? "text-primary opacity-70" : "text-muted-foreground opacity-50"}`}>
@@ -3846,6 +3850,7 @@ function GridRenderer({
   block: GridBlock;
   mode: ViewMode;
 }) {
+  const hasBorder = block.showBorder ?? false;
   return (
     <div
       className="grid"
@@ -3867,6 +3872,7 @@ function GridRenderer({
             isEmpty={cell.length === 0}
             row={row}
             col={col}
+            showBorder={hasBorder}
           >
             {cell.map((childBlock) => (
               <ColumnChildBlock
@@ -5204,7 +5210,10 @@ function StaticScheduleTable({
 }) {
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
-    padding: "4px 8px",
+    paddingTop: "4px",
+    paddingRight: "8px",
+    paddingBottom: "4px",
+    paddingLeft: 0,
     lineHeight: "1.35rem",
     verticalAlign: "top",
     boxSizing: "border-box",
@@ -5213,9 +5222,9 @@ function StaticScheduleTable({
     whiteSpace: "nowrap",
     textAlign: "left",
     color: "inherit",
-    fontSize: "0.8em",
-    fontWeight: 400,
-    textTransform: "uppercase",
+    fontSize: "inherit",
+    fontWeight: "inherit",
+    textTransform: "none",
     lineHeight: "1.35rem",
     height: "2rem",
     verticalAlign: "top",
@@ -5239,7 +5248,7 @@ function StaticScheduleTable({
     <>
       <style>{`
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px;vertical-align:top;box-sizing:border-box;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px 4px 0;vertical-align:top;box-sizing:border-box;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
         .scheduleNew thead tr th{border-top:none;}
         .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
@@ -5259,7 +5268,7 @@ function StaticScheduleTable({
             <tr>
               {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
               <th colSpan={3} style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={headerCellStyle}>Raum</th>}
+              {showRoom && <th style={{ ...headerCellStyle, paddingRight: "12px" }}>Raum</th>}
               <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
             </tr>
           </thead>
@@ -5274,9 +5283,9 @@ function StaticScheduleTable({
                 {showDate && <td style={rowCellStyle}>{formatted}</td>}
                 <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 3 }}>{formatScheduleCellTime(item.start)}</td>
                 <td style={dashStyle}>–</td>
-                <td style={{ ...rowCellStyle, paddingLeft: 3, paddingRight: 0 }}>{formatScheduleCellTime(item.end)}</td>
-                {showRoom && <td style={rowCellStyle}>{item.room}</td>}
-                <td style={{ padding: "4px 8px", lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
+                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 6 }}>{formatScheduleCellTime(item.end)}</td>
+                {showRoom && <td style={{ ...rowCellStyle, paddingRight: "12px" }}>{item.room}</td>}
+                <td style={{ paddingTop: "4px", paddingRight: "8px", paddingBottom: "4px", paddingLeft: 0, lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
                   <div style={{ fontWeight: 700 }}>{item.title}</div>
                   {item.description ? <div>{item.description}</div> : null}
                 </td>

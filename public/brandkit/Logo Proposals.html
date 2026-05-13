@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>didaktiv — Logo Proposals</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wdth,wght@75..125,200..900&family=Encode+Sans+Semi+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --steel-900: oklch(24% 0.035 245);
+    --steel-700: oklch(38% 0.055 245);
+    --steel-500: oklch(54% 0.065 245);
+    --steel-300: oklch(74% 0.045 245);
+    --steel-100: oklch(92% 0.018 245);
+    --ink:    oklch(18% 0.012 245);
+    --grey-700: oklch(40% 0.008 245);
+    --grey-500: oklch(60% 0.006 245);
+    --grey-300: oklch(82% 0.005 245);
+    --grey-200: oklch(90% 0.004 245);
+    --grey-100: oklch(95% 0.003 245);
+    --paper: oklch(98% 0.004 240);
+    --signal: oklch(70% 0.175 38);
+    --signal-deep: oklch(56% 0.165 35);
+    --rule: 1px solid var(--grey-300);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  em, i, cite{ font-style: normal; }
+  html,body{ background:var(--paper); color:var(--ink); }
+  body{
+    font-family:"Encode Sans", sans-serif;
+    font-weight:400; font-size:14px; line-height:1.5;
+    font-variation-settings:"wdth" 100;
+    font-feature-settings:"tnum", "ss01";
+  }
+  .page{
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 72px 64px 120px;
+    position:relative;
+  }
+  .page::before,
+  .page::after{
+    content:""; position:absolute; top:72px; bottom:120px;
+    width:1px;
+    background: repeating-linear-gradient(to bottom, var(--steel-500) 0 1px, transparent 1px 8px);
+  }
+  .page::before{ left:42px; }
+  .page::after{ right:42px; }
+
+  .mono{
+    font-family:"Encode Sans Semi Condensed", monospace;
+    font-feature-settings:"tnum" 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .label{
+    font-family:"Encode Sans Semi Condensed", sans-serif;
+    font-weight:600; text-transform:uppercase;
+    letter-spacing:0.14em; font-size:10px;
+    color:var(--grey-700);
+  }
+
+  /* MASTHEAD */
+  .masthead{
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding: 18px 0;
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items:center; gap:24px;
+  }
+  .masthead .left, .masthead .right{ display:flex; gap:18px; align-items:center; }
+  .masthead .right{ justify-content:flex-end; }
+  .masthead .center{
+    font-family:"Encode Sans Semi Condensed";
+    font-weight:700; letter-spacing:0.28em;
+    text-transform:uppercase; font-size:11px;
+  }
+  .dot{ width:8px; height:8px; background: var(--signal); display:inline-block; }
+
+  /* INTRO */
+  .intro{
+    padding: 64px 0 56px;
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap: 64px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .ex-tag{
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase;
+    letter-spacing:0.18em;
+    font-size:11px;
+    color:var(--signal-deep);
+    margin-bottom: 28px;
+  }
+  .ex-tag::before{ content:"§"; margin-right:8px; color:var(--ink);}
+  .intro h1{
+    font-size: 88px;
+    line-height:0.95;
+    font-weight:700;
+    letter-spacing:-0.03em;
+    font-variation-settings:"wdth" 92;
+    max-width: 900px;
+  }
+  .intro h1 b{ color: var(--signal); font-weight:700;}
+  .intro .lede{
+    margin-top: 28px;
+    font-size: 18px;
+    color: var(--grey-700);
+    max-width: 660px;
+    line-height: 1.4;
+  }
+  .intro-meta{ border-left: var(--rule); padding-left: 28px; align-self:end;}
+  .meta-row{
+    display:grid; grid-template-columns: 90px 1fr;
+    border-bottom: var(--rule);
+    padding: 10px 0;
+    font-size: 12px;
+  }
+  .meta-row:last-child{ border-bottom:none; }
+  .meta-row span:first-child{
+    color:var(--grey-500);
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase; letter-spacing:0.1em; font-size:10px;
+  }
+  .meta-row span:last-child{ font-weight:500; }
+
+  /* PROPOSAL BLOCK */
+  .proposal{
+    padding: 80px 0;
+    border-bottom: var(--rule);
+  }
+  .proposal:last-of-type{ border-bottom: none; }
+  .prop-head{
+    display:grid;
+    grid-template-columns: 220px 1fr 300px;
+    gap: 48px;
+    margin-bottom: 48px;
+    align-items:start;
+  }
+  .prop-id{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--grey-500);
+    border-top: 2px solid var(--ink); padding-top: 8px;
+  }
+  .prop-id .ord{ color: var(--signal-deep); }
+  .prop-id b{ display:block; color: var(--ink); font-size:14px; margin-top:4px; letter-spacing:0.1em;}
+  .prop-name{
+    font-size: 60px;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:-0.025em;
+    font-variation-settings:"wdth" 90;
+  }
+  .prop-name .badge{
+    display:inline-block;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
+    background:var(--ink); color:var(--paper);
+    padding:4px 8px;
+    vertical-align: 22px;
+    margin-left: 12px;
+    font-weight:600;
+  }
+  .prop-thesis{
+    font-size: 16px;
+    line-height: 1.45;
+    margin-top: 16px;
+    color: var(--ink);
+    max-width: 600px;
+  }
+  .prop-thesis em{ font-style:normal; border-bottom: 2px solid var(--signal); padding-bottom: 1px;}
+  .prop-tags{
+    display:flex; flex-direction:column; gap: 0;
+    border-top: 2px solid var(--ink);
+  }
+  .ptag{
+    display:grid; grid-template-columns: 90px 1fr;
+    border-bottom: var(--rule);
+    padding: 8px 0;
+    font-size: 12px;
+  }
+  .ptag span:first-child{
+    color: var(--grey-500);
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase; font-size:10px; letter-spacing:0.1em;
+  }
+  .ptag span:last-child{ font-weight:500; }
+
+  /* HERO STAGE for logo render */
+  .stage{
+    aspect-ratio: 5/2;
+    background: var(--paper);
+    border: 1px solid var(--grey-300);
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .stage.dark{ background: var(--ink); color: var(--paper);}
+  .stage.steel{ background: var(--steel-700); color: var(--paper);}
+  .stage.signal{ background: var(--signal); color: var(--ink);}
+  .stage.grid{
+    background:
+      linear-gradient(to right, var(--steel-100) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(to bottom, var(--steel-100) 1px, transparent 1px) 0 0/40px 40px,
+      var(--paper);
+  }
+  .stage .corner{
+    position:absolute; top:12px; left:14px;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
+    color: var(--grey-700);
+  }
+  .stage.dark .corner, .stage.steel .corner{ color: var(--steel-300);}
+  .stage .corner.r{ left:auto; right:14px;}
+
+  /* === Common wordmark base === */
+  .wm{
+    font-family:"Encode Sans";
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.85;
+    font-variation-settings:"wdth" 90;
+  }
+
+  /* =============================================
+     PROPOSAL A — VEKTOR (geometric arrow v)
+     ============================================= */
+  .wm-vektor{
+    font-size: 152px;
+    color: var(--steel-700);
+    display:inline-flex;
+    align-items:flex-end;
+    gap: 0;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .stage.dark .wm-vektor{ color: var(--paper); }
+  .stage.steel .wm-vektor{ color: var(--paper); }
+  .stage.signal .wm-vektor{ color: var(--ink); }
+
+  .wm-vektor .letters{ display:inline-block; }
+  /* SVG v inherits via currentColor for paths */
+  .wm-vektor svg{
+    display:inline-block;
+    margin-left: 0.04em;
+    margin-bottom: 0.04em;
+  }
+  .v-stroke{ stroke: currentColor; fill: none; stroke-linecap: butt; stroke-linejoin: miter; }
+  .v-accent{ stroke: var(--signal); fill: none; stroke-linecap: butt; stroke-linejoin: miter;}
+  .stage.signal .v-accent{ stroke: var(--ink); }
+  .stage.dark   .v-accent{ stroke: var(--signal); }
+
+  /* small version */
+  .wm-vektor.sm{ font-size: 56px; }
+  .wm-vektor.md{ font-size: 96px; }
+
+  /* construction overlay */
+  .construct{
+    margin-top: 28px;
+    display:grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 32px;
+  }
+  .construct .diagram{
+    aspect-ratio: 7/4;
+    border: 1px solid var(--grey-300);
+    position:relative;
+    padding: 32px;
+    background:
+      linear-gradient(to right, var(--steel-100) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(to bottom, var(--steel-100) 1px, transparent 1px) 0 0/24px 24px,
+      var(--paper);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .construct .specs{ }
+  .construct .specs h4{
+    font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    font-family:"Encode Sans Semi Condensed"; color: var(--ink);
+    border-top: 2px solid var(--ink); padding-top: 6px; margin-bottom: 12px;
+  }
+  .spec-list{ }
+  .spec-row{
+    display:grid; grid-template-columns: 1fr auto; gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--grey-200);
+    font-size: 13px;
+  }
+  .spec-row .k{ color: var(--grey-700); font-family:"Encode Sans Semi Condensed"; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;}
+  .spec-row .v{ font-weight:600; font-variation-settings:"wdth" 90;}
+  .spec-row .v b{ color: var(--signal-deep);}
+
+  /* Color strip + scale tests */
+  .variants{
+    margin-top: 28px;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .vtile{
+    aspect-ratio: 5/3;
+    border: 1px solid var(--grey-300);
+    background: var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    padding: 18px;
+    overflow:hidden;
+  }
+  .vtile.dark{ background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .vtile.steel{ background: var(--steel-700); color: var(--paper); border-color: var(--steel-700); }
+  .vtile.signal{ background: var(--signal); color: var(--ink); border-color: var(--signal); }
+  .vtile .lbl{
+    position:absolute; top:8px; left:10px;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:9px; letter-spacing:0.12em; text-transform:uppercase;
+    opacity: 0.65;
+  }
+
+  /* =============================================
+     PROPOSAL B — ANNOTAT (scholarly underscore)
+     ============================================= */
+  .wm-annot{
+    font-size: 140px;
+    color: var(--ink);
+    font-variation-settings:"wdth" 95;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    display: inline-block;
+    white-space: nowrap;
+  }
+  .wm-annot .v-ul{
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  /* footnote-style tag */
+  .wm-annot .fn{
+    font-family:"Encode Sans Semi Condensed";
+    font-weight:600;
+    font-size: 0.085em;
+    text-transform:uppercase;
+    letter-spacing:0.18em;
+    vertical-align: 0.85em;
+    color: var(--grey-500);
+    margin-left: 0.12em;
+    font-variation-settings:"wdth" 100;
+  }
+  .wm-annot .fn b{ color: var(--signal-deep); font-weight:700;}
+  .stage.dark .wm-annot{ color: var(--paper);}
+  .stage.steel .wm-annot{ color: var(--paper);}
+  .stage.signal .wm-annot{ color: var(--ink);}
+  .stage.signal .wm-annot .v-ul{ text-decoration-color: var(--ink);}
+  .stage.dark   .wm-annot .v-ul{ text-decoration-color: var(--signal);}
+  .vtile.signal .wm-annot .v-ul{ text-decoration-color: var(--ink);}
+  .vtile.dark   .wm-annot .v-ul{ text-decoration-color: var(--signal);}
+
+  .wm-annot.sm{ font-size: 40px; }
+  .wm-annot.md{ font-size: 64px; }
+
+  /* =============================================
+     PROPOSAL C — KONSTRUKT (geometric monogram)
+     ============================================= */
+  .monogram-c{
+    width: 280px; height: 280px;
+    position:relative;
+  }
+  .monogram-c.lg{ width: 360px; height: 360px;}
+  .monogram-c.sm{ width: 96px; height: 96px;}
+  .monogram-c.md{ width: 160px; height: 160px;}
+  .mono-svg{ width: 100%; height: 100%; display:block;}
+  .ks-ink   .mono-d{ stroke: var(--steel-700); }
+  .ks-ink   .mono-v{ stroke: var(--signal); }
+  .ks-dark  .mono-d{ stroke: var(--paper); }
+  .ks-dark  .mono-v{ stroke: var(--signal); }
+  .ks-steel .mono-d{ stroke: var(--paper); }
+  .ks-steel .mono-v{ stroke: var(--signal); }
+  .ks-signal .mono-d{ stroke: var(--ink); }
+  .ks-signal .mono-v{ stroke: var(--paper); }
+  .mono-d, .mono-v{ fill: none; stroke-linecap: butt; stroke-linejoin: miter;}
+
+  .konst-lockup{
+    display:flex; flex-direction:column; align-items:center; gap: 18px;
+  }
+  .konst-lockup .desc{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 14px; letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--steel-700);
+  }
+  .stage.dark .konst-lockup .desc, .stage.steel .konst-lockup .desc{ color: var(--steel-300);}
+  .stage.signal .konst-lockup .desc{ color: var(--ink);}
+
+  .konst-horiz{
+    display:flex; align-items:center; gap: 24px;
+  }
+  .konst-horiz .wm-horiz{
+    font-family:"Encode Sans";
+    font-weight: 700;
+    font-size: 56px;
+    letter-spacing: -0.03em;
+    font-variation-settings:"wdth" 92;
+    line-height:1;
+    color: var(--steel-700);
+  }
+  .konst-horiz .wm-horiz b{ color: var(--signal); font-weight:700;}
+  .stage.dark .konst-horiz .wm-horiz{ color: var(--paper);}
+
+  /* RATIONALE BLOCK */
+  .rationale{
+    margin-top: 28px;
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 32px;
+    padding-top: 20px;
+    border-top: 2px solid var(--ink);
+  }
+  .rationale h5{
+    font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+    font-family:"Encode Sans Semi Condensed"; color: var(--ink);
+    margin-bottom: 10px;
+    font-weight:600;
+  }
+  .rationale h5 .n{
+    color: var(--signal-deep); margin-right: 6px;
+  }
+  .rationale p{
+    font-size: 13px; color: var(--ink); line-height: 1.5;
+    max-width: 360px;
+  }
+  .rationale .pro::before{
+    content:"+ "; color: var(--signal-deep); font-weight: 700;
+  }
+  .rationale .con::before{
+    content:"− "; color: var(--grey-500); font-weight: 700;
+  }
+  .rationale ul{ list-style: none; }
+  .rationale li{ font-size: 13px; line-height: 1.5; padding: 3px 0;}
+
+  /* FOOTER */
+  footer{
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items:center;
+    font-size: 11px;
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase; letter-spacing:0.16em;
+    color: var(--grey-700);
+  }
+  footer .c{ text-align:center;}
+  footer .r{ text-align:right;}
+  footer b{ color: var(--ink); }
+
+  /* Recommend tag */
+  .recommend{
+    display:inline-block;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+    color: var(--signal-deep);
+    border: 1.5px solid var(--signal);
+    padding: 4px 8px;
+    margin-left: 12px;
+    vertical-align: 22px;
+    font-weight:700;
+  }
+
+  /* Lockup variants row */
+  .row{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .row .vtile{ aspect-ratio: 5/3;}
+
+  /* Spec inline rule */
+  .axis-x, .axis-y{
+    position:absolute; background: var(--signal);
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="left">
+      <span class="dot"></span>
+      <span class="mono">didaktiv / logo proposals · round 02</span>
+    </div>
+    <div class="center">Edition 01 · Three Directions for Review</div>
+    <div class="right">
+      <span class="mono">v2.0 — May 2026</span>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="intro">
+    <div>
+      <div class="ex-tag">Exercise 02 · The mark before the message</div>
+      <h1>Three marks.<br/>One <b>v</b>. Three ways to make it earn its place.</h1>
+      <p class="lede">Each proposal keeps the established system — Encode Sans, steel blue, signal coral — and rebuilds the wordmark around a different idea of what the final letter is <em>doing</em>. None use italics; sophistication comes from construction, not slant.</p>
+    </div>
+    <aside class="intro-meta">
+      <div class="meta-row"><span>Round</span><span>02 / Logo direction</span></div>
+      <div class="meta-row"><span>Variants</span><span>03 proposals × 4 colorways</span></div>
+      <div class="meta-row"><span>Type</span><span>Encode Sans (roman only)</span></div>
+      <div class="meta-row"><span>Italic use</span><span style="color:var(--signal-deep)">● Forbidden</span></div>
+      <div class="meta-row"><span>Brief</span><span>Functional · with a twist</span></div>
+    </aside>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- PROPOSAL A — VEKTOR -->
+  <!-- ============================================= -->
+  <section class="proposal">
+    <div class="prop-head">
+      <div class="prop-id"><span class="ord">A / 03</span><b>Vektor</b></div>
+      <div>
+        <div class="prop-name">vektor<span class="badge">geometric · arrow</span></div>
+        <p class="prop-thesis">The final <em>v</em> is redrawn as a precise geometric chevron — sharper than the typeface's native v, and slightly longer on the right diagonal so it reads as a vector pointing forward. The brand's pedagogical metaphor (<em>direction</em>) becomes the mark.</p>
+      </div>
+      <div class="prop-tags">
+        <div class="ptag"><span>Concept</span><span>Custom letter</span></div>
+        <div class="ptag"><span>Drawing</span><span>SVG vector</span></div>
+        <div class="ptag"><span>Stroke</span><span>20 / 200 em</span></div>
+        <div class="ptag"><span>Twist</span><span>v exits the baseline</span></div>
+        <div class="ptag"><span>Best on</span><span>Light surfaces</span></div>
+      </div>
+    </div>
+
+    <!-- HERO STAGE -->
+    <div class="stage">
+      <span class="corner">A.1 · Primary lockup, paper</span>
+      <span class="corner r">1200 × 480</span>
+      <span class="wm wm-vektor">
+        <span class="letters">didakti</span>
+        <svg viewBox="0 0 160 200" width="0.95em" height="1.18em" aria-label="v">
+          <!-- Custom geometric v: sharper angle than Encode's v, right stroke extends below baseline -->
+          <path class="v-stroke" d="M 6 22 L 70 168 L 70 168" stroke-width="34"></path>
+          <path class="v-accent" d="M 70 168 L 150 -10" stroke-width="34"></path>
+        </svg>
+      </span>
+    </div>
+
+    <!-- CONSTRUCTION -->
+    <div class="construct">
+      <div class="diagram">
+        <div style="position:relative; display:inline-block;">
+          <!-- enlarged v construction -->
+          <svg viewBox="0 0 280 320" width="200" height="232">
+            <!-- baseline -->
+            <line x1="0" y1="260" x2="280" y2="260" stroke="oklch(74% 0.045 245)" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="0" y1="40"  x2="280" y2="40"  stroke="oklch(74% 0.045 245)" stroke-width="1" stroke-dasharray="3 3"/>
+            <!-- v -->
+            <path d="M 20 60 L 120 250" stroke="oklch(38% 0.055 245)" stroke-width="40" fill="none"/>
+            <path d="M 120 250 L 260 -20" stroke="oklch(70% 0.175 38)" stroke-width="40" fill="none"/>
+            <!-- vertex dot -->
+            <circle cx="120" cy="250" r="6" fill="oklch(18% 0.012 245)"/>
+            <!-- angle annotation -->
+            <text x="135" y="245" font-family="Encode Sans Semi Condensed" font-size="14" fill="oklch(56% 0.165 35)" font-weight="600">62°</text>
+            <!-- labels -->
+            <text x="0" y="32" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(40% 0.008 245)" letter-spacing="1.5">CAP LINE</text>
+            <text x="0" y="278" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(40% 0.008 245)" letter-spacing="1.5">BASELINE</text>
+            <text x="160" y="20" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(56% 0.165 35)" letter-spacing="1.5">EXIT +14%</text>
+          </svg>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Construction</h4>
+        <div class="spec-list">
+          <div class="spec-row"><span class="k">Apex angle</span><span class="v"><b>62°</b></span></div>
+          <div class="spec-row"><span class="k">Stroke (uniform)</span><span class="v">20 / 200 em</span></div>
+          <div class="spec-row"><span class="k">Right exit</span><span class="v"><b>+14%</b> above cap line</span></div>
+          <div class="spec-row"><span class="k">Apex position</span><span class="v">−4% below baseline</span></div>
+          <div class="spec-row"><span class="k">Optical adjustment</span><span class="v">Apex sharpened to point, no overshoot terminal</span></div>
+          <div class="spec-row"><span class="k">Color split</span><span class="v">Left = brand · Right = signal</span></div>
+        </div>
+        <h4 style="margin-top:24px;">Behaviour</h4>
+        <p style="font-size:13px; line-height:1.5;">At sizes below 24 px the right stroke shortens to cap height — the arrow flavour is a luxury reserved for hero and editorial use. The mark <b>never</b> tilts, never animates, never becomes literal.</p>
+      </div>
+    </div>
+
+    <!-- VARIANTS -->
+    <div class="variants">
+      <div class="vtile">
+        <span class="lbl">A.2 · Paper</span>
+        <span class="wm wm-vektor md">
+          <span class="letters">didakti</span>
+          <svg viewBox="0 0 160 200" width="0.95em" height="1.18em" aria-label="v">
+            <path class="v-stroke" d="M 6 22 L 70 168" stroke-width="34"></path>
+            <path class="v-accent" d="M 70 168 L 150 -10" stroke-width="34"></path>
+          </svg>
+        </span>
+      </div>
+      <div class="vtile dark">
+        <span class="lbl" style="color:var(--steel-300)">A.3 · Ink</span>
+        <span class="wm wm-vektor md">
+          <span class="letters">didakti</span>
+          <svg viewBox="0 0 160 200" width="0.95em" height="1.18em" aria-label="v">
+            <path class="v-stroke" d="M 6 22 L 70 168" stroke-width="34"></path>
+            <path class="v-accent" d="M 70 168 L 150 -10" stroke-width="34"></path>
+          </svg>
+        </span>
+      </div>
+      <div class="vtile steel">
+        <span class="lbl" style="color:var(--steel-300)">A.4 · Steel</span>
+        <span class="wm wm-vektor md">
+          <span class="letters">didakti</span>
+          <svg viewBox="0 0 160 200" width="0.95em" height="1.18em" aria-label="v">
+            <path class="v-stroke" d="M 6 22 L 70 168" stroke-width="34"></path>
+            <path class="v-accent" d="M 70 168 L 150 -10" stroke-width="34"></path>
+          </svg>
+        </span>
+      </div>
+      <div class="vtile signal">
+        <span class="lbl" style="color:var(--ink); opacity:0.7;">A.5 · Signal</span>
+        <span class="wm wm-vektor md">
+          <span class="letters">didakti</span>
+          <svg viewBox="0 0 160 200" width="0.95em" height="1.18em" aria-label="v">
+            <path class="v-stroke" d="M 6 22 L 70 168" stroke-width="34"></path>
+            <path class="v-accent" d="M 70 168 L 150 -10" stroke-width="34"></path>
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- RATIONALE -->
+    <div class="rationale">
+      <div>
+        <h5><span class="n">01</span>Why it works</h5>
+        <ul>
+          <li class="pro">Custom letter — uncopyable</li>
+          <li class="pro">Visual metaphor matches mission</li>
+          <li class="pro">Reads as a single connected gesture</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">02</span>Where it bends</h5>
+        <ul>
+          <li class="con">Needs a vector master at every size</li>
+          <li class="con">Right exit cropped on square avatars</li>
+          <li class="con">Less academic, more product-y</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">03</span>Best fit</h5>
+        <p>Product surfaces, app icons, motion. The arrow shape rewards motion — a 200 ms ease-out as it draws in on first paint would feel native, but is optional.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- PROPOSAL B — ANNOTAT -->
+  <!-- ============================================= -->
+  <section class="proposal">
+    <div class="prop-head">
+      <div class="prop-id"><span class="ord">B / 03</span><b>Annotat</b></div>
+      <div>
+        <div class="prop-name">annotat<span class="recommend">★ recommended</span></div>
+        <p class="prop-thesis">The wordmark is left structurally untouched — same Encode Sans, same width, no custom letters. A precise <em>signal hairline</em> sits beneath the v, exactly v-width, like a teacher's red underline. A small <em>v.</em> footnote tag annotates the wordmark as a dictionary entry would. Sophistication through restraint.</p>
+      </div>
+      <div class="prop-tags">
+        <div class="ptag"><span>Concept</span><span>Editorial annotation</span></div>
+        <div class="ptag"><span>Drawing</span><span>Pure type</span></div>
+        <div class="ptag"><span>Rule</span><span>0.06 em hairline</span></div>
+        <div class="ptag"><span>Twist</span><span>Positional, not chromatic</span></div>
+        <div class="ptag"><span>Best on</span><span>Print, identity</span></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <span class="corner">B.1 · Primary lockup, paper</span>
+      <span class="corner r">1200 × 480</span>
+      <span class="wm wm-annot">
+        didakti<span class="v-ul">v</span><span class="fn">verb. <b>1.</b></span>
+      </span>
+    </div>
+
+    <div class="construct">
+      <div class="diagram">
+        <svg viewBox="0 0 480 240" width="380" height="190">
+          <!-- baseline / rule diagram -->
+          <line x1="0" y1="180" x2="480" y2="180" stroke="oklch(74% 0.045 245)" stroke-width="1" stroke-dasharray="3 3"/>
+          <!-- word stub -->
+          <text x="20" y="172" font-family="Encode Sans" font-weight="800" font-size="120" fill="oklch(18% 0.012 245)" font-variation-settings="'wdth' 95" letter-spacing="-4">didaktiv</text>
+          <!-- hairline under just the v -->
+          <rect x="346" y="190" width="64" height="6" fill="oklch(56% 0.165 35)"/>
+          <!-- v-width measurement -->
+          <line x1="346" y1="210" x2="410" y2="210" stroke="oklch(56% 0.165 35)" stroke-width="1"/>
+          <line x1="346" y1="206" x2="346" y2="214" stroke="oklch(56% 0.165 35)" stroke-width="1"/>
+          <line x1="410" y1="206" x2="410" y2="214" stroke="oklch(56% 0.165 35)" stroke-width="1"/>
+          <text x="354" y="230" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(56% 0.165 35)" letter-spacing="1.5" font-weight="600">V-WIDTH</text>
+          <!-- baseline offset arrow -->
+          <line x1="420" y1="180" x2="420" y2="193" stroke="oklch(56% 0.165 35)" stroke-width="1"/>
+          <text x="428" y="192" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(56% 0.165 35)" letter-spacing="1.5" font-weight="600">+0.08 EM</text>
+          <!-- footnote -->
+          <text x="425" y="80" font-family="Encode Sans Semi Condensed" font-weight="600" font-size="14" fill="oklch(40% 0.008 245)" letter-spacing="2">v.</text>
+          <line x1="425" y1="86" x2="455" y2="86" stroke="oklch(40% 0.008 245)" stroke-width="0.8"/>
+        </svg>
+      </div>
+      <div class="specs">
+        <h4>Construction</h4>
+        <div class="spec-list">
+          <div class="spec-row"><span class="k">Wordmark</span><span class="v">Encode Sans 800, wdth 95</span></div>
+          <div class="spec-row"><span class="k">Tracking</span><span class="v">−4.5%</span></div>
+          <div class="spec-row"><span class="k">Underline width</span><span class="v"><b>= v-width</b> (≈ 0.55 em)</span></div>
+          <div class="spec-row"><span class="k">Underline thickness</span><span class="v">0.06 em</span></div>
+          <div class="spec-row"><span class="k">Underline offset</span><span class="v">+0.08 em below baseline</span></div>
+          <div class="spec-row"><span class="k">Footnote tag</span><span class="v">Optional · 8.5% of cap height</span></div>
+          <div class="spec-row"><span class="k">Footnote case</span><span class="v">SEMI CONDENSED · 600</span></div>
+        </div>
+        <h4 style="margin-top:24px;">Two-tier system</h4>
+        <p style="font-size:13px; line-height:1.5;">Full mark with <b>v. 1.</b> tag for hero use. Stripped mark (rule + word only) for chrome, favicon, business systems. Both share one master.</p>
+      </div>
+    </div>
+
+    <!-- Variants -->
+    <div class="variants">
+      <div class="vtile">
+        <span class="lbl">B.2 · Paper, no tag</span>
+        <span class="wm wm-annot md">
+          didakti<span class="v-ul">v</span>
+        </span>
+      </div>
+      <div class="vtile dark">
+        <span class="lbl" style="color:var(--steel-300)">B.3 · Ink</span>
+        <span class="wm wm-annot md">
+          didakti<span class="v-ul">v</span>
+        </span>
+      </div>
+      <div class="vtile steel">
+        <span class="lbl" style="color:var(--steel-300)">B.4 · Steel</span>
+        <span class="wm wm-annot md">
+          didakti<span class="v-ul">v</span>
+        </span>
+      </div>
+      <div class="vtile signal">
+        <span class="lbl" style="color:var(--ink); opacity:0.7;">B.5 · Signal</span>
+        <span class="wm wm-annot md">
+          didakti<span class="v-ul">v</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Small scale + full lockup -->
+    <div class="row">
+      <div class="vtile">
+        <span class="lbl">B.6 · Hero with tag</span>
+        <span class="wm wm-annot" style="font-size:52px;">
+          didakti<span class="v-ul">v</span><span class="fn">verb. <b>1.</b></span>
+        </span>
+      </div>
+      <div class="vtile">
+        <span class="lbl">B.7 · Business size</span>
+        <span class="wm wm-annot sm">
+          didakti<span class="v-ul">v</span><span class="fn">v. <b>1.</b></span>
+        </span>
+      </div>
+      <div class="vtile" style="background: var(--steel-100); border-color: var(--steel-300);">
+        <span class="lbl">B.8 · Quiet panel</span>
+        <span class="wm wm-annot sm">
+          didakti<span class="v-ul">v</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="rationale">
+      <div>
+        <h5><span class="n">01</span>Why it works</h5>
+        <ul>
+          <li class="pro">Reads as a verb — the brand's promise</li>
+          <li class="pro">Distinct without redrawing the typeface</li>
+          <li class="pro">Two-tier mark works at every scale</li>
+          <li class="pro">Tag is a free hook for editorial layouts</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">02</span>Where it bends</h5>
+        <ul>
+          <li class="con">Underline lost on dark coral surfaces</li>
+          <li class="con">Footnote tag risks looking like a citation</li>
+          <li class="con">Needs sub-pixel precision in CSS</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">03</span>Best fit</h5>
+        <p>Editorial systems, books, signage, slow brands. This is the most institutional of the three — it dignifies the wordmark rather than dramatising it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- PROPOSAL C — KONSTRUKT -->
+  <!-- ============================================= -->
+  <section class="proposal">
+    <div class="prop-head">
+      <div class="prop-id"><span class="ord">C / 03</span><b>Konstrukt</b></div>
+      <div>
+        <div class="prop-name">konstrukt<span class="badge">monogram-led</span></div>
+        <p class="prop-thesis">A primary <em>logomark</em> — not a wordmark. A constructed square monogram where the lowercase <b>d</b> and <b>v</b> share strokes: the d's vertical stem is the v's left diagonal extended; the v sits inside the d's bowl. Pure geometric Swiss construction. The full wordmark becomes a descriptor lockup.</p>
+      </div>
+      <div class="prop-tags">
+        <div class="ptag"><span>Concept</span><span>Geometric monogram</span></div>
+        <div class="ptag"><span>Drawing</span><span>SVG, single stroke</span></div>
+        <div class="ptag"><span>Grid</span><span>12 × 12 square</span></div>
+        <div class="ptag"><span>Twist</span><span>Mark leads, type follows</span></div>
+        <div class="ptag"><span>Best on</span><span>Avatars, signage, motion</span></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <span class="corner">C.1 · Primary monogram, paper</span>
+      <span class="corner r">1200 × 480</span>
+      <div class="konst-lockup">
+        <div class="monogram-c lg ks-ink">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <!-- bounding ticks (corners) -->
+            <path d="M 0 12 L 0 0 L 12 0" fill="none" stroke="oklch(70% 0.175 38)" stroke-width="2"/>
+            <path d="M 228 0 L 240 0 L 240 12" fill="none" stroke="oklch(70% 0.175 38)" stroke-width="2"/>
+            <path d="M 0 228 L 0 240 L 12 240" fill="none" stroke="oklch(70% 0.175 38)" stroke-width="2"/>
+            <path d="M 228 240 L 240 240 L 240 228" fill="none" stroke="oklch(70% 0.175 38)" stroke-width="2"/>
+            <!-- d: bowl (open circle) + vertical stem on right -->
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <!-- v: built FROM the d's stem. Left diagonal starts at top of d-stem; right diagonal goes up-right -->
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+        <div class="desc">d i d a k t i v</div>
+      </div>
+    </div>
+
+    <div class="construct">
+      <div class="diagram">
+        <svg viewBox="0 0 320 320" width="240" height="240">
+          <!-- 12x12 grid -->
+          <g stroke="oklch(82% 0.005 245)" stroke-width="0.6">
+            <line x1="0" y1="0" x2="320" y2="0"/>
+            <line x1="0" y1="320" x2="320" y2="320"/>
+            <line x1="0" y1="0" x2="0" y2="320"/>
+            <line x1="320" y1="0" x2="320" y2="320"/>
+            <g>
+              <line x1="26.67" y1="0" x2="26.67" y2="320"/>
+              <line x1="53.33" y1="0" x2="53.33" y2="320"/>
+              <line x1="80"    y1="0" x2="80"    y2="320"/>
+              <line x1="106.67" y1="0" x2="106.67" y2="320"/>
+              <line x1="133.33" y1="0" x2="133.33" y2="320"/>
+              <line x1="160"   y1="0" x2="160"   y2="320"/>
+              <line x1="186.67" y1="0" x2="186.67" y2="320"/>
+              <line x1="213.33" y1="0" x2="213.33" y2="320"/>
+              <line x1="240"   y1="0" x2="240"   y2="320"/>
+              <line x1="266.67" y1="0" x2="266.67" y2="320"/>
+              <line x1="293.33" y1="0" x2="293.33" y2="320"/>
+            </g>
+            <g>
+              <line x1="0" y1="26.67"  x2="320" y2="26.67"/>
+              <line x1="0" y1="53.33"  x2="320" y2="53.33"/>
+              <line x1="0" y1="80"     x2="320" y2="80"/>
+              <line x1="0" y1="106.67" x2="320" y2="106.67"/>
+              <line x1="0" y1="133.33" x2="320" y2="133.33"/>
+              <line x1="0" y1="160"    x2="320" y2="160"/>
+              <line x1="0" y1="186.67" x2="320" y2="186.67"/>
+              <line x1="0" y1="213.33" x2="320" y2="213.33"/>
+              <line x1="0" y1="240"    x2="320" y2="240"/>
+              <line x1="0" y1="266.67" x2="320" y2="266.67"/>
+              <line x1="0" y1="293.33" x2="320" y2="293.33"/>
+            </g>
+          </g>
+          <!-- Glyph -->
+          <circle cx="120" cy="180" r="86" stroke="oklch(38% 0.055 245)" stroke-width="30" fill="none"/>
+          <line x1="206" y1="40" x2="206" y2="266" stroke="oklch(38% 0.055 245)" stroke-width="30"/>
+          <line x1="206" y1="40" x2="260" y2="158" stroke="oklch(70% 0.175 38)" stroke-width="30"/>
+          <line x1="260" y1="158" x2="314" y2="40" stroke="oklch(70% 0.175 38)" stroke-width="30"/>
+          <!-- Shared point dot -->
+          <circle cx="206" cy="40" r="4" fill="oklch(56% 0.165 35)"/>
+          <text x="170" y="22" font-family="Encode Sans Semi Condensed" font-size="11" fill="oklch(56% 0.165 35)" letter-spacing="1.5" font-weight="600">SHARED ORIGIN</text>
+        </svg>
+      </div>
+      <div class="specs">
+        <h4>Construction</h4>
+        <div class="spec-list">
+          <div class="spec-row"><span class="k">Grid</span><span class="v">12 × 12 unit square</span></div>
+          <div class="spec-row"><span class="k">Stroke</span><span class="v">1 unit (uniform across d &amp; v)</span></div>
+          <div class="spec-row"><span class="k">d bowl</span><span class="v">Circle, ø 6 units</span></div>
+          <div class="spec-row"><span class="k">d stem</span><span class="v">Vertical, 8.5 units tall</span></div>
+          <div class="spec-row"><span class="k">v origin</span><span class="v"><b>Top of d-stem</b> — shared point</span></div>
+          <div class="spec-row"><span class="k">v angle</span><span class="v">66° apex</span></div>
+          <div class="spec-row"><span class="k">Color rule</span><span class="v">d = brand · v = signal</span></div>
+        </div>
+        <h4 style="margin-top:24px;">Lockup logic</h4>
+        <p style="font-size:13px; line-height:1.5;">Monogram is always primary. Wordmark appears as a small spaced-out descriptor (tracking +0.22 em) beneath or beside — never larger than 0.25× the mark.</p>
+      </div>
+    </div>
+
+    <div class="variants">
+      <div class="vtile">
+        <span class="lbl">C.2 · Paper</span>
+        <div class="monogram-c md ks-ink">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+      </div>
+      <div class="vtile dark">
+        <span class="lbl" style="color:var(--steel-300)">C.3 · Ink</span>
+        <div class="monogram-c md ks-dark">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+      </div>
+      <div class="vtile steel">
+        <span class="lbl" style="color:var(--steel-300)">C.4 · Steel</span>
+        <div class="monogram-c md ks-steel">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+      </div>
+      <div class="vtile signal">
+        <span class="lbl" style="color:var(--ink); opacity:0.7;">C.5 · Signal</span>
+        <div class="monogram-c md ks-signal">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- horizontal & favicon lockups -->
+    <div class="row">
+      <div class="vtile">
+        <span class="lbl">C.6 · Horizontal lockup</span>
+        <div class="konst-horiz">
+          <div class="monogram-c sm ks-ink">
+            <svg class="mono-svg" viewBox="0 0 240 240">
+              <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+              <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+              <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+              <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+            </svg>
+          </div>
+          <div class="wm-horiz">didakti<b>v</b></div>
+        </div>
+      </div>
+      <div class="vtile dark">
+        <span class="lbl" style="color:var(--steel-300)">C.7 · App icon · 256 px</span>
+        <div style="width: 100px; height: 100px; background: var(--ink); border: 1px solid var(--steel-700); display:flex; align-items:center; justify-content:center;">
+          <div class="monogram-c ks-dark" style="width:72px;height:72px;">
+            <svg class="mono-svg" viewBox="0 0 240 240">
+              <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+              <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+              <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+              <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="vtile">
+        <span class="lbl">C.8 · Favicon · 32 px</span>
+        <div class="monogram-c ks-ink" style="width:48px;height:48px;">
+          <svg class="mono-svg" viewBox="0 0 240 240">
+            <circle class="mono-d" cx="90" cy="135" r="65" stroke-width="22"/>
+            <line class="mono-d" x1="155" y1="30" x2="155" y2="200" stroke-width="22"/>
+            <line class="mono-v" x1="155" y1="30" x2="195" y2="118" stroke-width="22"/>
+            <line class="mono-v" x1="195" y1="118" x2="235" y2="30" stroke-width="22"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="rationale">
+      <div>
+        <h5><span class="n">01</span>Why it works</h5>
+        <ul>
+          <li class="pro">Strongest at small scale</li>
+          <li class="pro">Owns square space — perfect for product</li>
+          <li class="pro">Shared stroke = literal "joined-up learning"</li>
+          <li class="pro">Reads as a system, not just a logo</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">02</span>Where it bends</h5>
+        <ul>
+          <li class="con">Requires education to read as "dv"</li>
+          <li class="con">Heavier brand investment — needs a launch</li>
+          <li class="con">Demotes the wordmark</li>
+        </ul>
+      </div>
+      <div>
+        <h5><span class="n">03</span>Best fit</h5>
+        <p>Long-horizon plays. Software products, app stores, school signage, partnerships. Choose this if the brand wants its own glyph rather than a styled word.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>didaktiv · logo proposals · round 02</div>
+    <div class="c">— ready for review —</div>
+    <div class="r"><b>v2.0</b> · 13 May 2026 · brand@didaktiv.school</div>
+  </footer>
+
+</div>
+</body>
+</html>

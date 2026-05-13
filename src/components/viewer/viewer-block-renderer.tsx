@@ -657,7 +657,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ marginBottom: "-1.5rem", ...baseTextStyle, color: primaryColor }}>
+      <div className={s.textPlain} style={{ marginBottom: "-2rem", ...baseTextStyle, color: primaryColor }}>
         {renderContent(block.content)}
       </div>
     );
@@ -2766,6 +2766,7 @@ function ColumnsView({
             ...(colBorder && block.columnBorderColors?.[colIndex]
               ? { borderColor: block.columnBorderColors[colIndex] }
               : {}),
+            ...(colBorder ? { paddingTop: "6px" } : {}),
           }}
         >
           {col.map((childBlock) => (
@@ -2814,6 +2815,9 @@ function GridView({
   brand?: Brand;
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
+  const hasBorder = block.showBorder ?? false;
+  const cellPadding = hasBorder ? "8px" : "0";
+
   return (
     <div
       className="grid"
@@ -2825,7 +2829,7 @@ function GridView({
       }}
     >
       {block.children.map((cell, cellIndex) => (
-        <div key={cellIndex}>
+        <div key={cellIndex} style={hasBorder ? { paddingTop: cellPadding } : {}}>
           {cell.map((childBlock) => (
             <ViewerBlockRenderer
               key={childBlock.id}
@@ -5137,7 +5141,7 @@ function StaticScheduleTable({
     paddingTop: 6,
     paddingRight: 12,
     paddingBottom: 6,
-    paddingLeft: 12,
+    paddingLeft: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
   };
@@ -5160,13 +5164,13 @@ function StaticScheduleTable({
     whiteSpace: "nowrap",
     textAlign: "left",
     color: "inherit",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    textTransform: "uppercase",
+    fontSize: "inherit",
+    fontWeight: "inherit",
+    textTransform: "none",
     paddingTop: 3,
     paddingRight: 12,
     paddingBottom: 3,
-    paddingLeft: 12,
+    paddingLeft: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
   };
@@ -5182,7 +5186,7 @@ function StaticScheduleTable({
         .scheduleNew{width:100%;border-collapse:collapse;border-top:var(--viewer-divider-style, 1px solid var(--border));}
         .scheduleNew th,.scheduleNew td{border-bottom:var(--viewer-divider-style, 1px solid var(--border));vertical-align:middle;box-sizing:border-box;}
         .scheduleNew tbody td{height:37px;}
-        .scheduleNew thead tr th{height:auto;border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:500;}
+        .scheduleNew thead tr th{height:auto;border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:inherit;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
@@ -5199,7 +5203,7 @@ function StaticScheduleTable({
             <tr>
               {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
               <th colSpan={3} style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={headerCellStyle}>Raum</th>}
+              {showRoom && <th style={{ ...headerCellStyle, paddingRight: 16 }}>Raum</th>}
               <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
             </tr>
           </thead>
@@ -5225,8 +5229,8 @@ function StaticScheduleTable({
                 {showDate && <td style={rowCellStyle}>{formatted}</td>}
                 <td style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 2 }}>{formatScheduleCellTime(item.start)}</td>
                 <td style={dashStyle}>–</td>
-                <td style={{ ...timeRowStyle, paddingLeft: 2, paddingRight: 8 }}>{formatScheduleCellTime(item.end)}</td>
-                {showRoom && <td style={rowCellStyle}>{item.room}</td>}
+                <td style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 12 }}>{formatScheduleCellTime(item.end)}</td>
+                {showRoom && <td style={{ ...rowCellStyle, paddingRight: 16 }}>{item.room}</td>}
                 <td style={rowCellStyle}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>

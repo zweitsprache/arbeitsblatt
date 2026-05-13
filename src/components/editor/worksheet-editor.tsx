@@ -28,8 +28,10 @@ import { v4 as uuidv4 } from "uuid";
 
 function EditorInner({
   initialData,
+  editorVersion,
 }: {
   initialData?: WorksheetDocument | null;
+  editorVersion: "v1" | "v2";
 }) {
   const { state, dispatch, addBlock, save } = useEditor();
   const dndId = useId();
@@ -246,7 +248,7 @@ function EditorInner({
       onDragEnd={handleDragEnd}
     >
       <div className="h-full flex flex-col">
-        <EditorToolbar />
+        <EditorToolbar editorVersion={editorVersion} />
         <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
           <BlockSidebar onAddBlock={(type) => addBlock(type)} />
           <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
@@ -273,13 +275,15 @@ function EditorInner({
 
 export function WorksheetEditor({
   initialData,
+  editorVersion = "v1",
 }: {
   initialData?: WorksheetDocument | null;
+  editorVersion?: "v1" | "v2";
 }) {
   return (
     <TooltipProvider>
       <EditorProvider>
-        <EditorInner initialData={initialData} />
+        <EditorInner initialData={initialData} editorVersion={editorVersion} />
       </EditorProvider>
     </TooltipProvider>
   );

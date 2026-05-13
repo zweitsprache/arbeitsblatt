@@ -1,0 +1,2124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>didaktiv — Brandkit</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wdth,wght@75..125,200..900&family=Encode+Sans+Semi+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Steel blue family */
+    --steel-900: oklch(24% 0.035 245);
+    --steel-700: oklch(38% 0.055 245);
+    --steel-500: oklch(54% 0.065 245);
+    --steel-300: oklch(74% 0.045 245);
+    --steel-100: oklch(92% 0.018 245);
+
+    /* Neutral greys (cool) */
+    --ink:    oklch(18% 0.012 245);
+    --grey-700: oklch(40% 0.008 245);
+    --grey-500: oklch(60% 0.006 245);
+    --grey-300: oklch(82% 0.005 245);
+    --grey-200: oklch(90% 0.004 245);
+    --grey-100: oklch(95% 0.003 245);
+
+    /* Paper */
+    --paper: oklch(98% 0.004 240);
+    --paper-warm: oklch(97% 0.012 85);
+
+    /* Accent — the twist */
+    --signal: oklch(70% 0.175 38);  /* warm coral/orange */
+    --signal-deep: oklch(56% 0.165 35);
+
+    /* Semantic states (tweakable — see footer script) */
+    --correct:      oklch(60% 0.14 155);
+    --correct-deep: oklch(48% 0.13 155);
+    --correct-pale: oklch(94% 0.045 155);
+    --wrong:        oklch(55% 0.19 25);
+    --wrong-deep:   oklch(44% 0.17 25);
+    --wrong-pale:   oklch(94% 0.05 25);
+
+    --rule: 1px solid var(--grey-300);
+    --rule-ink: 1px solid var(--ink);
+    --rule-steel: 1px solid var(--steel-500);
+
+    --grid: 12px;
+
+    font-family: "Encode Sans", system-ui, sans-serif;
+    font-feature-settings: "ss01", "tnum";
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  em, i, cite{ font-style: normal; }
+  html,body{ background:var(--paper); color:var(--ink); }
+  body{
+    font-family: "Encode Sans", sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    font-variation-settings: "wdth" 100;
+  }
+
+  .page{
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 72px 64px 120px;
+    position: relative;
+  }
+
+  /* ===== Page margin rulers (the twist) ===== */
+  .page::before,
+  .page::after{
+    content:"";
+    position:absolute;
+    top:72px; bottom:120px;
+    width:1px;
+    background: repeating-linear-gradient(to bottom, var(--steel-500) 0 1px, transparent 1px 8px);
+  }
+  .page::before{ left:42px; }
+  .page::after{ right:42px; }
+
+  /* ===== Typography utilities ===== */
+  .mono{
+    font-family: "Encode Sans Semi Condensed", "Encode Sans", monospace;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .label{
+    font-family: "Encode Sans Semi Condensed", sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 10px;
+    color: var(--grey-700);
+  }
+  .num{
+    font-variation-settings: "wdth" 75;
+    font-weight: 600;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* ===== Top masthead ===== */
+  .masthead{
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding: 18px 0;
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items:center;
+    gap:24px;
+  }
+  .masthead .left, .masthead .right{
+    display:flex; gap:18px; align-items:center;
+  }
+  .masthead .right{ justify-content:flex-end; }
+  .masthead .center{
+    font-family:"Encode Sans Semi Condensed";
+    font-weight:700;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    font-size:11px;
+  }
+  .dot{
+    width:8px; height:8px; background:var(--signal); display:inline-block;
+  }
+
+  /* ===== Hero ===== */
+  .hero{
+    padding: 72px 0 56px;
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap: 64px;
+    border-bottom: var(--rule-ink);
+    position:relative;
+  }
+  .ex-tag{
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase;
+    letter-spacing:0.18em;
+    font-size:11px;
+    color:var(--signal-deep);
+    margin-bottom: 28px;
+  }
+  .ex-tag::before{
+    content:"§"; margin-right:8px; color:var(--ink);
+  }
+  .wordmark{
+    font-family:"Encode Sans";
+    font-weight:800;
+    font-size: 184px;
+    line-height: 0.85;
+    letter-spacing: -0.045em;
+    color: var(--steel-700);
+    font-variation-settings: "wdth" 90;
+  }
+  .wordmark .k{ color: var(--signal); }
+  .wordmark .dot-end{
+    display:inline-block;
+    width:22px; height:22px;
+    background:var(--ink);
+    vertical-align: 12px;
+    margin-left: 6px;
+  }
+  .tagline{
+    margin-top: 28px;
+    font-size: 22px;
+    font-weight:400;
+    color: var(--grey-700);
+    max-width: 600px;
+    line-height:1.35;
+  }
+  .tagline em{
+    font-style:normal;
+    border-bottom: 2px solid var(--signal);
+    padding-bottom: 2px;
+    color: var(--ink);
+  }
+
+  .hero-meta{
+    border-left: var(--rule);
+    padding-left: 28px;
+    align-self:end;
+  }
+  .meta-row{
+    display:grid;
+    grid-template-columns: 90px 1fr;
+    border-bottom: var(--rule);
+    padding: 10px 0;
+    font-size: 12px;
+  }
+  .meta-row:last-child{ border-bottom:none; }
+  .meta-row span:first-child{
+    color:var(--grey-500);
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    font-size:10px;
+  }
+  .meta-row span:last-child{ font-weight:500; }
+
+  /* ===== Section ===== */
+  section{
+    padding: 72px 0;
+    border-bottom: var(--rule);
+    position:relative;
+  }
+  section:last-of-type{ border-bottom:none; }
+  .sec-head{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap: 48px;
+    margin-bottom: 40px;
+    align-items: start;
+  }
+  .sec-no{
+    font-family:"Encode Sans Semi Condensed";
+    font-weight:700;
+    font-size: 11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--grey-500);
+    border-top: 2px solid var(--ink);
+    padding-top: 8px;
+  }
+  .sec-no b{ color: var(--ink); display:block; font-size: 14px; margin-top:4px; letter-spacing:0.1em;}
+  .sec-no .ord{ color: var(--signal-deep); }
+  .sec-title{
+    font-size: 44px;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:-0.02em;
+    font-variation-settings:"wdth" 90;
+  }
+  .sec-sub{
+    margin-top: 12px;
+    font-size: 15px;
+    color: var(--grey-700);
+    max-width: 600px;
+  }
+  .sec-sub .pen{
+    border-bottom: 1.5px solid var(--signal);
+  }
+
+  /* ===== 02 Palette ===== */
+  .swatches{
+    display:grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  .sw{
+    aspect-ratio: 3/4;
+    position:relative;
+    padding: 16px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    color:white;
+    border: 1px solid transparent;
+  }
+  .sw.light{ color: var(--ink); border-color: var(--grey-300); }
+  .sw .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .sw .name{
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    font-size:11px;
+    font-weight:600;
+  }
+  .sw .hex{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px;
+    letter-spacing:0.05em;
+    opacity:0.85;
+  }
+  .sw .role{
+    font-size:11px;
+    line-height:1.3;
+    opacity:0.85;
+  }
+  .sw .tag{
+    width:18px; height:18px; border:1px solid currentColor;
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:600;
+    font-family:"Encode Sans Semi Condensed";
+  }
+
+  .sw-ink{ background: var(--ink); }
+  .sw-steel900{ background: var(--steel-900); }
+  .sw-steel700{ background: var(--steel-700); }
+  .sw-steel500{ background: var(--steel-500); }
+  .sw-steel300{ background: var(--steel-300); color: var(--ink); }
+  .sw-steel100{ background: var(--steel-100); color: var(--ink); border-color: var(--grey-300);}
+  .sw-grey700{ background: var(--grey-700); }
+  .sw-grey500{ background: var(--grey-500); }
+  .sw-grey300{ background: var(--grey-300); color: var(--ink);}
+  .sw-paper{ background: var(--paper); color: var(--ink); border-color: var(--grey-300);}
+  .sw-signal{ background: var(--signal); color: var(--ink);}
+  .sw-signal-deep{ background: var(--signal-deep); }
+  .sw-correct{ background: var(--correct); color: var(--paper); }
+  .sw-correct-deep{ background: var(--correct-deep); color: var(--paper);}
+  .sw-correct-pale{ background: var(--correct-pale); color: var(--ink); border-color: var(--correct);}
+  .sw-wrong{ background: var(--wrong); color: var(--paper); }
+  .sw-wrong-deep{ background: var(--wrong-deep); color: var(--paper);}
+  .sw-wrong-pale{ background: var(--wrong-pale); color: var(--ink); border-color: var(--wrong);}
+
+  /* Sub-header for swatch groups */
+  .sw-group-head{
+    display:flex; align-items:baseline; gap:16px;
+    margin: 28px 0 12px;
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .sw-group-head h3{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 11px; letter-spacing:0.18em; text-transform:uppercase;
+    font-weight: 700;
+  }
+  .sw-group-head .sub{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 11px; letter-spacing:0.1em; text-transform:uppercase;
+    color: var(--grey-500);
+  }
+  .swatches.states{
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .palette-note{
+    margin-top: 28px;
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 32px;
+    padding-top: 20px;
+    border-top: var(--rule);
+  }
+  .palette-note h4{
+    font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    font-family:"Encode Sans Semi Condensed"; color:var(--grey-700);
+    margin-bottom:8px;
+  }
+  .palette-note p{
+    font-size:13px; color:var(--ink); line-height:1.45;
+  }
+
+  /* ===== 03 Typography ===== */
+  .type-spec{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap: 48px;
+    padding: 28px 0;
+    border-top: var(--rule);
+    align-items:start;
+  }
+  .type-spec:first-of-type{ border-top: var(--rule-ink); }
+  .type-spec .meta .name{
+    font-size:18px; font-weight:700;
+    letter-spacing:-0.01em;
+    margin-bottom:8px;
+  }
+  .type-spec .meta .info{
+    font-size:11px;
+    font-family:"Encode Sans Semi Condensed";
+    color: var(--grey-700);
+    line-height: 1.7;
+  }
+  .type-spec .meta .info b{ color: var(--ink); display:inline-block; min-width:60px;}
+
+  .display{
+    font-size: 96px; line-height:0.95; font-weight:700;
+    letter-spacing:-0.035em;
+    font-variation-settings:"wdth" 90;
+  }
+  .display .k{ color: var(--signal); }
+  .h1-eg{ font-size: 56px; line-height:1; font-weight:600; letter-spacing:-0.025em;}
+  .h2-eg{ font-size: 32px; line-height:1.1; font-weight:600; letter-spacing:-0.015em;}
+  .body-eg{ font-size: 16px; line-height:1.55; max-width:580px; font-weight:400;}
+  .body-eg b{ font-weight:600; color:var(--steel-700); }
+  .caption-eg{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:11px; text-transform:uppercase; letter-spacing:0.16em;
+    color: var(--grey-700);
+  }
+
+  .scale{
+    display:grid; grid-template-columns: 60px 100px 1fr; gap:16px;
+    padding: 8px 0;
+    border-top: 1px solid var(--grey-200);
+    align-items:baseline;
+  }
+  .scale:first-child{ border-top:none; }
+  .scale .num-col{ color:var(--grey-500); font-family:"Encode Sans Semi Condensed"; font-size:11px;}
+  .scale .nm{ font-family:"Encode Sans Semi Condensed"; text-transform:uppercase; font-size:10px; letter-spacing:0.14em; color:var(--ink); font-weight:600;}
+  .scale .smp{ font-weight:500; }
+
+  /* ===== 04 Logo ===== */
+  .logo-grid{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 12px;
+  }
+  .logo-tile{
+    aspect-ratio: 4/3;
+    border: 1px solid var(--grey-300);
+    background: var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    padding: 24px;
+  }
+  .logo-tile.dark{ background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .logo-tile.steel{ background: var(--steel-700); color: var(--paper); border-color: var(--steel-700);}
+  .logo-tile.signal{ background: var(--signal); color: var(--ink); border-color: var(--signal);}
+  .logo-tile .corner{
+    position:absolute; top:8px; left:8px;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    opacity:0.6;
+  }
+  .logo-tile .corner.r{ left:auto; right:8px; }
+  .logo-tile.dark .corner, .logo-tile.steel .corner{ color:var(--paper);}
+  .logo-mark{
+    font-family:"Encode Sans";
+    font-weight:800;
+    font-size:64px;
+    letter-spacing:-0.04em;
+    line-height:1;
+    font-variation-settings:"wdth" 90;
+  }
+  .logo-mark.small{ font-size: 40px;}
+  .logo-mark .k{ color: var(--signal); }
+  .logo-tile.signal .logo-mark .k{ color: var(--paper); }
+  .logo-tile.dark   .logo-mark .k{ color: var(--signal); }
+  .logo-tile.steel  .logo-mark .k{ color: var(--signal); }
+  .logo-mark .stop{
+    display:inline-block;
+    width:10px; height:10px;
+    background: currentColor;
+    margin-left: 4px;
+    vertical-align: 4px;
+  }
+  .logo-tile.signal .logo-mark .stop{ background: var(--ink); }
+
+  /* monogram tile */
+  .mono-mark{
+    width: 120px; height: 120px;
+    border: 2px solid currentColor;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:80px;
+    letter-spacing:-0.05em;
+    position:relative;
+    font-variation-settings:"wdth" 85;
+  }
+  .mono-mark .k{ color: var(--signal); }
+  .mono-mark::after{
+    content:""; position:absolute;
+    top:-2px; right:-2px; width:14px; height:14px; background: var(--signal);
+  }
+  .logo-tile.signal .mono-mark::after{ background: var(--ink); }
+
+  .clear-space{
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .clear-space .box{
+    position:relative;
+    padding: 56px;
+    border: 1px dashed var(--steel-500);
+  }
+  .clear-space .box .corner-x{
+    position:absolute; width:16px; height:16px;
+    border: 1.5px solid var(--signal);
+  }
+  .clear-space .box .corner-x.tl{ top:-1px; left:-1px; border-right:none; border-bottom:none;}
+  .clear-space .box .corner-x.tr{ top:-1px; right:-1px; border-left:none; border-bottom:none;}
+  .clear-space .box .corner-x.bl{ bottom:-1px; left:-1px; border-right:none; border-top:none;}
+  .clear-space .box .corner-x.br{ bottom:-1px; right:-1px; border-left:none; border-top:none;}
+
+  .logo-row2{
+    margin-top: 12px;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  /* ===== 05 Voice ===== */
+  .voice{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+  .voice-list{ }
+  .voice-row{
+    display:grid; grid-template-columns: 24px 1fr 1fr; gap:16px;
+    padding: 18px 0;
+    border-top: var(--rule);
+    align-items:start;
+  }
+  .voice-row:first-child{ border-top: var(--rule-ink); }
+  .voice-row .check{
+    font-family:"Encode Sans Semi Condensed"; font-weight:700;
+    color: var(--correct-deep); font-size:14px;
+  }
+  .voice-row .cross{ color: var(--wrong); font-weight:700; font-size:14px; }
+  .voice-row h5{
+    font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    font-family:"Encode Sans Semi Condensed"; font-weight:600;
+    margin-bottom:6px;
+  }
+  .voice-row p{ font-size: 13.5px; line-height:1.45; color: var(--ink);}
+  .voice-row.no h5{ color: var(--wrong-deep);}
+  .voice-row.no p{ color: var(--grey-500); text-decoration: line-through; text-decoration-color: var(--wrong);}
+
+  .quote-block{
+    background: var(--steel-100);
+    padding: 40px;
+    position:relative;
+    border: 1px solid var(--steel-300);
+  }
+  .quote-block::before{
+    content:"„";
+    position:absolute;
+    top: 8px; left: 16px;
+    font-size: 80px; line-height:1;
+    color: var(--signal); font-weight:700;
+  }
+  .quote-block blockquote{
+    font-size: 22px; line-height: 1.35; font-weight: 500;
+    color: var(--steel-900);
+    margin-top: 24px;
+    letter-spacing: -0.01em;
+  }
+  .quote-block blockquote em{
+    font-style: normal;
+    background: var(--signal);
+    padding: 0 4px;
+    color: var(--ink);
+  }
+  .quote-block cite{
+    display:block; margin-top: 24px;
+    font-style: normal;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.14em;
+    color: var(--steel-700);
+    font-family:"Encode Sans Semi Condensed"; font-weight:600;
+  }
+
+  /* ===== 06 Components ===== */
+  .comp-grid{
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 32px;
+  }
+  .comp-card{
+    border: 1px solid var(--grey-300);
+    background: var(--paper);
+    padding: 28px;
+  }
+  .comp-card h4{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.16em;
+    font-family:"Encode Sans Semi Condensed"; color:var(--grey-700);
+    margin-bottom: 20px;
+    display:flex; justify-content:space-between;
+  }
+  .btn-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; align-items:center;}
+  .btn{
+    font-family:"Encode Sans";
+    font-weight:600;
+    font-size:13px;
+    padding: 11px 18px;
+    border: 1.5px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor:pointer;
+    letter-spacing: 0.01em;
+    display:inline-flex; align-items:center; gap:8px;
+    font-variation-settings: "wdth" 95;
+  }
+  .btn .arrow{
+    display:inline-block; width:14px; height:1.5px; background: currentColor; position:relative;
+  }
+  .btn .arrow::after{
+    content:""; position:absolute; right:0; top:-3px;
+    width:8px; height:8px; border-right:1.5px solid currentColor; border-top:1.5px solid currentColor;
+    transform: rotate(45deg); transform-origin:right top;
+  }
+  .btn.secondary{ background: transparent; color: var(--ink); }
+  .btn.signal{ background: var(--signal); border-color: var(--signal); color: var(--ink); }
+  .btn.steel{ background: var(--steel-700); border-color: var(--steel-700); color: var(--paper);}
+  .btn.ghost{ background: transparent; border-color: var(--grey-300); color: var(--grey-700); }
+  .btn.sm{ font-size: 11px; padding: 7px 12px; }
+
+  /* form */
+  .form-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+  .form-row label{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.14em;
+    color: var(--grey-700); font-weight:600;
+  }
+  .form-row input{
+    border: none;
+    border-bottom: 1.5px solid var(--ink);
+    background: transparent;
+    padding: 10px 0;
+    font-family: inherit; font-size: 15px;
+    outline: none;
+    color: var(--ink);
+  }
+  .form-row input:focus{ border-color: var(--signal-deep);}
+  .form-row .hint{
+    font-size:11px; color:var(--grey-500);
+    font-family:"Encode Sans Semi Condensed";
+  }
+
+  /* badges */
+  .badges{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .badge{
+    font-family:"Encode Sans Semi Condensed"; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.12em; font-weight:600;
+    padding: 4px 8px;
+    border:1px solid var(--ink);
+  }
+  .badge.fill{ background: var(--ink); color:var(--paper);}
+  .badge.signal{ background: var(--signal); border-color: var(--signal); color:var(--ink);}
+  .badge.steel{ background: var(--steel-100); border-color: var(--steel-300); color: var(--steel-900);}
+  .badge.dot::before{
+    content:""; display:inline-block; width:6px; height:6px;
+    background: var(--signal); margin-right:6px; vertical-align: 2px;
+    border-radius: 50%;
+  }
+
+  /* progress / spec */
+  .stat{
+    display:grid; grid-template-columns: 1fr auto; align-items:baseline;
+    border-bottom: var(--rule); padding: 12px 0;
+  }
+  .stat:first-of-type{ border-top: var(--rule-ink); }
+  .stat .nm{ font-family:"Encode Sans Semi Condensed"; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--grey-700);}
+  .stat .vl{ font-size: 24px; font-weight:700; letter-spacing:-0.01em; font-variation-settings:"wdth" 85;}
+  .stat .vl b{ color: var(--signal-deep); font-weight: 700; }
+
+  /* ===== Marking & feedback card ===== */
+  .feedback-card{
+    margin-top: 24px;
+    border: 1px solid var(--grey-300);
+    background: var(--paper);
+    padding: 28px;
+  }
+  .fb-head{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .fb-head h4{
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    font-family:"Encode Sans Semi Condensed"; color:var(--ink); font-weight:700;
+  }
+  .fb-head h4 span{
+    color: var(--grey-500); font-weight:500;
+  }
+  .fb-legend{ display:flex; gap:6px; flex-wrap:wrap;}
+  .lg-chip{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.12em; font-weight:600;
+    padding: 4px 8px; border: 1px solid var(--grey-300);
+  }
+  .lg-chip.lg-correct{ color: var(--correct-deep); border-color: var(--correct);}
+  .lg-chip.lg-wrong{   color: var(--wrong-deep);   border-color: var(--wrong);}
+  .lg-chip.lg-neutral{ color: var(--grey-700);     border-color: var(--grey-300);}
+
+  .fb-body{
+    display:grid; grid-template-columns: 1.3fr 1fr; gap: 32px;
+  }
+  /* quiz list */
+  .quiz{ display:flex; flex-direction:column; gap:6px; }
+  .quiz-q{
+    display:grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items:center; gap: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--grey-300);
+    background: var(--paper);
+    font-size: 13px;
+  }
+  .quiz-no{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color: var(--grey-500); font-weight:700;
+  }
+  .quiz-text{ font-weight: 500; line-height:1.35;}
+  .quiz-text b{ color: var(--steel-700); font-weight:700;}
+  .quiz-mark{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase; font-weight:700;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+  .quiz-mark.correct{ background: var(--correct-pale); color: var(--correct-deep); border-left: 3px solid var(--correct);}
+  .quiz-mark.wrong{   background: var(--wrong-pale);   color: var(--wrong-deep);   border-left: 3px solid var(--wrong);}
+  .quiz-q:has(.correct){ border-left: 1px solid var(--correct); }
+  .quiz-q:has(.wrong){ border-left: 1px solid var(--wrong); }
+
+  /* score card */
+  .fb-right{ display:flex; flex-direction:column; gap: 18px;}
+  .score-card{
+    border: 1px solid var(--ink);
+    padding: 18px;
+    background: var(--paper);
+  }
+  .score-label{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+    color: var(--grey-700); font-weight:600;
+    margin-bottom: 10px;
+  }
+  .score-line{
+    display:flex; align-items:baseline; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .score-big{
+    font-size: 64px; font-weight:700; letter-spacing:-0.04em;
+    font-variation-settings:"wdth" 85;
+    color: var(--correct-deep);
+    line-height: 0.9;
+  }
+  .score-divider{ font-size:32px; color: var(--grey-300); font-weight:300;}
+  .score-total{
+    font-size: 28px; font-weight:600; color: var(--grey-700);
+    font-variation-settings:"wdth" 85;
+  }
+  .score-badge{
+    margin-left: auto;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.14em; text-transform:uppercase; font-weight:700;
+    padding: 5px 8px;
+  }
+  .score-badge.correct{ background: var(--correct); color: var(--paper);}
+  .score-badge.wrong{ background: var(--wrong); color: var(--paper);}
+
+  .score-bar{
+    display:flex; height:10px; gap:2px; margin-bottom: 8px;
+  }
+  .bar-correct{ background: var(--correct); }
+  .bar-wrong{ background: var(--wrong); }
+  .bar-skip{ background: var(--grey-300); }
+
+  .score-legend{
+    display:flex; gap:16px;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:11px; text-transform:uppercase; letter-spacing:0.12em;
+    color: var(--grey-700);
+  }
+  .score-legend b{ color: var(--ink); }
+
+  .state-row{ display:flex; flex-wrap:wrap; gap:4px;}
+  .state-chip{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase; font-weight:600;
+    padding: 5px 8px;
+    border: 1px solid currentColor;
+  }
+  .state-chip.correct{ background: var(--correct); color: var(--paper); border-color: var(--correct);}
+  .state-chip.correct-pale{ background: var(--correct-pale); color: var(--correct-deep); border-color: var(--correct);}
+  .state-chip.neutral{ background: var(--paper); color: var(--grey-700); border-color: var(--grey-300);}
+  .state-chip.wrong-pale{ background: var(--wrong-pale); color: var(--wrong-deep); border-color: var(--wrong);}
+  .state-chip.wrong{ background: var(--wrong); color: var(--paper); border-color: var(--wrong);}
+
+  .fb-note{
+    font-size: 12.5px; color: var(--grey-700); line-height: 1.5;
+    border-top: 1px solid var(--grey-200);
+    padding-top: 12px;
+  }
+
+  /* ===== 07 Grid / spacing ===== */
+  .grid-demo{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 32px;
+  }
+  .grid-vis{
+    aspect-ratio: 16/9;
+    background:
+      linear-gradient(to right, var(--steel-100) 1px, transparent 1px) 0 0/8.333% 100%,
+      linear-gradient(to bottom, var(--steel-100) 1px, transparent 1px) 0 0/100% 8.333%,
+      var(--paper);
+    border: 1px solid var(--grey-300);
+    position:relative;
+    padding: 24px;
+    overflow:hidden;
+  }
+  .gv-block{
+    position:absolute;
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding: 10px;
+  }
+  .gv-block .l{ font-family:"Encode Sans Semi Condensed"; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;}
+  .gv-block .n{ font-family:"Encode Sans Semi Condensed"; font-size:10px; color: var(--grey-500);}
+  .gv-1{ top:8%; left:5%; width:38%; height:60%; background: var(--steel-700); color: var(--paper); border-color: var(--steel-700);}
+  .gv-1 .n{ color: var(--steel-300);}
+  .gv-2{ top:8%; left:47%; width:48%; height:28%; background: var(--paper);}
+  .gv-3{ top:40%; left:47%; width:22%; height:28%; background: var(--signal); border-color: var(--signal);}
+  .gv-4{ top:40%; left:71%; width:24%; height:28%; background: var(--paper);}
+  .gv-5{ top:74%; left:5%; width:90%; height:18%; background: var(--ink); color: var(--paper); border-color: var(--ink);}
+  .gv-5 .n{ color: var(--grey-500);}
+
+  .space-list{ }
+  .space-row{
+    display:grid;
+    grid-template-columns: 60px 1fr 60px;
+    align-items:center;
+    gap: 16px;
+    padding: 8px 0;
+    border-top: 1px solid var(--grey-200);
+  }
+  .space-row:first-child{ border-top: var(--rule-ink); }
+  .space-row .tk{ font-family:"Encode Sans Semi Condensed"; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; font-weight:600;}
+  .space-row .bar{ height: 10px; background: var(--steel-500); }
+  .space-row .px{ text-align:right; font-family:"Encode Sans Semi Condensed"; font-size:11px; color: var(--grey-700);}
+
+  /* ===== 08 Applications ===== */
+  .apps{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .app{
+    aspect-ratio: 3/4;
+    border: 1px solid var(--grey-300);
+    overflow: hidden;
+    position: relative;
+  }
+  /* App 1 — book cover */
+  .app-book{
+    background: var(--paper);
+    padding: 24px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    color: var(--ink);
+  }
+  .app-book .top{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.14em;
+    color: var(--grey-700);
+  }
+  .app-book .ttl{
+    font-size: 44px; font-weight:800; letter-spacing:-0.03em; line-height:0.95;
+    font-variation-settings:"wdth" 88;
+  }
+  .app-book .ttl .k{ color: var(--signal); }
+  .app-book .ttl .stop{ display:inline-block; width:10px; height:10px; background: var(--ink); margin-left:2px; vertical-align:3px;}
+  .app-book .sub{ font-size:13px; color: var(--grey-700); margin-top:8px; max-width:200px; line-height:1.3;}
+  .app-book .barcode{
+    width: 80px; height: 30px;
+    background: repeating-linear-gradient(to right, var(--ink) 0 1.5px, transparent 1.5px 3px, var(--ink) 3px 4px, transparent 4px 7px);
+  }
+  .app-book .ed{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.14em;
+    color: var(--ink); border-top:1px solid var(--ink); padding-top:6px;
+    display:flex; justify-content:space-between;
+  }
+
+  /* App 2 — poster */
+  .app-poster{
+    background: var(--steel-700);
+    color: var(--paper);
+    padding: 24px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    position:relative;
+  }
+  .app-poster .header{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.14em;
+    color: var(--steel-300);
+    display:flex; justify-content:space-between;
+  }
+  .app-poster .big{
+    font-size: 92px; line-height:0.85; font-weight:800;
+    letter-spacing:-0.04em;
+    font-variation-settings:"wdth" 85;
+  }
+  .app-poster .big .k{ color: var(--signal); }
+  .app-poster .big .stop{ display:inline-block; width:14px; height:14px; background: var(--paper); margin-left:2px; vertical-align:6px;}
+  .app-poster .meta{
+    display:grid; grid-template-columns:1fr 1fr; gap: 12px;
+    font-size:11px; line-height:1.4;
+  }
+  .app-poster .meta .k{
+    font-family:"Encode Sans Semi Condensed"; text-transform:uppercase;
+    letter-spacing:0.12em; font-size:9px; color: var(--steel-300);
+    display:block; margin-bottom:2px;
+  }
+  .app-poster .corner-mark{
+    position:absolute; top:24px; right:24px;
+    width:36px; height:36px;
+    border:1.5px solid var(--signal);
+    display:flex; align-items:center; justify-content:center;
+    font-family:"Encode Sans Semi Condensed"; font-weight:700;
+    font-size:14px; color: var(--signal);
+  }
+
+  /* App 3 — UI screen */
+  .app-ui{
+    background: var(--paper);
+    display:flex; flex-direction:column;
+  }
+  .app-ui .tb{
+    background: var(--ink); color: var(--paper);
+    padding: 10px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
+  }
+  .app-ui .tb .m{ display:flex; gap:8px; align-items:center;}
+  .app-ui .tb .m::before{
+    content:""; width:8px; height:8px; background: var(--signal);
+  }
+  .app-ui .content{ padding: 18px; flex:1; display:flex; flex-direction:column; gap: 14px;}
+  .app-ui .crumb{
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color: var(--grey-700);
+  }
+  .app-ui .crumb b{ color: var(--ink); }
+  .app-ui h3{
+    font-size:24px; font-weight:700; letter-spacing:-0.015em; line-height:1.1;
+    font-variation-settings:"wdth" 92;
+  }
+  .app-ui h3 .u{ background: var(--signal); padding: 0 2px; }
+  .app-ui .lessons{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .app-ui .lesson{
+    display:flex; align-items:center; gap:10px;
+    border: 1px solid var(--grey-300);
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .app-ui .lesson .no{
+    font-family:"Encode Sans Semi Condensed"; font-weight:700; font-size:10px;
+    color: var(--grey-500); width: 22px;
+  }
+  .app-ui .lesson .ti{ flex:1; font-weight:500;}
+  .app-ui .lesson .dur{ font-family:"Encode Sans Semi Condensed"; font-size:10px; color:var(--grey-700);}
+  .app-ui .lesson.now{ background: var(--steel-100); border-color: var(--steel-500);}
+  .app-ui .lesson.now .no{ color: var(--signal-deep);}
+  .app-ui .lesson.done{ color: var(--grey-500); }
+  .app-ui .lesson.done .ti{ text-decoration: line-through; text-decoration-color: var(--grey-300);}
+  .app-ui .progress{
+    margin-top:auto;
+    border-top: 1px solid var(--grey-300);
+    padding-top: 10px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .app-ui .progress .pb{
+    height: 4px; background: var(--grey-200);
+    position:relative;
+  }
+  .app-ui .progress .pb::after{
+    content:""; position:absolute; left:0; top:0; bottom:0;
+    width: 62%; background: var(--signal);
+  }
+  .app-ui .progress .pn{
+    display:flex; justify-content:space-between;
+    font-family:"Encode Sans Semi Condensed";
+    font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
+    color: var(--grey-700);
+  }
+  .app-ui .progress .pn b{ color: var(--ink); }
+
+  /* ===== Footer ===== */
+  footer{
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items:center;
+    font-size: 11px;
+    font-family:"Encode Sans Semi Condensed";
+    text-transform:uppercase;
+    letter-spacing:0.16em;
+    color: var(--grey-700);
+  }
+  footer .c{ text-align:center;}
+  footer .r{ text-align:right;}
+  footer b{ color: var(--ink); }
+
+  /* ===== Tweaks panel ===== */
+  #tweaks-panel{
+    position: fixed;
+    bottom: 24px; right: 24px;
+    width: 340px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 12px 32px -8px oklch(0% 0 0 / 0.18);
+    z-index: 1000;
+    font-family: "Encode Sans", sans-serif;
+  }
+  #tweaks-panel[hidden]{ display: none; }
+  .tp-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--ink);
+    cursor: move;
+  }
+  .tp-header h3{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 11px; letter-spacing:0.18em; text-transform:uppercase;
+    font-weight: 700; color: var(--ink);
+  }
+  .tp-close{
+    background: var(--ink); color: var(--paper);
+    border: none; width: 22px; height: 22px;
+    font-size: 16px; line-height: 1; cursor: pointer;
+    font-family: inherit;
+  }
+  .tp-body{ padding: 16px 14px; display:flex; flex-direction:column; gap: 18px;}
+  .tp-group{ }
+  .tp-group-head{
+    display:flex; align-items:center; gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--grey-300);
+    margin-bottom: 12px;
+  }
+  .tp-dot{
+    width: 22px; height: 22px;
+    display:inline-block;
+    border: 1px solid var(--ink);
+  }
+  .tp-name{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--ink); flex: 1;
+  }
+  .tp-row{
+    display:grid; grid-template-columns: 60px 1fr 50px;
+    align-items:center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .tp-row label{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--grey-700); font-weight: 600;
+  }
+  .tp-row input[type=range]{
+    width: 100%;
+    accent-color: var(--ink);
+  }
+  .tp-row .tp-out{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 11px; color: var(--ink);
+    font-weight: 600;
+    text-align: right;
+    font-feature-settings: "tnum";
+  }
+  .tp-presets{
+    display:flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .tp-presets button{
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 600;
+    padding: 5px 8px;
+    background: var(--paper);
+    border: 1px solid var(--grey-300);
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .tp-presets button:hover{ border-color: var(--ink); }
+  .tp-actions{
+    display:flex; gap:6px; border-top: 1px solid var(--grey-300); padding-top: 12px;
+  }
+  .tp-btn{
+    flex: 1;
+    font-family:"Encode Sans";
+    font-size: 12px; font-weight: 600;
+    padding: 8px 12px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .tp-btn.primary{ background: var(--ink); color: var(--paper); }
+
+  /* ===== Annotations (the twist) ===== */
+  .annot{
+    position:absolute;
+    font-family:"Encode Sans Semi Condensed";
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--signal-deep);
+    display:flex; align-items:center; gap:6px;
+    pointer-events:none;
+  }
+  .annot .line{
+    height:1px; background: var(--signal-deep);
+  }
+  .annot.right{ right:-160px; top:0; }
+  .annot.right .line{ width:80px; }
+
+  /* tiny corner ticks */
+  .tick-frame{ position:relative;}
+  .tick-frame::before,
+  .tick-frame::after{
+    content:""; position:absolute;
+    width:10px; height:10px;
+    border: 1.5px solid var(--signal);
+  }
+  .tick-frame::before{ top:-5px; left:-5px; border-right:none; border-bottom:none;}
+  .tick-frame::after{ bottom:-5px; right:-5px; border-left:none; border-top:none;}
+
+  /* ===== Print ===== */
+  @media print {
+    @page { size: A3 landscape; margin: 1.2cm; }
+    html, body{
+      background: var(--paper) !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    *{
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    #tweaks-panel{ display: none !important; }
+
+    .page{
+      max-width: none;
+      padding: 0;
+      margin: 0;
+    }
+    /* margin rulers are decorative — drop them in print */
+    .page::before, .page::after{ display: none; }
+
+    /* Page break between major sections */
+    .masthead{ break-after: avoid; }
+    .hero{ break-after: page; }
+    section{
+      break-before: page;
+      break-inside: auto;
+      padding: 32px 0;
+    }
+    .sec-head{ break-after: avoid; }
+    section > h2, section > h3{ break-after: avoid; }
+
+    /* Avoid splitting key blocks */
+    .swatches, .sw, .logo-tile, .logo-grid, .logo-row2,
+    .type-spec, .grid-demo, .grid-vis, .space-list,
+    .comp-card, .feedback-card, .quote-block,
+    .voice-row, .app, .palette-note{
+      break-inside: avoid;
+    }
+    /* Allow apps row to break if needed */
+    .apps{ break-inside: auto; }
+
+    footer{ break-before: avoid; margin-top: 32px; }
+
+    /* Slightly tighten section vertical rhythm */
+    .sec-title{ font-size: 36px; }
+    .intro h1, .hero .wordmark{ break-inside: avoid; }
+
+    /* Force any stage backgrounds to print */
+    .stage, .vtile, .sw, .app, .app-poster, .app-book, .app-ui, .quote-block{
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="left">
+      <span class="dot"></span>
+      <span class="mono">didaktiv / brand identity manual</span>
+    </div>
+    <div class="center">Edition 01 · Internal Working Document</div>
+    <div class="right">
+      <span class="mono num">v1.0 — May 2026</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" style="border-bottom: 2px solid var(--ink);">
+    <div>
+      <div class="ex-tag">Exercise 01 · Read the cover before opening the book</div>
+      <h1 class="wordmark">
+        didakti<span class="k">v</span>
+      </h1>
+      <p class="tagline">
+        A learning system that <em>teaches the teacher</em>. Functional by training, curious by reflex — a brand built for classrooms, codebases, and everything you haven't learned yet.
+      </p>
+    </div>
+    <aside class="hero-meta">
+      <div class="meta-row"><span>Type</span><span>Identity System</span></div>
+      <div class="meta-row"><span>Sector</span><span>Education · K-12 + Adult</span></div>
+      <div class="meta-row"><span>Region</span><span>DE · AT · CH</span></div>
+      <div class="meta-row"><span>Stewards</span><span>Brand Studio</span></div>
+      <div class="meta-row"><span>Status</span><span style="color:var(--signal-deep)">● Live</span></div>
+      <div class="meta-row"><span>Built on</span><span>Encode Sans</span></div>
+    </aside>
+  </section>
+
+  <!-- 01 LOGO -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">01 / 07</span><b>Marks</b></div>
+      <div>
+        <h2 class="sec-title">The wordmark, the monogram,<br/>and the letter that does the work.</h2>
+        <p class="sec-sub">The lowercase <span class="pen">v</span> is the only deliberate flourish. It carries the accent color, and stands in for the monogram when space is tight. <em>didaktiv</em> ends on a rising letter, not a period — the wordmark is left open on purpose, because learning is.</p>
+      </div>
+    </div>
+
+    <div class="logo-grid">
+      <div class="logo-tile">
+        <span class="corner">A · Primary, paper</span>
+        <span class="corner r">120 × 90</span>
+        <span class="logo-mark">didakti<span class="k">v</span></span>
+      </div>
+      <div class="logo-tile dark">
+        <span class="corner">B · Ink</span>
+        <span class="corner r">60 × 45</span>
+        <span class="logo-mark small">didakti<span class="k">v</span></span>
+      </div>
+      <div class="logo-tile steel">
+        <span class="corner">C · Steel</span>
+        <span class="corner r">60 × 45</span>
+        <span class="logo-mark small">didakti<span class="k">v</span></span>
+      </div>
+    </div>
+
+    <div class="logo-row2">
+      <div class="logo-tile signal">
+        <span class="corner">D · Signal lockup</span>
+        <span class="corner r">40 × 30</span>
+        <span class="logo-mark small">didakti<span class="k">v</span></span>
+      </div>
+      <div class="logo-tile">
+        <span class="corner">E · Monogram, paper</span>
+        <span class="corner r">40 × 30</span>
+        <div class="mono-mark">d<span class="k">v</span></div>
+      </div>
+      <div class="logo-tile dark">
+        <span class="corner">F · Monogram, ink</span>
+        <span class="corner r">40 × 30</span>
+        <div class="mono-mark">d<span class="k">v</span></div>
+      </div>
+      <div class="logo-tile">
+        <span class="corner">G · Clear space (1× v-height)</span>
+        <span class="corner r">40 × 30</span>
+        <div class="clear-space">
+          <div class="box">
+            <span class="corner-x tl"></span><span class="corner-x tr"></span>
+            <span class="corner-x bl"></span><span class="corner-x br"></span>
+            <span class="logo-mark small">didakti<span class="k">v</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 COLOR -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">02 / 07</span><b>Palette</b></div>
+      <div>
+        <h2 class="sec-title">Steel for structure, paper for thought,<br/>signal for the one thing you must read.</h2>
+        <p class="sec-sub">Steel blue carries authority without warming into nostalgia. Greys provide a quiet substrate for dense pedagogical information. The <span class="pen">signal</span> coral appears at most <b>once per surface</b> — it is the highlighter, never the wallpaper.</p>
+      </div>
+    </div>
+
+    <div class="swatches">
+      <div class="sw sw-ink">
+        <div class="top"><span class="name">Ink</span><span class="tag">01</span></div>
+        <div>
+          <div class="role">Primary text · borders · monogram</div>
+          <div class="hex">OKLCH 18 / 0.012 / 245<br/>#1A1F25</div>
+        </div>
+      </div>
+      <div class="sw sw-steel900">
+        <div class="top"><span class="name">Steel 900</span><span class="tag">02</span></div>
+        <div>
+          <div class="role">Brand display · headers on light</div>
+          <div class="hex">OKLCH 24 / 0.035 / 245<br/>#23323F</div>
+        </div>
+      </div>
+      <div class="sw sw-steel700">
+        <div class="top"><span class="name">Steel 700</span><span class="tag">03</span></div>
+        <div>
+          <div class="role">Surface · primary brand color</div>
+          <div class="hex">OKLCH 38 / 0.055 / 245<br/>#3D5A75</div>
+        </div>
+      </div>
+      <div class="sw sw-steel500">
+        <div class="top"><span class="name">Steel 500</span><span class="tag">04</span></div>
+        <div>
+          <div class="role">Rules · ticks · diagrams</div>
+          <div class="hex">OKLCH 54 / 0.065 / 245<br/>#5F84A4</div>
+        </div>
+      </div>
+      <div class="sw sw-steel300 light">
+        <div class="top"><span class="name">Steel 300</span><span class="tag">05</span></div>
+        <div>
+          <div class="role">Hover · disabled · inert</div>
+          <div class="hex">OKLCH 74 / 0.045 / 245<br/>#A6BCD0</div>
+        </div>
+      </div>
+      <div class="sw sw-steel100 light">
+        <div class="top"><span class="name">Steel 100</span><span class="tag">06</span></div>
+        <div>
+          <div class="role">Quiet panels · quote blocks</div>
+          <div class="hex">OKLCH 92 / 0.018 / 245<br/>#DDE7F0</div>
+        </div>
+      </div>
+
+      <div class="sw sw-grey700">
+        <div class="top"><span class="name">Grey 700</span><span class="tag">07</span></div>
+        <div>
+          <div class="role">Secondary text · labels</div>
+          <div class="hex">OKLCH 40 / 0.008 / 245<br/>#5A5E62</div>
+        </div>
+      </div>
+      <div class="sw sw-grey500">
+        <div class="top"><span class="name">Grey 500</span><span class="tag">08</span></div>
+        <div>
+          <div class="role">Tertiary · captions · hints</div>
+          <div class="hex">OKLCH 60 / 0.006 / 245<br/>#8E9094</div>
+        </div>
+      </div>
+      <div class="sw sw-grey300 light">
+        <div class="top"><span class="name">Grey 300</span><span class="tag">09</span></div>
+        <div>
+          <div class="role">Borders · dividers · ticks</div>
+          <div class="hex">OKLCH 82 / 0.005 / 245<br/>#C8CACD</div>
+        </div>
+      </div>
+      <div class="sw sw-paper light">
+        <div class="top"><span class="name">Paper</span><span class="tag">10</span></div>
+        <div>
+          <div class="role">Default surface · all reading</div>
+          <div class="hex">OKLCH 98 / 0.004 / 240<br/>#F5F7F9</div>
+        </div>
+      </div>
+      <div class="sw sw-signal light">
+        <div class="top"><span class="name">Signal</span><span class="tag">11</span></div>
+        <div>
+          <div class="role">Accent · the highlighter · the k</div>
+          <div class="hex">OKLCH 70 / 0.175 / 38<br/>#E88454</div>
+        </div>
+      </div>
+      <div class="sw sw-signal-deep">
+        <div class="top"><span class="name">Signal Deep</span><span class="tag">12</span></div>
+        <div>
+          <div class="role">Active text · links · errors</div>
+          <div class="hex">OKLCH 56 / 0.165 / 35<br/>#B85A2B</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semantic states sub-group -->
+    <div class="sw-group-head">
+      <h3>Semantic states · marking &amp; feedback</h3>
+      <span class="sub">/ 06 swatches · two stories, three steps each</span>
+    </div>
+    <div class="swatches states">
+      <div class="sw sw-correct">
+        <div class="top"><span class="name">Correct</span><span class="tag">13</span></div>
+        <div>
+          <div class="role">Right answers · achieved · passed</div>
+          <div class="hex" id="hex-correct">OKLCH 60 / 0.140 / 155</div>
+        </div>
+      </div>
+      <div class="sw sw-correct-deep">
+        <div class="top"><span class="name">Correct Deep</span><span class="tag">14</span></div>
+        <div>
+          <div class="role">Active state · text on pale</div>
+          <div class="hex" id="hex-correct-deep">OKLCH 48 / 0.130 / 155</div>
+        </div>
+      </div>
+      <div class="sw sw-correct-pale">
+        <div class="top"><span class="name">Correct Pale</span><span class="tag">15</span></div>
+        <div>
+          <div class="role">Background · highlight · fill</div>
+          <div class="hex" id="hex-correct-pale">OKLCH 94 / 0.045 / 155</div>
+        </div>
+      </div>
+      <div class="sw sw-wrong">
+        <div class="top"><span class="name">Wrong</span><span class="tag">16</span></div>
+        <div>
+          <div class="role">Incorrect · missed · retry</div>
+          <div class="hex" id="hex-wrong">OKLCH 55 / 0.190 / 25</div>
+        </div>
+      </div>
+      <div class="sw sw-wrong-deep">
+        <div class="top"><span class="name">Wrong Deep</span><span class="tag">17</span></div>
+        <div>
+          <div class="role">Active state · text on pale</div>
+          <div class="hex" id="hex-wrong-deep">OKLCH 44 / 0.170 / 25</div>
+        </div>
+      </div>
+      <div class="sw sw-wrong-pale">
+        <div class="top"><span class="name">Wrong Pale</span><span class="tag">18</span></div>
+        <div>
+          <div class="role">Background · highlight · fill</div>
+          <div class="hex" id="hex-wrong-pale">OKLCH 94 / 0.050 / 25</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="palette-note">
+      <div>
+        <h4>Mix rule · 60 / 30 / 8 / 2</h4>
+        <p>Paper at 60. Steel + Ink at 30. Greys at 8. Signal capped at 2 percent of any surface. If you can see two signals at once, one of them is wrong.</p>
+      </div>
+      <div>
+        <h4>Contrast minimum</h4>
+        <p>Body text against Paper: Ink or Grey 700 only. Steel 500 and lighter never carry copy below 14 px. Signal never used for long-form text — only headlines or single words.</p>
+      </div>
+      <div>
+        <h4>Print conversion</h4>
+        <p>Pantone match: Steel 700 ≈ 7546 C · Signal ≈ 7416 C. For uncoated stock, drop one step lighter to retain ink saturation under classroom lamp light.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 TYPE -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">03 / 07</span><b>Typography</b></div>
+      <div>
+        <h2 class="sec-title">One family. Two widths.<br/>Nine weights of confidence.</h2>
+        <p class="sec-sub"><b>Encode Sans</b> is the entire type system — chosen because it scales from a phone notification to a lecture hall poster without changing voice. Width axis (75–125) is our secret tool: condense for chrome, default for body, never extend.</p>
+      </div>
+    </div>
+
+    <!-- Display -->
+    <div class="type-spec">
+      <div class="meta">
+        <div class="name">Display</div>
+        <div class="info">
+          <b>Family</b> Encode Sans<br/>
+          <b>Weight</b> 700 Bold<br/>
+          <b>Width</b> 90 (Semi Cond.)<br/>
+          <b>Tracking</b> -3.5%<br/>
+          <b>Used for</b> Wordmarks, hero headlines, posters
+        </div>
+      </div>
+      <div class="display">Lernen, gemacht.<br/>akti<span class="k">v</span>.</div>
+    </div>
+
+    <!-- Headlines -->
+    <div class="type-spec">
+      <div class="meta">
+        <div class="name">Headline scale</div>
+        <div class="info">
+          <b>Family</b> Encode Sans<br/>
+          <b>Weight</b> 600 Semi<br/>
+          <b>Width</b> 95–100<br/>
+          <b>Tracking</b> -1 to -2%
+        </div>
+      </div>
+      <div>
+        <div class="scale"><div class="num-col">H1 / 56</div><div class="nm">Section</div><div class="smp h1-eg">The verb is teach.</div></div>
+        <div class="scale"><div class="num-col">H2 / 32</div><div class="nm">Topic</div><div class="smp h2-eg">A pattern repeats until it is understood.</div></div>
+        <div class="scale"><div class="num-col">H3 / 22</div><div class="nm">Block</div><div class="smp" style="font-size:22px;font-weight:600;letter-spacing:-0.01em;">Notes from the practical session</div></div>
+        <div class="scale"><div class="num-col">H4 / 16</div><div class="nm">Lesson</div><div class="smp" style="font-size:16px;font-weight:600;">Step 3 — Show your working</div></div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="type-spec">
+      <div class="meta">
+        <div class="name">Body & Reading</div>
+        <div class="info">
+          <b>Family</b> Encode Sans<br/>
+          <b>Weight</b> 400 / 500 / 600<br/>
+          <b>Width</b> 100<br/>
+          <b>Leading</b> 1.55<br/>
+          <b>Measure</b> 62–78 characters
+        </div>
+      </div>
+      <div>
+        <p class="body-eg">A good lesson does <b>one thing</b> at a time, and asks the student to prove they understood the one thing before moving to the next. <b>didaktiv</b> is built around that single rule. The interface, the worksheets, the teacher portal — all of it bends toward the same vertical structure: introduce, practice, demonstrate, advance.</p>
+        <p class="body-eg" style="margin-top:14px;">Numbers are tabular by default: <span class="num">1234567890</span> · prices stay aligned in tables, and quantities never reflow during animation.</p>
+      </div>
+    </div>
+
+    <!-- Mono / Label -->
+    <div class="type-spec">
+      <div class="meta">
+        <div class="name">Labels & Mono</div>
+        <div class="info">
+          <b>Family</b> Encode Sans Semi Condensed<br/>
+          <b>Weight</b> 500 / 600 / 700<br/>
+          <b>Tracking</b> +12 to +18%<br/>
+          <b>Case</b> ALL CAPS<br/>
+          <b>Size</b> 10 / 11 / 12
+        </div>
+      </div>
+      <div>
+        <div class="caption-eg">EXERCISE 04 · ALIGNMENT WITH THE GRID</div>
+        <div class="caption-eg" style="margin-top:8px; color:var(--signal-deep);">→ ACTIVE / ATTENDING NOW</div>
+        <div class="caption-eg" style="margin-top:8px; color:var(--ink);">FILED UNDER · MATHEMATICS · ALGEBRA · CLASS 8</div>
+        <div class="caption-eg" style="margin-top:8px;">VERSION <span class="num">02.4.118</span> · BUILT MAY 12 2026</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 GRID -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">04 / 07</span><b>Grid & spacing</b></div>
+      <div>
+        <h2 class="sec-title">Twelve columns. Eight steps.<br/>The page is a piece of squared paper.</h2>
+        <p class="sec-sub">All layouts sit on a 12-column grid with a 24 px gutter, atop an 8 px baseline. Spacing tokens are <b>geometric</b>, not arbitrary — every step doubles or halves the one before it, so density choices are explicit, not improvised.</p>
+      </div>
+    </div>
+
+    <div class="grid-demo">
+      <div class="grid-vis">
+        <div class="gv-block gv-1">
+          <span class="l">Hero / 4 col</span>
+          <span class="n">04 × 07</span>
+        </div>
+        <div class="gv-block gv-2">
+          <span class="l">Module title</span>
+          <span class="n">06 × 02</span>
+        </div>
+        <div class="gv-block gv-3">
+          <span class="l">Signal cell</span>
+          <span class="n">02 × 02</span>
+        </div>
+        <div class="gv-block gv-4">
+          <span class="l">Aside</span>
+          <span class="n">02 × 02</span>
+        </div>
+        <div class="gv-block gv-5">
+          <span class="l">Footer · rule + meta</span>
+          <span class="n">12 × 02</span>
+        </div>
+      </div>
+
+      <div class="space-list">
+        <div class="space-row"><span class="tk">S-0 · Hair</span><span class="bar" style="width:4px"></span><span class="px">4 px</span></div>
+        <div class="space-row"><span class="tk">S-1 · Tight</span><span class="bar" style="width:8px"></span><span class="px">8 px</span></div>
+        <div class="space-row"><span class="tk">S-2 · Close</span><span class="bar" style="width:12px"></span><span class="px">12 px</span></div>
+        <div class="space-row"><span class="tk">S-3 · Base</span><span class="bar" style="width:16px"></span><span class="px">16 px</span></div>
+        <div class="space-row"><span class="tk">S-4 · Comfort</span><span class="bar" style="width:24px"></span><span class="px">24 px</span></div>
+        <div class="space-row"><span class="tk">S-5 · Section</span><span class="bar" style="width:40px"></span><span class="px">40 px</span></div>
+        <div class="space-row"><span class="tk">S-6 · Page</span><span class="bar" style="width:72px"></span><span class="px">72 px</span></div>
+        <div class="space-row"><span class="tk">S-7 · Bleed</span><span class="bar" style="width:120px"></span><span class="px">120 px</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 COMPONENTS -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">05 / 07</span><b>UI elements</b></div>
+      <div>
+        <h2 class="sec-title">Rectangles. Hairlines. One arrow.<br/>Everything else is text.</h2>
+        <p class="sec-sub">Components are stripped to their structural minimum. Borders carry hierarchy; fills carry decision. The arrow is the only icon we treat as canonical — direction is a teaching motif, and we earn every other glyph.</p>
+      </div>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h4>Buttons <span>3 levels · 2 sizes</span></h4>
+        <div class="btn-row">
+          <button class="btn">Start lesson <span class="arrow"></span></button>
+          <button class="btn signal">Mark complete <span class="arrow"></span></button>
+          <button class="btn steel">Open module</button>
+          <button class="btn secondary">Save draft</button>
+          <button class="btn ghost">Cancel</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn sm">Submit</button>
+          <button class="btn sm signal">Reveal</button>
+          <button class="btn sm secondary">Skip</button>
+          <button class="btn sm ghost">Later</button>
+        </div>
+
+        <h4 style="margin-top:24px;">Badges</h4>
+        <div class="badges">
+          <span class="badge fill">New</span>
+          <span class="badge">Draft</span>
+          <span class="badge signal">Highlight</span>
+          <span class="badge steel">Class 8 · Math</span>
+          <span class="badge dot">Live</span>
+        </div>
+
+        <h4 style="margin-top:24px;">Form fields</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+          <div>
+            <div class="form-row">
+              <label>Student name</label>
+              <input type="text" value="Mara Lindqvist" />
+              <span class="hint">As it appears on the school register.</span>
+            </div>
+            <div class="form-row">
+              <label>Class</label>
+              <input type="text" value="8B · 2025 / 2026" />
+            </div>
+          </div>
+          <div>
+            <div class="form-row">
+              <label>Subject</label>
+              <input type="text" value="Mathematics" />
+            </div>
+            <div class="form-row">
+              <label>Notes</label>
+              <input type="text" value="Strong at proof writing, needs more practice with fractions." />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <h4>Module spec · live data <span>component</span></h4>
+        <div class="stat">
+          <span class="nm">Module</span>
+          <span class="vl">M-08 / <b>Fractions</b></span>
+        </div>
+        <div class="stat">
+          <span class="nm">Lessons</span>
+          <span class="vl"><span class="num">12</span></span>
+        </div>
+        <div class="stat">
+          <span class="nm">Avg. duration</span>
+          <span class="vl"><span class="num">26</span> <span style="font-size:13px;color:var(--grey-700);font-weight:500;">min</span></span>
+        </div>
+        <div class="stat">
+          <span class="nm">Completion</span>
+          <span class="vl"><b><span class="num">68%</span></b></span>
+        </div>
+        <div class="stat">
+          <span class="nm">Difficulty</span>
+          <span class="vl" style="display:flex; gap:4px; align-items:center;">
+            <span style="width:12px;height:12px;background:var(--ink);display:inline-block;"></span>
+            <span style="width:12px;height:12px;background:var(--ink);display:inline-block;"></span>
+            <span style="width:12px;height:12px;background:var(--ink);display:inline-block;"></span>
+            <span style="width:12px;height:12px;background:var(--grey-300);display:inline-block;"></span>
+            <span style="width:12px;height:12px;background:var(--grey-300);display:inline-block;"></span>
+          </span>
+        </div>
+        <div class="stat">
+          <span class="nm">Last updated</span>
+          <span class="vl" style="font-size:14px; font-weight:500; letter-spacing:0;">12 May 2026 · 09:14</span>
+        </div>
+
+        <h4 style="margin-top:24px;">Iconography rule</h4>
+        <p style="font-size:13px; color:var(--ink); line-height:1.5;">
+          We draw with rectangles. Every icon must fit on a 4 × 4 grid using only solid blocks, hairlines, and the directional arrow. No outlined glyphs, no rounded corners, no decoration.
+        </p>
+      </div>
+    </div>
+
+    <!-- Marking & feedback — semantic states in real use -->
+    <div class="feedback-card">
+      <div class="fb-head">
+        <h4>Marking &amp; feedback <span>· semantic states in use</span></h4>
+        <div class="fb-legend">
+          <span class="lg-chip lg-correct">✓ correct</span>
+          <span class="lg-chip lg-wrong">✕ wrong</span>
+          <span class="lg-chip lg-neutral">○ skipped</span>
+        </div>
+      </div>
+      <div class="fb-body">
+        <!-- left: marked quiz -->
+        <div class="quiz">
+          <div class="quiz-q">
+            <span class="quiz-no">Q1</span>
+            <span class="quiz-text">A fraction divides a whole into <b>equal</b> parts.</span>
+            <span class="quiz-mark correct">✓ True</span>
+          </div>
+          <div class="quiz-q">
+            <span class="quiz-no">Q2</span>
+            <span class="quiz-text">⅔ is larger than ¾.</span>
+            <span class="quiz-mark wrong">✕ False · was True</span>
+          </div>
+          <div class="quiz-q">
+            <span class="quiz-no">Q3</span>
+            <span class="quiz-text">Equivalent fractions have the same value.</span>
+            <span class="quiz-mark correct">✓ True</span>
+          </div>
+          <div class="quiz-q">
+            <span class="quiz-no">Q4</span>
+            <span class="quiz-text">You can add fractions with different denominators directly.</span>
+            <span class="quiz-mark wrong">✕ False · was True</span>
+          </div>
+        </div>
+        <!-- right: score + states -->
+        <div class="fb-right">
+          <div class="score-card">
+            <div class="score-label">Result · Mara, Class 8B</div>
+            <div class="score-line">
+              <span class="score-big">06</span>
+              <span class="score-divider">/</span>
+              <span class="score-total">10</span>
+              <span class="score-badge correct">Pass · continue</span>
+            </div>
+            <div class="score-bar">
+              <span class="bar-correct" style="flex:6"></span>
+              <span class="bar-wrong"   style="flex:3"></span>
+              <span class="bar-skip"    style="flex:1"></span>
+            </div>
+            <div class="score-legend">
+              <span><b>6</b> correct</span>
+              <span><b>3</b> wrong</span>
+              <span><b>1</b> skipped</span>
+            </div>
+          </div>
+          <div class="state-row">
+            <span class="state-chip correct">Mastered</span>
+            <span class="state-chip correct-pale">On track</span>
+            <span class="state-chip neutral">In progress</span>
+            <span class="state-chip wrong-pale">Needs review</span>
+            <span class="state-chip wrong">Failed</span>
+          </div>
+          <p class="fb-note">Semantic colors appear only on marking, scoring, and state. Never on layout chrome or brand surfaces — the moment you see green or red, it's about a student's work, not about decoration.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">06 / 07</span><b>Voice</b></div>
+      <div>
+        <h2 class="sec-title">Speak like a good teacher.<br/>Not a good salesman.</h2>
+        <p class="sec-sub">We write declaratively — short sentences, no euphemism, one idea per paragraph. We make space for the student to think. We never say <em>simply</em>, we never say <em>just</em>, and we never say <em>amazing</em>.</p>
+      </div>
+    </div>
+
+    <div class="voice">
+      <div class="voice-list">
+        <div class="voice-row">
+          <span class="check">✓</span>
+          <div>
+            <h5>Do</h5>
+            <p>"Three exercises today. Twelve minutes. We'll look at fractions."</p>
+          </div>
+          <div>
+            <h5>Why</h5>
+            <p>Specific, measured, sets a contract the student can hold us to.</p>
+          </div>
+        </div>
+        <div class="voice-row no">
+          <span class="cross">✕</span>
+          <div>
+            <h5>Don't</h5>
+            <p>"Get ready for an exciting new adventure in mathematics!"</p>
+          </div>
+          <div>
+            <h5>Why not</h5>
+            <p>Excitement is the student's job. Ours is to be clear.</p>
+          </div>
+        </div>
+
+        <div class="voice-row">
+          <span class="check">✓</span>
+          <div>
+            <h5>Do</h5>
+            <p>"You got six of ten. That's enough to continue. The four we missed are on page 14."</p>
+          </div>
+          <div>
+            <h5>Why</h5>
+            <p>Honest result, honest next step, no false praise.</p>
+          </div>
+        </div>
+        <div class="voice-row no">
+          <span class="cross">✕</span>
+          <div>
+            <h5>Don't</h5>
+            <p>"Wow, great effort! Keep going, you've totally got this 🎉"</p>
+          </div>
+          <div>
+            <h5>Why not</h5>
+            <p>Confetti doesn't teach. And the emoji is louder than the message.</p>
+          </div>
+        </div>
+
+        <div class="voice-row">
+          <span class="check">✓</span>
+          <div>
+            <h5>Do</h5>
+            <p>"This is hard. Most students need three tries. You're on try two."</p>
+          </div>
+          <div>
+            <h5>Why</h5>
+            <p>Names the difficulty, normalises struggle, gives an honest landmark.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="quote-block tick-frame">
+        <blockquote>
+          A lesson is not an experience to be <em>had</em>. It is a question to be <em>finished</em>.
+        </blockquote>
+        <cite>— Brand North Star · adopted June 2025</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 APPLICATIONS -->
+  <section style="border-bottom:none;">
+    <div class="sec-head">
+      <div class="sec-no"><span class="ord">07 / 07</span><b>In the wild</b></div>
+      <div>
+        <h2 class="sec-title">Three surfaces, one voice.<br/>A book, a poster, a screen.</h2>
+        <p class="sec-sub">The system's job is to survive translation. These are reference applications — not finished artwork — showing how the same wordmark, palette, and grid handle very different containers.</p>
+      </div>
+    </div>
+
+    <div class="apps">
+      <!-- Book -->
+      <div class="app app-book tick-frame">
+        <div class="top"><span>Workbook · Class 8</span><span>№ 08 / 24</span></div>
+        <div>
+          <div class="ttl">didakti<span class="k">v</span></div>
+          <div class="sub">Fractions, decimals and the part of the cake that no one took.</div>
+        </div>
+        <div>
+          <div class="barcode"></div>
+          <div class="ed" style="margin-top:14px;"><span>Edition 02 · 2026</span><span>€12,00</span></div>
+        </div>
+      </div>
+
+      <!-- Poster -->
+      <div class="app app-poster tick-frame">
+        <div class="header"><span>Open evening · 14 / 06</span><span>Schule Riehen</span></div>
+        <div class="corner-mark">↗</div>
+        <div class="big">Bring<br/>your<br/>questions<span class="stop"></span></div>
+        <div class="meta">
+          <div><span class="k">When</span> Sat 14 June · 18:00 – 21:30</div>
+          <div><span class="k">Where</span> Hauptstrasse 41, Riehen</div>
+          <div><span class="k">For</span> Parents · Students · Teachers</div>
+          <div><span class="k">By</span> didaktiv &amp; Pestalozzi-Stiftung</div>
+        </div>
+      </div>
+
+      <!-- UI screen -->
+      <div class="app app-ui tick-frame">
+        <div class="tb">
+          <span class="m">didakti<span style="color:var(--signal)">v</span></span>
+          <span class="num">M-08 · 09:14</span>
+        </div>
+        <div class="content">
+          <span class="crumb">CLASS 8 / MATH / <b>FRACTIONS</b></span>
+          <h3>Today you will divide things that <span class="u">don't divide evenly</span>.</h3>
+          <div class="lessons">
+            <div class="lesson done"><span class="no">01</span><span class="ti">Reading a fraction aloud</span><span class="dur">04m</span></div>
+            <div class="lesson done"><span class="no">02</span><span class="ti">Equivalent fractions</span><span class="dur">06m</span></div>
+            <div class="lesson now"><span class="no">03</span><span class="ti">When the cake doesn't split</span><span class="dur">09m</span></div>
+            <div class="lesson"><span class="no">04</span><span class="ti">Adding unlike denominators</span><span class="dur">07m</span></div>
+            <div class="lesson"><span class="no">05</span><span class="ti">Practical: kitchen scales</span><span class="dur">12m</span></div>
+          </div>
+          <div class="progress">
+            <div class="pb"></div>
+            <div class="pn"><span>Module progress</span><span><b>62%</b> · 26m left</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>didaktiv · brand manual · edition 01</div>
+    <div class="c">— end of exercise —</div>
+    <div class="r"><b>v1.0</b> · 12 May 2026 · brand@didaktiv.school</div>
+  </footer>
+
+</div>
+
+<!-- Tweaks panel -->
+<div id="tweaks-panel" hidden>
+  <div class="tp-header">
+    <h3>Tweaks · semantic colors</h3>
+    <button class="tp-close" id="tp-close" aria-label="Close">×</button>
+  </div>
+  <div class="tp-body">
+    <div class="tp-group">
+      <div class="tp-group-head">
+        <span class="tp-dot" id="dot-correct"></span>
+        <span class="tp-name">Correct · green</span>
+      </div>
+      <div class="tp-row">
+        <label>Hue</label>
+        <input type="range" id="correct-hue" min="100" max="190" step="1"/>
+        <span class="tp-out" id="out-correct-hue">155</span>
+      </div>
+      <div class="tp-row">
+        <label>Chroma</label>
+        <input type="range" id="correct-chroma" min="0.05" max="0.20" step="0.005"/>
+        <span class="tp-out" id="out-correct-chroma">0.14</span>
+      </div>
+      <div class="tp-row">
+        <label>Light.</label>
+        <input type="range" id="correct-light" min="45" max="75" step="1"/>
+        <span class="tp-out" id="out-correct-light">60</span>
+      </div>
+      <div class="tp-presets">
+        <button data-target="correct" data-h="155" data-c="0.14" data-l="60">Steel green</button>
+        <button data-target="correct" data-h="145" data-c="0.17" data-l="62">Spring</button>
+        <button data-target="correct" data-h="170" data-c="0.10" data-l="58">Teal</button>
+        <button data-target="correct" data-h="130" data-c="0.16" data-l="55">Forest</button>
+      </div>
+    </div>
+
+    <div class="tp-group">
+      <div class="tp-group-head">
+        <span class="tp-dot" id="dot-wrong"></span>
+        <span class="tp-name">Wrong · red</span>
+      </div>
+      <div class="tp-row">
+        <label>Hue</label>
+        <input type="range" id="wrong-hue" min="0" max="50" step="1"/>
+        <span class="tp-out" id="out-wrong-hue">25</span>
+      </div>
+      <div class="tp-row">
+        <label>Chroma</label>
+        <input type="range" id="wrong-chroma" min="0.10" max="0.25" step="0.005"/>
+        <span class="tp-out" id="out-wrong-chroma">0.19</span>
+      </div>
+      <div class="tp-row">
+        <label>Light.</label>
+        <input type="range" id="wrong-light" min="40" max="70" step="1"/>
+        <span class="tp-out" id="out-wrong-light">55</span>
+      </div>
+      <div class="tp-presets">
+        <button data-target="wrong" data-h="25" data-c="0.19" data-l="55">Brick</button>
+        <button data-target="wrong" data-h="15" data-c="0.22" data-l="52">Crimson</button>
+        <button data-target="wrong" data-h="35" data-c="0.18" data-l="58">Rust</button>
+        <button data-target="wrong" data-h="5"  data-c="0.21" data-l="54">Cherry</button>
+      </div>
+    </div>
+
+    <div class="tp-actions">
+      <button class="tp-btn" id="tp-reset">Reset</button>
+      <button class="tp-btn primary" id="tp-done">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const TWEAK_DEFAULTS = {
+    "correctHue": 120,
+    "correctChroma": 0.14,
+    "correctLight": 60,
+    "wrongHue": 25,
+    "wrongChroma": 0.19,
+    "wrongLight": 55
+  };
+
+  // working state — clone defaults
+  let t = Object.assign({}, TWEAK_DEFAULTS);
+
+  function applyTweaks(){
+    const r = document.documentElement.style;
+    // Correct family
+    r.setProperty('--correct',      `oklch(${t.correctLight}% ${t.correctChroma} ${t.correctHue})`);
+    r.setProperty('--correct-deep', `oklch(${Math.max(30, t.correctLight - 12)}% ${(t.correctChroma * 0.92).toFixed(3)} ${t.correctHue})`);
+    r.setProperty('--correct-pale', `oklch(94% ${(t.correctChroma * 0.32).toFixed(3)} ${t.correctHue})`);
+    // Wrong family
+    r.setProperty('--wrong',        `oklch(${t.wrongLight}% ${t.wrongChroma} ${t.wrongHue})`);
+    r.setProperty('--wrong-deep',   `oklch(${Math.max(30, t.wrongLight - 11)}% ${(t.wrongChroma * 0.90).toFixed(3)} ${t.wrongHue})`);
+    r.setProperty('--wrong-pale',   `oklch(94% ${(t.wrongChroma * 0.28).toFixed(3)} ${t.wrongHue})`);
+
+    // Update panel UI: outs + dots
+    const o = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+    o('out-correct-hue', t.correctHue);
+    o('out-correct-chroma', t.correctChroma.toFixed(3));
+    o('out-correct-light', t.correctLight);
+    o('out-wrong-hue', t.wrongHue);
+    o('out-wrong-chroma', t.wrongChroma.toFixed(3));
+    o('out-wrong-light', t.wrongLight);
+    const dc = document.getElementById('dot-correct');
+    const dw = document.getElementById('dot-wrong');
+    if (dc) dc.style.background = `oklch(${t.correctLight}% ${t.correctChroma} ${t.correctHue})`;
+    if (dw) dw.style.background = `oklch(${t.wrongLight}% ${t.wrongChroma} ${t.wrongHue})`;
+
+    // Update hex labels in palette swatches
+    o('hex-correct',      `OKLCH ${t.correctLight} / ${t.correctChroma.toFixed(3)} / ${t.correctHue}`);
+    o('hex-correct-deep', `OKLCH ${Math.max(30, t.correctLight - 12)} / ${(t.correctChroma * 0.92).toFixed(3)} / ${t.correctHue}`);
+    o('hex-correct-pale', `OKLCH 94 / ${(t.correctChroma * 0.32).toFixed(3)} / ${t.correctHue}`);
+    o('hex-wrong',        `OKLCH ${t.wrongLight} / ${t.wrongChroma.toFixed(3)} / ${t.wrongHue}`);
+    o('hex-wrong-deep',   `OKLCH ${Math.max(30, t.wrongLight - 11)} / ${(t.wrongChroma * 0.90).toFixed(3)} / ${t.wrongHue}`);
+    o('hex-wrong-pale',   `OKLCH 94 / ${(t.wrongChroma * 0.28).toFixed(3)} / ${t.wrongHue}`);
+  }
+
+  // Sync slider DOM to current state
+  function syncInputs(){
+    const m = {
+      'correct-hue': t.correctHue,
+      'correct-chroma': t.correctChroma,
+      'correct-light': t.correctLight,
+      'wrong-hue': t.wrongHue,
+      'wrong-chroma': t.wrongChroma,
+      'wrong-light': t.wrongLight,
+    };
+    for (const [id, v] of Object.entries(m)){
+      const el = document.getElementById(id);
+      if (el) el.value = v;
+    }
+  }
+
+  // Persist a change via host
+  function persist(patch){
+    try {
+      window.parent.postMessage({type: '__edit_mode_set_keys', edits: patch}, '*');
+    } catch(e){}
+  }
+
+  // Wire inputs
+  function wire(){
+    const bind = (id, key, parse) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        t[key] = parse(el.value);
+        applyTweaks();
+        persist({ [key]: t[key] });
+      });
+    };
+    bind('correct-hue',    'correctHue',    v => parseInt(v, 10));
+    bind('correct-chroma', 'correctChroma', v => parseFloat(v));
+    bind('correct-light',  'correctLight',  v => parseInt(v, 10));
+    bind('wrong-hue',      'wrongHue',      v => parseInt(v, 10));
+    bind('wrong-chroma',   'wrongChroma',   v => parseFloat(v));
+    bind('wrong-light',    'wrongLight',    v => parseInt(v, 10));
+
+    // Presets
+    document.querySelectorAll('.tp-presets button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tgt = btn.dataset.target;
+        const h = parseInt(btn.dataset.h, 10);
+        const c = parseFloat(btn.dataset.c);
+        const l = parseInt(btn.dataset.l, 10);
+        const patch = tgt === 'correct'
+          ? { correctHue: h, correctChroma: c, correctLight: l }
+          : { wrongHue: h, wrongChroma: c, wrongLight: l };
+        Object.assign(t, patch);
+        syncInputs();
+        applyTweaks();
+        persist(patch);
+      });
+    });
+
+    // Reset
+    document.getElementById('tp-reset').addEventListener('click', () => {
+      t = Object.assign({}, TWEAK_DEFAULTS);
+      syncInputs();
+      applyTweaks();
+      persist({...TWEAK_DEFAULTS});
+    });
+
+    // Close / done
+    const closePanel = () => {
+      panel.hidden = true;
+      try { window.parent.postMessage({type: '__edit_mode_dismissed'}, '*'); } catch(e){}
+    };
+    document.getElementById('tp-close').addEventListener('click', closePanel);
+    document.getElementById('tp-done').addEventListener('click', closePanel);
+  }
+
+  const panel = document.getElementById('tweaks-panel');
+
+  // Register host message listener FIRST
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === '__activate_edit_mode')   panel.hidden = false;
+    if (d.type === '__deactivate_edit_mode') panel.hidden = true;
+  });
+
+  // Wire + sync UI to defaults + apply initial colors
+  wire();
+  syncInputs();
+  applyTweaks();
+
+  // Drag the header to move panel
+  (function makeDraggable(){
+    const head = panel.querySelector('.tp-header');
+    let sx, sy, sl, st, dragging = false;
+    head.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.tp-close')) return;
+      dragging = true;
+      sx = e.clientX; sy = e.clientY;
+      const r = panel.getBoundingClientRect();
+      sl = r.left; st = r.top;
+      panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      panel.style.left = sl + 'px'; panel.style.top = st + 'px';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      panel.style.left = (sl + e.clientX - sx) + 'px';
+      panel.style.top  = (st + e.clientY - sy) + 'px';
+    });
+    window.addEventListener('mouseup', () => dragging = false);
+  })();
+
+  // THEN announce availability to host
+  try { window.parent.postMessage({type: '__edit_mode_available'}, '*'); } catch(e){}
+})();
+</script>
+
+<script>
+// Auto-print: wait for fonts + a small settle delay
+(async () => {
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+  } catch(e){}
+  setTimeout(() => window.print(), 500);
+})();
+</script>
+
+</body>
+</html>

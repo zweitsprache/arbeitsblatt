@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
 import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
@@ -35,6 +36,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
+import {
   Save,
   Printer,
   Monitor,
@@ -56,10 +61,17 @@ import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
 import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 
-export function EditorToolbar() {
+export function EditorToolbar({
+  editorVersion = "v1",
+}: {
+  editorVersion?: "v1" | "v2";
+}) {
   const { state, dispatch, save } = useEditor();
   const t = useTranslations("toolbar");
   const tc = useTranslations("common");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
   const [showOnlinePreview, setShowOnlinePreview] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showBrandSettings, setShowBrandSettings] = useState(false);
@@ -92,6 +104,7 @@ export function EditorToolbar() {
   }>({ open: false });
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
+  const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
 
   const togglePdfLang = (code: string) => {
     setPdfLangs((prev) => {
@@ -248,7 +261,8 @@ export function EditorToolbar() {
             published: data.published,
           },
         });
-        window.history.replaceState(null, "", `/editor/${data.id}`);
+        const basePath = editorVersion === "v2" ? "editor-v2" : "editor";
+        window.history.replaceState(null, "", `/${locale}/${basePath}/${data.id}`);
       }
       dispatch({ type: "MARK_SAVED" });
     } catch (err) {
@@ -262,6 +276,16 @@ export function EditorToolbar() {
       navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSwitchEditorVersion = () => {
+    const targetBase = editorVersion === "v2" ? "editor" : "editor-v2";
+    const target = state.worksheetId
+      ? `/${locale}/${targetBase}/${state.worksheetId}`
+      : `/${locale}/${targetBase}`;
+    if (target !== pathname) {
+      router.push(target);
     }
   };
 
@@ -324,6 +348,17 @@ export function EditorToolbar() {
         )}
 
         <div className="flex-1" />
+
+        {editorV2Enabled && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={handleSwitchEditorVersion}
+          >
+            {editorVersion === "v2" ? t("editorSwitchToV1") : t("editorSwitchToV2")}
+          </Button>
+        )}
 
         {/* Brand selector */}
         <div className="flex items-center gap-1">
@@ -599,7 +634,11 @@ export function EditorToolbar() {
       </div>
 
       {/* Print Preview Dialog */}
-      <PrintPreview open={showPrintPreview} onOpenChange={setShowPrintPreview} />
+      <PrintPreview
+        open={showPrintPreview}
+        onOpenChange={setShowPrintPreview}
+        engine={editorVersion === "v2" ? "pagedjs" : "default"}
+      />
 
       {/* PDF Locale Picker Dialog */}
       <Dialog

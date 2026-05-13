@@ -2679,6 +2679,23 @@ function GridProps({ block }: { block: GridBlock }) {
           <span className="text-xs text-muted-foreground w-8 text-right">{block.rowGap}px</span>
         </div>
       </div>
+      <Separator />
+      <div>
+        <Label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={block.showBorder ?? false}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showBorder: e.target.checked } },
+              })
+            }
+            className="w-4 h-4"
+          />
+          <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">{t("showBorder")}</span>
+        </Label>
+      </div>
     </div>
   );
 }
