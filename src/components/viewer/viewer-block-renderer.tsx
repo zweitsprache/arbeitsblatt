@@ -3919,6 +3919,7 @@ function FixSentencesView({
   answer,
   onAnswer,
   showResults,
+  showSolutions,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -4914,6 +4915,7 @@ function AccordionView({
   answer,
   onAnswer,
   showResults,
+  showSolutions,
   primaryColor,
   interactiveColor,
   allBlocks,
