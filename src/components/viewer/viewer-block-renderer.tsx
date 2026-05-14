@@ -201,7 +201,7 @@ function TaskContainer({
               showBadge={false}
               withDivider={false}
               rowClassName="pb-1"
-              style={instructionStyle} instructionIndex={instructionIndex}
+              style={instructionStyle}
             />
           )}
         </div>
