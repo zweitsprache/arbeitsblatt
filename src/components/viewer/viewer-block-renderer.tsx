@@ -3845,7 +3845,7 @@ function UnscrambleWordsView({
             instruction={block.instruction}
             accentColor={accentColor}
             style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
-            mode={mode} instructionIndex={instructionIndex}
+            mode={mode}
           />
         )
       )}
@@ -4431,7 +4431,7 @@ function VerbTableView({
           <InstructionRow
             instruction={block.infinitiveOverride || block.verb || ""}
             accentColor={accentColor}
-            mode={mode} instructionIndex={instructionIndex}
+            mode={mode}
           />
         )
       )}
