@@ -9,6 +9,7 @@ import {
   WorksheetBlock,
   TextBlock,
   HeadingBlock,
+  NumberedHeadingBlock,
   TextSnippetBlock,
   ColumnsBlock,
   AccordionBlock,
@@ -148,7 +149,7 @@ function forEachBlockTranslationField(
     }
 
     case "numbered-heading": {
-      if (!(block as HeadingBlock).skipTranslation) {
+      if (!(block as NumberedHeadingBlock).skipTranslation) {
         add("content", () => block.content, (v) => {
           block.content = v;
         });

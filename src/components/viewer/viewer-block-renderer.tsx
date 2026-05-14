@@ -3367,7 +3367,6 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   showResults,
   showSolutions = false,
   accentColor,
-  instructionIndex,
 }: {
   block: WordSearchBlock;
   mode: ViewMode;
@@ -4114,7 +4113,6 @@ function CompleteSentencesView({
   onAnswer,
   accentColor,
   interactiveColor,
-  instructionIndex,
 }: {
   block: CompleteSentencesBlock;
   mode: ViewMode;
@@ -4185,7 +4183,6 @@ function TransformSentencesView({
   showResults,
   accentColor,
   interactiveColor,
-  instructionIndex,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -5835,6 +5832,8 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
           accentColor={accentColor}
          
         />
