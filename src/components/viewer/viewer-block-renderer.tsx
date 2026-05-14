@@ -5733,6 +5733,7 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
          
