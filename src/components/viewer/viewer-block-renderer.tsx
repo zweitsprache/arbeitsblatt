@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   WorksheetBlock,
   HeadingBlock,
+  NumberedHeadingBlock,
   TextBlock,
   ImageBlock,
   ImageCardsBlock,
@@ -1533,7 +1534,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
       )}
       <div className="flex min-h-[49px] items-center border-b font-medium text-foreground">
         {block.question}
@@ -1640,7 +1641,7 @@ function FillInBlankView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div className="leading-loose mt-3">
@@ -1880,7 +1881,7 @@ function FillInBlankItemsView({
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
       )}
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
@@ -2082,7 +2083,7 @@ function FillInBlankItemsView({
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
           )
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
@@ -2142,7 +2143,7 @@ function FillInBlankItemsView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div className="grid grid-cols-2 gap-4">
@@ -2296,7 +2297,7 @@ function FillInBlankItemsView({
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
           )
         )}
         {/* Word Bank */}
@@ -2371,7 +2372,7 @@ function FillInBlankItemsView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       {/* Word Bank */}
@@ -2778,7 +2779,7 @@ function ArticleTrainingView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div>
@@ -3075,7 +3076,7 @@ function GridView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div>
@@ -3404,7 +3405,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       {block.showWordList && (
@@ -3538,7 +3539,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
     return (
       <div>
         {block.instruction && (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
         <div className="flex min-h-[49px] flex-wrap items-center gap-2">
           {shuffledItems.map((item) => (
@@ -3609,7 +3610,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       {/* Unsorted items */}
@@ -4140,7 +4141,7 @@ function CompleteSentencesView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div>
@@ -4212,7 +4213,7 @@ function TransformSentencesView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       <div>
@@ -4577,7 +4578,7 @@ function DialogueView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
         )
       )}
       {/* Word Bank */}
