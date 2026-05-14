@@ -65,6 +65,7 @@ import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkl
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
+import { getBlankWidthStyle, parseBlankContent } from "@/lib/fill-in-blank";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import s from "./viewer-blocks.module.css";
 
@@ -200,7 +201,7 @@ function TaskContainer({
               showBadge={false}
               withDivider={false}
               rowClassName="pb-1"
-              style={instructionStyle}
+              style={instructionStyle} instructionIndex={instructionIndex}
             />
           )}
         </div>
@@ -365,7 +366,68 @@ function NumberedLabelView({ block, originalBlock, allBlocks, primaryColor = "#1
   );
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
+// ─── Heading number helpers ──────────────────────────────────
+function toAlphabeticLabel(index: number, uppercase: boolean): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    n -= 1;
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26);
+  }
+  return uppercase ? out : out.toLowerCase();
+}
+
+function formatHeadingNumber(index: number, format: string | null | undefined): string {
+  switch (format) {
+    case "numbers-leading-zero": return String(index).padStart(2, "0");
+    case "letters-uppercase": return toAlphabeticLabel(index, true);
+    case "letters-lowercase": return toAlphabeticLabel(index, false);
+    case "numbers":
+    default: return String(index);
+  }
+}
+
+function resolveHeadingColor(
+  override: string | null | undefined,
+  primaryColor?: string,
+  accentColor?: string | null,
+): string | undefined {
+  if (override === "primary") return primaryColor;
+  if (override === "accent") return accentColor || primaryColor;
+  if (override && override !== "none") return override;
+  return undefined;
+}
+
+function collectNumberedHeadingsOfLevel(blocks: WorksheetBlock[], level: number): string[] {
+  const result: string[] = [];
+  for (const block of blocks) {
+    if (block.type === "numbered-heading" && (block as NumberedHeadingBlock).level === level) {
+      result.push(block.id);
+    }
+    if (block.type === "columns") {
+      for (const col of (block as ColumnsBlock).children) {
+        for (const child of col) {
+          if (child.type === "numbered-heading" && (child as NumberedHeadingBlock).level === level) {
+            result.push(child.id);
+          }
+        }
+      }
+    }
+    if (block.type === "grid") {
+      for (const cell of (block as GridBlock).children) {
+        for (const child of cell) {
+          if (child.type === "numbered-heading" && (child as NumberedHeadingBlock).level === level) {
+            result.push(child.id);
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -375,7 +437,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
     ...(block.level === 1 ? { marginBottom: -4 } : {}),
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
-    color: primaryColor,
+    color: headingColor || primaryColor,
   };
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
@@ -392,7 +454,65 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null }) {
+function NumberedHeadingView({
+  block,
+  brand,
+  headlineFont,
+  headingWeights,
+  isNonLatin,
+  translationScale,
+  primaryColor,
+  accentColor,
+  headingColor,
+  headingNumberColor,
+  headingNumberFormat,
+  allBlocks,
+}: {
+  block: NumberedHeadingBlock;
+  brand?: Brand;
+  headlineFont?: string;
+  headingWeights?: { h1: number; h2: number; h3: number };
+  isNonLatin?: boolean;
+  translationScale?: number;
+  primaryColor?: string;
+  accentColor?: string | null;
+  headingColor?: string;
+  headingNumberColor?: string;
+  headingNumberFormat?: string | null;
+  allBlocks?: WorksheetBlock[];
+}) {
+  const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
+  const sizes: Record<number, string> = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight =
+    (headingWeights as Record<string, number> | undefined)?.[`h${block.level}`] ?? brandFonts.headlineWeight;
+  const sameLevel = allBlocks ? collectNumberedHeadingsOfLevel(allBlocks, block.level) : [];
+  const position = sameLevel.indexOf(block.id);
+  const sequence = position >= 0 ? position + 1 : 1;
+  const numberLabel = formatHeadingNumber(sequence, headingNumberFormat);
+  const numberSlotStyle: React.CSSProperties = {
+    display: "inline-block",
+    minWidth: "1.5rem",
+    marginRight: "0.5rem",
+    fontVariantNumeric: "tabular-nums",
+    ...(headingNumberColor ? { color: headingNumberColor } : {}),
+  };
+  const style: React.CSSProperties = {
+    ...(block.level === 1 ? { marginBottom: -4 } : {}),
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: headingColor || primaryColor,
+  };
+  return (
+    <Tag className={sizes[block.level]} style={style}>
+      <span style={numberSlotStyle}>{numberLabel}</span>
+      <span>{block.content}</span>
+    </Tag>
+  );
+}
+
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", instructionIndex, accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; instructionIndex?: number; accentColor?: string | null }) {
   // Only highlight {{de:…}} markers with accent color when the worksheet is translated
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
@@ -1364,15 +1484,16 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
 
 // ─── Interactive blocks ─────────────────────────────────────
 
-function MultipleChoiceView({
+ function MultipleChoiceView({
   block,
   mode,
   interactive,
   answer,
   onAnswer,
   showResults,
-  showSolutions = false,
   accentColor,
+  showSolutions = false,
+  instructionIndex,
 }: {
   block: MultipleChoiceBlock;
   mode: ViewMode;
@@ -1382,7 +1503,8 @@ function MultipleChoiceView({
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
   const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
@@ -1411,7 +1533,7 @@ function MultipleChoiceView({
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
       <div className="flex min-h-[49px] items-center border-b font-medium text-foreground">
         {block.question}
@@ -1486,6 +1608,7 @@ function FillInBlankView({
   mode = "online",
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: FillInBlankBlock;
   interactive: boolean;
@@ -1496,6 +1619,7 @@ function FillInBlankView({
   mode?: ViewMode;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
@@ -1516,7 +1640,7 @@ function FillInBlankView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div className="leading-loose mt-3">
@@ -1525,17 +1649,7 @@ function FillInBlankView({
         if (match) {
           const noSpace = match[1] === '*';
           const raw = match[2] || "";
-          const commaIdx = raw.lastIndexOf(",");
-          let correctAnswer: string;
-          let widthMultiplier = 1;
-          if (commaIdx !== -1) {
-            correctAnswer = raw.substring(0, commaIdx).trim();
-            const wStr = raw.substring(commaIdx + 1).trim();
-            const parsed = Number(wStr);
-            if (!isNaN(parsed)) widthMultiplier = parsed;
-          } else {
-            correctAnswer = raw.trim();
-          }
+          const { answer: correctAnswer, width } = parseBlankContent(raw);
           const key = `blank-${blankIndex}`;
           blankIndex++;
           const userValue = blanks[key] || "";
@@ -1543,7 +1657,7 @@ function FillInBlankView({
           const isCorrectAnswer =
             showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
           const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
-          const widthStyle = widthMultiplier === 0 ? { flex: 1 } as React.CSSProperties : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+          const widthStyle = getBlankWidthStyle(width, false);
           const spacingClass = noSpace ? '' : 'mx-1';
 
           if (interactive) {
@@ -1565,7 +1679,7 @@ function FillInBlankView({
                           : ""
                       : ""}`}
                   style={{
-                    ...(widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }),
+                    ...getBlankWidthStyle(width, true),
                     ...(!showResults ? {
                       backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10),
                     } : {}),
@@ -1594,7 +1708,18 @@ function FillInBlankView({
             <span
               key={i}
               className={`bg-gray-100 px-2 ${spacingClass}`}
-              style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', height: '1.3em', borderRadius: 4, ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                verticalAlign: 'text-bottom',
+                borderRadius: 4,
+                ...(width.characterWidth !== null
+                  ? widthStyle
+                  : {
+                      height: '1.3em',
+                      ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
+                    }),
+              }}
             >
               <span className="text-muted-foreground" style={{ fontSize: '0.65em' }}>
                 {String(blankIndex).padStart(2, "0")}
@@ -1702,6 +1827,7 @@ function FillInBlankItemsView({
   mode = "online",
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: FillInBlankItemsBlock;
   interactive: boolean;
@@ -1712,6 +1838,7 @@ function FillInBlankItemsView({
   mode?: ViewMode;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const tb = useTranslations("blockRenderer");
   const blanks = (answer as Record<string, string> | undefined) || {};
@@ -1753,7 +1880,7 @@ function FillInBlankItemsView({
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
@@ -1782,17 +1909,7 @@ function FillInBlankItemsView({
                 if (match) {
                   const noSpace = match[1] === '*';
                   const raw = match[2] || "";
-                  const commaIdx = raw.lastIndexOf(",");
-                  let correctAnswer: string;
-                  let widthMultiplier = 1;
-                  if (commaIdx !== -1) {
-                    correctAnswer = raw.substring(0, commaIdx).trim();
-                    const wStr = raw.substring(commaIdx + 1).trim();
-                    const parsed = Number(wStr);
-                    if (!isNaN(parsed)) widthMultiplier = parsed;
-                  } else {
-                    correctAnswer = raw.trim();
-                  }
+                  const { answer: correctAnswer, width } = parseBlankContent(raw);
                   const key = `blank-${idx}-${blankInItem}`;
                   blankInItem++;
                   const userValue = blanks[key] || "";
@@ -1800,9 +1917,7 @@ function FillInBlankItemsView({
                   const isCorrectAnswer =
                     showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
                   const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
-                  const widthStyle = widthMultiplier === 0
-                    ? { flex: 1 } as React.CSSProperties
-                    : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+                  const widthStyle = getBlankWidthStyle(width, false);
                   const spacingClass = noSpace ? '' : 'mx-1';
 
                   if (interactive) {
@@ -1824,7 +1939,7 @@ function FillInBlankItemsView({
                                   : ""
                               : ""}`}
                           style={{
-                            ...(widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }),
+                            ...getBlankWidthStyle(width, true),
                             ...(!showResults ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : {}),
                           }}
                         />
@@ -1851,7 +1966,18 @@ function FillInBlankItemsView({
                     <span
                       key={i}
                       className={`bg-gray-100 ${spacingClass}`}
-                      style={{ display: 'inline-block', verticalAlign: 'middle', borderRadius: 3, lineHeight: '1.25rem', minHeight: '1.25rem', ...(widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * widthMultiplier}px` }) }}
+                      style={{
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                        borderRadius: 3,
+                        ...(width.characterWidth !== null
+                          ? widthStyle
+                          : {
+                              lineHeight: '1.25rem',
+                              minHeight: '1.25rem',
+                              ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
+                            }),
+                      }}
                     >
                       &nbsp;
                     </span>
@@ -1867,7 +1993,7 @@ function FillInBlankItemsView({
   );
 }
 
-function MatchingView({
+ function MatchingView({
   block,
   mode,
   interactive,
@@ -1876,6 +2002,7 @@ function MatchingView({
   showResults,
   showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: MatchingBlock;
   mode: ViewMode;
@@ -1885,7 +2012,8 @@ function MatchingView({
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const t = useTranslations("viewer");
   const isOnline = mode === "online";
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
@@ -1954,7 +2082,7 @@ function MatchingView({
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )
         )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
@@ -2014,7 +2142,7 @@ function MatchingView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div className="grid grid-cols-2 gap-4">
@@ -2109,23 +2237,27 @@ function MatchingView({
   );
 }
 
-function TwoColumnFillView({
+ function TwoColumnFillView({
   block,
   mode,
   interactive,
   answer,
   onAnswer,
+  showResults,
   showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: TwoColumnFillBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
+  showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const answers = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
 
@@ -2164,7 +2296,7 @@ function TwoColumnFillView({
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )
         )}
         {/* Word Bank */}
@@ -2239,7 +2371,7 @@ function TwoColumnFillView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {/* Word Bank */}
@@ -2451,11 +2583,10 @@ function renderTfBlanks(text: string): React.ReactNode {
   );
 }
 
-function TrueFalseMatrixView({
+ function TrueFalseMatrixView({
   block,
   mode,
   interactive,
-  showSolutions = false,
   showPill = true,
   taskNumber,
   lessonLabel,
@@ -2463,7 +2594,9 @@ function TrueFalseMatrixView({
   bodyFont,
   bodyFontSize,
   isNonLatin = false,
+  showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: TrueFalseMatrixBlock;
   mode: ViewMode;
@@ -2480,7 +2613,8 @@ function TrueFalseMatrixView({
   bodyFontSize?: string;
   isNonLatin?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const tc = useTranslations("common");
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
@@ -2644,7 +2778,7 @@ function ArticleTrainingView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -2853,7 +2987,7 @@ function GridView({
 }
 
 // ─── Order Items View ────────────────────────────────────────
-function OrderItemsView({
+ function OrderItemsView({
   block,
   mode,
   interactive,
@@ -2862,6 +2996,7 @@ function OrderItemsView({
   showResults,
   showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: OrderItemsBlock;
   mode: ViewMode;
@@ -2871,7 +3006,8 @@ function OrderItemsView({
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
   const isOnline = mode === "online";
@@ -2939,7 +3075,7 @@ function OrderItemsView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -3221,21 +3357,27 @@ function renderTextWithSup(text: string): React.ReactNode[] {
 }
 
 // ─── Word Search View ────────────────────────────────────────
-function WordSearchView({
+ function WordSearchView({
   block,
   mode,
   interactive,
   answer,
   onAnswer,
+  showResults,
+  showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: WordSearchBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
   onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const selectedCells = (answer as string[] | undefined) || [];
   const isPrint = mode === "print";
   const isOnline = mode === "online";
@@ -3262,7 +3404,7 @@ function WordSearchView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {block.showWordList && (
@@ -3323,7 +3465,7 @@ function WordSearchView({
 
 // ─── Sorting Categories View ────────────────────────────────
 // ─── Sorting Categories View ──────────────────────────────
-function SortingCategoriesView({
+ function SortingCategoriesView({
   block,
   mode,
   interactive,
@@ -3332,6 +3474,7 @@ function SortingCategoriesView({
   showResults,
   showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: SortingCategoriesBlock;
   mode: ViewMode;
@@ -3341,7 +3484,8 @@ function SortingCategoriesView({
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
-}) {
+  instructionIndex?: number;
+})  {
   const t = useTranslations("viewer");
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
   const [dragItem, setDragItem] = useState<string | null>(null);
@@ -3394,7 +3538,7 @@ function SortingCategoriesView({
     return (
       <div>
         {block.instruction && (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} instructionIndex={instructionIndex} />
         )}
         <div className="flex min-h-[49px] flex-wrap items-center gap-2">
           {shuffledItems.map((item) => (
@@ -3465,7 +3609,7 @@ function SortingCategoriesView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {/* Unsorted items */}
@@ -3630,6 +3774,7 @@ function UnscrambleWordsView({
   bodyFontSize,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: UnscrambleWordsBlock;
   mode: ViewMode;
@@ -3642,6 +3787,7 @@ function UnscrambleWordsView({
   bodyFontSize?: string;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const isPrint = mode === "print";
   const fontFamily = bodyFont || "inherit";
@@ -3698,7 +3844,7 @@ function UnscrambleWordsView({
             instruction={block.instruction}
             accentColor={accentColor}
             style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
-            mode={mode}
+            mode={mode} instructionIndex={instructionIndex}
           />
         )
       )}
@@ -3772,7 +3918,6 @@ function FixSentencesView({
   answer,
   onAnswer,
   showResults,
-  showSolutions = false,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -3967,6 +4112,7 @@ function CompleteSentencesView({
   onAnswer,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: CompleteSentencesBlock;
   mode: ViewMode;
@@ -3975,6 +4121,7 @@ function CompleteSentencesView({
   onAnswer: (value: unknown) => void;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
@@ -3993,7 +4140,7 @@ function CompleteSentencesView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -4036,6 +4183,7 @@ function TransformSentencesView({
   showResults,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -4045,6 +4193,7 @@ function TransformSentencesView({
   showResults: boolean;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
@@ -4063,7 +4212,7 @@ function TransformSentencesView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -4139,6 +4288,7 @@ function VerbTableView({
   primaryColor = "#1a1a1a",
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: VerbTableBlock;
   mode: ViewMode;
@@ -4149,6 +4299,7 @@ function VerbTableView({
   primaryColor?: string;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const t = useTranslations("viewer");
   const userAnswers = (answer as Record<string, string> | undefined) || {};
@@ -4279,7 +4430,7 @@ function VerbTableView({
           <InstructionRow
             instruction={block.infinitiveOverride || block.verb || ""}
             accentColor={accentColor}
-            mode={mode}
+            mode={mode} instructionIndex={instructionIndex}
           />
         )
       )}
@@ -4310,8 +4461,9 @@ function DialogueView({
   answer,
   onAnswer,
   showResults,
-  showSolutions = false,
   accentColor,
+  showSolutions = false,
+  instructionIndex,
 }: {
   block: DialogueBlock;
   mode: ViewMode;
@@ -4321,6 +4473,7 @@ function DialogueView({
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
+  instructionIndex?: number;
 }) {
   const t = useTranslations("blockRenderer");
   const isOnline = mode === "online";
@@ -4370,25 +4523,13 @@ function DialogueView({
       if (match) {
         const noSpace = match[1] === '*';
         const raw = match[2] || "";
-        const commaIdx = raw.lastIndexOf(",");
-        let correctAnswer: string;
-        let widthMultiplier = 1;
-        if (commaIdx !== -1) {
-          correctAnswer = raw.substring(0, commaIdx).trim();
-          const wStr = raw.substring(commaIdx + 1).trim();
-          const parsed = Number(wStr);
-          if (!isNaN(parsed)) widthMultiplier = parsed;
-        } else {
-          correctAnswer = raw.trim();
-        }
+        const { answer: correctAnswer, width } = parseBlankContent(raw);
         const idx = globalGapIdx++;
         const key = `gap-${idx}`;
         const userVal = answer?.[key] ?? "";
         const hasAnswer = correctAnswer !== "";
         const isCorrect = hasAnswer && userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-        const widthStyle = widthMultiplier === 0
-          ? { flex: 1 } as React.CSSProperties
-          : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
+        const widthStyle = getBlankWidthStyle(width, false);
         const spacingClass = noSpace ? '' : 'mx-1';
 
         return interactive ? (
@@ -4407,7 +4548,7 @@ function DialogueView({
                       : "text-muted-foreground"
                   : "focus:ring-1 focus:ring-primary/50"
               }`}
-              style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+              style={getBlankWidthStyle(width, true)}
             />
           </span>
         ) : (
@@ -4436,7 +4577,7 @@ function DialogueView({
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {/* Word Bank */}
@@ -4772,7 +4913,6 @@ function AccordionView({
   answer,
   onAnswer,
   showResults,
-  showSolutions = false,
   primaryColor,
   interactiveColor,
   allBlocks,
@@ -5430,6 +5570,10 @@ export function ViewerBlockRenderer({
   originalBlock,
   isNonLatin = false,
   isRtl: _isRtl = false,
+  instructionIndex,
+  headingNumberFormats,
+  headingColors,
+  headingNumberColors,
   translationScale,
 }: {
   block: WorksheetBlock;
@@ -5450,6 +5594,10 @@ export function ViewerBlockRenderer({
   bodyFontSize?: string;
   lessonLabel?: string;
   originalBlock?: WorksheetBlock;
+  instructionIndex?: number;
+  headingNumberFormats?: Record<string, string>;
+  headingColors?: Record<string, string>;
+  headingNumberColors?: Record<string, string>;
   isNonLatin?: boolean;
   isRtl?: boolean;
   translationScale?: number;
@@ -5475,27 +5623,47 @@ export function ViewerBlockRenderer({
 
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} instructionIndex={instructionIndex}/>;
+    case "numbered-heading": {
+      const nbBlock = block as NumberedHeadingBlock;
+      const levelKey = `h${nbBlock.level}` as keyof typeof headingColors;
+      return (
+        <NumberedHeadingView
+          block={nbBlock}
+          brand={brand}
+          headlineFont={headlineFont}
+          headingWeights={headingWeights}
+          isNonLatin={isNonLatin}
+          translationScale={translationScale}
+          primaryColor={primaryColor}
+          accentColor={accentColor}
+          headingColor={resolveHeadingColor(headingColors?.[levelKey], primaryColor, accentColor)}
+          headingNumberColor={resolveHeadingColor(headingNumberColors?.[levelKey], primaryColor, accentColor)}
+          headingNumberFormat={headingNumberFormats?.[levelKey]}
+          allBlocks={allBlocks}
+        />
+      );
+    }
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} />;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex}/>;
     case "image":
-      return <ImageView block={block} />;
+      return <ImageView block={block}  instructionIndex={instructionIndex}/>;
     case "image-cards":
-      return <ImageCardsView block={block} />;
+      return <ImageCardsView block={block}  instructionIndex={instructionIndex}/>;
     case "text-cards":
-      return <TextCardsView block={block} />;
+      return <TextCardsView block={block}  instructionIndex={instructionIndex}/>;
     case "spacer":
-      return <SpacerView block={block} />;
+      return <SpacerView block={block}  instructionIndex={instructionIndex}/>;
     case "divider":
-      return <DividerView block={block} />;
+      return <DividerView block={block}  instructionIndex={instructionIndex}/>;
     case "logo-divider":
-      return <LogoDividerView block={block as LogoDividerBlock} brand={brand} />;
+      return <LogoDividerView block={block as LogoDividerBlock} brand={brand}  instructionIndex={instructionIndex}/>;
     case "page-break":
-      return <PageBreakView block={block} />;
+      return <PageBreakView block={block}  instructionIndex={instructionIndex}/>;
     case "writing-lines":
-      return <WritingLinesView block={block} />;
+      return <WritingLinesView block={block}  instructionIndex={instructionIndex}/>;
     case "writing-rows":
-      return <WritingRowsView block={block} />;
+      return <WritingRowsView block={block}  instructionIndex={instructionIndex}/>;
     case "multiple-choice":
       return (
         <MultipleChoiceView
@@ -5507,6 +5675,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "fill-in-blank":
@@ -5521,6 +5690,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "fill-in-blank-items":
@@ -5535,6 +5705,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "matching":
@@ -5548,6 +5719,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "two-column-fill":
@@ -5560,6 +5732,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "glossary":
@@ -5570,6 +5743,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
+          instructionIndex={instructionIndex}
         />
       );
     case "open-response":
@@ -5579,12 +5753,13 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          instructionIndex={instructionIndex}
         />
       );
     case "word-bank":
-      return <WordBankView block={block} />;
+      return <WordBankView block={block}  instructionIndex={instructionIndex}/>;
     case "number-line":
-      return <NumberLineView block={block} />;
+      return <NumberLineView block={block}  instructionIndex={instructionIndex}/>;
     case "true-false-matrix":
       return (
         <TrueFalseMatrixView
@@ -5603,6 +5778,7 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "article-training":
@@ -5617,6 +5793,7 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "order-items":
@@ -5630,6 +5807,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "inline-choices":
@@ -5642,6 +5820,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           mode={mode}
+          instructionIndex={instructionIndex}
         />
       );
     case "word-search":
@@ -5653,6 +5832,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "sorting-categories":
@@ -5666,6 +5846,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "unscramble-words":
@@ -5682,6 +5863,7 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "fix-sentences":
@@ -5694,6 +5876,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
+          instructionIndex={instructionIndex}
         />
       );
     case "complete-sentences":
@@ -5706,6 +5889,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "transform-sentences":
@@ -5719,6 +5903,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "verb-table":
@@ -5733,10 +5918,11 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "chart":
-      return <ChartView block={block} />;
+      return <ChartView block={block}  instructionIndex={instructionIndex}/>;
     case "dialogue":
       return (
         <DialogueView
@@ -5751,7 +5937,7 @@ export function ViewerBlockRenderer({
         />
       );
     case "numbered-label":
-      return <NumberedLabelView block={block} originalBlock={originalBlock as NumberedLabelBlock | undefined} allBlocks={allBlocks} primaryColor={primaryColor} />;
+      return <NumberedLabelView block={block} originalBlock={originalBlock as NumberedLabelBlock | undefined} allBlocks={allBlocks} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
     case "columns":
       return (
         <ColumnsView
@@ -5764,6 +5950,7 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
+          instructionIndex={instructionIndex}
         />
       );
     case "grid":
@@ -5778,22 +5965,23 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
+          instructionIndex={instructionIndex}
         />
       );
     case "text-snippet":
-      return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
+      return <TextSnippetView block={block as TextSnippetBlock} mode={mode}  instructionIndex={instructionIndex}/>;
     case "email-skeleton":
-      return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
+      return <EmailSkeletonView block={block as EmailSkeletonBlock}  instructionIndex={instructionIndex}/>;
     case "job-application":
-      return <JobApplicationView block={block as JobApplicationBlock} />;
+      return <JobApplicationView block={block as JobApplicationBlock}  instructionIndex={instructionIndex}/>;
     case "dos-and-donts":
-      return <DosAndDontsView block={block as DosAndDontsBlock} />;
+      return <DosAndDontsView block={block as DosAndDontsBlock}  instructionIndex={instructionIndex}/>;
     case "text-comparison":
-      return <TextComparisonView block={block as TextComparisonBlock} />;
+      return <TextComparisonView block={block as TextComparisonBlock}  instructionIndex={instructionIndex}/>;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale}  instructionIndex={instructionIndex}/>;
     case "checklist":
-      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale}  instructionIndex={instructionIndex}/>;
     case "accordion":
       return (
         <AccordionView
@@ -5807,20 +5995,21 @@ export function ViewerBlockRenderer({
           interactiveColor={interactiveColor}
           allBlocks={allBlocks}
           brand={brand}
+          instructionIndex={instructionIndex}
         />
       );
     case "ai-prompt":
-      return <AiPromptView block={block as AiPromptBlock} />;
+      return <AiPromptView block={block as AiPromptBlock}  instructionIndex={instructionIndex}/>;
     case "ai-tool":
-      return <AiToolView block={block as AiToolBlock} />;
+      return <AiToolView block={block as AiToolBlock}  instructionIndex={instructionIndex}/>;
     case "table":
-      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} />;
+      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined}  instructionIndex={instructionIndex}/>;
     case "audio":
-      return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
+      return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode}  instructionIndex={instructionIndex}/>;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
     case "website":
-      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
     default:
       return null;
   }
