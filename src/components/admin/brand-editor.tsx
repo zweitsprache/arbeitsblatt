@@ -116,6 +116,18 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2Weight: "" as string | number,
     h3Size: "",
     h3Weight: "" as string | number,
+    h1NumberFormat: "numbers",
+    h2NumberFormat: "numbers",
+    h3NumberFormat: "numbers",
+    h4NumberFormat: "numbers",
+    h1HeadingColor: "primary",
+    h2HeadingColor: "primary",
+    h3HeadingColor: "primary",
+    h4HeadingColor: "primary",
+    h1HeadingNumberColor: "primary",
+    h2HeadingNumberColor: "primary",
+    h3HeadingNumberColor: "primary",
+    h4HeadingNumberColor: "primary",
     textBaseSize: "",
     primaryColor: "#1a1a1a",
     accentColor: "",
@@ -159,6 +171,18 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2Weight: data.h2Weight ?? "",
           h3Size: stripPx(data.h3Size),
           h3Weight: data.h3Weight ?? "",
+          h1NumberFormat: data.h1NumberFormat || "numbers",
+          h2NumberFormat: data.h2NumberFormat || "numbers",
+          h3NumberFormat: data.h3NumberFormat || "numbers",
+          h4NumberFormat: data.h4NumberFormat || "numbers",
+          h1HeadingColor: data.h1HeadingColor || "primary",
+          h2HeadingColor: data.h2HeadingColor || "primary",
+          h3HeadingColor: data.h3HeadingColor || "primary",
+          h4HeadingColor: data.h4HeadingColor || "primary",
+          h1HeadingNumberColor: data.h1HeadingNumberColor || "primary",
+          h2HeadingNumberColor: data.h2HeadingNumberColor || "primary",
+          h3HeadingNumberColor: data.h3HeadingNumberColor || "primary",
+          h4HeadingNumberColor: data.h4HeadingNumberColor || "primary",
           textBaseSize: stripPx(data.textBaseSize),
           primaryColor: data.primaryColor,
           accentColor: data.accentColor || "",
@@ -261,6 +285,18 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2Weight: form.h2Weight !== "" ? Number(form.h2Weight) : null,
         h3Size: ensurePx(String(form.h3Size)),
         h3Weight: form.h3Weight !== "" ? Number(form.h3Weight) : null,
+        h1NumberFormat: form.h1NumberFormat,
+        h2NumberFormat: form.h2NumberFormat,
+        h3NumberFormat: form.h3NumberFormat,
+        h4NumberFormat: form.h4NumberFormat,
+        h1HeadingColor: form.h1HeadingColor,
+        h2HeadingColor: form.h2HeadingColor,
+        h3HeadingColor: form.h3HeadingColor,
+        h4HeadingColor: form.h4HeadingColor,
+        h1HeadingNumberColor: form.h1HeadingNumberColor,
+        h2HeadingNumberColor: form.h2HeadingNumberColor,
+        h3HeadingNumberColor: form.h3HeadingNumberColor,
+        h4HeadingNumberColor: form.h4HeadingNumberColor,
         textBaseSize: ensurePx(String(form.textBaseSize)),
         pdfTranslationScale:
           form.pdfTranslationScale !== ""
@@ -711,6 +747,160 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   placeholder="21"
                   className="mt-1"
                 />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label>{t("h1NumberFormat")}</Label>
+                <select
+                  value={form.h1NumberFormat}
+                  onChange={(e) => update("h1NumberFormat", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="numbers">{t("headingNumberFormatNumbers")}</option>
+                  <option value="numbers-leading-zero">{t("headingNumberFormatNumbersLeadingZero")}</option>
+                  <option value="letters-uppercase">{t("headingNumberFormatUppercase")}</option>
+                  <option value="letters-lowercase">{t("headingNumberFormatLowercase")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h2NumberFormat")}</Label>
+                <select
+                  value={form.h2NumberFormat}
+                  onChange={(e) => update("h2NumberFormat", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="numbers">{t("headingNumberFormatNumbers")}</option>
+                  <option value="numbers-leading-zero">{t("headingNumberFormatNumbersLeadingZero")}</option>
+                  <option value="letters-uppercase">{t("headingNumberFormatUppercase")}</option>
+                  <option value="letters-lowercase">{t("headingNumberFormatLowercase")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h3NumberFormat")}</Label>
+                <select
+                  value={form.h3NumberFormat}
+                  onChange={(e) => update("h3NumberFormat", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="numbers">{t("headingNumberFormatNumbers")}</option>
+                  <option value="numbers-leading-zero">{t("headingNumberFormatNumbersLeadingZero")}</option>
+                  <option value="letters-uppercase">{t("headingNumberFormatUppercase")}</option>
+                  <option value="letters-lowercase">{t("headingNumberFormatLowercase")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h4NumberFormat")}</Label>
+                <select
+                  value={form.h4NumberFormat}
+                  onChange={(e) => update("h4NumberFormat", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="numbers">{t("headingNumberFormatNumbers")}</option>
+                  <option value="numbers-leading-zero">{t("headingNumberFormatNumbersLeadingZero")}</option>
+                  <option value="letters-uppercase">{t("headingNumberFormatUppercase")}</option>
+                  <option value="letters-lowercase">{t("headingNumberFormatLowercase")}</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label>{t("h1HeadingColor")}</Label>
+                <select
+                  value={form.h1HeadingColor}
+                  onChange={(e) => update("h1HeadingColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h2HeadingColor")}</Label>
+                <select
+                  value={form.h2HeadingColor}
+                  onChange={(e) => update("h2HeadingColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h3HeadingColor")}</Label>
+                <select
+                  value={form.h3HeadingColor}
+                  onChange={(e) => update("h3HeadingColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h4HeadingColor")}</Label>
+                <select
+                  value={form.h4HeadingColor}
+                  onChange={(e) => update("h4HeadingColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label>{t("h1HeadingNumberColor")}</Label>
+                <select
+                  value={form.h1HeadingNumberColor}
+                  onChange={(e) => update("h1HeadingNumberColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h2HeadingNumberColor")}</Label>
+                <select
+                  value={form.h2HeadingNumberColor}
+                  onChange={(e) => update("h2HeadingNumberColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h3HeadingNumberColor")}</Label>
+                <select
+                  value={form.h3HeadingNumberColor}
+                  onChange={(e) => update("h3HeadingNumberColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("h4HeadingNumberColor")}</Label>
+                <select
+                  value={form.h4HeadingNumberColor}
+                  onChange={(e) => update("h4HeadingNumberColor", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("headingColorOptionDefault")}</option>
+                  <option value="primary">{t("headingColorOptionPrimary")}</option>
+                  <option value="accent">{t("headingColorOptionAccent")}</option>
+                </select>
               </div>
             </div>
           </div>

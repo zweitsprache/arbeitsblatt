@@ -76,7 +76,7 @@ export default function ModulePage() {
                 data-block-id={block.id}
                 className="group/block relative"
               >
-                <ViewerBlockRenderer block={block} mode="online" primaryColor={primaryColor} accentColor={accentColor} brand={brand} allBlocks={visibleBlocks} />
+                <ViewerBlockRenderer block={block} mode="online" primaryColor={primaryColor} accentColor={accentColor} brand={brand} allBlocks={visibleBlocks} instructionIndex={undefined} />
                 <BlockScreenshotButton
                   courseId={courseId}
                   moduleId={moduleId}

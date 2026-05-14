@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS, DEFAULT_BRAND_SETTINGS, BrandSettings, Brand, BrandProfile, getStaticBrandProfile, applyBrandOverrides } from "@/types/worksheet";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
-import { replaceEszett, applyChOverrides } from "@/lib/locale-utils";
 import { applyWorksheetTranslations } from "@/lib/worksheet-translation";
+import { migrateWorksheetLocaleDataToV2, resolveWorksheetLocaleContent } from "@/lib/worksheet-locale-migration";
 
 // This page is used by Puppeteer for PDF rendering
 export default async function PrintWorksheetPage({
@@ -17,7 +17,11 @@ export default async function PrintWorksheetPage({
   const { locale, slug } = await params;
   const sp = await searchParams;
   setRequestLocale(locale);
-  const worksheet = await prisma.worksheet.findUnique({ where: { slug } });
+  const worksheet = await prisma.worksheet.findFirst({
+    where: {
+      OR: [{ slug }, { id: slug }],
+    },
+  });
 
   if (!worksheet) {
     notFound();
@@ -27,7 +31,16 @@ export default async function PrintWorksheetPage({
   const showSolutions = sp.solutions === "1";
   const lang = typeof sp.lang === "string" ? sp.lang : null;
 
-  let blocks = worksheet.blocks as unknown as WorksheetBlock[];
+  const migratedLocaleData = migrateWorksheetLocaleDataToV2({
+    title: worksheet.title,
+    blocks: worksheet.blocks as unknown as WorksheetBlock[],
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...(worksheet.settings as unknown as Partial<WorksheetSettings>),
+    },
+  });
+
+  let blocks = migratedLocaleData.blocks;
   const rawSettings = worksheet.settings as unknown as Partial<WorksheetSettings>;
   const brand = ((rawSettings?.brand as string) || "edoomio") as Brand;
   const now = new Date();
@@ -53,7 +66,7 @@ export default async function PrintWorksheetPage({
 
   const settings: WorksheetSettings = {
     ...DEFAULT_SETTINGS,
-    ...rawSettings,
+    ...migratedLocaleData.settings,
     brandSettings: resolvedBrandSettings,
   };
   const effectiveOrientation = settings.orientation === "landscape" ? "landscape" : "portrait";
@@ -62,10 +75,19 @@ export default async function PrintWorksheetPage({
       ? "297mm 210mm"
       : "210mm 297mm";
 
-  let title = worksheet.title;
+  let title = migratedLocaleData.title;
 
   // Keep original blocks for bilingual rendering before applying translations
-  const originalBlocks = worksheet.blocks as unknown as WorksheetBlock[];
+  const originalBlocks = migratedLocaleData.blocks;
+
+  const resolvedVariant = resolveWorksheetLocaleContent(
+    title,
+    blocks,
+    settings,
+    isCH ? "CH" : "DE",
+  );
+  title = resolvedVariant.title;
+  blocks = resolvedVariant.blocks;
 
   // Apply translation if lang param is provided
   if (lang && lang !== "de") {
@@ -74,15 +96,6 @@ export default async function PrintWorksheetPage({
     const langMap = allTranslations[lang];
     if (langMap) {
       blocks = applyWorksheetTranslations(blocks, langMap);
-    }
-  }
-
-  // Apply ß→ss replacement for Swiss locale, then layer manual CH overrides
-  if (isCH) {
-    title = replaceEszett(title);
-    blocks = replaceEszett(blocks);
-    if (settings.chOverrides) {
-      blocks = applyChOverrides(blocks, settings.chOverrides);
     }
   }
 
@@ -97,7 +110,7 @@ export default async function PrintWorksheetPage({
       <WorksheetViewer
         title={title}
         blocks={blocks}
-        settings={isCH ? replaceEszett(settings) : settings}
+        settings={settings}
         mode="print"
         worksheetId={worksheet.id}
         showSolutions={showSolutions}

@@ -7,9 +7,9 @@ import {
   compressImageUrl,
   CoverSvgProps,
 } from "@/app/api/worksheets/[id]/grammar-table-pdf-v2/route";
-import { replaceEszett, getEffectiveValue } from "@/lib/locale-utils";
-import { WorksheetSettings, ChOverrides } from "@/types/worksheet";
+import { WorksheetSettings, DEFAULT_SETTINGS } from "@/types/worksheet";
 import { GrammarTableSettings } from "@/types/grammar-table";
+import { migrateWorksheetLocaleDataToV2, resolveWorksheetLocaleContent } from "@/lib/worksheet-locale-migration";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +46,15 @@ export async function POST(
   }
 
   try {
-    const settings = (worksheet.settings ?? {}) as unknown as WorksheetSettings;
+    const migrated = migrateWorksheetLocaleDataToV2({
+      title: worksheet.title,
+      blocks: worksheet.blocks as unknown as import("@/types/worksheet").WorksheetBlock[],
+      settings: {
+        ...DEFAULT_SETTINGS,
+        ...((worksheet.settings ?? {}) as Partial<WorksheetSettings>),
+      },
+    });
+    const settings = migrated.settings;
 
     // Compress cover images
     const rawCoverImages = settings.coverImages ?? [];
@@ -76,27 +84,18 @@ export async function POST(
           200,
         );
 
-    let title = getEffectiveValue(
-      worksheet.title,
-      "_worksheet",
-      "title",
-      isSwiss ? "CH" : "DE",
-      settings.chOverrides,
-    );
+    let title = migrated.title;
     let subtitle = settings.coverSubtitle || "Arbeitsblatt";
     let infoText = settings.coverInfoText || "";
 
-    if (isSwiss) {
-      title = replaceEszett(title);
-      subtitle = replaceEszett(subtitle);
-      infoText = replaceEszett(infoText);
-    }
+    const localeMode: "CH" | "DE" = isSwiss ? "CH" : "DE";
+    title = resolveWorksheetLocaleContent(title, migrated.blocks, settings, localeMode).title;
 
     const coverProps: CoverSvgProps = {
       subtitle,
       title,
       tenseInfo: infoText,
-      settings: isSwiss ? replaceEszett(coverSettings) : coverSettings,
+      settings: coverSettings,
       worksheetId: worksheet.id,
       bigLogoDataUri,
       flagDataUri,

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import {
   HeadingBlock,
+  NumberedHeadingBlock,
   TextBlock,
   ImageBlock,
   ImageCardsBlock,
@@ -84,12 +85,13 @@ import {
   BlockVisibility,
   TextBlockStyle,
   ImageBlockStyle,
+  BLOCK_LIBRARY,
 } from "@/types/worksheet";
 import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
+import { hasChOverride } from "@/lib/locale-utils";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
@@ -125,13 +127,14 @@ function ChInput({
 }) {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
-  const isChMode = state.localeMode === "CH";
+  const isDeOverrideMode = state.localeMode === "DE";
   const overrides = state.settings.chOverrides;
   const hasOverride = hasChOverride(blockId, fieldPath, overrides);
-  const effectiveValue = getEffectiveValue(baseValue, blockId, fieldPath, state.localeMode, overrides);
+  const overrideValue = overrides?.[blockId]?.[fieldPath];
+  const effectiveValue = isDeOverrideMode && overrideValue !== undefined ? overrideValue : baseValue;
 
-  if (!isChMode) {
-    // DE mode: normal input
+  if (!isDeOverrideMode) {
+    // CH mode: normal/base input
     if (multiline) {
       return (
         <textarea
@@ -152,11 +155,9 @@ function ChInput({
     );
   }
 
-  // CH mode
+  // DE mode (override layer)
   const handleChange = (value: string) => {
-    // If text matches auto-replaced value, don't store an override
-    const autoReplaced = replaceEszett(baseValue);
-    if (value === autoReplaced) {
+    if (value === baseValue) {
       dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId, fieldPath } });
     } else {
       dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId, fieldPath, value } });
@@ -213,9 +214,9 @@ function ChInput({
           </button>
         </div>
       )}
-      {/* Show DE base text as reference */}
+      {/* Show CH base text as reference */}
       <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate" title={baseValue}>
-        {"🇩🇪 "}{baseValue.length > 60 ? baseValue.slice(0, 60) + "…" : baseValue}
+        {"🇨🇭 "}{baseValue.length > 60 ? baseValue.slice(0, 60) + "…" : baseValue}
       </p>
     </div>
   );
@@ -245,10 +246,11 @@ function TextSnippetProps({ block }: { block: TextSnippetBlock }) {
   );
 }
 
-function HeadingProps({ block }: { block: HeadingBlock }) {
+function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const isNumberedHeading = block.type === "numbered-heading";
   return (
     <div className="space-y-3">
       <div>
@@ -272,7 +274,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
           onValueChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { level: Number(v) as 1 | 2 | 3 } },
+              payload: { id: block.id, updates: { level: Number(v) as 1 | 2 | 3 | 4 } },
             })
           }
         >
@@ -283,6 +285,7 @@ function HeadingProps({ block }: { block: HeadingBlock }) {
             <SelectItem value="1">{t("heading1")}</SelectItem>
             <SelectItem value="2">{t("heading2")}</SelectItem>
             <SelectItem value="3">{t("heading3")}</SelectItem>
+            {isNumberedHeading && <SelectItem value="4">{t("heading4")}</SelectItem>}
           </SelectContent>
         </Select>
       </div>
@@ -1736,6 +1739,20 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("text")}</Label>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[88px] resize-y"
+          placeholder={t("dialogueTextPlaceholder")}
+          value={block.textAboveItems ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { textAboveItems: e.target.value } },
             })
           }
         />
@@ -4078,6 +4095,30 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
           }
         />
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">{t("colorCode")}</Label>
+        <Switch
+          checked={!!block.colorCode}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { colorCode: v } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: v } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -5077,21 +5118,29 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
         {block.items.map((item, i) => (
           <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
             <div className="flex items-center gap-1">
+              {(() => {
+                const currentIcon = iconOptions.some((opt) => opt.value === item.icon)
+                  ? item.icon
+                  : "circle";
+
+                return (
               <Select
-                value={item.icon}
+                value={currentIcon}
                 onValueChange={(v) => updateItem(i, { icon: v as DialogueSpeakerIcon })}
               >
-                <SelectTrigger className="w-[44px] h-8 text-xs px-2">
-                  {iconSvgMap[item.icon] || iconSvgMap.circle}
+                <SelectTrigger className="w-[56px] h-8 text-xs px-1.5">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {iconOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      <span className="flex items-center gap-2">{iconSvgMap[opt.value]} {opt.label}</span>
+                      <span className="flex items-center gap-2">{iconSvgMap[opt.value]}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+                );
+              })()}
               <ChInput
                 blockId={block.id}
                 fieldPath={`items.${i}.speaker`}
@@ -7230,6 +7279,7 @@ export function PropertiesPanel() {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const tb = useTranslations("blocks");
 
   const selectedBlock = React.useMemo(() => {
     if (!state.selectedBlockId) return undefined;
@@ -7273,6 +7323,13 @@ export function PropertiesPanel() {
       legacyVisibility === "print"),
   };
 
+  const selectedBlockName = React.useMemo(() => {
+    if (!selectedBlock) return "";
+    const def = BLOCK_LIBRARY.find((entry) => entry.type === selectedBlock.type);
+    if (!def) return selectedBlock.type;
+    return tb(def.labelKey);
+  }, [selectedBlock, tb]);
+
   if (!selectedBlock) {
     return (
       <div className="w-80 pt-8 pb-8">
@@ -7294,6 +7351,8 @@ export function PropertiesPanel() {
   const renderBlockProps = () => {
     switch (selectedBlock.type) {
       case "heading":
+        return <HeadingProps block={selectedBlock} />;
+      case "numbered-heading":
         return <HeadingProps block={selectedBlock} />;
       case "image":
         return <ImageProps block={selectedBlock} />;
@@ -7401,6 +7460,8 @@ export function PropertiesPanel() {
       <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden min-h-0">
       <ScrollArea className="flex-1 overflow-hidden scrollbar-hide">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
+          <div className="text-sm font-semibold text-slate-800 uppercase">{selectedBlockName}</div>
+
           {/* Visibility */}
           <div>
             <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{tc("visibility")}</div>

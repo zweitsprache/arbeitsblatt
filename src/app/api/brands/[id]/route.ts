@@ -82,6 +82,42 @@ export async function PUT(
         ...(body.h2Weight !== undefined && { h2Weight: body.h2Weight }),
         ...(body.h3Size !== undefined && { h3Size: body.h3Size }),
         ...(body.h3Weight !== undefined && { h3Weight: body.h3Weight }),
+        ...(body.h1NumberFormat !== undefined && {
+          h1NumberFormat: body.h1NumberFormat,
+        }),
+        ...(body.h2NumberFormat !== undefined && {
+          h2NumberFormat: body.h2NumberFormat,
+        }),
+        ...(body.h3NumberFormat !== undefined && {
+          h3NumberFormat: body.h3NumberFormat,
+        }),
+        ...(body.h4NumberFormat !== undefined && {
+          h4NumberFormat: body.h4NumberFormat,
+        }),
+        ...(body.h1HeadingColor !== undefined && {
+          h1HeadingColor: body.h1HeadingColor,
+        }),
+        ...(body.h2HeadingColor !== undefined && {
+          h2HeadingColor: body.h2HeadingColor,
+        }),
+        ...(body.h3HeadingColor !== undefined && {
+          h3HeadingColor: body.h3HeadingColor,
+        }),
+        ...(body.h4HeadingColor !== undefined && {
+          h4HeadingColor: body.h4HeadingColor,
+        }),
+        ...(body.h1HeadingNumberColor !== undefined && {
+          h1HeadingNumberColor: body.h1HeadingNumberColor,
+        }),
+        ...(body.h2HeadingNumberColor !== undefined && {
+          h2HeadingNumberColor: body.h2HeadingNumberColor,
+        }),
+        ...(body.h3HeadingNumberColor !== undefined && {
+          h3HeadingNumberColor: body.h3HeadingNumberColor,
+        }),
+        ...(body.h4HeadingNumberColor !== undefined && {
+          h4HeadingNumberColor: body.h4HeadingNumberColor,
+        }),
         ...(body.textBaseSize !== undefined && {
           textBaseSize: body.textBaseSize,
         }),

@@ -54,6 +54,20 @@ const brands = [
     logo: "/logo/logo-stadt-frauenfeld.svg",
     iconLogo: "/logo/logo-stadt-frauenfeld.svg",
   },
+  {
+    name: "Treffpunkt Schweiz",
+    slug: "treffpunkt-schweiz",
+    bodyFont: "TheSansB, sans-serif",
+    headlineFont: "TheSansB, sans-serif",
+    headlineWeight: 700,
+    subHeadlineFont: "TheSansB, sans-serif",
+    subHeadlineWeight: 700,
+    headerFooterFont: "TheSansB, sans-serif",
+    googleFontsUrl: "/fonts/thesansb.css",
+    primaryColor: "#1a1a1a",
+    logo: "/brands/treffpunkt_icon.svg",
+    iconLogo: "/brands/treffpunkt_icon.svg",
+  },
 ];
 
 async function main() {

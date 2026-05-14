@@ -31,6 +31,7 @@ interface GeneratedStatement {
 function extractBlockText(block: WorksheetBlock): string {
   switch (block.type) {
     case "heading":
+    case "numbered-heading":
       return block.content;
     case "text": {
       // Strip HTML tags to get plain text
@@ -75,12 +76,12 @@ export function AiTrueFalseModal({
     const found: { id: string; label: string; preview: string }[] = [];
     const scan = (blocks: WorksheetBlock[]) => {
       for (const b of blocks) {
-        if (b.type === "heading" || b.type === "text") {
+        if (b.type === "heading" || b.type === "numbered-heading" || b.type === "text") {
           const text = extractBlockText(b);
           if (text.length > 0) {
             found.push({
               id: b.id,
-              label: b.type === "heading" ? `Heading: ${text.slice(0, 60)}` : `Text: ${text.slice(0, 60)}`,
+              label: (b.type === "heading" || b.type === "numbered-heading") ? `Heading: ${text.slice(0, 60)}` : `Text: ${text.slice(0, 60)}`,
               preview: text.slice(0, 120) + (text.length > 120 ? "…" : ""),
             });
           }

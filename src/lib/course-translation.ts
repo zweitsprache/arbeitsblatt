@@ -147,6 +147,15 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "numbered-heading": {
+      if (!(block as HeadingBlock).skipTranslation) {
+        add("content", () => block.content, (v) => {
+          block.content = v;
+        });
+      }
+      break;
+    }
+
     case "image": {
       add("alt", () => block.alt, (v) => {
         block.alt = v;

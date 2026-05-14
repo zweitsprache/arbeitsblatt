@@ -123,6 +123,26 @@ Notes:
 
 - `level` must be `1`, `2`, or `3`.
 
+### `numbered-heading`
+
+```json
+{
+  "id": "numbered-heading-1",
+  "type": "numbered-heading",
+  "visibility": "both",
+  "content": "Section title",
+  "level": 1,
+  "bilingual": false,
+  "skipTranslation": false
+}
+```
+
+Notes:
+
+- `level` must be `1`, `2`, `3`, or `4`.
+- Numbering is sequential per heading level across the worksheet.
+- Number format per level (`h1` to `h4`) is defined in the active brand profile.
+
 ### `text`
 
 ```json
@@ -374,6 +394,10 @@ Rule:
 - Blanks use `{{blank:correctAnswer}}` syntax.
 - `{{blank}}` creates a blank gap with no solution (no auto-correction).
 - `{{blank*:correctAnswer}}` adds no space before the gap (useful for prefixes/suffixes like `ge{{blank*:macht}}`).
+- `{{blank:correctAnswer,1ch}}` creates a very narrow blank sized for roughly one character.
+- Numeric widths still work as before, for example `{{blank:correctAnswer,3}}`.
+- `{{blank:correctAnswer,1ch}}` creates a very narrow blank sized for roughly one character.
+- Numeric widths still work as before, for example `{{blank:correctAnswer,3}}`.
 
 ### `fill-in-blank-items`
 

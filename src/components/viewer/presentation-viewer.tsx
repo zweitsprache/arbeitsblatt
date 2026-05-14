@@ -123,7 +123,7 @@ export function PresentationViewer({
             <div className="flex flex-col gap-4">
               {currentBlocks.map((block) => (
                 <div key={block.id} className="worksheet-block">
-                  <ViewerBlockRenderer
+                  <ViewerBlockRenderer instructionIndex={undefined}
                     block={block}
                     mode={"online" as ViewMode}
                     allBlocks={currentBlocks}

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import { v4 as uuidv4 } from "uuid";
 import { authFetch } from "@/lib/auth-fetch";
 import { deepCloneBlocksWithNewIds } from "@/lib/block-utils";
+import { migrateWorksheetLocaleDataToV2 } from "@/lib/worksheet-locale-migration";
 import {
   WorksheetBlock,
   WorksheetSettings,
@@ -47,7 +48,7 @@ const initialState: EditorState = {
   selectedBlockId: null,
   activeItemIndex: null,
   viewMode: "print",
-  localeMode: "DE",
+  localeMode: "CH",
   isDirty: false,
   isSaving: false,
   published: false,
@@ -249,16 +250,23 @@ function removeFromContainer(b: WorksheetBlock, childId: string): WorksheetBlock
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case "LOAD_WORKSHEET":
+      {
+        const migrated = migrateWorksheetLocaleDataToV2({
+          title: action.payload.title,
+          blocks: action.payload.blocks,
+          settings: action.payload.settings,
+        });
       return {
         ...state,
         worksheetId: action.payload.id,
-        title: action.payload.title,
+        title: migrated.title,
         slug: action.payload.slug,
-        blocks: action.payload.blocks,
-        settings: { ...DEFAULT_SETTINGS, ...action.payload.settings },
+        blocks: migrated.blocks,
+        settings: { ...DEFAULT_SETTINGS, ...migrated.settings },
         published: action.payload.published,
         isDirty: false,
       };
+      }
 
     case "SET_TITLE":
       return { ...state, title: action.payload, isDirty: true };

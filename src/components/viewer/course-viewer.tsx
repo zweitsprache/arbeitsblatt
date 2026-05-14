@@ -929,7 +929,7 @@ function LessonContent({
         </div>
         <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-4 text-cv-base">
           {blocks.map((block) => (
-            <ViewerBlockRenderer key={block.id} block={block} mode="online" brand={brand} allBlocks={blocks} lessonLabel={lessonNumber(currentFlat.moduleIndex, currentFlat.topicIndex, currentFlat.lessonIndex)} />
+            <ViewerBlockRenderer key={block.id} block={block} mode="online" brand={brand} allBlocks={blocks} lessonLabel={lessonNumber(currentFlat.moduleIndex, currentFlat.topicIndex, currentFlat.lessonIndex)} instructionIndex={undefined} />
           ))}
           {blocks.length === 0 && (
             <p className="text-muted-foreground text-center py-8">

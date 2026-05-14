@@ -10,6 +10,7 @@
   --viewer-badge-size: 20px;
   --viewer-badge-radius: 3px;
   --viewer-control-size: 16px;
+  --viewer-badge-font-family: var(--font-sans);
 }
 
 .blockShadow {
@@ -69,6 +70,8 @@
   background: var(--color-primary);
   border: 2px solid var(--color-primary);
   color: #fff;
+  font-family: var(--viewer-badge-font-family, var(--font-sans));
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1;
   font-size: 0.65rem;
@@ -335,7 +338,7 @@
   display: grid;
   grid-template-columns: 2rem 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: center;
   padding: 0.5rem 0;
   border-bottom: 1px solid #e5e7eb;
   break-inside: avoid;

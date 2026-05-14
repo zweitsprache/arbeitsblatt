@@ -13,6 +13,7 @@ export type ViewMode = "print" | "online";
 // ─── Block types ─────────────────────────────────────────────
 export type BlockType =
   | "heading"
+  | "numbered-heading"
   | "text"
   | "image"
   | "image-cards"
@@ -77,6 +78,14 @@ export interface HeadingBlock extends BlockBase {
   type: "heading";
   content: string;
   level: 1 | 2 | 3;
+  bilingual?: boolean;
+  skipTranslation?: boolean;
+}
+
+export interface NumberedHeadingBlock extends BlockBase {
+  type: "numbered-heading";
+  content: string;
+  level: 1 | 2 | 3 | 4;
   bilingual?: boolean;
   skipTranslation?: boolean;
 }
@@ -242,6 +251,7 @@ export interface MatchingPair {
 export interface MatchingBlock extends BlockBase {
   type: "matching";
   instruction: string;
+  textAboveItems?: string;
   pairs: MatchingPair[];
   extendedRows?: boolean;
 }
@@ -449,6 +459,8 @@ export interface SortingCategoriesBlock extends BlockBase {
   categories: SortingCategory[];
   items: SortingItem[];
   showWritingLines: boolean;
+  colorCode?: boolean;
+  showFirstAsExample?: boolean;
 }
 
 // ─── Unscramble Words block ─────────────────────────────────
@@ -788,6 +800,7 @@ export interface LinkedBlocksBlock extends BlockBase {
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
+  | NumberedHeadingBlock
   | TextBlock
   | ImageBlock
   | ImageCardsBlock
@@ -881,6 +894,18 @@ export interface BrandProfile {
   h2Weight?: number | null;
   h3Size?: string | null;
   h3Weight?: number | null;
+  h1NumberFormat?: string | null;
+  h2NumberFormat?: string | null;
+  h3NumberFormat?: string | null;
+  h4NumberFormat?: string | null;
+  h1HeadingColor?: string | null;
+  h2HeadingColor?: string | null;
+  h3HeadingColor?: string | null;
+  h4HeadingColor?: string | null;
+  h1HeadingNumberColor?: string | null;
+  h2HeadingNumberColor?: string | null;
+  h3HeadingNumberColor?: string | null;
+  h4HeadingNumberColor?: string | null;
   textBaseSize?: string | null;
 
   // Colors
@@ -1063,13 +1088,13 @@ const BRAND_FONTS_BASE: Record<string, BrandFonts> = {
     primaryColor: "#e75325",
   },
   "treffpunkt-schweiz": {
-    bodyFont: "Asap Condensed, sans-serif",
-    headlineFont: "Asap Condensed, sans-serif",
+    bodyFont: "TheSansB, sans-serif",
+    headlineFont: "TheSansB, sans-serif",
     headlineWeight: 700,
-    subHeadlineFont: "Asap Condensed, sans-serif",
+    subHeadlineFont: "TheSansB, sans-serif",
     subHeadlineWeight: 700,
-    headerFooterFont: "Asap Condensed, sans-serif",
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Asap+Condensed:wght@400;600;700&display=swap",
+    headerFooterFont: "TheSansB, sans-serif",
+    googleFontsUrl: "/fonts/thesansb.css",
     primaryColor: "#1a1a1a",
   },
 };
@@ -1230,6 +1255,8 @@ export interface WorksheetSettings {
   brandOverrides?: BrandOverrides;
   /** Selected sub-profile ID (overrides header/footer with variant content) */
   subProfileId?: string;
+  /** Locale data semantics version (2 = CH base, DE overrides). */
+  localeDataVersion?: 2;
   chOverrides?: ChOverrides;
   coverSubtitle: string;       // Subtitle shown on the cover page
   coverInfoText: string;       // Info text shown below the cover images
@@ -1269,6 +1296,7 @@ export const DEFAULT_SETTINGS: WorksheetSettings = {
   fontFamily: "Asap Condensed, sans-serif",
   brand: "edoomio",
   brandSettings: DEFAULT_BRAND_SETTINGS["edoomio"],
+  localeDataVersion: 2,
   coverSubtitle: "Arbeitsblatt",
   coverInfoText: "",
   coverImages: [],
@@ -1304,6 +1332,22 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Überschrift", description: "Titel und Überschriften hinzufügen" } },
     defaultData: {
       type: "heading",
+      content: "Heading",
+      level: 1,
+      visibility: "both",
+    },
+  },
+  {
+    type: "numbered-heading",
+    label: "Numbered Heading",
+    description: "Heading with automatic numbering",
+    labelKey: "numberedHeading",
+    descriptionKey: "numberedHeadingDesc",
+    icon: "Heading",
+    category: "content",
+    translations: { de: { label: "Nummerierte Überschrift", description: "Überschrift mit automatischer Nummerierung" } },
+    defaultData: {
+      type: "numbered-heading",
       content: "Heading",
       level: 1,
       visibility: "both",
@@ -1547,6 +1591,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "matching",
       instruction: "Match the items on the left with the items on the right.",
+      textAboveItems: "",
       pairs: [
         { id: "p1", left: "Item 1", right: "Match 1" },
         { id: "p2", left: "Item 2", right: "Match 2" },
@@ -1711,6 +1756,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "si4", text: "Item 4" },
       ],
       showWritingLines: true,
+      colorCode: false,
+      showFirstAsExample: false,
       visibility: "both",
     },
   },

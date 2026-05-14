@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Shadows+Into+Light+Two&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -1276,7 +1276,7 @@
 .table-block.table-first-row-example tbody tr:nth-child(2) > td,
 .table-block.table-first-row-example tbody tr:nth-child(2) > td p {
   color: #3b82f6;
-  font-family: "Shadows Into Light Two", var(--font-handwriting), cursive !important;
+  font-family: "Shadows Into Light", var(--font-handwriting), cursive !important;
   font-weight: 400;
 }
 
@@ -1337,5 +1337,16 @@
 }
 .tiptap-table-view td p,
 .tiptap-table-view th p {
+
+  /* ─── TheSansB Font Metric Overrides ──────────────────────
+     Computed from actual font metrics to align with standard x-height baseline.
+     Metrics: unitsPerEm: 1000, ascent: 740, descent: -260, lineGap: 300, xHeight: 497
+     Size adjust: 102.5% (normalized to standard x-height).
+     ──────────────────────────────────────────────────────── */
+  @supports (size-adjust: 102.5%) {
+    .print-worksheet-root {
+      font-size-adjust: 102.5%;
+    }
+  }
   margin: 0;
 }

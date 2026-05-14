@@ -40,7 +40,7 @@ export function worksheetBlocksToRveOverlays(
       continue;
     }
 
-    if (block.type === "heading") {
+    if (block.type === "heading" || block.type === "numbered-heading") {
       overlays.push({
         id: id++,
         type: OverlayType.TEXT,

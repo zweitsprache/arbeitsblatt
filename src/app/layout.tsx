@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Asap_Condensed, Encode_Sans, Merriweather, Shadows_Into_Light_Two } from "next/font/google";
+import { Asap_Condensed, Encode_Sans, Merriweather, Shadows_Into_Light } from "next/font/google";
+import { fontTheSansB } from "./fonts";
 import "./globals.css";
 
 const asapCondensed = Asap_Condensed({
@@ -20,7 +21,7 @@ const merriweather = Merriweather({
   weight: ["300", "400", "700"],
 });
 
-const shadowsIntoLightTwo = Shadows_Into_Light_Two({
+const shadowsIntoLight = Shadows_Into_Light({
   variable: "--font-handwriting",
   subsets: ["latin"],
   weight: ["400"],
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body
-        className={`${asapCondensed.variable} ${encodeSans.variable} ${merriweather.variable} ${shadowsIntoLightTwo.variable} ${asapCondensed.className} antialiased`}
+        className={`${asapCondensed.variable} ${encodeSans.variable} ${merriweather.variable} ${shadowsIntoLight.variable} ${fontTheSansB.variable} ${asapCondensed.className} antialiased`}
       >
         {children}
       </body>

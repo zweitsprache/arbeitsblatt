@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
-import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
+import { hasChOverride } from "@/lib/locale-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -80,15 +80,15 @@ export function EditorToolbar({
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
 
-  // CH-aware title
-  const isChMode = state.localeMode === "CH";
+  // CH is base title; DE is override mode
+  const isDeOverrideMode = state.localeMode === "DE";
   const titleHasOverride = hasChOverride("_worksheet", "title", state.settings.chOverrides);
-  const displayTitle = getEffectiveValue(state.title, "_worksheet", "title", state.localeMode, state.settings.chOverrides);
+  const titleOverride = state.settings.chOverrides?._worksheet?.title;
+  const displayTitle = isDeOverrideMode && titleOverride !== undefined ? titleOverride : state.title;
 
   const handleTitleChange = (value: string) => {
-    if (isChMode) {
-      const autoReplaced = replaceEszett(state.title);
-      if (value === autoReplaced) {
+    if (isDeOverrideMode) {
+      if (value === state.title) {
         dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } });
       } else {
         dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title", value } });
@@ -319,11 +319,11 @@ export function EditorToolbar({
             value={displayTitle}
             onChange={(e) => handleTitleChange(e.target.value)}
             className={`h-8 font-medium flex-1 ${
-              isChMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
+              isDeOverrideMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
             }`}
             placeholder={t("titlePlaceholder")}
           />
-          {isChMode && titleHasOverride && (
+          {isDeOverrideMode && titleHasOverride && (
             <button
               type="button"
               onClick={() => dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } })}

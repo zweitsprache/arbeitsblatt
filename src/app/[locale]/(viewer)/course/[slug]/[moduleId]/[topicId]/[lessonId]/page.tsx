@@ -101,7 +101,7 @@ export default function LessonPage() {
               data-block-id={block.id}
               className="group/block relative"
             >
-              <ViewerBlockRenderer block={block} mode="online" primaryColor={primaryColor} accentColor={accentColor} brand={brand} allBlocks={visibleBlocks} lessonLabel={lessonNumber(moduleIndex, topicIndex, lessonIndex)} />
+              <ViewerBlockRenderer block={block} mode="online" primaryColor={primaryColor} accentColor={accentColor} brand={brand} allBlocks={visibleBlocks} lessonLabel={lessonNumber(moduleIndex, topicIndex, lessonIndex)} instructionIndex={undefined} />
               <BlockScreenshotButton
                 courseId={courseId}
                 moduleId={moduleId}

@@ -203,6 +203,18 @@ model BrandProfile {
   h2Weight     Int? // e.g. 700
   h3Size       String? // e.g. "21px"
   h3Weight     Int? // e.g. 800
+  h1NumberFormat String? // numbers | numbers-leading-zero | letters-uppercase | letters-lowercase
+  h2NumberFormat String?
+  h3NumberFormat String?
+  h4NumberFormat String?
+  h1HeadingColor String? // default | primary | accent
+  h2HeadingColor String?
+  h3HeadingColor String?
+  h4HeadingColor String?
+  h1HeadingNumberColor String? // default | primary | accent
+  h2HeadingNumberColor String?
+  h3HeadingNumberColor String?
+  h4HeadingNumberColor String?
   textBaseSize String? // e.g. "21px" or "1.3125rem"
 
   // Colors

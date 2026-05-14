@@ -1,4 +1,5 @@
 import { WorksheetBlock } from "@/types/worksheet";
+import { parseBlankContent } from "@/lib/fill-in-blank";
 
 /**
  * Strip HTML tags and decode common entities to plain text.
@@ -21,7 +22,7 @@ function stripHtml(html: string): string {
  * Extract fill-in-blank content, replacing {{blank:answer}} / {{blank*:answer}} with the answer.
  */
 function expandBlanks(content: string): string {
-  return content.replace(/\{\{blank\*?:?([^}]*)\}\}/g, (_m, answer) => answer);
+  return content.replace(/\{\{blank\*?:?([^}]*)\}\}/g, (_m, raw) => parseBlankContent(raw).answer);
 }
 
 /**
@@ -47,6 +48,10 @@ export function extractBlocksText(
   for (const block of blocks) {
     switch (block.type) {
       case "heading":
+        if (block.content) parts.push(block.content);
+        break;
+
+      case "numbered-heading":
         if (block.content) parts.push(block.content);
         break;
 

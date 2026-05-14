@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
   HeadingBlock,
+  NumberedHeadingBlock,
   TextBlock,
   ImageBlock,
   ImageCardsBlock,
@@ -69,8 +70,8 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
-import { getEffectiveValue, hasChOverride, replaceEszett } from "@/lib/locale-utils";
 import { setByPath, getByPath } from "@/lib/locale-utils";
+import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
@@ -134,32 +135,69 @@ function getDeterministicPreviewOrder<T>(
     .map(({ item }) => item);
 }
 
+function getDeterministicPreviewDerangement<T>(
+  items: T[],
+  getKey: (item: T, index: number) => string,
+): T[] {
+  const ranked = items
+    .map((item, index) => ({
+      item,
+      index,
+      weight: hashPreviewKey(getKey(item, index)),
+    }))
+    .sort((left, right) => left.weight - right.weight || left.index - right.index);
+
+  const n = ranked.length;
+  if (n <= 1) return ranked.map(({ item }) => item);
+
+  for (let shift = 1; shift < n; shift++) {
+    const candidate = ranked.map((_, i) => ranked[(i + shift) % n]);
+    if (candidate.every((entry, i) => entry.index !== i)) {
+      return candidate.map(({ item }) => item);
+    }
+  }
+
+  // Fallback: deterministic local swaps to remove fixed points.
+  const fallback = [...ranked];
+  for (let i = 0; i < n; i++) {
+    if (fallback[i].index !== i) continue;
+    for (let j = i + 1; j < n; j++) {
+      if (fallback[j].index !== i && fallback[i].index !== j) {
+        [fallback[i], fallback[j]] = [fallback[j], fallback[i]];
+        break;
+      }
+    }
+  }
+
+  return fallback.map(({ item }) => item);
+}
+
 // ─── Locale-aware inline editing ────────────────────────────
 
 /**
  * Hook for locale-aware inline editing in block renderers.
- * In DE mode, updates go directly to the block via UPDATE_BLOCK.
- * In CH mode, updates are routed to CH overrides so that ß→ss
- * and other CH-specific changes don't contaminate the base DE blocks.
+ * In CH mode, updates go directly to the block via UPDATE_BLOCK.
+ * In DE mode, updates are routed to overrides so DE stays non-destructive
+ * relative to the CH base content.
  */
 function useLocaleAwareEdit() {
   const { state, dispatch } = useEditor();
-  const isChMode = state.localeMode === "CH";
+  const isDeOverrideMode = state.localeMode === "DE";
 
   /**
    * Update a string field in a locale-aware way.
    * @param blockId   - Block ID
    * @param fieldPath - Dot-path field in the block (e.g. "content", "options.2.text")
    * @param value     - New string value
-   * @param deUpdate  - Function to execute for the DE-mode update
+   * @param baseUpdate - Function to execute for base (CH-mode) update
    */
   const localeUpdate = React.useCallback(
-    (blockId: string, fieldPath: string, value: string, deUpdate: () => void) => {
-      if (!isChMode) {
-        deUpdate();
+    (blockId: string, fieldPath: string, value: string, baseUpdate: () => void) => {
+      if (!isDeOverrideMode) {
+        baseUpdate();
         return;
       }
-      // CH mode → route to override system
+      // DE mode → route to override system
       // Look up the base value from the raw (untransformed) blocks
       let rawBlock: WorksheetBlock | null = null;
       for (const b of state.blocks) {
@@ -184,17 +222,16 @@ function useLocaleAwareEdit() {
         }
       }
       const baseValue = rawBlock ? String(getByPath(rawBlock, fieldPath) ?? "") : "";
-      const autoReplaced = replaceEszett(baseValue);
-      if (value === autoReplaced) {
+      if (value === baseValue) {
         dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId, fieldPath } });
       } else {
         dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId, fieldPath, value } });
       }
     },
-    [isChMode, state.blocks, dispatch],
+    [isDeOverrideMode, state.blocks, dispatch],
   );
 
-  return { isChMode, localeUpdate };
+  return { isDeOverrideMode, localeUpdate };
 }
 
 // ─── Heading ─────────────────────────────────────────────────
@@ -222,16 +259,97 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
   return result;
 }
 
+function collectNumberedHeadingBlocks(blocks: WorksheetBlock[]): { id: string; level: 1 | 2 | 3 | 4 }[] {
+  const result: { id: string; level: 1 | 2 | 3 | 4 }[] = [];
+  for (const block of blocks) {
+    if (block.type === "numbered-heading") {
+      result.push({ id: block.id, level: block.level });
+      continue;
+    }
+    if (block.type === "columns") {
+      for (const col of block.children) {
+        for (const child of col) {
+          if (child.type === "numbered-heading") {
+            result.push({ id: child.id, level: child.level });
+          }
+        }
+      }
+      continue;
+    }
+    if (block.type === "accordion") {
+      for (const item of block.items) {
+        for (const child of item.children) {
+          if (child.type === "numbered-heading") {
+            result.push({ id: child.id, level: child.level });
+          }
+        }
+      }
+      continue;
+    }
+    if (block.type === "grid") {
+      for (const cell of block.children) {
+        for (const child of cell) {
+          if (child.type === "numbered-heading") {
+            result.push({ id: child.id, level: child.level });
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function toAlphabeticLabel(index: number, uppercase: boolean): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    n -= 1;
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26);
+  }
+  return uppercase ? out : out.toLowerCase();
+}
+
+function formatHeadingNumber(index: number, format: string | null | undefined): string {
+  switch (format) {
+    case "numbers-leading-zero":
+      return String(index).padStart(2, "0");
+    case "letters-uppercase":
+      return toAlphabeticLabel(index, true);
+    case "letters-lowercase":
+      return toAlphabeticLabel(index, false);
+    case "numbers":
+    default:
+      return String(index);
+  }
+}
+
+function resolveHeadingOverrideColor(
+  override: string | null | undefined,
+  primaryColor?: string,
+  accentColor?: string | null,
+): string | undefined {
+  if (override === "primary") return primaryColor;
+  if (override === "accent") return accentColor || primaryColor;
+  return undefined;
+}
+
 function HeadingRenderer({ block }: { block: HeadingBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl" };
+  const colorKey = `h${block.level}HeadingColor` as const;
+  const headingColor = resolveHeadingOverrideColor(
+    state.brandProfile[colorKey],
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
 
   return (
     <Tag
       className={`${sizes[block.level]} font-bold outline-none`}
-      style={block.level === 3 ? { fontWeight: 800 } : undefined}
+      style={{ ...(block.level === 3 ? { fontWeight: 800 } : {}), ...(headingColor ? { color: headingColor } : {}) }}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -242,6 +360,66 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
       }}
     >
       {block.content}
+    </Tag>
+  );
+}
+
+function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
+  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
+  const numberSlotStyle: React.CSSProperties = {
+    display: "inline-block",
+    width: "1.5rem",
+    minWidth: "1.5rem",
+    textAlign: "left",
+    marginRight: "0.5rem",
+    fontVariantNumeric: "tabular-nums",
+  };
+
+  const allNumberedHeadings = React.useMemo(
+    () => collectNumberedHeadingBlocks(state.blocks).filter((h) => h.level === block.level),
+    [state.blocks, block.level],
+  );
+  const position = allNumberedHeadings.findIndex((h) => h.id === block.id);
+  const sequence = position >= 0 ? position + 1 : 1;
+  const formatKey = (`h${block.level}NumberFormat` as const);
+  const format = state.brandProfile[formatKey];
+  const headingColorKey = (`h${block.level}HeadingColor` as const);
+  const headingNumberColorKey = (`h${block.level}HeadingNumberColor` as const);
+  const headingColor = resolveHeadingOverrideColor(
+    state.brandProfile[headingColorKey],
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+  const headingNumberColor = resolveHeadingOverrideColor(
+    state.brandProfile[headingNumberColorKey],
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+  const numberLabel = formatHeadingNumber(sequence, format);
+  const numberStyle: React.CSSProperties = {
+    ...numberSlotStyle,
+    ...(headingNumberColor ? { color: headingNumberColor } : {}),
+  };
+
+  return (
+    <Tag
+      className={`${sizes[block.level]} font-bold outline-none`}
+      style={{ ...(block.level >= 3 ? { fontWeight: 800 } : {}), ...(headingColor ? { color: headingColor } : {}) }}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e) => {
+        const contentEl = e.currentTarget.querySelector('[data-numbered-heading-content="true"]');
+        const strippedValue = (contentEl?.textContent || "").trim();
+        localeUpdate(block.id, "content", strippedValue, () =>
+          dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: strippedValue } } })
+        );
+      }}
+    >
+      <span contentEditable={false} style={numberStyle}>{numberLabel}</span>
+      <span data-numbered-heading-content="true">{block.content}</span>
     </Tag>
   );
 }
@@ -1246,40 +1424,28 @@ function FillInBlankRenderer({
         if (match) {
           const noSpace = match[1] === '*';
           const raw = match[2] || "";
-          const commaIdx = raw.lastIndexOf(",");
-          let answer: string;
-          let widthMultiplier = 1;
-          if (commaIdx !== -1) {
-            answer = raw.substring(0, commaIdx).trim();
-            const wStr = raw.substring(commaIdx + 1).trim();
-            const parsed = Number(wStr);
-            if (!isNaN(parsed)) widthMultiplier = parsed;
-          } else {
-            answer = raw.trim();
-          }
-          const widthStyle = widthMultiplier === 0
-            ? { flex: 1 } as React.CSSProperties
-            : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
-          const spacingClass = noSpace ? '' : 'mx-1';
+          const { answer, width } = parseBlankContent(raw);
+          const widthStyle = getBlankWidthStyle(width, false);
+          const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
           return interactive ? (
             <input
               key={i}
               type="text"
               placeholder={t("fillInBlankPlaceholder")}
-              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacingClass} focus:outline-none focus:border-primary inline`}
-              style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacing.className} focus:outline-none focus:border-primary inline`}
+              style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
             />
           ) : (
             <span
               key={i}
-              className={`inline-block bg-gray-100 rounded px-2 py-0.5 text-center ${spacingClass} text-muted-foreground text-xs`}
-              style={widthStyle}
+              className={`inline-block bg-gray-100 rounded px-2 py-0.5 text-center ${spacing.className} text-muted-foreground text-xs`}
+              style={{ ...widthStyle, ...spacing.style }}
             >
               {answer || '\u00A0'}
             </span>
           );
         }
-        return <span key={i}>{part}</span>;
+        return <span key={i}>{tripleInnerRegularSpaces(part)}</span>;
       })}
     </div>
   );
@@ -1401,40 +1567,28 @@ function FillInBlankItemsRenderer({
                 if (match) {
                   const noSpace = match[1] === '*';
                   const raw = match[2] || "";
-                  const commaIdx = raw.lastIndexOf(",");
-                  let answer: string;
-                  let widthMultiplier = 1;
-                  if (commaIdx !== -1) {
-                    answer = raw.substring(0, commaIdx).trim();
-                    const wStr = raw.substring(commaIdx + 1).trim();
-                    const parsed = Number(wStr);
-                    if (!isNaN(parsed)) widthMultiplier = parsed;
-                  } else {
-                    answer = raw.trim();
-                  }
-                  const widthStyle = widthMultiplier === 0
-                    ? { flex: 1 } as React.CSSProperties
-                    : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
-                  const spacingClass = noSpace ? '' : 'mx-1';
+                  const { answer, width } = parseBlankContent(raw);
+                  const widthStyle = getBlankWidthStyle(width, false);
+                  const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
                   return interactive ? (
                     <input
                       key={i}
                       type="text"
                       placeholder={t("fillInBlankPlaceholder")}
-                      className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacingClass} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
-                      style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+                      className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
+                      style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
                     />
                   ) : (
                     <span
                       key={i}
-                      className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacingClass} text-muted-foreground text-xs`}
-                      style={{ ...widthStyle, verticalAlign: 'middle', minHeight: '1.25rem' }}
+                      className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacing.className} text-muted-foreground text-xs`}
+                      style={{ ...widthStyle, ...spacing.style, verticalAlign: 'middle', minHeight: '1.25rem' }}
                     >
                       {answer || '\u00A0'}
                     </span>
                   );
                 }
-                return <span key={i}>{renderTextWithSup(part)}</span>;
+                return <span key={i}>{renderTextWithSup(tripleInnerRegularSpaces(part))}</span>;
               })}
             </span>
             {!interactive && (
@@ -1466,7 +1620,7 @@ function FillInBlankItemsRenderer({
 
 // ─── Matching ────────────────────────────────────────────────
 function MatchingRenderer({ block }: { block: MatchingBlock }) {
-  const shuffledRight = getDeterministicPreviewOrder(
+  const shuffledRight = getDeterministicPreviewDerangement(
     block.pairs,
     (pair, index) => `${pair.id}:${pair.right}:${index}`
   );
@@ -1474,6 +1628,9 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
   return (
     <div className="space-y-3">
       <p className="text-base text-muted-foreground">{block.instruction}</p>
+      {block.textAboveItems?.trim() && (
+        <p className="text-sm whitespace-pre-line">{block.textAboveItems}</p>
+      )}
       <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
         <div className="space-y-0">
           {block.pairs.map((pair, i) => (
@@ -1484,7 +1641,7 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1">{pair.left}</span>
+              <span className="flex-1 text-right">{pair.left}</span>
             </div>
           ))}
         </div>
@@ -1494,10 +1651,11 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               key={`right-${pair.id}`}
               className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
+              <div className="h-4 w-4 rounded-[3px] border border-muted-foreground/40 shrink-0" />
+              <span className="flex-1">{pair.right}</span>
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String.fromCharCode(97 + i)}
               </span>
-              <span className="flex-1">{pair.right}</span>
             </div>
           ))}
         </div>
@@ -2665,6 +2823,24 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
+  const colorCodeEnabled = !!block.colorCode;
+
+  const categoryPalette = [
+    { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
+    { headerBg: "#EDF8EE", headerText: "#334155", headerBorder: "#EDF8EE", itemBg: "#F6FCF7", itemText: "#334155", itemBorder: "#EDF8EE" },
+    { headerBg: "#ECF3F9", headerText: "#334155", headerBorder: "#ECF3F9", itemBg: "#F6F9FC", itemText: "#334155", itemBorder: "#ECF3F9" },
+    { headerBg: "#F9EEF0", headerText: "#334155", headerBorder: "#F9EEF0", itemBg: "#FCF7F8", itemText: "#334155", itemBorder: "#F9EEF0" },
+    { headerBg: "#EFEBF6", headerText: "#334155", headerBorder: "#EFEBF6", itemBg: "#F7F5FB", itemText: "#334155", itemBorder: "#EFEBF6" },
+    { headerBg: "#F9F6ED", headerText: "#334155", headerBorder: "#F9F6ED", itemBg: "#FCFBF6", itemText: "#334155", itemBorder: "#F9F6ED" },
+    { headerBg: "#F5EDF7", headerText: "#334155", headerBorder: "#F5EDF7", itemBg: "#FAF6FB", itemText: "#334155", itemBorder: "#F5EDF7" },
+    { headerBg: "#F2F2F6", headerText: "#334155", headerBorder: "#F2F2F6", itemBg: "#F9F9FB", itemText: "#334155", itemBorder: "#F2F2F6" },
+  ] as const;
+
+  const getCategoryTheme = (catId: string) => {
+    const catIndex = block.categories.findIndex((cat) => cat.id === catId);
+    const index = catIndex >= 0 ? catIndex : 0;
+    return categoryPalette[index % categoryPalette.length];
+  };
 
   const updateItem = (id: string, text: string) => {
     dispatch({
@@ -2732,14 +2908,24 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
         {block.categories.map((cat) => {
+          const catTheme = getCategoryTheme(cat.id);
           const catItems = block.items.filter((item) =>
             cat.correctItems.includes(item.id)
           );
           return (
             <div key={cat.id} className="rounded-sm border border-border overflow-hidden">
-              <div className="bg-muted px-3 py-2">
+              <div
+                className="bg-muted min-h-[37px] flex items-center pl-2 pr-2 py-0"
+                style={colorCodeEnabled
+                  ? {
+                      backgroundColor: catTheme.headerBg,
+                      borderBottom: `1px solid ${catTheme.headerBorder}`,
+                    }
+                  : { backgroundColor: "#f8fafc" }}
+              >
                 <span
                   className="font-semibold outline-none block"
+                  style={colorCodeEnabled ? { color: catTheme.headerText } : undefined}
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={(e) => {
@@ -2772,7 +2958,14 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                     <span
                       contentEditable
                       suppressContentEditableWarning
-                      className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+                      className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors rounded px-2 py-0.5"
+                      style={colorCodeEnabled
+                        ? {
+                            backgroundColor: catTheme.itemBg,
+                            border: `1px solid ${catTheme.itemBorder}`,
+                            color: catTheme.itemText,
+                          }
+                        : undefined}
                       onBlur={(e) => {
                         const value = e.currentTarget.textContent || "";
                         const arrIdx = block.items.findIndex((it) => it.id === item.id);
@@ -3942,41 +4135,28 @@ function DialogueRenderer({
       if (match) {
         const noSpace = match[1] === '*';
         const raw = match[2] || "";
-        // Parse optional width: {{blank:answer,N}}
-        const commaIdx = raw.lastIndexOf(",");
-        let answer: string;
-        let widthMultiplier = 1;
-        if (commaIdx !== -1) {
-          answer = raw.substring(0, commaIdx).trim();
-          const wStr = raw.substring(commaIdx + 1).trim();
-          const parsed = Number(wStr);
-          if (!isNaN(parsed)) widthMultiplier = parsed;
-        } else {
-          answer = raw.trim();
-        }
-        const widthStyle = widthMultiplier === 0
-          ? { flex: 1 } as React.CSSProperties
-          : { minWidth: `${80 * widthMultiplier}px` } as React.CSSProperties;
-        const spacingClass = noSpace ? '' : 'mx-1';
+        const { answer, width } = parseBlankContent(raw);
+        const widthStyle = getBlankWidthStyle(width, false);
+        const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
         return interactive ? (
           <input
             key={i}
             type="text"
             placeholder="…"
-            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacingClass} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
-            style={widthMultiplier === 0 ? { flex: 1 } : { width: `${112 * widthMultiplier}px` }}
+            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
+            style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
           />
         ) : (
           <span
             key={i}
-            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${spacingClass} text-muted-foreground text-xs`}
-            style={{ minHeight: "1.25rem", ...widthStyle }}
+            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${spacing.className} text-muted-foreground text-xs`}
+            style={{ minHeight: "1.25rem", ...widthStyle, ...spacing.style }}
           >
             {answer || '\u00A0'}
           </span>
         );
       }
-      return <span key={i}>{part}</span>;
+      return <span key={i}>{tripleInnerRegularSpaces(part)}</span>;
     });
   };
 
@@ -5469,12 +5649,11 @@ export function BlockRenderer({
   const { state } = useEditor();
   const interactive = mode === "online";
 
-  // Apply CH overrides when in CH locale mode
+  // Apply DE overrides only when in DE locale mode. CH remains base/original.
   const block = React.useMemo(() => {
-    if (state.localeMode !== "CH") return rawBlock;
+    if (state.localeMode !== "DE") return rawBlock;
     const overrides = state.settings.chOverrides?.[rawBlock.id];
-    // First apply automatic ß→ss, then layer manual overrides on top
-    let effective = replaceEszett(rawBlock);
+    let effective = rawBlock;
     if (overrides) {
       for (const [fieldPath, value] of Object.entries(overrides)) {
         effective = setByPath(effective, fieldPath, value) as WorksheetBlock;
@@ -5487,6 +5666,8 @@ export function BlockRenderer({
   switch (block.type) {
     case "heading":
       return <HeadingRenderer block={block} />;
+    case "numbered-heading":
+      return <NumberedHeadingRenderer block={block} />;
     case "text":
       return <TextRenderer block={block} />;
     case "image":
