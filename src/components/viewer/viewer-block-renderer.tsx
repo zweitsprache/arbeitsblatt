@@ -5626,7 +5626,7 @@ export function ViewerBlockRenderer({
 
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} instructionIndex={instructionIndex}/>;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)}/>;
     case "numbered-heading": {
       const nbBlock = block as NumberedHeadingBlock;
       const levelKey = `h${nbBlock.level}` as keyof typeof headingColors;
@@ -5648,25 +5648,25 @@ export function ViewerBlockRenderer({
       );
     }
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex}/>;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor}/>;
     case "image":
-      return <ImageView block={block}  instructionIndex={instructionIndex}/>;
+      return <ImageView block={block} />;
     case "image-cards":
-      return <ImageCardsView block={block}  instructionIndex={instructionIndex}/>;
+      return <ImageCardsView block={block} />;
     case "text-cards":
-      return <TextCardsView block={block}  instructionIndex={instructionIndex}/>;
+      return <TextCardsView block={block} />;
     case "spacer":
-      return <SpacerView block={block}  instructionIndex={instructionIndex}/>;
+      return <SpacerView block={block} />;
     case "divider":
-      return <DividerView block={block}  instructionIndex={instructionIndex}/>;
+      return <DividerView block={block} />;
     case "logo-divider":
-      return <LogoDividerView block={block as LogoDividerBlock} brand={brand}  instructionIndex={instructionIndex}/>;
+      return <LogoDividerView block={block as LogoDividerBlock} brand={brand} />;
     case "page-break":
-      return <PageBreakView block={block}  instructionIndex={instructionIndex}/>;
+      return <PageBreakView block={block} />;
     case "writing-lines":
-      return <WritingLinesView block={block}  instructionIndex={instructionIndex}/>;
+      return <WritingLinesView block={block} />;
     case "writing-rows":
-      return <WritingRowsView block={block}  instructionIndex={instructionIndex}/>;
+      return <WritingRowsView block={block} />;
     case "multiple-choice":
       return (
         <MultipleChoiceView
@@ -5678,7 +5678,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "fill-in-blank":
@@ -5693,7 +5693,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "fill-in-blank-items":
@@ -5708,7 +5708,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "matching":
@@ -5722,7 +5722,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "two-column-fill":
@@ -5735,7 +5735,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showSolutions={showSolutions}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "glossary":
@@ -5746,7 +5746,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "open-response":
@@ -5756,13 +5756,13 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "word-bank":
-      return <WordBankView block={block}  instructionIndex={instructionIndex}/>;
+      return <WordBankView block={block} />;
     case "number-line":
-      return <NumberLineView block={block}  instructionIndex={instructionIndex}/>;
+      return <NumberLineView block={block} />;
     case "true-false-matrix":
       return (
         <TrueFalseMatrixView
@@ -5781,7 +5781,7 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "article-training":
@@ -5796,7 +5796,7 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "order-items":
@@ -5810,7 +5810,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "inline-choices":
@@ -5823,7 +5823,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           mode={mode}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "word-search":
@@ -5835,7 +5835,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "sorting-categories":
@@ -5849,7 +5849,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "unscramble-words":
@@ -5866,7 +5866,7 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "fix-sentences":
@@ -5879,7 +5879,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "complete-sentences":
@@ -5892,7 +5892,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "transform-sentences":
@@ -5906,7 +5906,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "verb-table":
@@ -5921,11 +5921,11 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "chart":
-      return <ChartView block={block}  instructionIndex={instructionIndex}/>;
+      return <ChartView block={block} />;
     case "dialogue":
       return (
         <DialogueView
@@ -5940,7 +5940,7 @@ export function ViewerBlockRenderer({
         />
       );
     case "numbered-label":
-      return <NumberedLabelView block={block} originalBlock={originalBlock as NumberedLabelBlock | undefined} allBlocks={allBlocks} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
+      return <NumberedLabelView block={block} originalBlock={originalBlock as NumberedLabelBlock | undefined} allBlocks={allBlocks} primaryColor={primaryColor} />;
     case "columns":
       return (
         <ColumnsView
@@ -5953,7 +5953,7 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "grid":
@@ -5968,23 +5968,23 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "text-snippet":
-      return <TextSnippetView block={block as TextSnippetBlock} mode={mode}  instructionIndex={instructionIndex}/>;
+      return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
-      return <EmailSkeletonView block={block as EmailSkeletonBlock}  instructionIndex={instructionIndex}/>;
+      return <EmailSkeletonView block={block as EmailSkeletonBlock} />;
     case "job-application":
-      return <JobApplicationView block={block as JobApplicationBlock}  instructionIndex={instructionIndex}/>;
+      return <JobApplicationView block={block as JobApplicationBlock} />;
     case "dos-and-donts":
-      return <DosAndDontsView block={block as DosAndDontsBlock}  instructionIndex={instructionIndex}/>;
+      return <DosAndDontsView block={block as DosAndDontsBlock} />;
     case "text-comparison":
-      return <TextComparisonView block={block as TextComparisonBlock}  instructionIndex={instructionIndex}/>;
+      return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale}  instructionIndex={instructionIndex}/>;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "checklist":
-      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale}  instructionIndex={instructionIndex}/>;
+      return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":
       return (
         <AccordionView
@@ -5998,21 +5998,21 @@ export function ViewerBlockRenderer({
           interactiveColor={interactiveColor}
           allBlocks={allBlocks}
           brand={brand}
-          instructionIndex={instructionIndex}
+         
         />
       );
     case "ai-prompt":
-      return <AiPromptView block={block as AiPromptBlock}  instructionIndex={instructionIndex}/>;
+      return <AiPromptView block={block as AiPromptBlock} />;
     case "ai-tool":
-      return <AiToolView block={block as AiToolBlock}  instructionIndex={instructionIndex}/>;
+      return <AiToolView block={block as AiToolBlock} />;
     case "table":
-      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined}  instructionIndex={instructionIndex}/>;
+      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} />;
     case "audio":
-      return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode}  instructionIndex={instructionIndex}/>;
+      return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":
-      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
+      return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":
-      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor}  instructionIndex={instructionIndex}/>;
+      return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     default:
       return null;
   }
