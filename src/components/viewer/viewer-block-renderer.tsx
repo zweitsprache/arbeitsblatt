@@ -3393,7 +3393,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   if (block.grid.length === 0) return null;
 
   return (
-    <div>
+    <div className="space-y-3">
       {block.instruction && (
         isOnline ? (
           <div
@@ -3536,7 +3536,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
     return (
-      <div>
+      <div className="space-y-3">
         {block.instruction && (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} />
         )}
@@ -3598,7 +3598,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   }
 
   return (
-    <div>
+    <div className="space-y-3">
       {block.instruction && (
         isOnline ? (
           <div
