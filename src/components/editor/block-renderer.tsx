@@ -3705,9 +3705,22 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
         {block.sentences.map((item, i) => (
           <div
             key={item.id}
-            className="group/item py-2 border-b last:border-b-0"
+            className={`group/item border-b ${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}`}
           >
-            <div className="flex items-center gap-3">
+            {item.src ? (
+              <div className="row-span-2 pr-3 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.src}
+                  alt=""
+                  className="block max-h-full max-w-full h-auto w-auto object-contain"
+                  style={{
+                    borderRadius: "3px",
+                  }}
+                />
+              </div>
+            ) : null}
+            <div className="flex items-center gap-3 py-2">
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -3735,10 +3748,10 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
                 <X className="h-3 w-3 text-destructive" />
               </button>
             </div>
-            <div className="ml-9 mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
+            <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
               {item.id === exampleSentenceId && item.solution ? (
                 <span
-                  className="absolute -top-1 left-0 text-[1.15em]"
+                  className="absolute -top-1 left-9 text-[1.15em]"
                   style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
                 >
                   {item.solution}

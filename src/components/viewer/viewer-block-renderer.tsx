@@ -4684,6 +4684,9 @@ function TransformSentencesView({
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
   const TRANSFORM_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const TRANSFORM_FOLLOWUP_ROW_CLASS = isOnline
+    ? "flex min-h-[49px] items-center gap-3"
+    : "flex min-h-[32.5px] items-center gap-3";
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
 
@@ -4711,10 +4714,20 @@ function TransformSentencesView({
           const isExampleSentence = item.id === exampleSentenceId && !!item.solution;
 
           return (
-            <div
-              key={item.id}
-              className=""
-            >
+            <div key={item.id} className={`${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"} border-b`}>
+              {item.src ? (
+                <div className="row-span-2 pr-3 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.src}
+                    alt=""
+                    className="block max-h-full max-w-full h-auto w-auto object-contain"
+                    style={{
+                      borderRadius: "3px",
+                    }}
+                  />
+                </div>
+              ) : null}
               <div className={TRANSFORM_ROW_CLASS}>
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
@@ -4722,7 +4735,7 @@ function TransformSentencesView({
                 <span>{item.beginning}</span>
               </div>
               {isExampleSentence ? (
-                <div className={TRANSFORM_ROW_CLASS}>
+                <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
                   <span
                     className="flex-1"
                     style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
@@ -4731,7 +4744,7 @@ function TransformSentencesView({
                   </span>
                 </div>
               ) : interactive ? (
-                <div className={TRANSFORM_ROW_CLASS}>
+                <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
                   <div className="flex-1">
                     <input
                       type="text"
@@ -4757,7 +4770,7 @@ function TransformSentencesView({
                   </div>
                 </div>
               ) : (
-                <div className={TRANSFORM_ROW_CLASS}>
+                <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
                   <span
                     className="flex-1 inline-block h-8 rounded"
                     style={{ opacity: 1.0, minWidth: 80 }}

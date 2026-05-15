@@ -533,6 +533,7 @@ export interface TransformSentenceItem {
   id: string;
   beginning: string;
   solution?: string;
+  src?: string;
 }
 
 // ─── Verb Table block ───────────────────────────────────────

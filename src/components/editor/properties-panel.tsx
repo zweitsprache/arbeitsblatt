@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
@@ -4853,9 +4854,15 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const { upload } = useUpload();
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [activeSentenceIndex, setActiveSentenceIndex] = React.useState<number | null>(null);
+  const [uploadingSentenceIndex, setUploadingSentenceIndex] = React.useState<number | null>(null);
 
   const handleCsvImport = () => {
     setCsvError(null);
@@ -4885,7 +4892,7 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
     setCsvText("");
   };
 
-  const updateSentence = (index: number, updates: Partial<{ beginning: string; solution: string }>) => {
+  const updateSentence = (index: number, updates: Partial<{ beginning: string; solution: string; src?: string }>) => {
     const newSentences = [...block.sentences];
     newSentences[index] = { ...newSentences[index], ...updates };
     dispatch({
@@ -4920,6 +4927,52 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
         },
       },
     });
+  };
+
+  const moveSentence = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.sentences.length) return;
+    const newSentences = [...block.sentences];
+    [newSentences[index], newSentences[newIndex]] = [newSentences[newIndex], newSentences[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { sentences: newSentences },
+      },
+    });
+  };
+
+  const handleFileSelected = (index: number, file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setActiveSentenceIndex(index);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (activeSentenceIndex === null) {
+      URL.revokeObjectURL(result.url);
+      return;
+    }
+
+    setUploadingSentenceIndex(activeSentenceIndex);
+    try {
+      const file = new File([result.blob], "transform-sentence-image.png", { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateSentence(activeSentenceIndex, { src: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadingSentenceIndex(null);
+      setActiveSentenceIndex(null);
+      if (cropSrc) {
+        URL.revokeObjectURL(cropSrc);
+      }
+      URL.revokeObjectURL(result.url);
+      setCropSrc(null);
+    }
   };
 
   return (
@@ -4957,6 +5010,22 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
                   placeholder={t("transformSentencePlaceholder")}
                 />
               </div>
+              <div className="flex flex-col">
+                <button
+                  className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveSentence(i, -1)}
+                  disabled={i === 0}
+                >
+                  <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                </button>
+                <button
+                  className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveSentence(i, 1)}
+                  disabled={i === block.sentences.length - 1}
+                >
+                  <ArrowUpDown className="h-2.5 w-2.5" />
+                </button>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -4975,6 +5044,97 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
                 onBaseChange={(v) => updateSentence(i, { solution: v || undefined })}
                 className="h-7 text-xs text-muted-foreground"
                 placeholder={t("transformSentenceSolutionPlaceholder")}
+              />
+            </div>
+            <div className="pl-1 space-y-2 rounded-md border border-slate-200 p-2">
+              <Label className="text-[11px] font-medium text-slate-600">{t("imageUrl")}</Label>
+              {item.src ? (
+                <div className="space-y-2">
+                  <div className="relative group/img h-20 w-28 overflow-hidden rounded-sm border bg-slate-50">
+                    <Image src={item.src} alt="" fill unoptimized className="object-contain p-1" />
+                    <button
+                      type="button"
+                      onClick={() => updateSentence(i, { src: undefined })}
+                      className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    <label className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleFileSelected(i, file);
+                            e.currentTarget.value = "";
+                          }
+                        }}
+                      />
+                      <span className="inline-flex h-8 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+                        {uploadingSentenceIndex === i ? t("uploading") : t("replaceImage")}
+                      </span>
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        setActiveSentenceIndex(i);
+                        setBrowserOpen(true);
+                      }}
+                    >
+                      <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                      {t("mediaBrowser")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="flex h-20 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-slate-200 px-3 text-center transition-colors hover:border-slate-300">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileSelected(i, file);
+                          e.currentTarget.value = "";
+                        }
+                      }}
+                    />
+                    {uploadingSentenceIndex === i ? (
+                      <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5 text-muted-foreground/50 mb-1" />
+                        <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                      </>
+                    )}
+                  </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setActiveSentenceIndex(i);
+                      setBrowserOpen(true);
+                    }}
+                  >
+                    <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                    {t("mediaBrowser")}
+                  </Button>
+                </div>
+              )}
+              <Input
+                value={item.src ?? ""}
+                placeholder={t("imageUrlPlaceholder")}
+                onChange={(e) => updateSentence(i, { src: e.target.value || undefined })}
+                className="h-8 text-xs"
               />
             </div>
           </div>
@@ -5039,6 +5199,39 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
           }
         />
       </div>
+
+      <MediaBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelectUrl={(url) => {
+          if (activeSentenceIndex === null) return;
+          updateSentence(activeSentenceIndex, { src: url });
+          setBrowserOpen(false);
+          setActiveSentenceIndex(null);
+        }}
+        onSelectFile={(file) => {
+          if (activeSentenceIndex === null) return;
+          handleFileSelected(activeSentenceIndex, file);
+          setBrowserOpen(false);
+        }}
+      />
+
+      <ImageCropDialog
+        imageSrc={cropSrc}
+        open={cropOpen}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open) {
+            if (cropSrc) {
+              URL.revokeObjectURL(cropSrc);
+            }
+            setCropSrc(null);
+            setActiveSentenceIndex(null);
+          }
+        }}
+        onCropComplete={handleCropComplete}
+        title={t("cropImage")}
+      />
     </div>
   );
 }
