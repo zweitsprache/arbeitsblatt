@@ -9,7 +9,7 @@
 
 export type ChoiceSegment =
   | { type: "text"; value: string }
-  | { type: "choice"; options: string[] }; // first option = correct
+  | { type: "choice"; options: string[]; correctIndex: number };
 
 /**
  * Regex that matches both new `{{opt|opt}}` and legacy `{{choice:opt|opt}}` markers.
@@ -20,9 +20,8 @@ const CHOICE_MATCH_RE = /\{\{(?:choice:)?(.+)\}\}/;
 
 /**
  * Parse a content string into alternating text and choice segments.
- * For choice segments, the first option is always the correct answer.
- * Legacy `*`-prefixed correct answers are normalised: the starred option
- * is moved to index 0 and the `*` prefix is stripped.
+ * For choice segments, `correctIndex` identifies the correct answer.
+ * Legacy `*`-prefixed correct answers preserve authored option order.
  */
 export function parseChoiceSegments(content: string): ChoiceSegment[] {
   const parts = content.split(CHOICE_SPLIT_RE);
@@ -31,19 +30,9 @@ export function parseChoiceSegments(content: string): ChoiceSegment[] {
       const match = part.match(CHOICE_MATCH_RE);
       if (match) {
         const rawOptions = match[1].split("|");
-        // Normalise: if any option has *, move it to first position
         const starIdx = rawOptions.findIndex((o) => o.startsWith("*"));
-        let options: string[];
-        if (starIdx >= 0) {
-          const correct = rawOptions[starIdx].slice(1); // strip *
-          const rest = rawOptions.filter((_, i) => i !== starIdx).map((o) =>
-            o.startsWith("*") ? o.slice(1) : o
-          );
-          options = [correct, ...rest];
-        } else {
-          options = rawOptions;
-        }
-        return { type: "choice", options };
+        const options = rawOptions.map((option) => option.startsWith("*") ? option.slice(1) : option);
+        return { type: "choice", options, correctIndex: starIdx >= 0 ? starIdx : 0 };
       }
       // Keep text segments even if empty (they represent positions between choices)
       return { type: "text", value: part };
@@ -52,14 +41,17 @@ export function parseChoiceSegments(content: string): ChoiceSegment[] {
 }
 
 /**
- * Serialize choice segments back into a content string using the new syntax.
- * First option = correct, no `*` prefix, no `choice:` prefix.
+ * Serialize choice segments back into a content string while preserving
+ * authored order. Non-first correct options are marked with `*`.
  */
 export function serializeChoiceSegments(segments: ChoiceSegment[]): string {
   return segments
     .map((seg) => {
       if (seg.type === "choice") {
-        return `{{${seg.options.join("|")}}}`;
+        const serializedOptions = seg.options.map((option, index) =>
+          index === seg.correctIndex && seg.correctIndex !== 0 ? `*${option}` : option,
+        );
+        return `{{${serializedOptions.join("|")}}}`;
       }
       return seg.value;
     })
@@ -84,7 +76,7 @@ export function updateChoiceGroup(
     if (seg.type === "choice") {
       if (choiceIdx === groupIndex) {
         choiceIdx++;
-        return { type: "choice" as const, options: newOptions };
+        return { type: "choice" as const, options: newOptions, correctIndex: 0 };
       }
       choiceIdx++;
     }

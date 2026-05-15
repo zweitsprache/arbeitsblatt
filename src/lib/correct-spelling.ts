@@ -26,7 +26,7 @@ function deterministicShuffle<T>(items: T[], rand: () => number): T[] {
   return out;
 }
 
-function jumbleWord(
+function jumbleSingleWord(
   word: string,
   keepFirstLetter: boolean,
   keepLastLetter: boolean,
@@ -59,6 +59,69 @@ function jumbleWord(
     ...chars.slice(endIndex),
   ].join("");
   return fallback === word ? word : fallback;
+}
+
+function applyWordOrder(
+  segments: string[],
+  orderedWords: string[],
+): string {
+  let wordIndex = 0;
+
+  return segments
+    .map((segment) => {
+      if (/^\s+$/.test(segment)) {
+        return segment;
+      }
+
+      const nextWord = orderedWords[wordIndex];
+      wordIndex += 1;
+      return nextWord ?? segment;
+    })
+    .join("");
+}
+
+function jumbleWord(
+  word: string,
+  keepFirstLetter: boolean,
+  keepLastLetter: boolean,
+  seedKey: string,
+): string {
+  if (!/\s/.test(word)) {
+    return jumbleSingleWord(word, keepFirstLetter, keepLastLetter, seedKey);
+  }
+
+  const segments = word.split(/(\s+)/).filter((segment) => segment.length > 0);
+  const wordSegments = segments.filter((segment) => !/^\s+$/.test(segment));
+
+  if (wordSegments.length <= 1) {
+    return jumbleSingleWord(word, keepFirstLetter, keepLastLetter, seedKey);
+  }
+
+  const jumbledWords = wordSegments.map((segment, index) =>
+    jumbleSingleWord(segment, keepFirstLetter, keepLastLetter, `${seedKey}:word:${index}`),
+  );
+
+  const originalOrderCandidate = applyWordOrder(segments, jumbledWords);
+  const rand = mulberry32(hashString(`${seedKey}:order`));
+  const shuffledOrder = deterministicShuffle(
+    Array.from({ length: jumbledWords.length }, (_, index) => index),
+    rand,
+  );
+  const reorderedCandidate = applyWordOrder(
+    segments,
+    shuffledOrder.map((index) => jumbledWords[index]),
+  );
+
+  if (reorderedCandidate !== word && reorderedCandidate !== originalOrderCandidate) {
+    return reorderedCandidate;
+  }
+
+  if (originalOrderCandidate !== word) {
+    return originalOrderCandidate;
+  }
+
+  const rotatedCandidate = applyWordOrder(segments, [...jumbledWords.slice(1), jumbledWords[0]]);
+  return rotatedCandidate === word ? word : rotatedCandidate;
 }
 
 export function buildCorrectSpellingRow(

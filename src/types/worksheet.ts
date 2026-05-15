@@ -243,6 +243,7 @@ export interface FillInBlankItemsBlock extends BlockBase {
   instruction: string;
   items: FillInBlankItem[];
   showWordBank: boolean;
+  showFirstAsExample?: boolean;
 }
 
 // ─── Matching block ─────────────────────────────────────────
@@ -404,16 +405,21 @@ export interface OrderItemsBlock extends BlockBase {
 
 // ─── Inline Choices block ────────────────────────────────────
 // Each item is a sentence with inline choices marked as {{correct|wrong1|wrong2}}
-// The FIRST option is always the correct answer (randomised on render).
-// Legacy syntax {{choice:*correct|wrong1|wrong2}} is still supported for backward compat.
+// The first option is the default correct answer.
+// Legacy syntax {{choice:*correct|wrong1|wrong2}} is still supported and can mark
+// a later option as correct without changing authored order.
 export interface InlineChoiceItem {
   id: string;
-  content: string; // e.g. "Er {{geht|gehe|gehst}} zur Schule." — first option is correct
+  content: string;
+  isSpacer?: boolean;
 }
 
 export interface InlineChoicesBlock extends BlockBase {
   type: "inline-choices";
   items: InlineChoiceItem[];
+  instruction?: string;
+  shuffleChoices?: boolean;
+  showFirstAsExample?: boolean;
   /** @deprecated — kept for backward compatibility with old data. Use items instead. */
   content?: string;
 }
@@ -421,39 +427,18 @@ export interface InlineChoicesBlock extends BlockBase {
 /**
  * Migrate legacy InlineChoicesBlock that only has `content` (single string)
  * into the new `items` array format. Each line becomes one item.
- * Also normalises legacy {{choice:*correct|wrong}} syntax to {{correct|wrong}}.
  */
 export function migrateInlineChoicesBlock(block: InlineChoicesBlock): InlineChoiceItem[] {
   if (block.items && block.items.length > 0) {
     return block.items.map((item) => ({
       ...item,
-      content: migrateChoiceSyntaxInline(item.content),
     }));
   }
   if (!block.content) return [];
   return block.content.split("\n").filter((line) => line.trim().length > 0).map((line, i) => ({
     id: `ic${Date.now()}-${i}`,
-    content: migrateChoiceSyntaxInline(line),
+    content: line,
   }));
-}
-
-/**
- * Convert legacy {{choice:*correct|wrong1|wrong2}} to {{correct|wrong1|wrong2}}.
- * Moves the *-prefixed option to index 0 and strips both `choice:` and `*`.
- * Idempotent — already-new-syntax strings pass through unchanged.
- */
-function migrateChoiceSyntaxInline(content: string): string {
-  return content.replace(/\{\{choice:([^}]+)\}\}/g, (_match, inner: string) => {
-    const opts = inner.split("|");
-    const starIdx = opts.findIndex((o: string) => o.startsWith("*"));
-    if (starIdx >= 0) {
-      const correct = opts[starIdx].slice(1);
-      const rest = opts.filter((_: string, i: number) => i !== starIdx);
-      return `{{${[correct, ...rest].join("|")}}}`;
-    }
-    // No star — just strip the choice: prefix
-    return `{{${opts.join("|")}}}`;
-  });
 }
 
 // ─── Word Search block ──────────────────────────────────────
@@ -463,6 +448,7 @@ export interface WordSearchBlock extends BlockBase {
   gridSize?: number; // deprecated, use gridCols/gridRows
   gridCols: number;
   gridRows: number;
+  rowHeight?: number;
   grid: string[][]; // generated letter grid
   showWordList: boolean;
   instruction?: string;
@@ -1627,6 +1613,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "fib3", content: "They {{blank:have}} a big house." },
       ],
       showWordBank: false,
+      showFirstAsExample: false,
       visibility: "both",
     },
   },
@@ -1789,6 +1776,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       items: [
         { id: "ic-default-1", content: "In {{1988|1889|1898}} he was born in London." },
       ],
+      shuffleChoices: true,
+      showFirstAsExample: false,
       visibility: "both",
     },
   },
@@ -1806,6 +1795,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       words: ["Hello", "World", "Search", "Find"],
       gridCols: 24,
       gridRows: 12,
+      rowHeight: 1.9,
       grid: [],
       showWordList: true,
       visibility: "both",

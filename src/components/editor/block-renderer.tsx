@@ -1457,6 +1457,16 @@ function FillInBlankItemsRenderer({
   const t = useTranslations("blockRenderer");
   const activeIdx = state.activeItemIndex;
   const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
+  const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+  const exampleAnswers = React.useMemo(() => {
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.content.matchAll(/\{\{blank\*?:([^,}]+)/g)) {
+      const value = match[1]?.trim();
+      if (value) answers.add(value);
+    }
+    return answers;
+  }, [exampleItem]);
 
   // For mutations, always use the raw (DE) block from the store so we never
   // persist CH-converted text (ß→ss) back into the canonical data.
@@ -1529,9 +1539,13 @@ function FillInBlankItemsRenderer({
         {instructionText}
       </p>
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-2 bg-muted/40 rounded-sm">
+        <div className="flex flex-wrap items-center gap-2 py-1">
           {wordBankAnswers.map((word, i) => (
-            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-sm">
+            <span
+              key={i}
+              className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+              style={exampleAnswers.has(word) ? { textDecoration: 'line-through' } : undefined}
+            >
               {word}
             </span>
           ))}
@@ -1540,11 +1554,12 @@ function FillInBlankItemsRenderer({
       {block.items.map((item, idx) => {
         // Parse {{blank:answer}}, {{blank}}, {{blank*:answer}} patterns
         const parts = item.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+        const isExampleItem = item.id === exampleItem?.id;
 
         return (
           <div
             key={item.id || idx}
-            className={`flex min-h-[37px] items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+            className={`flex min-h-[49px] items-center gap-3 border-b last:border-b-0 cursor-pointer rounded-sm transition-colors ${
               !interactive && activeIdx === idx
                 ? "bg-blue-50 ring-1 ring-blue-200"
                 : "hover:bg-muted/30"
@@ -1563,6 +1578,35 @@ function FillInBlankItemsRenderer({
                   const { answer, width } = parseBlankContent(raw);
                   const widthStyle = getBlankWidthStyle(width, false);
                   const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
+                  if (isExampleItem && answer) {
+                    return (
+                      <span
+                        key={i}
+                        className={`relative inline-flex items-center ${spacing.className}`}
+                        style={{
+                          ...widthStyle,
+                          ...spacing.style,
+                          verticalAlign: 'middle',
+                          minHeight: '1.25rem',
+                          lineHeight: '1.25rem',
+                          borderRadius: 3,
+                          backgroundColor: 'rgb(243 244 246)',
+                        }}
+                      >
+                        <span aria-hidden="true">&nbsp;</span>
+                        <span
+                          className="absolute inset-x-0 bottom-0 block text-center leading-none"
+                          style={{
+                            fontFamily: 'var(--font-handwriting), cursive',
+                            color: '#0097dc',
+                            fontSize: '18px',
+                          }}
+                        >
+                          {answer}
+                        </span>
+                      </span>
+                    );
+                  }
                   return interactive ? (
                     <input
                       key={i}
@@ -2702,16 +2746,14 @@ function OrderItemsRenderer({
 /** Parse inline choice content into alternating text/choice segments. */
 function parseInlineChoiceSegments(content: string) {
   const parts = content.split(/(\{\{(?:choice:)?[^}]+\}\})/g);
-  const segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[] }> = [];
+  const segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[]; correctIndex: number }> = [];
   parts.forEach((part) => {
     const match = part.match(/\{\{(?:choice:)?(.+)\}\}/);
     if (match) {
       const rawOptions = match[1].split("|");
       const starIdx = rawOptions.findIndex((o) => o.startsWith("*"));
-      const options = starIdx >= 0
-        ? [rawOptions[starIdx].slice(1), ...rawOptions.filter((_, idx) => idx !== starIdx).map((o) => o.startsWith("*") ? o.slice(1) : o)]
-        : rawOptions;
-      segments.push({ type: "choice", options });
+      const options = rawOptions.map((option) => option.startsWith("*") ? option.slice(1) : option);
+      segments.push({ type: "choice", options, correctIndex: starIdx >= 0 ? starIdx : 0 });
     } else {
       segments.push({ type: "text", value: part });
     }
@@ -2720,40 +2762,124 @@ function parseInlineChoiceSegments(content: string) {
 }
 
 /** Reconstruct content string from segments. */
-function serializeInlineChoiceSegments(segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[] }>): string {
-  return segments.map((s) => s.type === "choice" ? `{{${s.options.join("|")}}}` : s.value).join("");
+function serializeInlineChoiceSegments(segments: Array<{ type: "text"; value: string } | { type: "choice"; options: string[]; correctIndex: number }>): string {
+  return segments.map((s) => {
+    if (s.type === "choice") {
+      const serializedOptions = s.options.map((option, index) =>
+        index === s.correctIndex && s.correctIndex !== 0 ? `*${option}` : option,
+      );
+      return `{{${serializedOptions.join("|")}}}`;
+    }
+    return s.value;
+  }).join("");
+}
+
+function renderInlineChoiceIndicator(isCorrect: boolean, isExample: boolean) {
+  if (isExample) {
+    return (
+      <span
+        className="relative inline-flex items-center justify-center shrink-0"
+        style={{
+          boxSizing: 'border-box',
+          width: 16,
+          height: 16,
+          minWidth: 16,
+          minHeight: 16,
+          borderRadius: 3,
+          color: '#0097dc',
+          boxShadow: 'inset 0 0 0 1px currentColor',
+          background: '#fff',
+        }}
+      >
+        {isCorrect ? (
+          <span
+            className="absolute inset-0 flex items-center justify-center leading-none"
+            style={{
+              fontFamily: 'var(--font-handwriting), cursive',
+              color: '#0097dc',
+              fontSize: '18px',
+              top: -2,
+            }}
+          >
+            X
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0"
+      style={isCorrect
+        ? {
+            boxSizing: 'border-box',
+            width: 16,
+            height: 16,
+            minWidth: 16,
+            minHeight: 16,
+            borderRadius: 3,
+            color: '#22c55e',
+            boxShadow: 'inset 0 0 0 1px #22c55e',
+            background: '#22c55e',
+          }
+        : {
+            boxSizing: 'border-box',
+            width: 16,
+            height: 16,
+            minWidth: 16,
+            minHeight: 16,
+            borderRadius: 3,
+            color: 'var(--color-primary)',
+            boxShadow: 'inset 0 0 0 1px currentColor',
+            background: '#fff',
+          }}
+    />
+  );
 }
 
 /** Render a read-only inline choice line (used as fallback / for interactive mode). */
-function renderInlineChoiceLine(content: string): React.ReactNode[] {
+function renderInlineChoiceLine(content: string, showExample = false): React.ReactNode[] {
   const segments = parseInlineChoiceSegments(content);
   let hasTextBefore = false;
+  let exampleUsed = false;
   return segments.map((seg, i) => {
     if (seg.type === "choice") {
       const atStart = !hasTextBefore;
+      const renderAsExample = showExample && !exampleUsed;
+      if (renderAsExample) {
+        exampleUsed = true;
+        return (
+          <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
+            {seg.options.map((opt, oi) => {
+              const isCorrect = oi === seg.correctIndex;
+              const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
+              return (
+                <span key={oi} className="inline-flex items-center gap-1.5">
+                  {renderInlineChoiceIndicator(isCorrect, true)}
+                  <span className="font-semibold">{label}</span>
+                </span>
+              );
+            })}
+          </span>
+        );
+      }
       return (
         <span key={i} className="inline-flex items-center gap-1 mx-0.5">
           {seg.options.map((opt, oi) => {
-            const isCorrect = oi === 0;
+            const isCorrect = oi === seg.correctIndex;
             const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
             return (
               <span key={oi} className="inline-flex items-center">
                 {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
                 <span
                   className={`inline-flex items-center gap-0.5 font-semibold ${
-                    isCorrect
+                    isCorrect && !showExample
                       ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
                       : ""
                   }`}
                 >
-                  <span
-                    className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
-                      isCorrect
-                        ? "border-green-500 bg-green-500"
-                        : "border-muted-foreground/40"
-                    }`}
-                    style={{ position: 'relative', top: 2 }}
-                  />
+                  {renderInlineChoiceIndicator(isCorrect, showExample)}
                   <span>{label}</span>
                 </span>
               </span>
@@ -2771,9 +2897,11 @@ function renderInlineChoiceLine(content: string): React.ReactNode[] {
 function EditableInlineChoiceLine({
   content,
   onChange,
+  showExample = false,
 }: {
   content: string;
   onChange: (newContent: string) => void;
+  showExample?: boolean;
 }) {
   const segments = React.useMemo(() => parseInlineChoiceSegments(content), [content]);
   const segmentsRef = React.useRef(segments);
@@ -2782,6 +2910,7 @@ function EditableInlineChoiceLine({
   // Track whether any visible text appeared before each segment
   let hasTextBefore = false;
   const textBefore: boolean[] = [];
+  let exampleUsed = false;
   segments.forEach((seg) => {
     textBefore.push(hasTextBefore);
     if (seg.type === "text" && seg.value.trim().length > 0) hasTextBefore = true;
@@ -2816,6 +2945,24 @@ function EditableInlineChoiceLine({
       {segments.map((seg, i) => {
         if (seg.type === "choice") {
           const atStart = !textBefore[i];
+          const renderAsExample = showExample && !exampleUsed;
+          if (renderAsExample) {
+            exampleUsed = true;
+            return (
+              <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap" contentEditable={false}>
+                {seg.options.map((opt, oi) => {
+                  const isCorrect = oi === seg.correctIndex;
+                  const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
+                  return (
+                    <span key={oi} className="inline-flex items-center gap-1.5">
+                      {renderInlineChoiceIndicator(isCorrect, true)}
+                      <span className="font-semibold">{label}</span>
+                    </span>
+                  );
+                })}
+              </span>
+            );
+          }
           return (
             <span
               key={i}
@@ -2823,26 +2970,19 @@ function EditableInlineChoiceLine({
               contentEditable={false}
             >
               {seg.options.map((opt, oi) => {
-                const isCorrect = oi === 0;
+                const isCorrect = oi === seg.correctIndex;
                 const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
                 return (
                   <span key={oi} className="inline-flex items-center">
                     {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
                     <span
                       className={`inline-flex items-center gap-0.5 font-semibold ${
-                        isCorrect
+                        isCorrect && !showExample
                           ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
                           : ""
                       }`}
                     >
-                      <span
-                        className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
-                          isCorrect
-                            ? "border-green-500 bg-green-500"
-                            : "border-muted-foreground/40"
-                        }`}
-                        style={{ position: 'relative', top: 2 }}
-                      />
+                      {renderInlineChoiceIndicator(isCorrect, showExample)}
                       <span>{label}</span>
                     </span>
                   </span>
@@ -2884,6 +3024,7 @@ function InlineChoicesRenderer({
   // persist CH-converted text (ß→ss) back into the canonical data.
   const rawBlock = state.blocks.find((b) => b.id === block.id) as InlineChoicesBlock | undefined;
   const rawItems = rawBlock ? migrateInlineChoicesBlock(rawBlock) : items;
+  const exampleItemId = block.showFirstAsExample ? items.find((item) => !item.isSpacer)?.id : undefined;
 
   const updateItemContent = React.useCallback(
     (index: number, newContent: string) => {
@@ -2927,49 +3068,60 @@ function InlineChoicesRenderer({
   return (
     <div>
       {items.map((item, idx) => (
-        <div
-          key={item.id || idx}
-          className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
-            !interactive && activeIdx === idx
-              ? "bg-blue-50 ring-1 ring-blue-200"
-              : "hover:bg-muted/30"
-          }`}
-          onClick={() => handleRowClick(idx)}
-        >
-          <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-            {String(idx + 1).padStart(2, "0")}
-          </span>
-          <span className="flex-1">
-            {interactive ? (
-              renderInlineChoiceLine(item.content)
-            ) : (
-              <EditableInlineChoiceLine
-                content={item.content}
-                onChange={(c) => updateItemContent(idx, c)}
-              />
+        item.isSpacer ? (
+          <div
+            key={item.id || idx}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+          >
+            <span className="flex-1">&nbsp;</span>
+          </div>
+        ) : (
+          <div
+            key={item.id || idx}
+            className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+              !interactive && activeIdx === idx
+                ? "bg-blue-50 ring-1 ring-blue-200"
+                : "hover:bg-muted/30"
+            }`}
+            onClick={() => handleRowClick(idx)}
+          >
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length).padStart(2, "0")}
+            </span>
+            <span className="flex-1">
+              {interactive ? (
+                renderInlineChoiceLine(item.content, item.id === exampleItemId)
+              ) : (
+                <EditableInlineChoiceLine
+                  content={item.content}
+                  onChange={(c) => updateItemContent(idx, c)}
+                  showExample={item.id === exampleItemId}
+                />
+              )}
+            </span>
+            {!interactive && (
+              <div className="flex flex-col shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveItem(idx, -1)}
+                  disabled={idx === 0}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  onClick={() => moveItem(idx, 1)}
+                  disabled={idx === items.length - 1}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
             )}
-          </span>
-          {!interactive && (
-            <div className="flex flex-col shrink-0" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                onClick={() => moveItem(idx, -1)}
-                disabled={idx === 0}
-              >
-                <ChevronUp className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                className="h-3.5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                onClick={() => moveItem(idx, 1)}
-                disabled={idx === items.length - 1}
-              >
-                <ChevronDown className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )
       ))}
     </div>
   );
@@ -3070,6 +3222,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
 
   const cols = block.gridCols ?? block.gridSize ?? 24;
   const rows = block.gridRows ?? block.gridSize ?? 12;
+  const rowHeight = block.rowHeight ?? 1.9;
 
   // Generate grid if empty
   React.useEffect(() => {
@@ -3095,7 +3248,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
       {/* Grid */}
       {block.grid.length > 0 && (
         <div className="w-full">
-          <table className="w-full border-separate border-spacing-0">
+          <table className="w-full table-fixed border-separate border-spacing-0">
             <tbody>
               {block.grid.map((row, ri) => (
                 <tr key={ri}>
@@ -3108,9 +3261,12 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
                     return (
                       <td
                         key={ci}
-                        className={`text-center text-base font-mono font-semibold select-none border border-border aspect-square ${cornerClass}`}
+                        className={`p-0 text-center font-mono font-semibold select-none border border-border ${cornerClass}`}
+                        style={{ height: `${rowHeight}rem` }}
                       >
-                        {cell}
+                        <div className="flex h-full items-center justify-center leading-none">
+                          {cell}
+                        </div>
                       </td>
                     );
                   })}
@@ -3624,6 +3780,7 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
 
   const updateSentence = (id: string, sentence: string) => {
     dispatch({
@@ -3686,6 +3843,14 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
       <div className="space-y-3">
         {block.sentences.map((item, i) => {
           const parts = item.sentence.split(" | ");
+          const displayParts = parts.length <= 1
+            ? parts
+            : getDeterministicPreviewDerangement(
+                parts.map((part, index) => ({ id: `${item.id}:${index}`, part })),
+                ({ id }) => `fix-sentences:${block.id}:${id}`,
+              ).map(({ part }) => part);
+          const solvedSentence = parts.map((part) => part.trim()).join(" ");
+          const isExampleSentence = item.id === exampleSentenceId;
           return (
             <div
               key={item.id}
@@ -3696,10 +3861,10 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1.5">
-                  {parts.map((part, pi) => (
+                  {displayParts.map((part, pi) => (
                     <span
                       key={pi}
-                      className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 font-medium"
+                      className="rounded border px-2 py-0.5 text-xs bg-blue-50 border-blue-200 text-blue-800 font-medium"
                     >
                       {part.trim()}
                     </span>
@@ -3717,19 +3882,33 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
                 </button>
               </div>
               <div className="px-3 py-2">
-                <input
-                  type="text"
-                  value={item.sentence}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const arrIdx = block.sentences.findIndex((s) => s.id === item.id);
-                    localeUpdate(block.id, `sentences.${arrIdx}.sentence`, value, () =>
-                      updateSentence(item.id, value)
-                    );
-                  }}
-                  className="w-full text-xs text-muted-foreground bg-transparent border-0 outline-none font-mono"
-                  placeholder={t("fixSentencePlaceholder")}
-                />
+                {isExampleSentence ? (
+                  <div
+                    className="relative h-8 overflow-hidden"
+                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
+                  >
+                    <span
+                      className="absolute inset-x-0 bottom-px block leading-none"
+                      style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
+                    >
+                      {solvedSentence}
+                    </span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={item.sentence}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const arrIdx = block.sentences.findIndex((s) => s.id === item.id);
+                      localeUpdate(block.id, `sentences.${arrIdx}.sentence`, value, () =>
+                        updateSentence(item.id, value)
+                      );
+                    }}
+                    className="w-full text-xs text-muted-foreground bg-transparent border-0 outline-none font-mono"
+                    placeholder={t("fixSentencePlaceholder")}
+                  />
+                )}
               </div>
             </div>
           );

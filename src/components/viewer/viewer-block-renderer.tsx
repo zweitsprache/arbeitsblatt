@@ -87,7 +87,7 @@ const CONSISTENT_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b";
 const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[32.5px] items-center gap-3 border-b";
 const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b font-bold";
 const CONSISTENT_ITEM_BANK_CLASS = "flex min-h-[49px] flex-wrap items-center gap-2";
-const CONSISTENT_ITEM_BANK_CHIP_CLASS = "px-2 py-0.5 rounded border text-cv-xs";
+const CONSISTENT_ITEM_BANK_CHIP_CLASS = "px-2 py-0.5 rounded border";
 const VIEWER_SECTION_GAP = {
   small: 8,
   medium: 12,
@@ -1906,7 +1906,18 @@ function FillInBlankItemsView({
   const isPrint = mode === "print";
   const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
   const isOnline = mode === "online";
+  const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+  const exampleAnswers = useMemo(() => {
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.content.matchAll(/\{\{blank\*?:([^,}]+)/g)) {
+      const value = match[1]?.trim();
+      if (value) answers.add(value);
+    }
+    return answers;
+  }, [exampleItem]);
 
   // Extract answers for word bank
   const wordBankAnswers = useMemo(() => {
@@ -1944,9 +1955,13 @@ function FillInBlankItemsView({
         <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
       {block.showWordBank && wordBankAnswers.length > 0 && (
-        <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
+        <div className={CONSISTENT_ITEM_BANK_CLASS}>
           {wordBankAnswers.map((word, i) => (
-            <span key={i} className="px-2 py-0.5 bg-background border border-border rounded text-cv-sm">
+            <span
+              key={i}
+              className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}
+              style={exampleAnswers.has(word) ? { textDecoration: "line-through" } : undefined}
+            >
               {word}
             </span>
           ))}
@@ -1955,11 +1970,12 @@ function FillInBlankItemsView({
       {block.items.map((item, idx) => {
         const parts = item.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
         let blankInItem = 0;
+        const isExampleItem = item.id === exampleItem?.id;
 
         return (
           <div
             key={item.id || idx}
-            className="flex min-h-[49px] items-center gap-3 border-b"
+            className={ROW_CLASS}
           >
             <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
               {String(idx + 1).padStart(2, "0")}
@@ -1980,6 +1996,35 @@ function FillInBlankItemsView({
                   const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
                   const widthStyle = getBlankWidthStyle(width, false);
                   const spacingClass = noSpace ? '' : 'mx-1';
+
+                  if (isExampleItem && hasAnswer) {
+                    return (
+                      <span
+                        key={i}
+                        className={`relative inline-flex items-center ${spacingClass}`}
+                        style={{
+                          ...widthStyle,
+                          verticalAlign: 'middle',
+                          minHeight: '1.25rem',
+                          lineHeight: '1.25rem',
+                          borderRadius: 3,
+                          backgroundColor: 'rgb(243 244 246)',
+                        }}
+                      >
+                        <span aria-hidden="true">&nbsp;</span>
+                        <span
+                          className="absolute inset-x-0 bottom-0 block text-center leading-none"
+                          style={{
+                            fontFamily: 'var(--font-handwriting), cursive',
+                            color: '#0097dc',
+                            fontSize: '18px',
+                          }}
+                        >
+                          {correctAnswer}
+                        </span>
+                      </span>
+                    );
+                  }
 
                   if (interactive) {
                     return (
@@ -2250,12 +2295,12 @@ function FillInBlankItemsView({
         )}
         {block.showWordBank && wordBankItems.length > 0 && (
           <>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-cv-xs text-muted-foreground">
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
               {wordBankItems.map((item) => (
                 <span
                   key={item.id}
                   className="rounded border px-2 py-0.5"
-                  style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+                  style={item.id === examplePairId ? { textDecoration: "line-through" } : undefined}
                 >
                   {item.text}
                 </span>
@@ -2370,12 +2415,12 @@ function FillInBlankItemsView({
       )}
       {block.showWordBank && wordBankItems.length > 0 && (
         <>
-          <div className="flex flex-wrap gap-x-2 gap-y-1 text-cv-xs text-muted-foreground">
+          <div className="flex flex-wrap gap-x-2 gap-y-1">
             {wordBankItems.map((item) => (
               <span
                 key={item.id}
                 className="rounded border px-2 py-0.5"
-                style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+                style={item.id === examplePairId ? { textDecoration: "line-through" } : undefined}
               >
                 {item.text}
               </span>
@@ -2548,7 +2593,7 @@ function FillInBlankItemsView({
           <div className="rounded p-3 border border-dashed border-muted-foreground/30">
             <div className="flex flex-wrap gap-2">
               {shuffledWordBank.map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border">
                   {text}
                 </span>
               ))}
@@ -2774,7 +2819,7 @@ function WordBankView({ block }: { block: WordBankBlock }) {
     <div className="flex min-h-[49px] flex-wrap items-center gap-2">
       <div className="flex flex-1 flex-wrap gap-2">
         {block.words.map((word, i) => (
-          <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
+          <span key={i} className="px-2 py-0.5 bg-background rounded border">
             {word}
           </span>
         ))}
@@ -3558,36 +3603,78 @@ function renderInlineChoiceViewLine(
   showResults: boolean,
   choiceCounter: { value: number },
   showSolutions = false,
+  shuffleChoices = true,
+  showExample = false,
 ): React.ReactNode[] {
   const parts = content.split(/(\{\{(?:choice:)?[^}]+\}\})/g);
   // Track whether any visible text appeared before the current part
   let hasTextBefore = false;
+  let exampleUsed = false;
   return parts.map((part, i) => {
     const match = part.match(/\{\{(?:choice:)?(.+)\}\}/);
     if (match) {
       const rawOptions = match[1].split("|");
       const atStart = !hasTextBefore;
       const capitalise = (s: string) => atStart ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-      const key = `choice-${choiceCounter.value}`;
-      choiceCounter.value++;
+      const key = showExample ? `${lineKey}-example-${i}` : `choice-${choiceCounter.value}`;
+      if (!showExample) {
+        choiceCounter.value++;
+      }
       const selectedValue = selections[key] || "";
 
-      // Normalise: if any option has *, move it to first; otherwise first = correct
       const starIdx = rawOptions.findIndex((o) => o.startsWith("*"));
-      const options = starIdx >= 0
-        ? [rawOptions[starIdx].slice(1), ...rawOptions.filter((_, idx) => idx !== starIdx).map((o) => o.startsWith("*") ? o.slice(1) : o)]
-        : rawOptions;
-      // options[0] is always correct now
+      const options = rawOptions.map((option) => option.startsWith("*") ? option.slice(1) : option);
+      const correctIndex = starIdx >= 0 ? starIdx : 0;
 
-      // Deterministic shuffle for display so students can't exploit position
       const seed = hashCode(`${lineKey}-${i}`);
-      const shuffled = seededShuffleArr(options, seed);
+      const displayed = shuffleChoices
+        ? seededShuffleArr(options, seed)
+        : options.map((item, originalIndex) => ({ item, originalIndex }));
+
+      const renderAsExample = showExample && !exampleUsed;
+      if (renderAsExample) {
+        exampleUsed = true;
+        return (
+          <span key={`${lineKey}-${i}`} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
+            {displayed.map((sh, oi) => {
+              const isCorrectOpt = sh.originalIndex === correctIndex;
+              const label = capitalise(sh.item);
+              return (
+                <span key={oi} className="inline-flex items-center gap-1.5">
+                  <span
+                    className={CONTROL_BOX_CLASS}
+                    style={{
+                      position: 'relative',
+                      color: '#0097dc',
+                    }}
+                  >
+                    {isCorrectOpt ? (
+                      <span
+                        className="absolute inset-0 flex items-center justify-center leading-none"
+                        style={{
+                          fontFamily: 'var(--font-handwriting), cursive',
+                          color: '#0097dc',
+                          fontSize: '18px',
+                          top: -1,
+                        }}
+                      >
+                        X
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="font-semibold" style={{ verticalAlign: 'middle' }}>{label}</span>
+                </span>
+              );
+            })}
+          </span>
+        );
+      }
 
       if (interactive) {
         return (
           <span key={`${lineKey}-${i}`} className="inline-flex items-center gap-1 mx-0.5">
-            {shuffled.map((sh, oi) => {
-              const isCorrectOpt = sh.originalIndex === 0;
+            {displayed.map((sh, oi) => {
+              const isCorrectOpt = sh.originalIndex === correctIndex;
               const label = capitalise(sh.item);
               const isSelected = selectedValue === label;
 
@@ -3622,12 +3709,7 @@ function renderInlineChoiceViewLine(
                     disabled={showResults}
                   >
                     <span
-                      className={`inline-block w-3 h-3 rounded-full border-[1.5px] shrink-0 ${
-                        isSelected
-                          ? "border-primary bg-primary"
-                          : "border-muted-foreground/40"
-                      }`}
-                      style={{ position: 'relative', top: 2 }}
+                      className={isSelected ? `${CONTROL_BOX_CLASS} ${s.controlBoxActive}` : CONTROL_BOX_CLASS}
                     />
                     {label}
                   </button>
@@ -3638,25 +3720,17 @@ function renderInlineChoiceViewLine(
         );
       }
 
-      // Print mode: show squares (also shuffled for fairness)
-      const printShuffled = seededShuffleArr(options, seed);
       return (
         <span key={`${lineKey}-${i}`} style={{ marginLeft: 2, marginRight: 2 }}>
-          {printShuffled.map((sh, oi) => {
-            const isCorrectOpt = sh.originalIndex === 0;
+          {displayed.map((sh, oi) => {
+            const isCorrectOpt = sh.originalIndex === correctIndex;
             const label = capitalise(sh.item);
             const filled = showSolutions && isCorrectOpt;
             return (
-              <span key={oi} style={{ marginRight: oi < printShuffled.length - 1 ? 6 : 0 }}>
+              <span key={oi} style={{ marginRight: oi < displayed.length - 1 ? 6 : 0 }}>
                 <span
-                  className="inline-block rounded border-2"
-                  style={{
-                    width: 20,
-                    height: 20,
-                    verticalAlign: '-5px',
-                    borderColor: filled ? '#16a34a' : 'rgba(115,115,115,0.3)',
-                    backgroundColor: filled ? '#16a34a' : 'transparent',
-                  }}
+                  className={filled ? CONTROL_BOX_FILLED_CLASS : CONTROL_BOX_CLASS}
+                  style={{ verticalAlign: '-3px' }}
                 />
                 <span
                   className="font-semibold"
@@ -3686,6 +3760,8 @@ function InlineChoicesView({
   showResults,
   showSolutions = false,
   mode = "online",
+  accentColor,
+  instructionIndex,
 }: {
   block: InlineChoicesBlock;
   interactive: boolean;
@@ -3694,36 +3770,67 @@ function InlineChoicesView({
   showResults: boolean;
   showSolutions?: boolean;
   mode?: ViewMode;
+  accentColor?: string | null;
+  instructionIndex?: number;
 }) {
   const selections = (answer as Record<string, string> | undefined) || {};
   const items = migrateInlineChoicesBlock(block);
   const choiceCounter = { value: 0 };
-  const isPrint = mode === "print";
+  const isOnline = mode === "online";
+  const exampleItemId = block.showFirstAsExample ? items.find((item) => !item.isSpacer)?.id : undefined;
 
   return (
     <div>
+      {block.instruction && (
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          )}
+          {items.length > 0 && <SectionGap size="medium" />}
+        </>
+      )}
       {items.map((item, idx) => (
-        <div
-          key={item.id || idx}
-          className="flex items-center border-b last:border-b-0"
-          style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
-        >
-          <span className={NUMBER_BADGE_CLASS}>
-            {String(idx + 1).padStart(2, "0")}
-          </span>
-          <span className="flex-1">
-            {renderInlineChoiceViewLine(
-              item.content,
-              `line-${idx}`,
-              interactive,
-              selections,
-              onAnswer,
-              showResults,
-              choiceCounter,
-              showSolutions,
-            )}
-          </span>
-        </div>
+        item.isSpacer ? (
+          <div
+            key={item.id || idx}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+          >
+            <span className="flex-1">&nbsp;</span>
+          </div>
+        ) : (
+          <div
+            key={item.id || idx}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+          >
+            <span className={NUMBER_BADGE_CLASS}>
+              {String(items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length).padStart(2, "0")}
+            </span>
+            <span className="flex-1">
+              {renderInlineChoiceViewLine(
+                item.content,
+                `line-${idx}`,
+                interactive,
+                selections,
+                onAnswer,
+                showResults,
+                choiceCounter,
+                showSolutions,
+                block.shuffleChoices !== false,
+                item.id === exampleItemId,
+              )}
+            </span>
+          </div>
+        )
       ))}
     </div>
   );
@@ -3774,6 +3881,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   const selectedCells = (answer as string[] | undefined) || [];
   const isPrint = mode === "print";
   const isOnline = mode === "online";
+  const rowHeight = block.rowHeight ?? 1.9;
 
   const toggleCell = (key: string) => {
     if (!interactive) return;
@@ -3816,7 +3924,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
         </>
       )}
       <div className="w-full">
-        <table className="w-full border-separate border-spacing-0">
+        <table className="w-full table-fixed border-separate border-spacing-0">
           <tbody>
             {block.grid.map((row, ri) => (
               <tr key={ri}>
@@ -3843,13 +3951,18 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                   return (
                     <td
                       key={ci}
-                      className={`text-center font-mono select-none aspect-square transition-colors ${isPrint ? '' : 'font-medium'}
+                      className={`p-0 text-center font-mono select-none transition-colors ${isPrint ? '' : 'font-medium'}
                         ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
                         ${isSelected ? "bg-primary/20 text-primary" : ""}`}
-                      style={cellStyle}
+                      style={{
+                        ...cellStyle,
+                        height: `${rowHeight}rem`,
+                      }}
                       onClick={() => toggleCell(key)}
                     >
-                      {cell}
+                      <div className="flex h-full items-center justify-center leading-none">
+                        {cell}
+                      </div>
                     </td>
                   );
                 })}
@@ -4574,6 +4687,8 @@ function FixSentencesView({
   onAnswer,
   showResults,
   showSolutions,
+  accentColor,
+  instructionIndex,
 }: {
   block: FixSentencesBlock;
   mode: ViewMode;
@@ -4582,26 +4697,26 @@ function FixSentencesView({
   onAnswer: (value: unknown) => void;
   showResults: boolean;
   showSolutions?: boolean;
+  accentColor?: string | null;
+  instructionIndex?: number;
 }) {
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
+  const isOnline = mode === "online";
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
   // answer: Record<sentenceId, string[]> where string[] is user-ordered parts
   const userOrders = (answer as Record<string, string[]> | undefined) || {};
 
   // Deterministic shuffle based on block id + sentence id
   const getShuffledParts = (sentenceId: string, parts: string[]): string[] => {
-    const arr = [...parts];
-    let seed = 0;
-    const combined = block.id + sentenceId;
-    for (let i = 0; i < combined.length; i++) {
-      seed = ((seed << 5) - seed + combined.charCodeAt(i)) | 0;
+    if (parts.length <= 1) {
+      return parts;
     }
-    for (let i = arr.length - 1; i > 0; i--) {
-      seed = (seed * 16807 + 0) % 2147483647;
-      const j = Math.abs(seed) % (i + 1);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+
+    return deterministicDerangement(
+      parts.map((part, index) => ({ id: `${sentenceId}:${index}`, part })),
+      `fix-sentences:${block.id}:${sentenceId}`,
+    ).map(({ part }) => part);
   };
 
   // Initialize user orders if empty
@@ -4638,13 +4753,24 @@ function FixSentencesView({
   };
 
   return (
-    <div className="space-y-2">
+    <div>
       {block.instruction && (
-        <p className="font-medium">{block.instruction}</p>
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <InstructionBadge instructionIndex={instructionIndex} />
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        )
       )}
       <div>
         {block.sentences.map((item, i) => {
           const correctParts = item.sentence.split(" | ").map((p) => p.trim());
+          const isExampleSentence = item.id === exampleSentenceId;
           const displayParts = interactive
             ? userOrders[item.id] || getShuffledParts(item.id, correctParts)
             : getShuffledParts(item.id, correctParts);
@@ -4672,7 +4798,7 @@ function FixSentencesView({
                   <div className="flex flex-wrap gap-1.5">
                     {displayParts.map((part, pi) => (
                       <div key={pi} className="flex items-center gap-0.5">
-                        {interactive && !showResults && (
+                        {!isExampleSentence && interactive && !showResults && (
                           <div className="flex flex-col gap-0">
                             <button
                               className="p-0 hover:bg-muted rounded disabled:opacity-30"
@@ -4711,7 +4837,7 @@ function FixSentencesView({
                           </div>
                         )}
                         <span
-                          className={`px-2.5 py-1 rounded border font-medium ${
+                          className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} font-medium ${
                             showResults
                               ? part === correctParts[pi]
                                 ? "bg-green-100 border-green-300 text-green-800"
@@ -4724,12 +4850,21 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  {isPrint && showSolutions ? (
+                  {isExampleSentence ? (
+                    <div
+                      className="relative mt-2 h-8 overflow-hidden font-medium"
+                      style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
+                    >
+                      <span className="absolute inset-x-0 bottom-px block leading-none">
+                        {correctParts.join(" ")}
+                      </span>
+                    </div>
+                  ) : isPrint && showSolutions ? (
                     <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
                   ) : isPrint ? (
                     <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
                   ) : null}
-                  {showResults && !isFullyCorrect && (
+                  {showResults && !isExampleSentence && !isFullyCorrect && (
                     <p className="text-cv-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
                     </p>
@@ -5331,7 +5466,7 @@ function DialogueView({
             {[...gapAnswers]
               .sort(() => Math.random() - 0.5)
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
+                <span key={i} className="px-2 py-0.5 bg-background rounded border">
                   {text}
                 </span>
               ))}
@@ -6679,7 +6814,8 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
-         
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "complete-sentences":
