@@ -106,6 +106,17 @@ export function EditorToolbar({
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
 
+  const handleOpenPrintPreviewInNewTab = async () => {
+    if (!state.slug) {
+      alert(t("saveFirst"));
+      return;
+    }
+    if (state.isDirty) {
+      await save();
+    }
+    window.open(`/${locale}/worksheet/${state.slug}/print?scale=140`, "_blank", "noopener,noreferrer");
+  };
+
   const togglePdfLang = (code: string) => {
     setPdfLangs((prev) => {
       const next = new Set(prev);
@@ -482,20 +493,37 @@ export function EditorToolbar({
 
 
         {/* Print Preview */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => setShowPrintPreview(true)}
-            >
-              <Printer className="h-3.5 w-3.5" />
-              {t("printPreview")}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t("printPreviewTooltip")}</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => setShowPrintPreview(true)}
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {t("printPreview")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("printPreviewTooltip")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleOpenPrintPreviewInNewTab}
+                disabled={!state.slug}
+                aria-label={t("openInNewTab")}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("openInNewTab")}</TooltipContent>
+          </Tooltip>
+        </div>
 
         {/* Online Preview */}
         <Tooltip>

@@ -31,6 +31,7 @@ export type BlockType =
   | "inline-choices"
   | "word-search"
   | "sorting-categories"
+  | "correct-spelling"
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
@@ -254,6 +255,8 @@ export interface MatchingBlock extends BlockBase {
   textAboveItems?: string;
   pairs: MatchingPair[];
   extendedRows?: boolean;
+  showWordBank?: boolean;
+  showFirstAsExample?: boolean;
 }
 
 // ─── Two-column fill block ──────────────────────────────────
@@ -479,6 +482,21 @@ export interface UnscrambleWordsBlock extends BlockBase {
   itemOrder?: string[]; // persisted shuffled order of word IDs
 }
 
+export interface CorrectSpellingItem {
+  id: string;
+  word: string;
+  displayCount?: number;
+}
+
+export interface CorrectSpellingBlock extends BlockBase {
+  type: "correct-spelling";
+  instruction: string;
+  words: CorrectSpellingItem[];
+  displayCount?: number;
+  keepFirstLetter: boolean;
+  keepLastLetter: boolean;
+}
+
 // ─── Fix Sentences block ────────────────────────────────────
 export interface FixSentenceItem {
   id: string;
@@ -558,6 +576,8 @@ export interface DialogueBlock extends BlockBase {
   instruction: string;
   items: DialogueItem[];
   showWordBank: boolean;
+  showOriginal?: boolean;
+  showFirstAsExample?: boolean;
 }
 
 // ─── Chart block ─────────────────────────────────────────────
@@ -819,6 +839,7 @@ export type WorksheetBlock =
   | InlineChoicesBlock
   | WordSearchBlock
   | SortingCategoriesBlock
+  | CorrectSpellingBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
@@ -1598,6 +1619,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "p3", left: "Item 3", right: "Match 3" },
       ],
       extendedRows: false,
+      showWordBank: false,
+      showFirstAsExample: false,
       visibility: "both",
     },
   },
@@ -1758,6 +1781,28 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       showWritingLines: true,
       colorCode: false,
       showFirstAsExample: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "correct-spelling",
+    label: "Correct Spelling",
+    description: "Find the correctly spelled word in each row",
+    labelKey: "correctSpelling",
+    descriptionKey: "correctSpellingDesc",
+    icon: "SpellCheck",
+    category: "interactive",
+    translations: { de: { label: "Rechtschreibung erkennen", description: "Das korrekt geschriebene Wort in jeder Zeile finden" } },
+    defaultData: {
+      type: "correct-spelling",
+      instruction: "",
+      words: [
+        { id: "cs1", word: "school", displayCount: 10 },
+        { id: "cs2", word: "teacher", displayCount: 10 },
+        { id: "cs3", word: "garden", displayCount: 10 },
+      ],
+      keepFirstLetter: false,
+      keepLastLetter: false,
       visibility: "both",
     },
   },
@@ -1954,6 +1999,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "dl2", speaker: "B", icon: "circle", text: "I am fine, thank you!" },
       ],
       showWordBank: false,
+      showOriginal: false,
+      showFirstAsExample: false,
       visibility: "both",
     },
   },

@@ -30,6 +30,8 @@ export default async function PrintWorksheetPage({
   const isCH = sp.ch === "1";
   const showSolutions = sp.solutions === "1";
   const lang = typeof sp.lang === "string" ? sp.lang : null;
+  const scaleParam = typeof sp.scale === "string" ? Number(sp.scale) : NaN;
+  const previewScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam / 100 : 1;
 
   const migratedLocaleData = migrateWorksheetLocaleDataToV2({
     title: worksheet.title,
@@ -106,18 +108,30 @@ export default async function PrintWorksheetPage({
 
   return (
     <>
-      <style>{`@page { size: ${pageSizeCss}; margin: 0; }`}</style>
-      <WorksheetViewer
-        title={title}
-        blocks={blocks}
-        settings={settings}
-        mode="print"
-        worksheetId={worksheet.id}
-        showSolutions={showSolutions}
-        initialLocale={lang ?? "de"}
-        originalBlockMap={originalBlockMap}
-        brandProfile={brandProfile}
-      />
+      <style>{`
+        @page { size: ${pageSizeCss}; margin: 0; }
+        @media screen {
+          .print-preview-scale {
+            transform: scale(${previewScale});
+            transform-origin: top center;
+            width: ${100 / previewScale}%;
+            margin: 0 auto;
+          }
+        }
+      `}</style>
+      <div className={previewScale !== 1 ? "print-preview-scale" : undefined}>
+        <WorksheetViewer
+          title={title}
+          blocks={blocks}
+          settings={settings}
+          mode="print"
+          worksheetId={worksheet.id}
+          showSolutions={showSolutions}
+          initialLocale={lang ?? "de"}
+          originalBlockMap={originalBlockMap}
+          brandProfile={brandProfile}
+        />
+      </div>
     </>
   );
 }

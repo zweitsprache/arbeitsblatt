@@ -29,6 +29,7 @@ import {
   migrateInlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
+  CorrectSpellingBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -68,6 +69,7 @@ import {
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
+import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
@@ -1620,10 +1622,66 @@ function FillInBlankItemsRenderer({
 
 // ─── Matching ────────────────────────────────────────────────
 function MatchingRenderer({ block }: { block: MatchingBlock }) {
-  const shuffledRight = getDeterministicPreviewDerangement(
+  const shuffledRight = React.useMemo(() => getDeterministicPreviewDerangement(
     block.pairs,
     (pair, index) => `${pair.id}:${pair.right}:${index}`
+  ), [block.pairs]);
+  const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+  const lineContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const leftExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
+  const rightExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
+  const [exampleLine, setExampleLine] = React.useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
+  const [exampleSvgSize, setExampleSvgSize] = React.useState({ width: 0, height: 0 });
+  const wordBankItems = getDeterministicPreviewOrder(
+    block.pairs.map((pair) => ({
+      id: pair.id,
+      text: `${pair.left.trim()}${pair.right.trim()}`,
+    })).filter((item) => item.text),
+    (item) => `matching-wordbank:${block.id}:${item.id}:${item.text}`
   );
+
+  React.useLayoutEffect(() => {
+    const container = lineContainerRef.current;
+    if (!container || !examplePairId) {
+      setExampleLine((current) => (current === null ? current : null));
+      setExampleSvgSize((current) => (current.width === 0 && current.height === 0 ? current : { width: 0, height: 0 }));
+      return;
+    }
+
+    const measure = () => {
+      const leftAnchor = leftExampleRefs.current[examplePairId];
+      const rightAnchor = rightExampleRefs.current[examplePairId];
+      if (!leftAnchor || !rightAnchor) {
+        setExampleLine(null);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const leftRect = leftAnchor.getBoundingClientRect();
+      const rightRect = rightAnchor.getBoundingClientRect();
+
+      setExampleSvgSize({ width: containerRect.width, height: containerRect.height });
+      setExampleLine({
+        x1: leftRect.right - containerRect.left,
+        y1: leftRect.top - containerRect.top + leftRect.height / 2,
+        x2: rightRect.left - containerRect.left,
+        y2: rightRect.top - containerRect.top + rightRect.height / 2,
+      });
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+    });
+    resizeObserver.observe(container);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [block.pairs, shuffledRight, examplePairId]);
 
   return (
     <div className="space-y-3">
@@ -1631,6 +1689,38 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
       {block.textAboveItems?.trim() && (
         <p className="text-sm whitespace-pre-line">{block.textAboveItems}</p>
       )}
+      {block.showWordBank && wordBankItems.length > 0 && (
+        <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {wordBankItems.map((item) => (
+            <span
+              key={item.id}
+              className="rounded border px-2 py-0.5"
+              style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+            >
+              {item.text}
+            </span>
+          ))}
+        </div>
+      )}
+      <div ref={lineContainerRef} className="relative">
+        {examplePairId && exampleLine && (
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            aria-hidden="true"
+            width={exampleSvgSize.width}
+            height={exampleSvgSize.height}
+            viewBox={`0 0 ${exampleSvgSize.width} ${exampleSvgSize.height}`}
+            preserveAspectRatio="none"
+          >
+            <path
+              d={`M ${exampleLine.x1} ${exampleLine.y1} C ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.35} ${exampleLine.y1}, ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.65} ${exampleLine.y2}, ${exampleLine.x2} ${exampleLine.y2}`}
+              stroke="#0097dc"
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </svg>
+        )}
       <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
         <div className="space-y-0">
           {block.pairs.map((pair, i) => (
@@ -1641,7 +1731,15 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 text-right">{pair.left}</span>
+              <span
+                ref={pair.id === examplePairId ? (node) => {
+                  leftExampleRefs.current[pair.id] = node;
+                } : undefined}
+                className="flex-1 text-right"
+                style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
+              >
+                {pair.left}
+              </span>
             </div>
           ))}
         </div>
@@ -1652,13 +1750,22 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
               <div className="h-4 w-4 rounded-[3px] border border-muted-foreground/40 shrink-0" />
-              <span className="flex-1">{pair.right}</span>
+              <span
+                ref={pair.id === examplePairId ? (node) => {
+                  rightExampleRefs.current[pair.id] = node;
+                } : undefined}
+                className="flex-1"
+                style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
+              >
+                {pair.right}
+              </span>
               <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                 {String.fromCharCode(97 + i)}
               </span>
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -2824,6 +2931,11 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const colorCodeEnabled = !!block.colorCode;
+  const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+  const exampleItemId = exampleItem?.id;
+  const exampleCategoryId = exampleItem
+    ? block.categories.find((cat) => cat.correctItems.includes(exampleItem.id))?.id
+    : undefined;
 
   const categoryPalette = [
     { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
@@ -2950,43 +3062,49 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                 </span>
               </div>
               <div className="min-h-[60px]">
-                {catItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="group/item flex min-h-[37px] items-center gap-3 border-b px-2 py-2"
-                  >
-                    <span
-                      contentEditable
-                      suppressContentEditableWarning
-                      className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors rounded px-2 py-0.5"
-                      style={colorCodeEnabled
-                        ? {
-                            backgroundColor: catTheme.itemBg,
-                            border: `1px solid ${catTheme.itemBorder}`,
-                            color: catTheme.itemText,
-                          }
-                        : undefined}
-                      onBlur={(e) => {
-                        const value = e.currentTarget.textContent || "";
-                        const arrIdx = block.items.findIndex((it) => it.id === item.id);
-                        localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                          updateItem(item.id, value)
-                        );
-                      }}
+                {catItems.map((item) => {
+                  const isExampleItem = item.id === exampleItemId && cat.id === exampleCategoryId;
+                  return (
+                    <div
+                      key={item.id}
+                      className="group/item flex min-h-[37px] items-center gap-3 border-b px-2 py-2"
                     >
-                      {item.text}
-                    </span>
-                    <button
-                      className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeItem(item.id);
-                      }}
-                    >
-                      <X className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
+                      <span
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors rounded px-2 py-0.5"
+                        style={colorCodeEnabled
+                          ? {
+                              border: `1px solid ${catTheme.itemBorder}`,
+                              color: isExampleItem ? "#0097dc" : catTheme.itemText,
+                              fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
+                            }
+                          : {
+                              color: isExampleItem ? "#0097dc" : undefined,
+                              fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
+                            }}
+                        onBlur={(e) => {
+                          const value = e.currentTarget.textContent || "";
+                          const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                          localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                            updateItem(item.id, value)
+                          );
+                        }}
+                      >
+                        {item.text}
+                      </span>
+                      <button
+                        className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeItem(item.id);
+                        }}
+                      >
+                        <X className="h-3 w-3 text-destructive" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -3136,6 +3254,133 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
           );
         });
         })()}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addWord();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addWord")}
+      </button>
+    </div>
+  );
+}
+
+function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+  const legacyDisplayCount = block.displayCount ?? 10;
+
+  const updateWord = (id: string, word: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: block.words.map((item) =>
+            item.id === id ? { ...item, word } : item
+          ),
+        },
+      },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: [...block.words, { id: crypto.randomUUID(), word: "word", displayCount: legacyDisplayCount }],
+        },
+      },
+    });
+  };
+
+  const removeWord = (id: string) => {
+    if (block.words.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: block.words.filter((item) => item.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {block.instruction}
+      </div>
+
+      <div>
+        {block.words.map((item, i) => {
+          const displayCount = item.displayCount ?? legacyDisplayCount;
+          const variants = buildCorrectSpellingRow(
+            item.word,
+            block.keepFirstLetter,
+            block.keepLastLetter,
+            `${block.id}:${item.id}`,
+            displayCount,
+          );
+
+          return (
+            <div key={item.id} className="group/item flex min-h-[49px] items-center gap-3 border-b">
+              <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
+                {variants.map((variant, variantIndex) => (
+                  <span
+                    key={`${item.id}-${variantIndex}`}
+                    className={`rounded border px-2 py-0.5 text-xs ${variantIndex === 0 || variant.isOriginal ? "border-green-300 bg-green-50 text-green-700" : "border-border text-muted-foreground"}`}
+                  >
+                    {variant.text}
+                  </span>
+                ))}
+              </div>
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                className="text-base outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors font-medium text-green-700 shrink-0"
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  const arrIdx = block.words.findIndex((w) => w.id === item.id);
+                  localeUpdate(block.id, `words.${arrIdx}.word`, value, () =>
+                    updateWord(item.id, value)
+                  );
+                }}
+              >
+                {item.word}
+              </span>
+              <button
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0 ${block.words.length <= 1 ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeWord(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+          );
+        })}
       </div>
       <button
         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -3396,6 +3641,7 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
 
   const updateSentence = (id: string, beginning: string) => {
     dispatch({
@@ -3489,7 +3735,16 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
                 <X className="h-3 w-3 text-destructive" />
               </button>
             </div>
-            <div className="ml-9 mt-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
+            <div className="ml-9 mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
+              {item.id === exampleSentenceId && item.solution ? (
+                <span
+                  className="absolute -top-1 left-0 text-[1.15em]"
+                  style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                >
+                  {item.solution}
+                </span>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
@@ -4127,9 +4382,22 @@ function DialogueRenderer({
     }
   }
 
-  // Render text with gaps
-  const renderDialogueText = (text: string) => {
+  const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
+    if (variant === "solution") {
+      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
+        const { answer } = parseBlankContent(raw);
+        return answer;
+      });
+    }
+
     const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
+      for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
+        if (parts[cursor] !== "") return parts[cursor];
+      }
+      return "";
+    };
+    let exampleShown = false;
     return parts.map((part, i) => {
       const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
       if (match) {
@@ -4137,26 +4405,89 @@ function DialogueRenderer({
         const raw = match[2] || "";
         const { answer, width } = parseBlankContent(raw);
         const widthStyle = getBlankWidthStyle(width, false);
-        const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
-        return interactive ? (
+        const previousPart = findAdjacentToken(i, -1);
+        const nextPart = findAdjacentToken(i, 1);
+        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
+        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const halfInnerGap = "0.125rem";
+        // Check if blank is at start: all parts before it are empty or whitespace-only
+        const isAtStart = parts.slice(0, i).every(p => !p.trim());
+        const spacing = getBlankSpacing(width, noSpace, nextPart);
+        // Remove left margin if at start
+        let adjustedSpacing = isAtStart && spacing.style
+          ? { ...spacing, style: { ...spacing.style, marginLeft: "0" } }
+          : spacing;
+        if (previousIsBlank || nextIsBlank) {
+          const styleFromClass = adjustedSpacing.className === "mx-1"
+            ? { marginLeft: "0.25rem", marginRight: "0.25rem" }
+            : adjustedSpacing.className === "mr-1"
+              ? { marginRight: "0.25rem" }
+              : {};
+          adjustedSpacing = {
+            ...adjustedSpacing,
+            className: "",
+            style: adjustedSpacing.style
+              ? {
+                  ...styleFromClass,
+                  ...adjustedSpacing.style,
+                  ...(previousIsBlank ? { marginLeft: halfInnerGap } : null),
+                  ...(nextIsBlank ? { marginRight: "0" } : null),
+                }
+              : {
+                  ...styleFromClass,
+                  ...(previousIsBlank ? { marginLeft: halfInnerGap } : null),
+                  ...(nextIsBlank ? { marginRight: "0" } : null),
+                },
+          };
+        }
+        const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        if (shouldRenderExample) {
+          exampleShown = true;
+          return (
+            <span
+              key={i}
+              className={`relative inline-block rounded-[3px] bg-gray-100 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+              style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || '\u00A0'}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: "var(--font-handwriting)",
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#0097dc",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {answer}
+              </span>
+            </span>
+          );
+        }
+        if (interactive) {
+          return (
           <input
             key={i}
             type="text"
             placeholder="…"
-            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
-            style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
+            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${adjustedSpacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
           />
-        ) : (
+          );
+        }
+
+        return (
           <span
             key={i}
-            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${spacing.className} text-muted-foreground text-xs`}
-            style={{ minHeight: "1.25rem", ...widthStyle, ...spacing.style }}
+            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+            style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
           >
-            {answer || '\u00A0'}
+            {variant === "default" ? (answer || '\u00A0') : '\u00A0'}
           </span>
         );
       }
-      return <span key={i}>{tripleInnerRegularSpaces(part)}</span>;
+      return <span key={i}>{part}</span>;;
     });
   };
 
@@ -4187,19 +4518,38 @@ function DialogueRenderer({
       )}
       {/* Dialogue items */}
       <div>
-        {block.items.map((item, i) => (
+        {block.items.map((item, i) => {
+          const prevItem = i > 0 ? block.items[i - 1] : null;
+          const isSameSpeaker = prevItem && prevItem.icon === item.icon;
+          return (
           <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
             <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
-              {speakerIconMap[item.icon] || speakerIconMap.circle}
-            </span>
-            <div className="flex flex-1 flex-wrap items-center leading-5">
-              {renderDialogueText(item.text)}
-            </div>
+            {isSameSpeaker ? (
+              <span className="h-5 w-5 min-w-5 shrink-0" />
+            ) : (
+              <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
+                {speakerIconMap[item.icon] || speakerIconMap.circle}
+              </span>
+            )}
+            {block.showOriginal ? (
+              <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
+                <div className="min-w-0">
+                  {renderDialogueText(item.text, "original", !!block.showFirstAsExample && i === 0)}
+                </div>
+                <div className="min-w-0">
+                  {renderDialogueText(item.text, "solution")}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-wrap items-center leading-5">
+                {renderDialogueText(item.text, "default", !!block.showFirstAsExample && i === 0)}
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -5718,6 +6068,8 @@ export function BlockRenderer({
       return <WordSearchRenderer block={block} />;
     case "sorting-categories":
       return <SortingCategoriesRenderer block={block} />;
+    case "correct-spelling":
+      return <CorrectSpellingRenderer block={block} />;
     case "unscramble-words":
       return <UnscrambleWordsRenderer block={block} />;
     case "fix-sentences":

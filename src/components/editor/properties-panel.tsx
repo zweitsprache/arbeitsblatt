@@ -47,6 +47,7 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   SortingCategory,
+  CorrectSpellingBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -1766,6 +1767,30 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { extendedRows: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showWordBank")}</Label>
+        <Switch
+          checked={block.showWordBank ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={block.showFirstAsExample ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
             })
           }
         />
@@ -4332,6 +4357,28 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
         />
       </div>
       <div className="flex items-center gap-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block">{t("displayCount")}</Label>
+        <Input
+          type="number"
+          min={1}
+          max={20}
+          value={String(block.displayCount)}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: {
+                id: block.id,
+                updates: {
+                  displayCount: Number.isFinite(value) ? Math.max(1, Math.min(20, value)) : 10,
+                },
+              },
+            });
+          }}
+          className="h-8 w-20 text-xs"
+        />
+      </div>
+      <div className="flex items-center gap-2">
         <Switch
           checked={block.keepFirstLetter}
           onCheckedChange={(v) =>
@@ -4413,6 +4460,135 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
           }}
         >
           <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const legacyDisplayCount = block.displayCount ?? 10;
+
+  const updateWord = (index: number, word: string) => {
+    const newWords = [...block.words];
+    newWords[index] = { ...newWords[index], word };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { words: newWords } },
+    });
+  };
+
+  const addWord = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: [...block.words, { id: `cs${Date.now()}`, word: "word", displayCount: legacyDisplayCount }],
+        },
+      },
+    });
+  };
+
+  const removeWord = (index: number) => {
+    if (block.words.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { words: block.words.filter((_, i) => i !== index) },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.keepFirstLetter}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { keepFirstLetter: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepFirstLetter")}</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.keepLastLetter}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { keepLastLetter: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepLastLetter")}</Label>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+        {block.words.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1">
+            <div className="flex-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`words.${i}.word`}
+                baseValue={item.word}
+                onBaseChange={(v) => updateWord(i, v)}
+                className="h-8 text-xs"
+              />
+            </div>
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              value={String(item.displayCount ?? legacyDisplayCount)}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                const nextDisplayCount = Number.isFinite(value) ? Math.max(1, Math.min(20, value)) : legacyDisplayCount;
+                const newWords = [...block.words];
+                newWords[i] = { ...newWords[i], displayCount: nextDisplayCount };
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { words: newWords } },
+                });
+              }}
+              className="h-8 w-20 text-xs"
+              aria-label={t("displayCount")}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeWord(i)}
+              disabled={block.words.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addWord} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addWord")}
         </Button>
       </div>
     </div>
@@ -5103,6 +5279,30 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showOriginal")}</Label>
+        <Switch
+          checked={block.showOriginal ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showOriginal: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={block.showFirstAsExample ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
             })
           }
         />
@@ -7326,8 +7526,8 @@ export function PropertiesPanel() {
   const selectedBlockName = React.useMemo(() => {
     if (!selectedBlock) return "";
     const def = BLOCK_LIBRARY.find((entry) => entry.type === selectedBlock.type);
-    if (!def) return selectedBlock.type;
-    return tb(def.labelKey);
+    const blockLabel = def ? tb(def.labelKey) : selectedBlock.type;
+    return `${blockLabel} | ${selectedBlock.type}`;
   }, [selectedBlock, tb]);
 
   if (!selectedBlock) {
@@ -7404,6 +7604,8 @@ export function PropertiesPanel() {
         return <WordSearchProps block={selectedBlock} />;
       case "sorting-categories":
         return <SortingCategoriesProps block={selectedBlock} />;
+      case "correct-spelling":
+        return <CorrectSpellingProps block={selectedBlock} />;
       case "unscramble-words":
         return <UnscrambleWordsProps block={selectedBlock} />;
       case "fix-sentences":

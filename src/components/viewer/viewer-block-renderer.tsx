@@ -31,6 +31,7 @@ import {
   migrateInlineChoicesBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
+  CorrectSpellingBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -66,8 +67,9 @@ import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkl
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
-import { getBlankWidthStyle, parseBlankContent } from "@/lib/fill-in-blank";
+import { getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
+import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
 import s from "./viewer-blocks.module.css";
 
 /** Safe lookup for BRAND_FONTS — falls back to edoomio if brand slug not in static map */
@@ -83,6 +85,17 @@ const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 const CONSISTENT_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b";
 const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[32.5px] items-center gap-3 border-b";
 const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b font-bold";
+const CONSISTENT_ITEM_BANK_CLASS = "flex min-h-[49px] flex-wrap items-center gap-2";
+const CONSISTENT_ITEM_BANK_CHIP_CLASS = "px-2 py-0.5 rounded border text-cv-xs";
+const VIEWER_SECTION_GAP = {
+  small: 8,
+  medium: 12,
+  large: 16,
+} as const;
+
+function SectionGap({ size }: { size: keyof typeof VIEWER_SECTION_GAP }) {
+  return <div aria-hidden="true" style={{ height: VIEWER_SECTION_GAP[size] }} />;
+}
 
 // Inline <svg> bullet marker for viewer/print lists.
 // CSS background-image markers are unreliable in Chromium PDF output.
@@ -125,6 +138,38 @@ function deterministicShuffle<T>(items: T[], seedKey: string): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+function deterministicDerangement<T>(items: T[], seedKey: string): T[] {
+  const ranked = items.map((item, index) => ({
+    item,
+    index,
+    weight: hashString(`${seedKey}:${index}`),
+  }))
+    .sort((left, right) => left.weight - right.weight || left.index - right.index);
+
+  const n = ranked.length;
+  if (n <= 1) return ranked.map(({ item }) => item);
+
+  for (let shift = 1; shift < n; shift++) {
+    const candidate = ranked.map((_, i) => ranked[(i + shift) % n]);
+    if (candidate.every((entry, i) => entry.index !== i)) {
+      return candidate.map(({ item }) => item);
+    }
+  }
+
+  const fallback = [...ranked];
+  for (let i = 0; i < n; i++) {
+    if (fallback[i].index !== i) continue;
+    for (let j = i + 1; j < n; j++) {
+      if (fallback[j].index !== i && fallback[i].index !== j) {
+        [fallback[i], fallback[j]] = [fallback[j], fallback[i]];
+        break;
+      }
+    }
+  }
+
+  return fallback.map(({ item }) => item);
 }
 
 // ─── German marker helper ────────────────────────────────────
@@ -2018,21 +2063,30 @@ function FillInBlankItemsView({
   const t = useTranslations("viewer");
   const isOnline = mode === "online";
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
+  const lineContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const leftSolutionBoxRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const rightSolutionBoxRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const [solutionLines, setSolutionLines] = React.useState<Array<{ x1: number; y1: number; x2: number; y2: number }>>([]);
+  const [exampleLine, setExampleLine] = React.useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
+  const [solutionSvgSize, setSolutionSvgSize] = React.useState({ width: 0, height: 0 });
+  const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
 
-  // Stable shuffle based on block id (deterministic)
+  // Stable derangement based on block id so matches never stay on the same row.
   const shuffledRight = useMemo(() => {
-    const arr = [...block.pairs];
-    let seed = 0;
-    for (let i = 0; i < block.id.length; i++) {
-      seed = ((seed << 5) - seed + block.id.charCodeAt(i)) | 0;
-    }
-    for (let i = arr.length - 1; i > 0; i--) {
-      seed = (seed * 16807 + 0) % 2147483647;
-      const j = Math.abs(seed) % (i + 1);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+    return deterministicDerangement(block.pairs, `matching:${block.id}`);
   }, [block.pairs, block.id]);
+  const wordBankItems = useMemo(() => {
+    if (!block.showWordBank) return [];
+    return deterministicShuffle(
+      block.pairs
+        .map((pair) => ({
+          id: pair.id,
+          text: `${pair.left.trim()}${pair.right.trim()}`,
+        }))
+        .filter((item) => item.text),
+      `matching-wordbank:${block.id}`
+    );
+  }, [block.pairs, block.showWordBank, block.id]);
 
   const selections = useMemo<Record<string, string>>(
     () => (answer as Record<string, string> | undefined) || {},
@@ -2069,23 +2123,164 @@ function FillInBlankItemsView({
     onAnswer(newSelections);
   };
 
+  const getCenterRelativeToContainer = (element: HTMLElement, container: HTMLElement) => {
+    let left = element.offsetLeft;
+    let top = element.offsetTop;
+    let current = element.offsetParent;
+
+    while (current && current instanceof HTMLElement && current !== container) {
+      left += current.offsetLeft;
+      top += current.offsetTop;
+      current = current.offsetParent;
+    }
+
+    return {
+      x: left + element.offsetWidth / 2,
+      y: top + element.offsetHeight / 2,
+    };
+  };
+
+  React.useLayoutEffect(() => {
+    if (interactive || (!showSolutions && !examplePairId)) {
+      setSolutionLines([]);
+      setExampleLine(null);
+      setSolutionSvgSize({ width: 0, height: 0 });
+      return;
+    }
+
+    const container = lineContainerRef.current;
+    if (!container) return;
+
+    const measure = () => {
+      setSolutionSvgSize({ width: container.offsetWidth, height: container.offsetHeight });
+
+      if (examplePairId) {
+        const leftBox = leftSolutionBoxRefs.current[examplePairId];
+        const rightBox = rightSolutionBoxRefs.current[examplePairId];
+        if (leftBox && rightBox) {
+          const leftCenter = getCenterRelativeToContainer(leftBox, container);
+          const rightCenter = getCenterRelativeToContainer(rightBox, container);
+          setExampleLine({
+            x1: leftCenter.x,
+            y1: leftCenter.y,
+            x2: rightCenter.x,
+            y2: rightCenter.y,
+          });
+        } else {
+          setExampleLine(null);
+        }
+      } else {
+        setExampleLine(null);
+      }
+
+      const nextLines = block.pairs.flatMap((pair) => {
+        if (pair.id === examplePairId) return [];
+        const leftBox = leftSolutionBoxRefs.current[pair.id];
+        const rightBox = rightSolutionBoxRefs.current[pair.id];
+        if (!leftBox || !rightBox) return [];
+
+        const leftCenter = getCenterRelativeToContainer(leftBox, container);
+        const rightCenter = getCenterRelativeToContainer(rightBox, container);
+
+        return [{
+          x1: leftCenter.x,
+          y1: leftCenter.y,
+          x2: rightCenter.x,
+          y2: rightCenter.y,
+        }];
+      });
+
+      setSolutionLines(nextLines);
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+    });
+    resizeObserver.observe(container);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [block.pairs, interactive, showSolutions, shuffledRight, examplePairId]);
+
   // ── Print / non-interactive mode: row-based layout like T/F and Order ──
   if (!interactive) {
     return (
       <div>
         {block.instruction && (
-          isOnline ? (
-            <div
-              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
-              style={{ color: accentColor || "var(--color-primary)" }}
-            >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
-              <p>{block.instruction}</p>
-            </div>
-          ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
-          )
+          <>
+            {isOnline ? (
+              <div
+                className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+                style={{ color: accentColor || "var(--color-primary)" }}
+              >
+                <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+                <p>{block.instruction}</p>
+              </div>
+            ) : (
+              <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            )}
+            {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
+          </>
         )}
+        {block.textAboveItems?.trim() && (
+          <>
+            <p className="whitespace-pre-line text-sm">{block.textAboveItems}</p>
+            {block.pairs.length > 0 && <SectionGap size="medium" />}
+          </>
+        )}
+        {block.showWordBank && wordBankItems.length > 0 && (
+          <>
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-cv-xs text-muted-foreground">
+              {wordBankItems.map((item) => (
+                <span
+                  key={item.id}
+                  className="rounded border px-2 py-0.5"
+                  style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+                >
+                  {item.text}
+                </span>
+              ))}
+            </div>
+            {block.pairs.length > 0 && <SectionGap size="medium" />}
+          </>
+        )}
+        <div ref={lineContainerRef} className="relative">
+          {(showSolutions || examplePairId) && solutionSvgSize.width > 0 && solutionSvgSize.height > 0 && (
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+              aria-hidden="true"
+              width={solutionSvgSize.width}
+              height={solutionSvgSize.height}
+              viewBox={`0 0 ${solutionSvgSize.width} ${solutionSvgSize.height}`}
+              preserveAspectRatio="none"
+            >
+              {exampleLine ? (
+                <path
+                  d={`M ${exampleLine.x1} ${exampleLine.y1} C ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.35} ${exampleLine.y1}, ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.65} ${exampleLine.y2}, ${exampleLine.x2} ${exampleLine.y2}`}
+                  stroke="#0097dc"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              ) : null}
+              {solutionLines.map((line, index) => (
+                <path
+                  key={index}
+                  d={`M ${line.x1} ${line.y1} C ${line.x1 + (line.x2 - line.x1) * 0.35} ${line.y1}, ${line.x1 + (line.x2 - line.x1) * 0.65} ${line.y2}, ${line.x2} ${line.y2}`}
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  fill="none"
+                  className="text-slate-500"
+                />
+              ))}
+            </svg>
+          )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
           <div>
@@ -2097,12 +2292,13 @@ function FillInBlankItemsView({
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="flex-1">{pair.left}</span>
-                {showSolutions ? (
-                  <div className={CONTROL_BOX_FILLED_CLASS} />
-                ) : (
-                  <div className={CONTROL_BOX_CLASS} />
-                )}
+                <span className="flex-1 text-right" style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}>{pair.left}</span>
+                <div
+                  className={CONTROL_BOX_CLASS}
+                  ref={showSolutions || pair.id === examplePairId ? (node) => {
+                    leftSolutionBoxRefs.current[pair.id] = node;
+                  } : undefined}
+                />
               </div>
             ))}
           </div>
@@ -2113,18 +2309,20 @@ function FillInBlankItemsView({
                 key={`r-${pair.id}`}
                 className={CONSISTENT_ROW_CLASS_PRINT}
               >
+                <div
+                  className={CONTROL_BOX_CLASS}
+                  ref={showSolutions || pair.id === examplePairId ? (node) => {
+                    rightSolutionBoxRefs.current[pair.id] = node;
+                  } : undefined}
+                />
+                <span className="flex-1" style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}>{pair.right}</span>
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String.fromCharCode(97 + i)}
                 </span>
-                {showSolutions ? (
-                  <div className={CONTROL_BOX_FILLED_CLASS} />
-                ) : (
-                  <div className={CONTROL_BOX_CLASS} />
-                )}
-                <span className="flex-1">{pair.right}</span>
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     );
@@ -2134,17 +2332,42 @@ function FillInBlankItemsView({
   return (
     <div>
       {block.instruction && (
-        isOnline ? (
-          <div
-            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
-            style={{ color: accentColor || "var(--color-primary)" }}
-          >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
-            <p>{block.instruction}</p>
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          )}
+          {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
+        </>
+      )}
+      {block.textAboveItems?.trim() && (
+        <>
+          <p className="whitespace-pre-line text-sm">{block.textAboveItems}</p>
+          {block.pairs.length > 0 && <SectionGap size="medium" />}
+        </>
+      )}
+      {block.showWordBank && wordBankItems.length > 0 && (
+        <>
+          <div className="flex flex-wrap gap-x-2 gap-y-1 text-cv-xs text-muted-foreground">
+            {wordBankItems.map((item) => (
+              <span
+                key={item.id}
+                className="rounded border px-2 py-0.5"
+                style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+              >
+                {item.text}
+              </span>
+            ))}
           </div>
-        ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
-        )
+          {block.pairs.length > 0 && <SectionGap size="medium" />}
+        </>
       )}
       <div className="grid grid-cols-2 gap-4">
         {/* Left side */}
@@ -2179,7 +2402,8 @@ function FillInBlankItemsView({
                   type="button"
                   onClick={() => handleLeftClick(pair.id)}
                   disabled={!interactive || showResults}
-                  className={`flex-1 text-left ${interactive && !showResults ? "cursor-pointer" : "cursor-default"}`}
+                  className={`flex-1 text-right ${interactive && !showResults ? "cursor-pointer" : "cursor-default"}`}
+                  style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
                 >
                   {pair.left}
                 </button>
@@ -2212,27 +2436,31 @@ function FillInBlankItemsView({
                 key={`r-${pair.id}`}
                 className={`${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} ${rowClass}`}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String.fromCharCode(97 + i)}
-                </span>
                 {!isOnline && <div className={indicatorClass} />}
                 <button
                   type="button"
                   onClick={() => handleRightClick(pair.id)}
                   disabled={!interactive || showResults || !activeLeftId}
                   className={`flex-1 text-left ${interactive && !showResults && activeLeftId ? "cursor-pointer" : "cursor-default"}`}
+                  style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
                 >
                   {pair.right}
                 </button>
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String.fromCharCode(97 + i)}
+                </span>
               </div>
             );
           })}
         </div>
       </div>
       {showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
-        </p>
+        <>
+          <SectionGap size="medium" />
+          <p className="text-cv-xs text-muted-foreground">
+            {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
+          </p>
+        </>
       )}
     </div>
   );
@@ -3393,28 +3621,34 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   if (block.grid.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        isOnline ? (
-          <div
-            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
-            style={{ color: accentColor || "var(--color-primary)" }}
-          >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
-            <p>{block.instruction}</p>
-          </div>
-        ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
-        )
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          )}
+          {(block.showWordList || block.grid.length > 0) && <SectionGap size="medium" />}
+        </>
       )}
       {block.showWordList && (
-        <div className="flex min-h-[49px] flex-wrap items-center gap-2">
-          {block.words.map((word, i) => (
-            <span key={i} className="px-2 py-0.5 bg-background rounded border text-cv-xs">
-              {word}
-            </span>
-          ))}
-        </div>
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {block.words.map((word, i) => (
+              <span key={i} className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}>
+                {word}
+              </span>
+            ))}
+          </div>
+          {block.grid.length > 0 && <SectionGap size="medium" />}
+        </>
       )}
       <div className="w-full">
         <table className="w-full border-separate border-spacing-0">
@@ -3490,6 +3724,24 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   const userSorting = (answer as Record<string, string[]> | undefined) || {};
   const [dragItem, setDragItem] = useState<string | null>(null);
   const isOnline = mode === "online";
+  const colorCodeEnabled = !!block.colorCode;
+
+  const categoryPalette = [
+    { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
+    { headerBg: "#EDF8EE", headerText: "#334155", headerBorder: "#EDF8EE", itemBg: "#F6FCF7", itemText: "#334155", itemBorder: "#EDF8EE" },
+    { headerBg: "#ECF3F9", headerText: "#334155", headerBorder: "#ECF3F9", itemBg: "#F6F9FC", itemText: "#334155", itemBorder: "#ECF3F9" },
+    { headerBg: "#F9EEF0", headerText: "#334155", headerBorder: "#F9EEF0", itemBg: "#FCF7F8", itemText: "#334155", itemBorder: "#F9EEF0" },
+    { headerBg: "#EFEBF6", headerText: "#334155", headerBorder: "#EFEBF6", itemBg: "#F7F5FB", itemText: "#334155", itemBorder: "#EFEBF6" },
+    { headerBg: "#F9F6ED", headerText: "#334155", headerBorder: "#F9F6ED", itemBg: "#FCFBF6", itemText: "#334155", itemBorder: "#F9F6ED" },
+    { headerBg: "#F5EDF7", headerText: "#334155", headerBorder: "#F5EDF7", itemBg: "#FAF6FB", itemText: "#334155", itemBorder: "#F5EDF7" },
+    { headerBg: "#F2F2F6", headerText: "#334155", headerBorder: "#F2F2F6", itemBg: "#F9F9FB", itemText: "#334155", itemBorder: "#F2F2F6" },
+  ] as const;
+
+  const getCategoryTheme = (catId: string) => {
+    const catIndex = block.categories.findIndex((cat) => cat.id === catId);
+    const index = catIndex >= 0 ? catIndex : 0;
+    return categoryPalette[index % categoryPalette.length];
+  };
 
   const sortedItemIds = Object.values(userSorting).flat();
 
@@ -3508,8 +3760,28 @@ function renderTextWithSup(text: string): React.ReactNode[] {
     return arr;
   }, [block.items, block.id]);
 
+  const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+  const exampleCategory = exampleItem
+    ? block.categories.find((cat) => cat.correctItems.includes(exampleItem.id))
+    : undefined;
+  const exampleItemId = exampleItem?.id;
+  const effectiveAnswer = exampleItemId && exampleCategory
+    ? {
+        ...userSorting,
+        [exampleCategory.id]: [
+          exampleItemId,
+          ...(userSorting[exampleCategory.id] || []).filter((id) => id !== exampleItemId),
+        ],
+      }
+    : userSorting;
+
+  const getItemTheme = (itemId: string) => {
+    const correctCat = block.categories.find((cat) => cat.correctItems.includes(itemId));
+    return correctCat ? getCategoryTheme(correctCat.id) : categoryPalette[0];
+  };
+
   const displayUnsorted = shuffledItems.filter(
-    (item) => !sortedItemIds.includes(item.id)
+    (item) => item.id === exampleItemId || !Object.values(effectiveAnswer).flat().includes(item.id)
   );
 
   const addToCategory = (catId: string, itemId: string) => {
@@ -3536,38 +3808,121 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
     return (
-      <div className="space-y-3">
+      <div>
         {block.instruction && (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+          <>
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+            <SectionGap size="medium" />
+          </>
         )}
-        <div className="flex min-h-[49px] flex-wrap items-center gap-2">
-          {shuffledItems.map((item) => (
-            <span
-              key={item.id}
-              className="px-2 py-0.5 bg-background rounded border text-cv-xs"
-            >
-              {item.text}
-            </span>
-          ))}
+        <div className={CONSISTENT_ITEM_BANK_CLASS}>
+          {displayUnsorted.map((item) => {
+            const itemTheme = getItemTheme(item.id);
+            const isExampleItem = item.id === exampleItemId;
+            return (
+              <span
+                key={item.id}
+                className={CONSISTENT_ITEM_BANK_CHIP_CLASS}
+                style={colorCodeEnabled
+                  ? {
+                      backgroundColor: itemTheme.itemBg,
+                      borderColor: itemTheme.itemBorder,
+                      color: itemTheme.itemText,
+                    }
+                  : undefined}
+              >
+                <span
+                  style={{
+                    textDecoration: isExampleItem ? 'line-through' : undefined,
+                    color: isExampleItem ? '#0097dc' : undefined,
+                  }}
+                >
+                  {item.text}
+                </span>
+              </span>
+            );
+          })}
         </div>
-        <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
-          {block.categories.map((cat) => (
-                <div key={cat.id} className="rounded overflow-hidden">
-              <div className="min-h-[49px] border-b flex items-center">
+        <SectionGap size="medium" />
+        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+          {block.categories.map((cat) => {
+            const catTheme = getCategoryTheme(cat.id);
+            const categoryExampleItem = exampleCategory?.id === cat.id ? exampleItem : undefined;
+            return (
+              <div
+                key={cat.id}
+                className="rounded overflow-hidden"
+              >
+              <div
+                className="min-h-[37px] border-b flex items-center px-3 rounded-bl rounded-br"
+                style={colorCodeEnabled
+                  ? {
+                      backgroundColor: catTheme.headerBg,
+                      color: catTheme.headerText,
+                      borderBottomColor: catTheme.headerBorder,
+                    }
+                  : undefined}
+              >
                 <span className="font-semibold">{cat.label}</span>
               </div>
               <div>
-                {showSolutions ? (
+                {categoryExampleItem ? (
+                  <div>
+                    <div
+                      className={`${SORT_ROW_CLASS} text-cv-sm`}
+                      style={colorCodeEnabled
+                        ? {
+                            color: catTheme.itemText,
+                            borderBottomColor: catTheme.itemBorder,
+                          }
+                        : undefined}
+                    >
+                      <span
+                        className="flex-1"
+                        style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc' }}
+                      >
+                        {categoryExampleItem.text}
+                      </span>
+                    </div>
+                    {(block.showWritingLines ?? true) && maxItemsPerCat > 1 && (
+                      <div>
+                        {Array.from({ length: maxItemsPerCat - 1 }).map((_, i) => (
+                          <div key={i} className={SORT_ROW_CLASS}>
+                            <span
+                              className="flex-1 inline-block h-8 rounded"
+                              style={{
+                                opacity: 1.0,
+                                minWidth: 80,
+                              }}
+                            >
+                              &nbsp;
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : showSolutions ? (
                   <div>
                     {cat.correctItems.map((itemId, rowIndex) => {
                       const item = block.items.find((it) => it.id === itemId);
                       return item ? (
-                            <div key={itemId} className={`${SORT_ROW_CLASS} text-cv-sm`}>
-                              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                                {String(rowIndex + 1).padStart(2, "0")}
+                            <div
+                              key={itemId}
+                              className={`${SORT_ROW_CLASS} text-cv-sm`}
+                              style={colorCodeEnabled
+                                ? {
+                                    color: catTheme.itemText,
+                                    borderBottomColor: catTheme.itemBorder,
+                                  }
+                                : undefined}
+                            >
+                              <span
+                                className="flex-1"
+                                style={{ fontFamily: 'var(--font-handwriting), cursive' }}
+                              >
+                                {item.text}
                               </span>
-                              <div className={CONTROL_BOX_FILLED_CLASS} />
-                              <span className="flex-1">{item.text}</span>
                             </div>
                       ) : null;
                     })}
@@ -3576,12 +3931,12 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                   <div>
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
                       <div key={i} className={SORT_ROW_CLASS}>
-                        <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
                         <span
                           className="flex-1 inline-block h-8 rounded"
-                          style={{ opacity: 1.0, minWidth: 80 }}
+                          style={{
+                            opacity: 1.0,
+                            minWidth: 80,
+                          }}
                         >
                           &nbsp;
                         </span>
@@ -3591,48 +3946,78 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 )}
               </div>
             </div>
-          ))}
+          );})}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       {block.instruction && (
-        isOnline ? (
-          <div
-            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
-            style={{ color: accentColor || "var(--color-primary)" }}
-          >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
-            <p>{block.instruction}</p>
-          </div>
-        ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
-        )
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          )}
+          {(displayUnsorted.length > 0 || block.categories.length > 0) && <SectionGap size="medium" />}
+        </>
       )}
       {/* Unsorted items */}
       {displayUnsorted.length > 0 && (
-        <div className="flex min-h-[49px] flex-wrap items-center gap-2">
-          {displayUnsorted.map((item) => (
-            <span
-              key={item.id}
-              className={`px-2 py-0.5 bg-background rounded border text-cv-xs cursor-grab transition-colors
-                ${dragItem === item.id ? "bg-primary/10 border-primary" : "hover:bg-accent"}`}
-              draggable
-              onDragStart={() => setDragItem(item.id)}
-              onDragEnd={() => setDragItem(null)}
-            >
-              {item.text}
-            </span>
-          ))}
-        </div>
+        <>
+          <div className={CONSISTENT_ITEM_BANK_CLASS}>
+            {displayUnsorted.map((item) => {
+              const catTheme = getItemTheme(item.id);
+              const isExampleItem = item.id === exampleItemId;
+              return (
+                <span
+                  key={item.id}
+                  className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} cursor-grab transition-colors
+                    ${dragItem === item.id ? "border-primary" : "hover:opacity-80"}`}
+                  draggable={!isExampleItem}
+                  onDragStart={() => {
+                    if (!isExampleItem) setDragItem(item.id);
+                  }}
+                  onDragEnd={() => setDragItem(null)}
+                  style={colorCodeEnabled
+                    ? {
+                        backgroundColor: catTheme.itemBg,
+                        borderColor: catTheme.itemBorder,
+                        color: catTheme.itemText,
+                      }
+                    : {
+                        backgroundColor: dragItem === item.id ? "var(--color-primary, #0ea5e9)" : "var(--color-background, #ffffff)",
+                        borderColor: dragItem === item.id ? "var(--color-primary, #0ea5e9)" : "var(--color-border, #e2e8f0)",
+                      }}
+                >
+                  <span
+                    style={{
+                      textDecoration: isExampleItem ? 'line-through' : undefined,
+                      color: isExampleItem ? '#0097dc' : undefined,
+                    }}
+                  >
+                    {item.text}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+          <SectionGap size="medium" />
+        </>
       )}
       {/* Category boxes */}
-      <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
         {block.categories.map((cat) => {
-          const catItemIds = userSorting[cat.id] || [];
+          const catTheme = getCategoryTheme(cat.id);
+          const catItemIds = effectiveAnswer[cat.id] || [];
           return (
             <div
               key={cat.id}
@@ -3653,7 +4038,16 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 }
               }}
             >
-                <div className="min-h-[49px] border-b flex items-center">
+                <div
+                  className="min-h-[37px] border-b flex items-center px-3 rounded-bl rounded-br"
+                  style={colorCodeEnabled
+                    ? {
+                        backgroundColor: catTheme.headerBg,
+                        color: catTheme.headerText,
+                        borderBottomColor: catTheme.headerBorder,
+                      }
+                    : undefined}
+                >
                 <span className="font-semibold">{cat.label}</span>
               </div>
               <div className="min-h-[60px]">
@@ -3666,17 +4060,29 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                     : isCorrect
                       ? CONTROL_BOX_FILLED_CLASS
                       : `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`;
+                  const isExampleItem = item.id === exampleItemId && cat.id === exampleCategory?.id;
                   return (
                     <div
                       key={item.id}
                         className={`${SORT_ROW_CLASS} transition-colors`}
+                      style={colorCodeEnabled
+                        ? {
+                            color: catTheme.itemText,
+                            borderBottomColor: catTheme.itemBorder,
+                          }
+                        : undefined}
                     >
-                      <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                        {String(rowIndex + 1).padStart(2, "0")}
+                      {!isExampleItem && <div className={indicatorClass} />}
+                      <span
+                        className="flex-1"
+                        style={{
+                          fontFamily: isExampleItem ? 'var(--font-handwriting), cursive' : undefined,
+                          color: isExampleItem ? '#0097dc' : undefined,
+                        }}
+                      >
+                        {item.text}
                       </span>
-                      <div className={indicatorClass} />
-                      <span className="flex-1">{item.text}</span>
-                      {!showResults && (
+                      {!showResults && !isExampleItem && (
                         <button
                           className="p-0.5 hover:bg-muted rounded text-muted-foreground shrink-0"
                           onClick={() => removeFromCategory(cat.id, item.id)}
@@ -3699,17 +4105,11 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                       const slotIndex = catItemIds.length + offset;
                       return (
                         <div key={`empty-${cat.id}-${slotIndex}`} className={SORT_ROW_CLASS}>
-                          <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                            {String(slotIndex + 1).padStart(2, "0")}
-                          </span>
                           <span
                             className="flex-1 inline-block h-8 rounded"
                             style={{
                               opacity: 1.0,
                               minWidth: 80,
-                              ...(isOnline
-                                ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" }
-                                : {}),
                             }}
                           >
                             &nbsp;
@@ -3725,13 +4125,16 @@ function renderTextWithSup(text: string): React.ReactNode[] {
         })}
       </div>
       {showResults && (
-        <p className="text-cv-xs text-muted-foreground">
-          {t("resultCount", { correct: Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
-            const cat = block.categories.find((c) => c.id === catId);
-            if (!cat) return total;
-            return total + itemIds.filter((id) => cat.correctItems.includes(id)).length;
-          }, 0), total: block.items.length })}
-        </p>
+        <>
+          <SectionGap size="medium" />
+          <p className="text-cv-xs text-muted-foreground">
+            {t("resultCount", { correct: Object.entries(userSorting).reduce((total, [catId, itemIds]) => {
+              const cat = block.categories.find((c) => c.id === catId);
+              if (!cat) return total;
+              return total + itemIds.filter((id) => cat.correctItems.includes(id)).length;
+            }, 0), total: block.items.length })}
+          </p>
+        </>
       )}
     </div>
   );
@@ -3902,6 +4305,90 @@ function UnscrambleWordsView({
                   />
                 </div>
               )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CorrectSpellingView({
+  block,
+  mode,
+  showSolutions = false,
+  accentColor,
+  bodyFont,
+  bodyFontSize,
+}: {
+  block: CorrectSpellingBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  bodyFont?: string;
+  bodyFontSize?: string;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const isOnline = mode === "online";
+  const fontFamily = bodyFont || "inherit";
+  const legacyDisplayCount = block.displayCount ?? 10;
+
+  return (
+    <div className="text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+      {block.instruction && (
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{
+                color: accentColor || "var(--color-primary)",
+                ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+              }}
+            >
+              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow
+              instruction={block.instruction}
+              accentColor={accentColor}
+              style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
+              mode={mode}
+            />
+          )}
+          {block.words.length > 0 && <SectionGap size="medium" />}
+        </>
+      )}
+      <div>
+        {block.words.map((item, i) => {
+          const displayCount = item.displayCount ?? legacyDisplayCount;
+          const variants = buildCorrectSpellingRow(
+            item.word,
+            block.keepFirstLetter,
+            block.keepLastLetter,
+            `${block.id}:${item.id}`,
+            displayCount,
+          );
+
+          return (
+            <div key={item.id} className="flex min-h-[49px] items-center gap-3 border-b">
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
+                {variants.map((variant, variantIndex) => (
+                  <span
+                    key={`${item.id}-${variantIndex}`}
+                    className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${variantIndex === 0 || (showSolutions && variant.isOriginal) ? "text-green-700 border-green-300 bg-green-50" : "bg-background"}`}
+                  >
+                    {variant.text}
+                  </span>
+                ))}
+              </div>
             </div>
           );
         })}
@@ -4198,6 +4685,7 @@ function TransformSentencesView({
   const isOnline = mode === "online";
   const TRANSFORM_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
 
   return (
     <div>
@@ -4220,6 +4708,7 @@ function TransformSentencesView({
           const hasSolution = !!item.solution;
           const isCorrect = showResults && hasSolution && userVal.trim().toLowerCase() === item.solution!.trim().toLowerCase();
           const isWrong = showResults && hasSolution && userVal.trim() !== "" && !isCorrect;
+          const isExampleSentence = item.id === exampleSentenceId && !!item.solution;
 
           return (
             <div
@@ -4232,7 +4721,16 @@ function TransformSentencesView({
                 </span>
                 <span>{item.beginning}</span>
               </div>
-              {interactive ? (
+              {isExampleSentence ? (
+                <div className={TRANSFORM_ROW_CLASS}>
+                  <span
+                    className="flex-1"
+                    style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
+                  >
+                    {item.solution}
+                  </span>
+                </div>
+              ) : interactive ? (
                 <div className={TRANSFORM_ROW_CLASS}>
                   <div className="flex-1">
                     <input
@@ -4515,8 +5013,22 @@ function DialogueView({
 
   // Render text with interactive gaps
   let globalGapIdx = 0;
-  const renderDialogueText = (text: string) => {
+  const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
+    if (variant === "solution") {
+      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
+        const { answer } = parseBlankContent(raw);
+        return answer;
+      });
+    }
+
     const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
+      for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
+        if (parts[cursor] !== "") return parts[cursor];
+      }
+      return "";
+    };
+    let exampleShown = false;
     return parts.map((part, i) => {
       const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
       if (match) {
@@ -4529,10 +5041,55 @@ function DialogueView({
         const hasAnswer = correctAnswer !== "";
         const isCorrect = hasAnswer && userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
         const widthStyle = getBlankWidthStyle(width, false);
-        const spacingClass = noSpace ? '' : 'mx-1';
+        const previousPart = findAdjacentToken(i, -1);
+        const nextPart = findAdjacentToken(i, 1);
+        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
+        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const halfInnerGap = "0.125rem";
+        const outerGap = "0.25rem";
+        // Check if blank is at start: all parts before it are empty or whitespace-only
+        const isAtStart = parts.slice(0, i).every(p => !p.trim());
+        const spacingStyle = noSpace
+          ? undefined
+          : {
+              ...(isAtStart
+                ? {}
+                : previousIsBlank
+                  ? { marginLeft: halfInnerGap }
+                  : { marginLeft: outerGap }),
+              ...(nextIsBlank ? { marginRight: "0" } : { marginRight: outerGap }),
+            };
 
-        return interactive ? (
-          <span key={i} className={`inline-block ${spacingClass}`}>
+        const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        if (shouldRenderExample) {
+          exampleShown = true;
+          return (
+            <span
+              key={i}
+              className="relative inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
+              style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{correctAnswer || "\u00A0"}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: 'var(--font-handwriting)',
+                  fontWeight: 400,
+                  fontSize: '18px',
+                  color: '#0097dc',
+                  lineHeight: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {correctAnswer}
+              </span>
+            </span>
+          );
+        }
+
+        if (interactive) {
+          return (
+          <span key={i} className="inline-block" style={spacingStyle}>
             <input
               type="text"
               value={userVal}
@@ -4550,13 +5107,16 @@ function DialogueView({
               style={getBlankWidthStyle(width, true)}
             />
           </span>
-        ) : (
+          );
+        }
+
+        return (
           <span
             key={i}
-            className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacingClass} ${showSolutions && hasAnswer ? "bg-green-100 text-green-700 text-cv-xs font-medium" : "bg-gray-100"}`}
-            style={{ minHeight: "1.25rem", ...widthStyle }}
+            className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${variant === "default" && showSolutions && hasAnswer ? "bg-green-100 text-green-700 text-cv-xs font-medium" : "bg-gray-100"}`}
+            style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
           >
-            {showSolutions && hasAnswer ? correctAnswer : "\u00A0"}
+            {variant === "default" && showSolutions && hasAnswer ? correctAnswer : "\u00A0"}
           </span>
         );
       }
@@ -4596,19 +5156,38 @@ function DialogueView({
       )}
       {/* Dialogue items */}
       <div>
-        {block.items.map((item, i) => (
+        {block.items.map((item, i) => {
+          const prevItem = i > 0 ? block.items[i - 1] : null;
+          const isSameSpeaker = prevItem && prevItem.icon === item.icon;
+          return (
           <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
             <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
-              {speakerIconMap[item.icon] || speakerIconMap.circle}
-            </span>
-            <div className="flex flex-1 flex-wrap items-center leading-5">
-              {renderDialogueText(item.text)}
-            </div>
+            {isSameSpeaker ? (
+              <span className="h-5 w-5 min-w-5 shrink-0" />
+            ) : (
+              <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
+                {speakerIconMap[item.icon] || speakerIconMap.circle}
+              </span>
+            )}
+            {block.showOriginal ? (
+              <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
+                <div className="min-w-0">
+                  {renderDialogueText(item.text, "original", !!block.showFirstAsExample && i === 0)}
+                </div>
+                <div className="min-w-0">
+                  {renderDialogueText(item.text, "solution")}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-wrap items-center leading-5">
+                {renderDialogueText(item.text, "default", !!block.showFirstAsExample && i === 0)}
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -5850,6 +6429,21 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
          
+        />
+      );
+    case "correct-spelling":
+      return (
+        <CorrectSpellingView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          bodyFont={bodyFont}
+          bodyFontSize={bodyFontSize}
+          accentColor={accentColor}
         />
       );
     case "unscramble-words":
