@@ -113,6 +113,17 @@ export function extractBlocksText(
         }
         break;
 
+      case "mcq-matrix":
+        if (block.instruction) parts.push(block.instruction);
+        for (const stmt of block.statements ?? []) {
+          const correctOptions = (block.options ?? [])
+            .filter((option) => stmt.correctOptionIds?.includes(option.id))
+            .map((option) => option.text)
+            .join(", ");
+          parts.push(`${stmt.text} (${correctOptions})`);
+        }
+        break;
+
       case "order-items":
         if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {

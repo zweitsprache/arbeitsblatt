@@ -221,6 +221,8 @@ model BrandProfile {
   primaryColor String  @default("#1a1a1a")
   accentColor  String?
   interactiveColor String @default("#0ea5e9")
+  instructionBadgeStyle String? @default("default")
+  instructionBadgeColor String?
 
   // Assets
   logo     String  @default("") // URL or base64 data URL

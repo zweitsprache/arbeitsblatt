@@ -10,6 +10,8 @@ export interface BlockDisplayOn {
 // ─── View mode ───────────────────────────────────────────────
 export type ViewMode = "print" | "online";
 
+export type InstructionBadgeStyle = "default" | "unboxed-small-letter";
+
 // ─── Block types ─────────────────────────────────────────────
 export type BlockType =
   | "heading"
@@ -27,6 +29,7 @@ export type BlockType =
   | "number-line"
   | "columns"
   | "true-false-matrix"
+  | "mcq-matrix"
   | "order-items"
   | "inline-choices"
   | "word-search"
@@ -350,6 +353,27 @@ export interface TrueFalseMatrixBlock extends BlockBase {
     correctAnswer: boolean; // true = True, false = False
   }[];
   statementOrder?: string[]; // persisted shuffled order of statement IDs (Fisher-Yates)
+}
+
+export interface MCQMatrixOption {
+  id: string;
+  text: string;
+}
+
+export interface MCQMatrixStatement {
+  id: string;
+  text: string;
+  correctOptionIds: string[];
+}
+
+export interface MCQMatrixBlock extends BlockBase {
+  type: "mcq-matrix";
+  instruction: string;
+  statementColumnHeader?: string;
+  showPill?: boolean;
+  options: MCQMatrixOption[];
+  statements: MCQMatrixStatement[];
+  statementOrder?: string[];
 }
 
 // ─── Article Training block ──────────────────────────────────
@@ -836,6 +860,7 @@ export type WorksheetBlock =
   | NumberLineBlock
   | ColumnsBlock
   | TrueFalseMatrixBlock
+  | MCQMatrixBlock
   | OrderItemsBlock
   | InlineChoicesBlock
   | WordSearchBlock
@@ -934,6 +959,8 @@ export interface BrandProfile {
   primaryColor: string;
   accentColor?: string | null;
   interactiveColor: string;
+  instructionBadgeStyle?: InstructionBadgeStyle | null;
+  instructionBadgeColor?: string | null;
 
   // Assets
   logo: string;
@@ -1151,6 +1178,8 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
     interactiveColor: "#0ea5e9",
+    instructionBadgeStyle: "default",
+    instructionBadgeColor: null,
     logo: hasKnownIcon ? settings.logo : inferredBrandIcon,
     iconLogo: hasKnownIcon ? BRAND_ICON_LOGOS[slug] : inferredBrandIcon,
     organization: settings.organization,
@@ -1696,6 +1725,31 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "s1", text: "Statement 1", correctAnswer: true },
         { id: "s2", text: "Statement 2", correctAnswer: false },
         { id: "s3", text: "Statement 3", correctAnswer: true },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "mcq-matrix",
+    label: "MCQ Matrix",
+    description: "Evaluate each statement across multiple options",
+    labelKey: "mcqMatrix",
+    descriptionKey: "mcqMatrixDesc",
+    icon: "CheckSquare",
+    category: "interactive",
+    translations: { de: { label: "MCQ-Matrix", description: "Aussagen mit mehreren Optionen bewerten" } },
+    defaultData: {
+      type: "mcq-matrix",
+      instruction: "Mark the correct options for each statement.",
+      options: [
+        { id: "o1", text: "Option 1" },
+        { id: "o2", text: "Option 2" },
+        { id: "o3", text: "Option 3" },
+      ],
+      statements: [
+        { id: "s1", text: "Statement 1", correctOptionIds: ["o1"] },
+        { id: "s2", text: "Statement 2", correctOptionIds: ["o2", "o3"] },
+        { id: "s3", text: "Statement 3", correctOptionIds: ["o3"] },
       ],
       visibility: "both",
     },

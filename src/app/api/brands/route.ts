@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
         primaryColor: body.primaryColor,
         accentColor: body.accentColor,
         interactiveColor: body.interactiveColor,
+        instructionBadgeStyle: body.instructionBadgeStyle,
+        instructionBadgeColor: body.instructionBadgeColor,
         logo: body.logo,
         iconLogo: body.iconLogo,
         favicon: body.favicon,

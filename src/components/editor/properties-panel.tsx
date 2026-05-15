@@ -39,6 +39,7 @@ import {
   ColumnsBlock,
   GridBlock,
   TrueFalseMatrixBlock,
+  MCQMatrixBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
   OrderItemsBlock,
@@ -3254,6 +3255,157 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
         )}
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const updateStatements = (statements: MCQMatrixBlock["statements"]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { statements },
+      },
+    });
+  };
+
+  const updateOptions = (options: MCQMatrixBlock["options"], statements = block.statements) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { options, statements },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showPill !== false}
+          onCheckedChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showPill: value } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+        <div className="space-y-2">
+          {block.options.map((option) => (
+            <div key={option.id} className="flex items-center gap-2">
+              <Input
+                className="h-8 text-xs"
+                value={option.text}
+                onChange={(e) =>
+                  updateOptions(block.options.map((item) => (item.id === option.id ? { ...item, text: e.target.value } : item)))
+                }
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  if (block.options.length <= 2) return;
+                  updateOptions(
+                    block.options.filter((item) => item.id !== option.id),
+                    block.statements.map((statement) => ({
+                      ...statement,
+                      correctOptionIds: statement.correctOptionIds.filter((id) => id !== option.id),
+                    }))
+                  );
+                }}
+                disabled={block.options.length <= 2}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              if (block.options.length >= 5) return;
+              updateOptions([
+                ...block.options,
+                { id: crypto.randomUUID(), text: `${t("addOption")} ${block.options.length + 1}` },
+              ]);
+            }}
+            disabled={block.options.length >= 5}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t("addOption")} ({block.options.length}/5)
+          </Button>
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("items")}</Label>
+        <p className="text-xs text-muted-foreground">{t("statementCount", { count: block.statements.length })}</p>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("shuffleItems")}</Label>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => {
+            const ids = block.statements.map((statement) => statement.id);
+            const shuffled = [...ids];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { statementOrder: shuffled } },
+            });
+          }}
+        >
+          <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
+        </Button>
+        {block.statementOrder && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-1 text-muted-foreground"
+            onClick={() => {
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { statementOrder: undefined } },
+              });
+            }}
+          >
+            {t("resetOrder")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -7765,6 +7917,8 @@ export function PropertiesPanel() {
         return <GridProps block={selectedBlock as GridBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
+      case "mcq-matrix":
+        return <MCQMatrixProps block={selectedBlock} />;
       case "article-training":
         return <ArticleTrainingProps block={selectedBlock} />;
       case "order-items":

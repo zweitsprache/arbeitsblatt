@@ -130,6 +130,12 @@ export async function PUT(
         ...(body.interactiveColor !== undefined && {
           interactiveColor: body.interactiveColor,
         }),
+        ...(body.instructionBadgeStyle !== undefined && {
+          instructionBadgeStyle: body.instructionBadgeStyle,
+        }),
+        ...(body.instructionBadgeColor !== undefined && {
+          instructionBadgeColor: body.instructionBadgeColor,
+        }),
         ...(body.logo !== undefined && { logo: body.logo }),
         ...(body.iconLogo !== undefined && { iconLogo: body.iconLogo }),
         ...(body.favicon !== undefined && { favicon: body.favicon }),

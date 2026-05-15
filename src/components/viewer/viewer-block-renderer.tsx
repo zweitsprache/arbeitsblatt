@@ -24,6 +24,7 @@ import {
   ColumnsBlock,
   GridBlock,
   TrueFalseMatrixBlock,
+  MCQMatrixBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
   OrderItemsBlock,
@@ -77,7 +78,7 @@ function getBrandFonts(brand: string) {
   return BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
 }
 
-const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "order-items", "unscramble-words"]);
+const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "order-items", "unscramble-words"]);
 const NUMBER_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-transparent text-slate-700 ring-1 ring-inset ring-slate-700 font-normal leading-none tabular-nums pl-px text-[10.5px]`;
 const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
@@ -92,6 +93,14 @@ const VIEWER_SECTION_GAP = {
   medium: 12,
   large: 16,
 } as const;
+
+function formatInstructionBadgeLabel(index?: number): string {
+  return toAlphabeticLabel((index ?? 0) + 1, true);
+}
+
+function InstructionBadge({ instructionIndex }: { instructionIndex?: number }) {
+  return <span className={`${INSTRUCTION_BADGE_CLASS} ${s.instructionBadge}`}>{formatInstructionBadgeLabel(instructionIndex)}</span>;
+}
 
 function SectionGap({ size }: { size: keyof typeof VIEWER_SECTION_GAP }) {
   return <div aria-hidden="true" style={{ height: VIEWER_SECTION_GAP[size] }} />;
@@ -267,6 +276,7 @@ function InstructionRow({
   accentColor,
   showBadge = true,
   withDivider = true,
+  instructionIndex,
   rowClassName,
   trailingContent,
   style,
@@ -276,6 +286,7 @@ function InstructionRow({
   accentColor?: string | null;
   showBadge?: boolean;
   withDivider?: boolean;
+  instructionIndex?: number;
   rowClassName?: string;
   trailingContent?: React.ReactNode;
   style?: React.CSSProperties;
@@ -292,7 +303,7 @@ function InstructionRow({
     >
       <div className={`flex items-center ${showBadge ? "gap-3" : ""} flex-1`.trim()}>
         {showBadge && (
-          <span className={INSTRUCTION_BADGE_CLASS}>A</span>
+          <InstructionBadge instructionIndex={instructionIndex} />
         )}
         <p>{instruction}</p>
       </div>
@@ -445,32 +456,37 @@ function resolveHeadingColor(
   return undefined;
 }
 
-function collectNumberedHeadingsOfLevel(blocks: WorksheetBlock[], level: number): string[] {
-  const result: string[] = [];
-  for (const block of blocks) {
-    if (block.type === "numbered-heading" && (block as NumberedHeadingBlock).level === level) {
-      result.push(block.id);
-    }
-    if (block.type === "columns") {
-      for (const col of (block as ColumnsBlock).children) {
-        for (const child of col) {
-          if (child.type === "numbered-heading" && (child as NumberedHeadingBlock).level === level) {
-            result.push(child.id);
-          }
+function collectNumberedHeadingSequences(blocks: WorksheetBlock[]): Map<string, number> {
+  const sequences = new Map<string, number>();
+  const counters = [0, 0, 0, 0];
+
+  const visit = (items: WorksheetBlock[]) => {
+    for (const block of items) {
+      if (block.type === "numbered-heading") {
+        const levelIndex = block.level - 1;
+        counters[levelIndex] += 1;
+        for (let index = levelIndex + 1; index < counters.length; index += 1) {
+          counters[index] = 0;
         }
+        sequences.set(block.id, counters[levelIndex]);
+        continue;
+      }
+      if (block.type === "columns") {
+        for (const column of block.children) visit(column);
+        continue;
+      }
+      if (block.type === "accordion") {
+        for (const item of block.items) visit(item.children);
+        continue;
+      }
+      if (block.type === "grid") {
+        for (const cell of block.children) visit(cell);
       }
     }
-    if (block.type === "grid") {
-      for (const cell of (block as GridBlock).children) {
-        for (const child of cell) {
-          if (child.type === "numbered-heading" && (child as NumberedHeadingBlock).level === level) {
-            result.push(child.id);
-          }
-        }
-      }
-    }
-  }
-  return result;
+  };
+
+  visit(blocks);
+  return sequences;
 }
 
 function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string }) {
@@ -533,9 +549,8 @@ function NumberedHeadingView({
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight =
     (headingWeights as Record<string, number> | undefined)?.[`h${block.level}`] ?? brandFonts.headlineWeight;
-  const sameLevel = allBlocks ? collectNumberedHeadingsOfLevel(allBlocks, block.level) : [];
-  const position = sameLevel.indexOf(block.id);
-  const sequence = position >= 0 ? position + 1 : 1;
+  const sequences = allBlocks ? collectNumberedHeadingSequences(allBlocks) : undefined;
+  const sequence = sequences?.get(block.id) ?? 1;
   const numberLabel = formatHeadingNumber(sequence, headingNumberFormat);
   const numberSlotStyle: React.CSSProperties = {
     display: "inline-block",
@@ -1575,11 +1590,11 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           className={CONSISTENT_INSTRUCTION_ROW_CLASS}
           style={{ color: accentColor || "var(--color-primary)" }}
         >
-          <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+          <InstructionBadge instructionIndex={instructionIndex} />
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
       <div className="flex min-h-[49px] items-center border-b font-medium text-foreground">
         {block.question}
@@ -1682,11 +1697,11 @@ function FillInBlankView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div className="leading-loose mt-3">
@@ -1922,11 +1937,11 @@ function FillInBlankItemsView({
           className={CONSISTENT_INSTRUCTION_ROW_CLASS}
           style={{ color: accentColor || "var(--color-primary)" }}
         >
-          <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+          <InstructionBadge instructionIndex={instructionIndex} />
           <p>{instructionText}</p>
         </div>
       ) : (
-        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} />
+        <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap p-2 bg-muted/40 rounded-sm" style={{ gap: 8 }}>
@@ -2218,11 +2233,11 @@ function FillInBlankItemsView({
                 className={CONSISTENT_INSTRUCTION_ROW_CLASS}
                 style={{ color: accentColor || "var(--color-primary)" }}
               >
-                <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+                <InstructionBadge instructionIndex={instructionIndex} />
                 <p>{block.instruction}</p>
               </div>
             ) : (
-              <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+              <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
             )}
             {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
           </>
@@ -2338,11 +2353,11 @@ function FillInBlankItemsView({
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
           {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
         </>
@@ -2521,11 +2536,11 @@ function FillInBlankItemsView({
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )
         )}
         {/* Word Bank */}
@@ -2596,11 +2611,11 @@ function FillInBlankItemsView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {/* Word Bank */}
@@ -2863,7 +2878,7 @@ function renderTfBlanks(text: string): React.ReactNode {
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
               <div className="flex items-center gap-3 flex-1">
                 <p className="flex-1">{block.instruction}</p>
                 <div className="w-20" aria-hidden="true" />
@@ -2875,6 +2890,7 @@ function renderTfBlanks(text: string): React.ReactNode {
               instruction={block.instruction}
               accentColor={accentColor}
               mode={mode}
+              instructionIndex={instructionIndex}
               trailingContent={(
                 <>
                   <div className="w-20" aria-hidden="true" />
@@ -2962,6 +2978,152 @@ function renderTfBlanks(text: string): React.ReactNode {
   );
 }
 
+function MCQMatrixView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  showSolutions = false,
+  showPill = true,
+  taskNumber,
+  lessonLabel,
+  brand,
+  bodyFont,
+  bodyFontSize,
+  isNonLatin = false,
+  showResults = false,
+  accentColor,
+  instructionIndex,
+}: {
+  block: MCQMatrixBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults?: boolean;
+  showSolutions?: boolean;
+  showPill?: boolean;
+  taskNumber?: number;
+  lessonLabel?: string;
+  brand?: Brand;
+  bodyFont?: string;
+  bodyFontSize?: string;
+  isNonLatin?: boolean;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const answers = (answer as Record<string, string[]> | undefined) || {};
+  const fontFamily = bodyFont || "inherit";
+  const isOnline = mode === "online";
+
+  const handleSelect = (statementId: string, optionId: string) => {
+    if (!interactive || showResults) return;
+    const selected = answers[statementId] || [];
+    const next = selected.includes(optionId)
+      ? selected.filter((id) => id !== optionId)
+      : [...selected, optionId];
+    onAnswer({ ...answers, [statementId]: next });
+  };
+
+  const orderedStatements = block.statementOrder
+    ? block.statementOrder
+        .map((id) => block.statements.find((statement) => statement.id === id))
+        .filter((statement): statement is NonNullable<typeof statement> => !!statement)
+        .concat(block.statements.filter((statement) => !block.statementOrder!.includes(statement.id)))
+    : block.statements;
+
+  return (
+    <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+      <div>
+        {block.instruction && (
+          isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <div className="flex items-center gap-3 flex-1">
+                <p className="flex-1">{block.instruction}</p>
+                {block.options.map((option) => (
+                  <div key={option.id} className="w-20" aria-hidden="true" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <InstructionRow
+              instruction={block.instruction}
+              accentColor={accentColor}
+              mode={mode}
+              instructionIndex={instructionIndex}
+              trailingContent={block.options.map((option) => (
+                <div key={option.id} className="w-20" aria-hidden="true" />
+              ))}
+            />
+          )
+        )}
+        <div className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+          <span className="w-6 shrink-0" aria-hidden="true" />
+          <div className="flex-1" aria-hidden="true" />
+          {block.options.map((option) => (
+            <div key={option.id} className="w-20 text-center font-medium text-muted-foreground text-[14px]">
+              {option.text}
+            </div>
+          ))}
+        </div>
+        <div>
+          {orderedStatements.map((statement, statementIndex) => {
+            const selectedIds = answers[statement.id] || [];
+
+            return (
+              <div key={statement.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
+                  {String(statementIndex + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{renderTfBlanks(statement.text)}</span>
+                {block.options.map((option) => {
+                  const isSelected = selectedIds.includes(option.id);
+                  const isCorrect = statement.correctOptionIds.includes(option.id);
+
+                  let optionClass = CONTROL_BOX_CLASS;
+                  if (showSolutions && !interactive) {
+                    optionClass = isCorrect ? CONTROL_BOX_FILLED_CLASS : CONTROL_BOX_CLASS;
+                  } else if (showResults) {
+                    if (isSelected && isCorrect) {
+                      optionClass = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
+                    } else if (isSelected && !isCorrect) {
+                      optionClass = `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`;
+                    } else if (!isSelected && isCorrect) {
+                      optionClass = `${CONTROL_BOX_CLASS} border-blue-500 bg-blue-500 text-white`;
+                    }
+                  } else if (isSelected) {
+                    optionClass = `${CONTROL_BOX_CLASS} ${s.controlBoxActive}`;
+                  }
+
+                  return (
+                    <div key={option.id} className="w-20 flex items-center justify-center">
+                      {showSolutions && !interactive ? (
+                        <div className={optionClass} />
+                      ) : (
+                        <button
+                          type="button"
+                          className={`${optionClass} transition-colors ${interactive && !showResults ? "hover:border-primary/50" : ""}`.trim()}
+                          onClick={() => handleSelect(statement.id, option.id)}
+                          disabled={!interactive || showResults}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ArticleTrainingView({
   block,
   mode = "online",
@@ -2972,6 +3134,7 @@ function ArticleTrainingView({
   showSolutions = false,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: ArticleTrainingBlock;
   mode?: ViewMode;
@@ -2982,6 +3145,7 @@ function ArticleTrainingView({
   showSolutions?: boolean;
   accentColor?: string | null;
   interactiveColor?: string;
+  instructionIndex?: number;
 }) {
   const t = useTranslations("viewer");
   const answers = (answer as Record<string, string | null> | undefined) || {};
@@ -3003,11 +3167,11 @@ function ArticleTrainingView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -3300,11 +3464,11 @@ function GridView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -3595,6 +3759,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   showResults,
   showSolutions = false,
   accentColor,
+  instructionIndex,
 }: {
   block: WordSearchBlock;
   mode: ViewMode;
@@ -3629,11 +3794,11 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+                <InstructionBadge instructionIndex={instructionIndex} />
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+              <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
           {(block.showWordList || block.grid.length > 0) && <SectionGap size="medium" />}
         </>
@@ -3811,7 +3976,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
       <div>
         {block.instruction && (
           <>
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} instructionIndex={instructionIndex} />
             <SectionGap size="medium" />
           </>
         )}
@@ -3961,11 +4126,11 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
               <p>{block.instruction}</p>
             </div>
           ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
           {(displayUnsorted.length > 0 || block.categories.length > 0) && <SectionGap size="medium" />}
         </>
@@ -4239,7 +4404,7 @@ function UnscrambleWordsView({
               ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
             }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
@@ -4248,6 +4413,7 @@ function UnscrambleWordsView({
             accentColor={accentColor}
             style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
             mode={mode}
+            instructionIndex={instructionIndex}
           />
         )
       )}
@@ -4320,6 +4486,7 @@ function CorrectSpellingView({
   accentColor,
   bodyFont,
   bodyFontSize,
+  instructionIndex,
 }: {
   block: CorrectSpellingBlock;
   mode: ViewMode;
@@ -4349,7 +4516,7 @@ function CorrectSpellingView({
                 ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
               }}
             >
-              <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
               <p>{block.instruction}</p>
             </div>
           ) : (
@@ -4358,6 +4525,7 @@ function CorrectSpellingView({
               accentColor={accentColor}
               style={bodyFontSize ? { fontSize: bodyFontSize } : undefined}
               mode={mode}
+              instructionIndex={instructionIndex}
             />
           )}
           {block.words.length > 0 && <SectionGap size="medium" />}
@@ -4600,6 +4768,7 @@ function CompleteSentencesView({
   onAnswer,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: CompleteSentencesBlock;
   mode: ViewMode;
@@ -4623,11 +4792,11 @@ function CompleteSentencesView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+              <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -4670,6 +4839,7 @@ function TransformSentencesView({
   showResults,
   accentColor,
   interactiveColor,
+  instructionIndex,
 }: {
   block: TransformSentencesBlock;
   mode: ViewMode;
@@ -4698,11 +4868,11 @@ function TransformSentencesView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       <div>
@@ -4941,6 +5111,7 @@ function VerbTableView({
             instruction={block.infinitiveOverride || block.verb || ""}
             accentColor={accentColor}
             mode={mode}
+            instructionIndex={instructionIndex}
           />
         )
       )}
@@ -5145,11 +5316,11 @@ function DialogueView({
             className={CONSISTENT_INSTRUCTION_ROW_CLASS}
             style={{ color: accentColor || "var(--color-primary)" }}
           >
-            <span className={INSTRUCTION_BADGE_CLASS}>01</span>
+            <InstructionBadge instructionIndex={instructionIndex} />
             <p>{block.instruction}</p>
           </div>
         ) : (
-          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} />
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
       {/* Word Bank */}
@@ -6237,7 +6408,7 @@ export function ViewerBlockRenderer({
       );
     }
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor}/>;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex}/>;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":
@@ -6267,7 +6438,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "fill-in-blank":
@@ -6282,7 +6453,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "fill-in-blank-items":
@@ -6297,7 +6468,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "matching":
@@ -6311,7 +6482,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "two-column-fill":
@@ -6325,7 +6496,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "glossary":
@@ -6371,7 +6542,28 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "mcq-matrix":
+      return (
+        <MCQMatrixView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          showPill={block.showPill !== false}
+          taskNumber={taskNumber}
+          lessonLabel={lessonLabel}
+          brand={brand}
+          bodyFont={bodyFont}
+          bodyFontSize={bodyFontSize}
+          isNonLatin={isNonLatin}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "article-training":
@@ -6386,7 +6578,7 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "order-items":
@@ -6400,7 +6592,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "inline-choices":
@@ -6427,7 +6619,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "sorting-categories":
@@ -6441,7 +6633,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "correct-spelling":
@@ -6457,6 +6649,7 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "unscramble-words":
@@ -6473,7 +6666,7 @@ export function ViewerBlockRenderer({
           bodyFontSize={bodyFontSize}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "fix-sentences":
@@ -6499,7 +6692,7 @@ export function ViewerBlockRenderer({
           onAnswer={onAnswer || noop}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "transform-sentences":
@@ -6513,7 +6706,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "verb-table":
@@ -6528,7 +6721,7 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
-         
+          instructionIndex={instructionIndex}
         />
       );
     case "chart":
@@ -6544,6 +6737,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "numbered-label":

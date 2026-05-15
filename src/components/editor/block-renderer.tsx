@@ -24,6 +24,7 @@ import {
   ColumnsBlock,
   GridBlock,
   TrueFalseMatrixBlock,
+  MCQMatrixBlock,
   OrderItemsBlock,
   InlineChoicesBlock,
   migrateInlineChoicesBlock,
@@ -261,43 +262,36 @@ function collectNumberedLabelBlocks(blocks: WorksheetBlock[]): { id: string; sta
   return result;
 }
 
-function collectNumberedHeadingBlocks(blocks: WorksheetBlock[]): { id: string; level: 1 | 2 | 3 | 4 }[] {
-  const result: { id: string; level: 1 | 2 | 3 | 4 }[] = [];
-  for (const block of blocks) {
-    if (block.type === "numbered-heading") {
-      result.push({ id: block.id, level: block.level });
-      continue;
-    }
-    if (block.type === "columns") {
-      for (const col of block.children) {
-        for (const child of col) {
-          if (child.type === "numbered-heading") {
-            result.push({ id: child.id, level: child.level });
-          }
+function collectNumberedHeadingBlocks(blocks: WorksheetBlock[]): { id: string; level: 1 | 2 | 3 | 4; sequence: number }[] {
+  const result: { id: string; level: 1 | 2 | 3 | 4; sequence: number }[] = [];
+  const counters = [0, 0, 0, 0];
+
+  const visit = (items: WorksheetBlock[]) => {
+    for (const block of items) {
+      if (block.type === "numbered-heading") {
+        const levelIndex = block.level - 1;
+        counters[levelIndex] += 1;
+        for (let index = levelIndex + 1; index < counters.length; index += 1) {
+          counters[index] = 0;
         }
+        result.push({ id: block.id, level: block.level, sequence: counters[levelIndex] });
+        continue;
       }
-      continue;
-    }
-    if (block.type === "accordion") {
-      for (const item of block.items) {
-        for (const child of item.children) {
-          if (child.type === "numbered-heading") {
-            result.push({ id: child.id, level: child.level });
-          }
-        }
+      if (block.type === "columns") {
+        for (const column of block.children) visit(column);
+        continue;
       }
-      continue;
-    }
-    if (block.type === "grid") {
-      for (const cell of block.children) {
-        for (const child of cell) {
-          if (child.type === "numbered-heading") {
-            result.push({ id: child.id, level: child.level });
-          }
-        }
+      if (block.type === "accordion") {
+        for (const item of block.items) visit(item.children);
+        continue;
+      }
+      if (block.type === "grid") {
+        for (const cell of block.children) visit(cell);
       }
     }
-  }
+  };
+
+  visit(blocks);
   return result;
 }
 
@@ -380,12 +374,9 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
     fontVariantNumeric: "tabular-nums",
   };
 
-  const allNumberedHeadings = React.useMemo(
-    () => collectNumberedHeadingBlocks(state.blocks).filter((h) => h.level === block.level),
-    [state.blocks, block.level],
-  );
-  const position = allNumberedHeadings.findIndex((h) => h.id === block.id);
-  const sequence = position >= 0 ? position + 1 : 1;
+  const allNumberedHeadings = React.useMemo(() => collectNumberedHeadingBlocks(state.blocks), [state.blocks]);
+  const currentHeading = allNumberedHeadings.find((heading) => heading.id === block.id);
+  const sequence = currentHeading?.sequence ?? 1;
   const formatKey = (`h${block.level}NumberFormat` as const);
   const format = state.brandProfile[formatKey];
   const headingColorKey = (`h${block.level}HeadingColor` as const);
@@ -2193,6 +2184,239 @@ function TrueFalseMatrixRenderer({
         </button>
       </div>
       <AiTrueFalseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+function MCQMatrixRenderer({
+  block,
+  interactive,
+}: {
+  block: MCQMatrixBlock;
+  interactive: boolean;
+}) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+  const instructionText = (block.instruction || "").trim() || "Mark the correct options for each statement.";
+
+  const updateStatements = (statements: MCQMatrixBlock["statements"]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { statements },
+      },
+    });
+  };
+
+  const updateOptions = (options: MCQMatrixBlock["options"], statements = block.statements) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { options, statements },
+      },
+    });
+  };
+
+  const updateStatement = (
+    id: string,
+    updates: Partial<Pick<MCQMatrixBlock["statements"][number], "text" | "correctOptionIds">>
+  ) => {
+    updateStatements(block.statements.map((statement) => (statement.id === id ? { ...statement, ...updates } : statement)));
+  };
+
+  const addStatement = () => {
+    updateStatements([
+      ...block.statements,
+      { id: crypto.randomUUID(), text: t("newStatement"), correctOptionIds: [] },
+    ]);
+  };
+
+  const removeStatement = (id: string) => {
+    if (block.statements.length <= 1) return;
+    updateStatements(block.statements.filter((statement) => statement.id !== id));
+  };
+
+  const addOption = () => {
+    if (block.options.length >= 5) return;
+    updateOptions([
+      ...block.options,
+      { id: crypto.randomUUID(), text: `${t("addOption")} ${block.options.length + 1}` },
+    ]);
+  };
+
+  const removeOption = (optionId: string) => {
+    if (block.options.length <= 2) return;
+    updateOptions(
+      block.options.filter((option) => option.id !== optionId),
+      block.statements.map((statement) => ({
+        ...statement,
+        correctOptionIds: statement.correctOptionIds.filter((id) => id !== optionId),
+      }))
+    );
+  };
+
+  const toggleCorrectOption = (statementId: string, optionId: string) => {
+    updateStatements(
+      block.statements.map((statement) => {
+        if (statement.id !== statementId) return statement;
+        const isSelected = statement.correctOptionIds.includes(optionId);
+        return {
+          ...statement,
+          correctOptionIds: isSelected
+            ? statement.correctOptionIds.filter((id) => id !== optionId)
+            : [...statement.correctOptionIds, optionId],
+        };
+      })
+    );
+  };
+
+  const orderedStatements = block.statementOrder
+    ? block.statementOrder
+        .map((id) => block.statements.find((statement) => statement.id === id))
+        .filter((statement): statement is NonNullable<typeof statement> => !!statement)
+        .concat(block.statements.filter((statement) => !block.statementOrder!.includes(statement.id)))
+    : block.statements;
+
+  return (
+    <div className="space-y-2">
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable={!interactive}
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          if (interactive) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
+      <div>
+        <div className="flex items-center gap-3 py-2 border-b">
+          <div className="flex-1" />
+          {block.options.map((option, optionIndex) => (
+            <div key={option.id} className="w-24 flex items-center justify-center gap-1">
+              <span
+                className="outline-none block text-center font-medium text-muted-foreground text-xs flex-1"
+                contentEditable={!interactive}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  if (interactive) return;
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, `options.${optionIndex}.text`, value, () =>
+                    updateOptions(block.options.map((item) => (item.id === option.id ? { ...item, text: value } : item)))
+                  );
+                }}
+              >
+                {option.text}
+              </span>
+              {!interactive && (
+                <button
+                  type="button"
+                  className={`p-0.5 rounded hover:bg-destructive/10 ${block.options.length <= 2 ? "invisible" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeOption(option.id);
+                  }}
+                >
+                  <X className="h-3 w-3 text-destructive" />
+                </button>
+              )}
+            </div>
+          ))}
+          <div className="w-8" />
+        </div>
+        <div>
+          {orderedStatements.map((statement, statementIndex) => (
+            <div key={statement.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
+              <div className="flex flex-1 items-center gap-3">
+                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+                  {String(statementIndex + 1).padStart(2, "0")}
+                </span>
+                <span
+                  className="outline-none block flex-1"
+                  contentEditable={!interactive}
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    if (interactive) return;
+                    const value = e.currentTarget.textContent || "";
+                    const statementPosition = block.statements.findIndex((item) => item.id === statement.id);
+                    localeUpdate(block.id, `statements.${statementPosition}.text`, value, () =>
+                      updateStatement(statement.id, { text: value })
+                    );
+                  }}
+                >
+                  {statement.text}
+                </span>
+              </div>
+              {block.options.map((option) => {
+                const isSelected = statement.correctOptionIds.includes(option.id);
+                return (
+                  <div key={option.id} className="w-24 flex items-center justify-center">
+                    <button
+                      type="button"
+                      className={`w-5 h-5 rounded-sm border-2 inline-flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? "bg-green-500 border-green-500 text-white"
+                          : "border-muted-foreground/30 hover:border-green-400"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCorrectOption(statement.id, option.id);
+                      }}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                  </div>
+                );
+              })}
+              <div className="w-8 flex items-center justify-center">
+                <button
+                  type="button"
+                  className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeStatement(statement.id);
+                  }}
+                >
+                  <X className="h-3 w-3 text-destructive" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {!interactive && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              addStatement();
+            }}
+          >
+            <Plus className="h-3 w-3" /> {t("addStatement")}
+          </button>
+          <button
+            type="button"
+            className={`text-xs flex items-center gap-1 ${block.options.length >= 5 ? "text-muted-foreground/50 cursor-not-allowed" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              addOption();
+            }}
+            disabled={block.options.length >= 5}
+          >
+            <Plus className="h-3 w-3" /> {t("addOption")} ({block.options.length}/5)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -6071,6 +6295,8 @@ export function BlockRenderer({
       return <NumberLineRenderer block={block} />;
     case "true-false-matrix":
       return <TrueFalseMatrixRenderer block={block} interactive={interactive} />;
+    case "mcq-matrix":
+      return <MCQMatrixRenderer block={block} interactive={interactive} />;
     case "article-training":
       return <ArticleTrainingRenderer block={block} interactive={interactive} />;
     case "order-items":

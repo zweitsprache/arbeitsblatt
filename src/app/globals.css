@@ -529,6 +529,7 @@
 .worksheet-block-multiple-choice,
 .worksheet-block-matching,
 .worksheet-block-true-false-matrix,
+.worksheet-block-mcq-matrix,
 .worksheet-block-order-items,
 .worksheet-block-sorting-categories,
 .worksheet-block-word-search,
@@ -993,6 +994,7 @@
   }
 
   .worksheet-block-true-false-matrix,
+  .worksheet-block-mcq-matrix,
   .worksheet-block-article-training,
   .worksheet-block-fix-sentences,
   .worksheet-block-complete-sentences,

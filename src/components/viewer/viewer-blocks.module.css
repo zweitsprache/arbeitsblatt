@@ -77,6 +77,23 @@
   font-size: 0.65rem;
 }
 
+.instructionBadge {
+  text-transform: uppercase;
+}
+
+:global([data-instruction-badge-style="unboxed-small-letter"]) .instructionBadge {
+  border-radius: 0;
+  background: none;
+  box-shadow: none !important;
+  color: var(--viewer-instruction-badge-color, var(--color-primary));
+  font-size: 1.3em;
+  font-weight: inherit;
+  justify-content: flex-start;
+  padding: 0;
+  text-transform: lowercase;
+  transform: translateY(-0.06em);
+}
+
 /* ─── Handwriting ────────────────────────────────────────── */
 
 .handwriting {

@@ -94,6 +94,13 @@ export function WorksheetViewer({
     const map = new Map<string, number>();
     let instructionCount = 0;
     for (const block of visibleBlocks) {
+      if (
+        (block.type === "heading" && block.level === 3) ||
+        (block.type === "numbered-heading" && block.level === 3)
+      ) {
+        instructionCount = 0;
+        continue;
+      }
       if ("instruction" in block && block.instruction && typeof block.instruction === "string" && block.instruction.trim()) {
         map.set(block.id, instructionCount);
         instructionCount++;
@@ -204,6 +211,7 @@ export function WorksheetViewer({
       b.type === "fill-in-blank-items" ||
       b.type === "open-response" ||
       b.type === "true-false-matrix" ||
+        b.type === "mcq-matrix" ||
       b.type === "article-training" ||
       b.type === "matching"
   );
@@ -398,7 +406,11 @@ export function WorksheetViewer({
               <tr>
                 <td>
                   <div className="print-body-content">
-                    <div className="worksheet-blocks-container">
+                    <div
+                      className="worksheet-blocks-container"
+                      data-instruction-badge-style={resolvedProfile.instructionBadgeStyle || "default"}
+                      style={{ ["--viewer-instruction-badge-color" as string]: resolvedProfile.instructionBadgeColor || resolvedProfile.primaryColor || brandFonts.primaryColor }}
+                    >
                       {visibleBlocks.map((block) => (
                         <div
                           key={block.id}
@@ -452,10 +464,12 @@ export function WorksheetViewer({
             {/* Blocks */}
             <div
               className="worksheet-blocks-container flex flex-col gap-5"
+              data-instruction-badge-style={resolvedProfile.instructionBadgeStyle || "default"}
               style={{
                 fontFamily: activeBodyFont,
                 fontSize: "clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)",
                 ["--viewer-interactive-color" as string]: resolvedProfile.interactiveColor || "#0ea5e9",
+                ["--viewer-instruction-badge-color" as string]: resolvedProfile.instructionBadgeColor || resolvedProfile.primaryColor || brandFonts.primaryColor,
               }}
             >
               {visibleBlocks.map((block) => (

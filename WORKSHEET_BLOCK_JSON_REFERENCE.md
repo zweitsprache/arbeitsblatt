@@ -531,6 +531,50 @@ Notes:
 
 - `statementOrder` is optional persisted shuffle order.
 
+### `mcq-matrix`
+
+```json
+{
+  "id": "mcq-matrix-1",
+  "type": "mcq-matrix",
+  "visibility": "both",
+  "instruction": "Mark the correct options for each statement.",
+  "showPill": true,
+  "options": [
+    {
+      "id": "option-1",
+      "text": "Correct"
+    },
+    {
+      "id": "option-2",
+      "text": "Incorrect"
+    },
+    {
+      "id": "option-3",
+      "text": "Needs context"
+    }
+  ],
+  "statements": [
+    {
+      "id": "statement-1",
+      "text": "Berlin is in Germany.",
+      "correctOptionIds": ["option-1"]
+    },
+    {
+      "id": "statement-2",
+      "text": "The sentence needs more context.",
+      "correctOptionIds": ["option-2", "option-3"]
+    }
+  ],
+  "statementOrder": ["statement-2", "statement-1"]
+}
+```
+
+Notes:
+
+- `options` supports up to 5 entries.
+- `correctOptionIds` allows multiple correct options per statement.
+
 ### `order-items`
 
 ```json

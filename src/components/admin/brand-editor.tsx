@@ -132,6 +132,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     primaryColor: "#1a1a1a",
     accentColor: "",
     interactiveColor: "#0ea5e9",
+    instructionBadgeStyle: "default",
+    instructionBadgeColor: "",
     logo: "",
     iconLogo: "",
     favicon: "",
@@ -187,6 +189,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           primaryColor: data.primaryColor,
           accentColor: data.accentColor || "",
           interactiveColor: typeof data.interactiveColor === "string" ? data.interactiveColor : "",
+          instructionBadgeStyle: data.instructionBadgeStyle || "default",
+          instructionBadgeColor: data.instructionBadgeColor || "",
           logo: data.logo,
           iconLogo: data.iconLogo || "",
           favicon: data.favicon || "",
@@ -304,6 +308,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
             : null,
         accentColor: form.accentColor || null,
         ...(form.interactiveColor ? { interactiveColor: form.interactiveColor } : {}),
+        instructionBadgeStyle: form.instructionBadgeStyle,
+        instructionBadgeColor: form.instructionBadgeColor || null,
         iconLogo: form.iconLogo || null,
         favicon: form.favicon || null,
         pageTitle: form.pageTitle || null,
@@ -960,6 +966,36 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   onChange={(e) => update("interactiveColor", e.target.value)}
                   placeholder="#0ea5e9"
                   className="flex-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>{t("instructionBadgeStyle")}</Label>
+              <select
+                value={form.instructionBadgeStyle}
+                onChange={(e) => update("instructionBadgeStyle", e.target.value)}
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="default">{t("instructionBadgeStyleDefault")}</option>
+                <option value="unboxed-small-letter">{t("instructionBadgeStyleUnboxedSmallLetter")}</option>
+              </select>
+            </div>
+            <div>
+              <Label>{t("instructionBadgeColor")}</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={form.instructionBadgeColor || (form.primaryColor || "#1a1a1a")}
+                  onChange={(e) => update("instructionBadgeColor", e.target.value)}
+                  className="h-9 w-9 rounded border cursor-pointer"
+                  disabled={form.instructionBadgeStyle !== "unboxed-small-letter"}
+                />
+                <Input
+                  value={form.instructionBadgeColor || ""}
+                  onChange={(e) => update("instructionBadgeColor", e.target.value)}
+                  placeholder={form.primaryColor || "#1a1a1a"}
+                  className="flex-1"
+                  disabled={form.instructionBadgeStyle !== "unboxed-small-letter"}
                 />
               </div>
             </div>
