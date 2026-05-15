@@ -1710,6 +1710,13 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
     (pair, index) => `${pair.id}:${pair.right}:${index}`
   ), [block.pairs]);
   const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+  const exampleAnswers = React.useMemo(() => {
+    if (!examplePairId) return new Set<string>();
+    const examplePair = block.pairs.find((pair) => pair.id === examplePairId);
+    if (!examplePair) return new Set<string>();
+    const answer = `${examplePair.left.trim()}${examplePair.right.trim()}`;
+    return answer ? new Set([answer]) : new Set<string>();
+  }, [block.pairs, examplePairId]);
   const lineContainerRef = React.useRef<HTMLDivElement | null>(null);
   const leftExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
   const rightExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
@@ -1778,9 +1785,9 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
             <span
               key={i}
               className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
-              style={exampleAnswers.has(word) ? { textDecoration: 'line-through' } : undefined}
+              style={exampleAnswers.has(word.text) ? { textDecoration: 'line-through' } : undefined}
             >
-              {word}
+              {word.text}
             </span>
           ))}
         </div>
@@ -2187,10 +2194,7 @@ function TrueFalseMatrixRenderer({
         </div>
         <div>
           {(() => {
-            const orderedStatements = block.statements
-              .map((id) => block.statements.find((s) => s.id === id))
-              .filter((s): s is NonNullable<typeof s> => !!s)
-              .concat(block.statements.filter((s) => !block.statements.includes(s.id)))
+            const orderedStatements = block.statements;
             return orderedStatements.map((stmt, stmtIndex) => (
             <div key={stmt.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
               <div className="flex flex-1 items-center gap-3">
@@ -2364,10 +2368,7 @@ function MCQMatrixRenderer({
     );
   };
 
-  const orderedStatements = block.statements
-    .map((id) => block.statements.find((s) => s.id === id))
-    .filter((s): s is NonNullable<typeof s> => !!s)
-    .concat(block.statements.filter((s) => !block.statements.includes(s.id)));
+  const orderedStatements = block.statements;
 
   return (
     <div className="space-y-2">
@@ -2604,7 +2605,7 @@ function MCQRowsRenderer({
               onCommit={(value) => {
                 if (interactive) return;
                 localeUpdate(block.id, `items.${itemIndex}.text`, value, () =>
-                  updateItem(item.id, value)
+                  updateItem(item.id, { text: value })
                 );
               }}
             />
@@ -2789,7 +2790,7 @@ function ArticleTrainingRenderer({
                     const value = e.currentTarget.textContent || "";
                     const arrIdx = block.items.findIndex((it) => it.id === item.id);
                     localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                      updateItem(item.id, value)
+                      updateItem(item.id, { text: value })
                     );
                   }}
                 >
@@ -4078,12 +4079,12 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
               suppressContentEditableWarning
               onBlur={(e) => {
                 const value = e.currentTarget.textContent || "";
-                localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                localeUpdate(block.id, `sentences.${i}.sentence`, value, () =>
                   updateSentence(item.id, value)
                 );
               }}
             >
-              {item.beginning}
+              {item.sentence}
             </span>
             <button
               className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
