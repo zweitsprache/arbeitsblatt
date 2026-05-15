@@ -38,6 +38,7 @@ import {
   WordBankBlock,
   ColumnsBlock,
   GridBlock,
+  BoardGameBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -2757,6 +2758,207 @@ function GridProps({ block }: { block: GridBlock }) {
           <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">{t("showBorder")}</span>
         </Label>
       </div>
+    </div>
+  );
+}
+
+function BoardGameProps({ block }: { block: BoardGameBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+
+  const totalCells = Math.max(1, block.rows * block.cols);
+  const cells = Array.from({ length: totalCells }, (_, index) => {
+    const existing = block.cells[index];
+    return existing ?? { id: `cell-${index + 1}`, text: "", imageUrl: "" };
+  });
+  const selectedCellIndex = state.activeItemIndex;
+  const selectedCell = selectedCellIndex !== null ? cells[selectedCellIndex] : null;
+  const selectedDisplayText =
+    selectedCellIndex === 0 ? "ZIEL" : selectedCellIndex === 35 ? "START" : selectedCell?.text || "";
+  const isSpecialCell = selectedCellIndex === 0 || selectedCellIndex === 35;
+
+  const updateCell = (index: number, updates: Partial<BoardGameBlock["cells"][number]>) => {
+    const nextCells = cells.map((cell, cellIndex) => (cellIndex === index ? { ...cell, ...updates } : cell));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { cells: nextCells } },
+    });
+  };
+
+  const handleFileSelected = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (selectedCellIndex === null) return;
+    setIsUploading(true);
+    try {
+      const file = new File([result.blob], `board-game-cell-${selectedCellIndex + 1}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateCell(selectedCellIndex, { imageUrl: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelected(file);
+    }
+  };
+
+  const clearCells = () => {
+    const nextCells = block.cells.map((cell) => ({ ...cell, text: "", imageUrl: "" }));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { cells: nextCells } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
+        <Input value={String(block.rows)} readOnly />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
+        <Input value={String(block.cols)} readOnly />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          Selected Cell
+        </Label>
+        <Input
+          readOnly
+          value={selectedCellIndex === null ? "Click a cell in the board" : `Cell ${selectedCellIndex + 1}`}
+        />
+      </div>
+      {selectedCellIndex !== null && selectedCell ? (
+        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
+          {selectedCell.imageUrl ? (
+            <div className="space-y-2">
+              <div className="relative group/img rounded overflow-hidden border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedCell.imageUrl} alt={selectedDisplayText || "Board game cell"} className="w-full" />
+                <button
+                  type="button"
+                  onClick={() => updateCell(selectedCellIndex, { imageUrl: "" })}
+                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                {t("replaceImage")}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                />
+                {isUploading ? (
+                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                  </>
+                )}
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => setBrowserOpen(true)}
+              >
+                <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                {t("mediaBrowser")}
+              </Button>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              Text
+            </Label>
+            <textarea
+              value={selectedDisplayText}
+              readOnly={isSpecialCell}
+              onChange={(e) => updateCell(selectedCellIndex, { text: e.target.value })}
+              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              placeholder="Cell text"
+            />
+            {isSpecialCell ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                START and ZIEL are fixed labels.
+              </p>
+            ) : null}
+          </div>
+
+          <MediaBrowserDialog
+            open={browserOpen}
+            onOpenChange={setBrowserOpen}
+            onSelectUrl={(url) => {
+              if (selectedCellIndex === null) return;
+              updateCell(selectedCellIndex, { imageUrl: url });
+            }}
+            onSelectFile={handleFileSelected}
+          />
+
+          <ImageCropDialog
+            imageSrc={cropSrc}
+            open={cropOpen}
+            onOpenChange={(open) => {
+              setCropOpen(open);
+              if (!open && cropSrc) {
+                URL.revokeObjectURL(cropSrc);
+                setCropSrc(null);
+              }
+            }}
+            onCropComplete={handleCropComplete}
+            title={t("cropImage")}
+          />
+        </div>
+      ) : null}
+      <Button type="button" variant="outline" onClick={clearCells}>
+        Clear board
+      </Button>
     </div>
   );
 }
@@ -8168,6 +8370,8 @@ export function PropertiesPanel() {
         return <ColumnsProps block={selectedBlock} />;
       case "grid":
         return <GridProps block={selectedBlock as GridBlock} />;
+      case "board-game":
+        return <BoardGameProps block={selectedBlock as BoardGameBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
       case "mcq-matrix":

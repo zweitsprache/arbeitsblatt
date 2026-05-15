@@ -23,6 +23,7 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   GridBlock,
+  BoardGameBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -80,6 +81,7 @@ import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
+import { Input } from "@/components/ui/input";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
@@ -595,11 +597,9 @@ function TextSnippetRenderer({ block }: { block: TextSnippetBlock }) {
   return (
     <div className="relative group/text-snippet">
       <div className="border border-dashed border-amber-300 rounded-sm p-3 bg-amber-50/30">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
-            <Copy className="h-3.5 w-3.5" />
-            {t("textSnippetLabel")}
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+          <Copy className="h-3.5 w-3.5" />
+          {t("textSnippetLabel")}
         </div>
         <RichTextEditor
           content={block.content}
@@ -1393,11 +1393,9 @@ function MultipleChoiceRenderer({
                 className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors"
                 onBlur={(e) => {
                   const value = e.currentTarget.textContent || "";
-                  localeUpdate(block.id, `options.${i}.text`, value, () => {
-                    const newOptions = [...block.options];
-                    newOptions[i] = { ...opt, text: value };
-                    updateOptions(newOptions);
-                  });
+                  localeUpdate(block.id, `options.${i}.text`, value, () =>
+                    updateOptions(block.options.map((item) => (item.id === opt.id ? { ...item, text: value } : item)))
+                  );
                 }}
               >
                 {opt.text}
@@ -1421,21 +1419,25 @@ function MultipleChoiceRenderer({
         <div className="flex items-center gap-3 mt-1">
           <button
             type="button"
-            onClick={addOption}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              addOption();
+            }}
           >
             <Plus className="h-3.5 w-3.5" />
             {t("addOption")}
           </button>
           <button
             type="button"
-            className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 transition-colors"
+            className={`text-xs flex items-center gap-1 ${block.options.length >= 5 ? "text-muted-foreground/50 cursor-not-allowed" : "text-muted-foreground hover:text-foreground"}`}
             onClick={(e) => {
               e.stopPropagation();
-              setShowAiModal(true);
+              addOption();
             }}
+            disabled={block.options.length >= 5}
           >
-            <Sparkles className="h-3 w-3" /> {t("aiGenerate")}
+            <Plus className="h-3 w-3" /> {t("addOption")} ({block.options.length}/5)
           </button>
         </div>
       )}
@@ -1471,7 +1473,7 @@ function FillInBlankRenderer({
               key={i}
               type="text"
               placeholder={t("fillInBlankPlaceholder")}
-              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacing.className} focus:outline-none focus:border-primary inline`}
+              className={`border-b border-dashed border-muted-foreground/30 bg-transparent px-2 py-0.5 text-center ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
               style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
             />
           ) : (
@@ -1507,7 +1509,7 @@ function FillInBlankItemsRenderer({
   const exampleAnswers = React.useMemo(() => {
     if (!exampleItem) return new Set<string>();
     const answers = new Set<string>();
-    for (const match of exampleItem.content.matchAll(/\{\{blank\*?:([^,}]+)/g)) {
+    for (const match of exampleItem.content.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
       const value = match[1]?.trim();
       if (value) answers.add(value);
     }
@@ -1562,7 +1564,7 @@ function FillInBlankItemsRenderer({
     if (!block.showWordBank) return [];
     const answers: string[] = [];
     for (const item of block.items) {
-      const matches = item.content.matchAll(/\{\{blank\*?:([^,}]+)/g);
+      const matches = item.content.matchAll(/\{\{blank\*?:([^,}]+)\}\}/g);
       for (const m of matches) if (m[1].trim()) answers.push(m[1].trim());
     }
     return answers;
@@ -1615,7 +1617,7 @@ function FillInBlankItemsRenderer({
             <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
               {String(idx + 1).padStart(2, "0")}
             </span>
-            <span className="flex-1 flex flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
+            <span className="flex-1 flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
                 if (match) {
@@ -1771,14 +1773,14 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
         <p className="text-sm whitespace-pre-line">{block.textAboveItems}</p>
       )}
       {block.showWordBank && wordBankItems.length > 0 && (
-        <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          {wordBankItems.map((item) => (
+        <div className="flex flex-wrap items-center gap-2 py-1">
+          {wordBankItems.map((word, i) => (
             <span
-              key={item.id}
-              className="rounded border px-2 py-0.5"
-              style={item.id === examplePairId ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+              key={i}
+              className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+              style={exampleAnswers.has(word) ? { textDecoration: 'line-through' } : undefined}
             >
-              {item.text}
+              {word}
             </span>
           ))}
         </div>
@@ -2185,12 +2187,10 @@ function TrueFalseMatrixRenderer({
         </div>
         <div>
           {(() => {
-            const orderedStatements = block.statementOrder
-              ? block.statementOrder
-                  .map((id) => block.statements.find((s) => s.id === id))
-                  .filter((s): s is NonNullable<typeof s> => !!s)
-                  .concat(block.statements.filter((s) => !block.statementOrder!.includes(s.id)))
-              : block.statements;
+            const orderedStatements = block.statements
+              .map((id) => block.statements.find((s) => s.id === id))
+              .filter((s): s is NonNullable<typeof s> => !!s)
+              .concat(block.statements.filter((s) => !block.statements.includes(s.id)))
             return orderedStatements.map((stmt, stmtIndex) => (
             <div key={stmt.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
               <div className="flex flex-1 items-center gap-3">
@@ -2238,6 +2238,7 @@ function TrueFalseMatrixRenderer({
               </div>
               <div className="w-8 flex items-center justify-center">
                 <button
+                  type="button"
                   className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2363,12 +2364,10 @@ function MCQMatrixRenderer({
     );
   };
 
-  const orderedStatements = block.statementOrder
-    ? block.statementOrder
-        .map((id) => block.statements.find((statement) => statement.id === id))
-        .filter((statement): statement is NonNullable<typeof statement> => !!statement)
-        .concat(block.statements.filter((statement) => !block.statementOrder!.includes(statement.id)))
-    : block.statements;
+  const orderedStatements = block.statements
+    .map((id) => block.statements.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => !!s)
+    .concat(block.statements.filter((s) => !block.statements.includes(s.id)));
 
   return (
     <div className="space-y-2">
@@ -2605,7 +2604,7 @@ function MCQRowsRenderer({
               onCommit={(value) => {
                 if (interactive) return;
                 localeUpdate(block.id, `items.${itemIndex}.text`, value, () =>
-                  updateItem(item.id, { text: value })
+                  updateItem(item.id, value)
                 );
               }}
             />
@@ -2790,7 +2789,7 @@ function ArticleTrainingRenderer({
                     const value = e.currentTarget.textContent || "";
                     const arrIdx = block.items.findIndex((it) => it.id === item.id);
                     localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                      updateItem(item.id, { text: value })
+                      updateItem(item.id, value)
                     );
                   }}
                 >
@@ -2826,7 +2825,7 @@ function ArticleTrainingRenderer({
             addItem();
           }}
         >
-          <Plus className="h-3 w-3" /> {t("addNoun")}
+          <Plus className="h-3 w-3" /> {t("addItem")}
         </button>
       </div>
     </div>
@@ -3008,7 +3007,7 @@ function renderInlineChoiceIndicator(isCorrect: boolean, isExample: boolean) {
           borderRadius: 3,
           color: '#0097dc',
           boxShadow: 'inset 0 0 0 1px currentColor',
-          background: '#fff',
+          background: 'rgb(243 244 246)',
         }}
       >
         {isCorrect ? (
@@ -3169,7 +3168,7 @@ function EditableInlineChoiceLine({
           if (renderAsExample) {
             exampleUsed = true;
             return (
-              <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap" contentEditable={false}>
+              <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
                 {seg.options.map((opt, oi) => {
                   const isCorrect = oi === seg.correctIndex;
                   const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
@@ -3685,7 +3684,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                             }}
                         onBlur={(e) => {
                           const value = e.currentTarget.textContent || "";
-                          const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                          const arrIdx = block.items.findIndex((w) => w.id === item.id);
                           localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
                             updateItem(item.id, value)
                           );
@@ -3804,7 +3803,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
         {block.instruction}
       </div>
 
-      <div className="space-y-2">
+      <div>
         {(() => {
           const orderedWords = block.itemOrder
             ? block.itemOrder
@@ -3829,7 +3828,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
               <span
                 contentEditable
                 suppressContentEditableWarning
-                className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors font-medium text-green-700"
+                className="text-base outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors font-medium text-green-700"
                 onBlur={(e) => {
                   const value = e.currentTarget.textContent || "";
                   const arrIdx = block.words.findIndex((w) => w.id === item.id);
@@ -3894,7 +3893,10 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
       payload: {
         id: block.id,
         updates: {
-          words: [...block.words, { id: crypto.randomUUID(), word: "word", displayCount: legacyDisplayCount }],
+          words: [
+            ...block.words,
+            { id: crypto.randomUUID(), word: "word", displayCount: legacyDisplayCount },
+          ],
         },
       },
     });
@@ -3970,7 +3972,8 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
                 {item.word}
               </span>
               <button
-                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0 ${block.words.length <= 1 ? "invisible" : ""}`}
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                  ${block.words.length <= 1 ? "invisible" : ""}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   removeWord(item.id);
@@ -4060,79 +4063,40 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
         {block.instruction}
       </div>
 
-      <div className="space-y-3">
-        {block.sentences.map((item, i) => {
-          const parts = item.sentence.split(" | ");
-          const displayParts = parts.length <= 1
-            ? parts
-            : getDeterministicPreviewDerangement(
-                parts.map((part, index) => ({ id: `${item.id}:${index}`, part })),
-                ({ id }) => `fix-sentences:${block.id}:${id}`,
-              ).map(({ part }) => part);
-          const solvedSentence = parts.map((part) => part.trim()).join(" ");
-          const isExampleSentence = item.id === exampleSentenceId;
-          return (
-            <div
-              key={item.id}
-              className="group/item rounded-sm border border-border overflow-hidden"
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className="group/item flex min-h-[37px] items-center gap-3 border-b py-2"
+          >
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span
+              className="outline-none block flex-1"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                  updateSentence(item.id, value)
+                );
+              }}
             >
-              <div className="flex items-center gap-3 p-3 bg-muted/30">
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="flex-1 flex flex-wrap gap-1.5">
-                  {displayParts.map((part, pi) => (
-                    <span
-                      key={pi}
-                      className="rounded border px-2 py-0.5 text-xs bg-blue-50 border-blue-200 text-blue-800 font-medium"
-                    >
-                      {part.trim()}
-                    </span>
-                  ))}
-                </div>
-                <button
-                  className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
-                    ${block.sentences.length <= 1 ? "invisible" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeSentence(item.id);
-                  }}
-                >
-                  <X className="h-3 w-3 text-destructive" />
-                </button>
-              </div>
-              <div className="px-3 py-2">
-                {isExampleSentence ? (
-                  <div
-                    className="relative h-8 overflow-hidden"
-                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
-                  >
-                    <span
-                      className="absolute inset-x-0 bottom-px block leading-none"
-                      style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
-                    >
-                      {solvedSentence}
-                    </span>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    value={item.sentence}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const arrIdx = block.sentences.findIndex((s) => s.id === item.id);
-                      localeUpdate(block.id, `sentences.${arrIdx}.sentence`, value, () =>
-                        updateSentence(item.id, value)
-                      );
-                    }}
-                    className="w-full text-xs text-muted-foreground bg-transparent border-0 outline-none font-mono"
-                    placeholder={t("fixSentencePlaceholder")}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
+              {item.beginning}
+            </span>
+            <button
+              className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                ${block.sentences.length <= 1 ? "invisible" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeSentence(item.id);
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </button>
+          </div>
+        ))}
       </div>
       <button
         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -4974,6 +4938,162 @@ function GridRenderer({
   );
 }
 
+function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
+  const { state, dispatch } = useEditor();
+  const totalCells = Math.max(1, block.rows * block.cols);
+  const cellWidthMm = 35;
+  const cellHeightMm = 25;
+  const cellGapPx = 8;
+  const mmToPx = 96 / 25.4;
+  const cellWidthPx = cellWidthMm * mmToPx;
+  const cellHeightPx = cellHeightMm * mmToPx;
+  const boardWidthPx = block.cols * cellWidthPx + Math.max(0, block.cols - 1) * cellGapPx;
+  const boardHeightPx = block.rows * cellHeightPx + Math.max(0, block.rows - 1) * cellGapPx;
+  const cells = Array.from({ length: totalCells }, (_, index) => {
+    const existing = block.cells[index];
+    return existing ?? { id: `cell-${index + 1}`, text: "", imageUrl: "" };
+  });
+
+  const snakePathIndices: number[] = [35];
+  for (let r = block.rows - 1; r >= 0; r--) {
+    const isLeftToRight = (block.rows - 1 - r) % 2 === 0;
+    if (isLeftToRight) {
+      for (let c = 0; c < block.cols; c++) {
+        const idx = r * block.cols + c;
+        if (idx !== 35 && idx !== 0 && idx < totalCells) {
+          snakePathIndices.push(idx);
+        }
+      }
+    } else {
+      for (let c = block.cols - 1; c >= 0; c--) {
+        const idx = r * block.cols + c;
+        if (idx !== 35 && idx !== 0 && idx < totalCells) {
+          snakePathIndices.push(idx);
+        }
+      }
+    }
+  }
+
+  const snakePathPoints = snakePathIndices
+    .map((idx) => {
+      const row = Math.floor(idx / block.cols);
+      const col = idx % block.cols;
+      const x = col * (cellWidthPx + cellGapPx) + cellWidthPx / 2;
+      const y = row * (cellHeightPx + cellGapPx) + cellHeightPx / 2;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const getSnakeNumber = (cellIndex: number): number | null => {
+    // Skip START (index 35) and ZIEL (index 0)
+    if (cellIndex === 35 || cellIndex === 0) return null;
+    
+    const cols = 5;
+    const rows = 8;
+    let number = 0;
+    
+    // Start from bottom row, snake up
+    for (let r = rows - 1; r >= 0; r--) {
+      const isLeftToRight = (rows - 1 - r) % 2 === 0;
+      
+      if (isLeftToRight) {
+        // Left to right
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          if (idx !== 35 && idx !== 0) {
+            number++;
+            if (idx === cellIndex) return number;
+          }
+        }
+      } else {
+        // Right to left
+        for (let c = cols - 1; c >= 0; c--) {
+          const idx = r * cols + c;
+          if (idx !== 35 && idx !== 0) {
+            number++;
+            if (idx === cellIndex) return number;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const selectedCellIndex = state.activeItemIndex;
+
+  return (
+    <div
+      className="grid relative"
+      style={{
+        gridTemplateColumns: `repeat(${block.cols}, ${cellWidthMm}mm)`,
+        gap: "8px",
+        width: "fit-content",
+        margin: "0 auto",
+        marginLeft: "-8.5mm",
+      }}
+    >
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        viewBox={`0 0 ${boardWidthPx} ${boardHeightPx}`}
+        preserveAspectRatio="none"
+      >
+        <polyline
+          points={snakePathPoints}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-foreground/40"
+        />
+      </svg>
+      {cells.map((cell, cellIndex) => {
+        const displayText = cellIndex === 0 ? "ZIEL" : cellIndex === 35 ? "START" : cell.text;
+        const isSpecial = displayText === "ZIEL" || displayText === "START";
+        const snakeNumber = getSnakeNumber(cellIndex);
+        const isSelected = selectedCellIndex === cellIndex;
+        return (
+        <button
+          key={cell.id || cellIndex}
+          type="button"
+          onClick={() => dispatch({ type: "SET_ACTIVE_ITEM", payload: cellIndex })}
+          className={`relative z-10 rounded-sm border p-2 bg-background flex flex-col text-left transition-colors ${isSpecial ? "items-center justify-center" : "space-y-2 relative"} ${isSelected ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}
+          style={{
+            width: "35mm",
+            height: "25mm",
+            ...(cell.imageUrl && !isSpecial
+              ? {
+                  backgroundImage: `url(${cell.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }
+              : {}),
+          }}
+        >
+          {isSpecial ? (
+            <div className="font-bold text-3xl text-center leading-none">{displayText}</div>
+          ) : (
+            <>
+              {snakeNumber && <div className="absolute top-1 right-1 text-[9px] text-muted-foreground font-semibold">{snakeNumber}</div>}
+              {!cell.imageUrl ? (
+                <div className="flex-1 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+              ) : null}
+              {displayText?.trim() ? (
+                <p className="flex items-center justify-center text-center text-xs leading-snug whitespace-pre-wrap break-words rounded-sm bg-background/70 px-1 py-1" style={{ minHeight: "1.25rem", maxHeight: '100%', wordBreak: 'break-word' }}>
+                  {displayText}
+                </p>
+              ) : null}
+            </>
+          )}
+        </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Dialogue ────────────────────────────────────────────────
 function DialogueRenderer({
   block,
@@ -5031,7 +5151,7 @@ function DialogueRenderer({
 
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
     if (variant === "solution") {
-      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
+      return text.replace(/\{\{blank\*?(?::[^}]*)?\}\}/g, (_match, raw = "") => {
         const { answer } = parseBlankContent(raw);
         return answer;
       });
@@ -5158,7 +5278,7 @@ function DialogueRenderer({
                 <span
                   key={i}
                   className="px-2 py-0.5 bg-background rounded border text-[10px]"
-                  style={exampleAnswers.has(text) ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+                  style={exampleAnswers.has(text) ? { textDecoration: 'line-through' } : undefined}
                 >
                   {text}
                 </span>
@@ -6078,9 +6198,9 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
     ]);
   };
 
-  const removeItem = (index: number) => {
+  const removeItem = (id: string) => {
     if (block.items.length <= 1) return;
-    updateItems(block.items.filter((_, itemIndex) => itemIndex !== index));
+    updateItems(block.items.filter((item) => item.id !== id));
   };
 
   const moveItem = (index: number, direction: "up" | "down") => {
@@ -6227,7 +6347,6 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
               <div className="mt-3 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   type="button"
-                  onClick={() => updateItem(index, { pageBreakAfter: !(item.pageBreakAfter ?? false) })}
                   className={`text-slate-400 hover:text-slate-700 ${item.pageBreakAfter ? "text-slate-700" : ""}`}
                   title={pageBreakLabel}
                 >
@@ -6235,25 +6354,22 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => moveItem(index, "up")}
-                  disabled={index === 0}
                   className="text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                  onClick={() => moveItem(index, "up")}
                 >
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => moveItem(index, "down")}
-                  disabled={index === block.items.length - 1}
                   className="text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                  onClick={() => moveItem(index, "down")}
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeItem(index)}
-                  disabled={block.items.length <= 1}
                   className="text-slate-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                  onClick={() => removeItem(item.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -6324,15 +6440,15 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
             <div className="flex justify-end gap-2 px-4 pb-4">
               <button
                 type="button"
-                onClick={dismissBlockedPreview}
                 className="px-3 py-1.5 text-sm rounded border border-border hover:bg-muted transition-colors"
+                onClick={dismissBlockedPreview}
               >
                 {t("websiteBlockedDiscard")}
               </button>
               <button
                 type="button"
-                onClick={() => void confirmBlockedPreview()}
                 className="px-3 py-1.5 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                onClick={() => void confirmBlockedPreview()}
               >
                 {t("websiteBlockedInsert")}
               </button>
@@ -6744,6 +6860,8 @@ export function BlockRenderer({
       return <ColumnsRenderer block={block} mode={mode} />;
     case "grid":
       return <GridRenderer block={block as GridBlock} mode={mode} />;
+    case "board-game":
+      return <BoardGameRenderer block={block as BoardGameBlock} />;
     case "linked-blocks":
       return <LinkedBlocksRenderer block={block as LinkedBlocksBlock} />;
     case "text-snippet":

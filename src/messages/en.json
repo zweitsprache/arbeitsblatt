@@ -443,6 +443,8 @@
     "articleTrainingDesc": "Practice German articles (der/das/die)",
     "audio": "Audio",
     "audioDesc": "Audio player with playback controls",
+    "boardGame": "Board Game",
+    "boardGameDesc": "8x5 board with text and image cells",
     "checklist": "Checklist",
     "checklistDesc": "Item list with checkboxes and rich text",
     "columnsDesc": "Arrange content in columns",

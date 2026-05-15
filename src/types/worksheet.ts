@@ -68,6 +68,7 @@ export type BlockType =
   | "schedule"
   | "website"
   | "checklist"
+  | "board-game"
   | "grid";
 
 // ─── Base block ──────────────────────────────────────────────
@@ -339,6 +340,20 @@ export interface GridBlock extends BlockBase {
   colGap: number;
   children: WorksheetBlock[][]; // flat array of cells, length = rows * cols
   showBorder?: boolean;
+}
+
+// ─── Board Game block ───────────────────────────────────────
+export interface BoardGameCell {
+  id: string;
+  text?: string;
+  imageUrl?: string;
+}
+
+export interface BoardGameBlock extends BlockBase {
+  type: "board-game";
+  rows: number;
+  cols: number;
+  cells: BoardGameCell[];
 }
 
 // ─── True/False Matrix block ─────────────────────────────────
@@ -902,6 +917,7 @@ export type WorksheetBlock =
   | AudioBlock
   | ScheduleBlock
   | WebsiteBlock
+  | BoardGameBlock
   | AiPromptBlock
   | AiToolBlock
   | TableBlock
@@ -1575,6 +1591,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       rowGap: 16,
       colGap: 16,
       children: [[], [], [], []],
+      visibility: "both",
+    },
+  },
+  {
+    type: "board-game",
+    label: "Board Game",
+    description: "8x5 board with text and image cells",
+    labelKey: "boardGame",
+    descriptionKey: "boardGameDesc",
+    icon: "Grid3X3",
+    category: "layout",
+    translations: { de: { label: "Board Game", description: "8x5-Spielfeld mit Text- und Bildzellen" } },
+    defaultData: {
+      type: "board-game",
+      rows: 8,
+      cols: 5,
+      cells: Array.from({ length: 40 }, (_, index) => ({
+        id: `cell-${index + 1}`,
+        text: index === 0 ? "ZIEL" : index === 35 ? "START" : "",
+        imageUrl: "",
+      })),
       visibility: "both",
     },
   },

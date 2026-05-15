@@ -23,6 +23,7 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   GridBlock,
+  BoardGameBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -3426,6 +3427,152 @@ function GridView({
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+function BoardGameView({ block }: { block: BoardGameBlock }) {
+  const totalCells = Math.max(1, block.rows * block.cols);
+  const cellWidthMm = 35;
+  const cellHeightMm = 25;
+  const cellGapPx = 8;
+  const mmToPx = 96 / 25.4;
+  const cellWidthPx = cellWidthMm * mmToPx;
+  const cellHeightPx = cellHeightMm * mmToPx;
+  const boardWidthPx = block.cols * cellWidthPx + Math.max(0, block.cols - 1) * cellGapPx;
+  const boardHeightPx = block.rows * cellHeightPx + Math.max(0, block.rows - 1) * cellGapPx;
+  const cells = Array.from({ length: totalCells }, (_, index) => {
+    const existing = block.cells[index];
+    return existing ?? { id: `cell-${index + 1}`, text: "", imageUrl: "" };
+  });
+
+  const snakePathIndices: number[] = [35];
+  for (let r = block.rows - 1; r >= 0; r--) {
+    const isLeftToRight = (block.rows - 1 - r) % 2 === 0;
+    if (isLeftToRight) {
+      for (let c = 0; c < block.cols; c++) {
+        const idx = r * block.cols + c;
+        if (idx !== 35 && idx !== 0 && idx < totalCells) {
+          snakePathIndices.push(idx);
+        }
+      }
+    } else {
+      for (let c = block.cols - 1; c >= 0; c--) {
+        const idx = r * block.cols + c;
+        if (idx !== 35 && idx !== 0 && idx < totalCells) {
+          snakePathIndices.push(idx);
+        }
+      }
+    }
+  }
+
+  const snakePathPoints = snakePathIndices
+    .map((idx) => {
+      const row = Math.floor(idx / block.cols);
+      const col = idx % block.cols;
+      const x = col * (cellWidthPx + cellGapPx) + cellWidthPx / 2;
+      const y = row * (cellHeightPx + cellGapPx) + cellHeightPx / 2;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const getSnakeNumber = (cellIndex: number): number | null => {
+    // Skip START (index 35) and ZIEL (index 0)
+    if (cellIndex === 35 || cellIndex === 0) return null;
+    
+    const cols = 5;
+    const rows = 8;
+    let number = 0;
+    
+    // Start from bottom row, snake up
+    for (let r = rows - 1; r >= 0; r--) {
+      const isLeftToRight = (rows - 1 - r) % 2 === 0;
+      
+      if (isLeftToRight) {
+        // Left to right
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          if (idx !== 35 && idx !== 0) {
+            number++;
+            if (idx === cellIndex) return number;
+          }
+        }
+      } else {
+        // Right to left
+        for (let c = cols - 1; c >= 0; c--) {
+          const idx = r * cols + c;
+          if (idx !== 35 && idx !== 0) {
+            number++;
+            if (idx === cellIndex) return number;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div
+      className="grid relative"
+      style={{
+        gridTemplateColumns: `repeat(${block.cols}, ${cellWidthMm}mm)`,
+        gap: "8px",
+        width: "fit-content",
+        margin: "0 auto",
+        marginLeft: "-8.5mm",
+      }}
+    >
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        viewBox={`0 0 ${boardWidthPx} ${boardHeightPx}`}
+        preserveAspectRatio="none"
+      >
+        <polyline
+          points={snakePathPoints}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-foreground/40"
+        />
+      </svg>
+      {cells.map((cell, index) => {
+        const displayText = index === 0 ? "ZIEL" : index === 35 ? "START" : cell.text;
+        const isSpecial = displayText === "ZIEL" || displayText === "START";
+        const snakeNumber = getSnakeNumber(index);
+        return (
+        <div
+          key={cell.id || index}
+          className={`relative z-10 rounded-sm border border-border p-2 bg-background flex flex-col ${isSpecial ? "items-center justify-center" : "space-y-2 relative"}`}
+          style={{
+            width: "35mm",
+            height: "25mm",
+            ...(cell.imageUrl && !isSpecial
+              ? {
+                  backgroundImage: `url(${cell.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }
+              : {}),
+          }}
+        >
+          {isSpecial ? (
+            <p className="font-bold text-3xl text-center leading-none">{displayText}</p>
+          ) : (
+            <>
+              {snakeNumber && <div className="absolute top-1 right-1 text-[9px] text-muted-foreground font-semibold">{snakeNumber}</div>}
+              {!cell.imageUrl ? <div className="flex-1 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
+              {displayText?.trim() ? (
+                <p className="flex-1 flex items-center justify-center text-center text-xs leading-snug whitespace-pre-wrap break-words overflow-hidden rounded-sm bg-background/70 px-1">{displayText}</p>
+              ) : null}
+            </>
+          )}
+        </div>
+        );
+      })}
     </div>
   );
 }
@@ -7070,6 +7217,8 @@ export function ViewerBlockRenderer({
          
         />
       );
+    case "board-game":
+      return <BoardGameView block={block as BoardGameBlock} />;
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
