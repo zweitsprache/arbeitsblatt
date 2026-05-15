@@ -955,6 +955,7 @@ export interface BrandProfile {
   subHeadlineFont: string;
   subHeadlineWeight: number;
   headerFooterFont: string;
+  exampleTextFont?: string | null;
   googleFontsUrl: string;
   translationFontOverrides?: TranslationFontOverrides | null;
 
@@ -969,6 +970,7 @@ export interface BrandProfile {
   h2NumberFormat?: string | null;
   h3NumberFormat?: string | null;
   h4NumberFormat?: string | null;
+  itemNumberFormat?: string | null;
   h1HeadingColor?: string | null;
   h2HeadingColor?: string | null;
   h3HeadingColor?: string | null;
@@ -1198,7 +1200,9 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     subHeadlineFont: fonts.subHeadlineFont,
     subHeadlineWeight: fonts.subHeadlineWeight,
     headerFooterFont: fonts.headerFooterFont,
+    exampleTextFont: "",
     googleFontsUrl: fonts.googleFontsUrl,
+    itemNumberFormat: "default",
     translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
     interactiveColor: "#0ea5e9",

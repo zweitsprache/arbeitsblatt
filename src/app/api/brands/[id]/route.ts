@@ -70,6 +70,9 @@ export async function PUT(
         ...(body.headerFooterFont !== undefined && {
           headerFooterFont: body.headerFooterFont,
         }),
+        ...(body.exampleTextFont !== undefined && {
+          exampleTextFont: body.exampleTextFont,
+        }),
         ...(body.googleFontsUrl !== undefined && {
           googleFontsUrl: body.googleFontsUrl,
         }),
@@ -93,6 +96,9 @@ export async function PUT(
         }),
         ...(body.h4NumberFormat !== undefined && {
           h4NumberFormat: body.h4NumberFormat,
+        }),
+        ...(body.itemNumberFormat !== undefined && {
+          itemNumberFormat: body.itemNumberFormat,
         }),
         ...(body.h1HeadingColor !== undefined && {
           h1HeadingColor: body.h1HeadingColor,

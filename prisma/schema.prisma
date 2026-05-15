@@ -193,6 +193,7 @@ model BrandProfile {
   subHeadlineFont          String @default("Asap Condensed, sans-serif")
   subHeadlineWeight        Int    @default(700)
   headerFooterFont         String @default("Asap Condensed, sans-serif")
+  exampleTextFont          String @default("")
   googleFontsUrl           String @default("")
   translationFontOverrides Json   @default("{}")
 
@@ -207,6 +208,7 @@ model BrandProfile {
   h2NumberFormat String?
   h3NumberFormat String?
   h4NumberFormat String?
+  itemNumberFormat String? @default("default") // default | numbers-with-period
   h1HeadingColor String? // default | primary | accent
   h2HeadingColor String?
   h3HeadingColor String?

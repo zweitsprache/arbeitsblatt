@@ -43,6 +43,7 @@ import {
   ChartBlock,
   NumberedLabelBlock,
   DialogueBlock,
+  DialogueSpeakerIcon,
   PageBreakBlock,
   WritingLinesBlock,
   WritingRowsBlock,
@@ -74,6 +75,9 @@ import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
+import {
+  DialogueSpeakerIconGlyph,
+} from "@/lib/dialogue-icons";
 import s from "./viewer-blocks.module.css";
 
 /** Safe lookup for BRAND_FONTS — falls back to edoomio if brand slug not in static map */
@@ -81,8 +85,13 @@ function getBrandFonts(brand: string) {
   return BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
 }
 
+const EXAMPLE_HANDWRITING_FONT = "var(--worksheet-example-font, var(--font-handwriting)), cursive";
+const ItemNumberFormatContext = React.createContext<string>("default");
+
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "mcq-rows", "order-items", "unscramble-words"]);
-const NUMBER_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-transparent text-slate-700 ring-1 ring-inset ring-slate-700 font-normal leading-none tabular-nums pl-px text-[10.5px]`;
+const NUMBER_BADGE_LAYOUT_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] shrink-0 leading-none tabular-nums`;
+const NUMBER_BADGE_CLASS = `${NUMBER_BADGE_LAYOUT_CLASS} bg-transparent text-slate-700 ring-1 ring-inset ring-slate-700 font-normal pl-px text-[10.5px]`;
+const NUMBER_TEXT_PLACEHOLDER_CLASS = `${NUMBER_BADGE_LAYOUT_CLASS} justify-start bg-transparent text-slate-700 ring-0 font-medium text-[1em]`;
 const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
@@ -99,6 +108,22 @@ const VIEWER_SECTION_GAP = {
 
 function formatInstructionBadgeLabel(index?: number): string {
   return toAlphabeticLabel((index ?? 0) + 1, true);
+}
+
+function formatItemNumberLabel(index: number, format: string | null | undefined): string {
+  if (format === "numbers-with-period") return `${index}.`;
+  return String(index).padStart(2, "0");
+}
+
+function ItemNumberBadge({ index, className = "" }: { index: number; className?: string }) {
+  const itemNumberFormat = React.useContext(ItemNumberFormatContext);
+  const isTextOnly = itemNumberFormat === "numbers-with-period";
+
+  return (
+    <span className={`${isTextOnly ? NUMBER_TEXT_PLACEHOLDER_CLASS : NUMBER_BADGE_CLASS} ${className}`.trim()}>
+      {formatItemNumberLabel(index, itemNumberFormat)}
+    </span>
+  );
 }
 
 function InstructionBadge({ instructionIndex }: { instructionIndex?: number }) {
@@ -631,14 +656,18 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const showBilingualDivider = block.bilingualDivider === true;
   const resolvedBodyFont = bodyFont || "inherit";
   const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
+  const resolvedContentFont = hasExampleBox ? "var(--worksheet-example-font, inherit)" : resolvedBodyFont;
+  const resolvedOriginalContentFont = hasExampleBox
+    ? "var(--worksheet-original-example-font, var(--worksheet-example-font, inherit))"
+    : resolvedOriginalBodyFont;
   const baseTextStyle: React.CSSProperties = {
-    ...(resolvedBodyFont !== "inherit" ? { fontFamily: resolvedBodyFont } : {}),
+    ...(resolvedContentFont !== "inherit" ? { fontFamily: resolvedContentFont } : {}),
     ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
   };
   // Font override for the original (German) column in bilingual mode — ensures brand font for Latin text
   const originalFontStyle: React.CSSProperties | undefined = isBilingual
     ? {
-        ...(resolvedOriginalBodyFont !== "inherit" ? { fontFamily: resolvedOriginalBodyFont } : {}),
+        ...(resolvedOriginalContentFont !== "inherit" ? { fontFamily: resolvedOriginalContentFont } : {}),
         ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
       }
     : undefined;
@@ -998,7 +1027,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           style={{
             "--block-color": borderTextColor,
             "--example-radius": mode === "online" ? "5px" : "4px",
-            fontFamily: resolvedBodyFont,
+            fontFamily: resolvedContentFont,
             ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
           } as React.CSSProperties}
         >
@@ -1006,7 +1035,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           {wrapBilingual(block.content, originalBlock?.content)}
         </div>
         {block.comment && (
-          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
+          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedContentFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
             {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
@@ -1022,7 +1051,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           style={{
             "--block-color": borderTextColor,
             "--example-radius": mode === "online" ? "5px" : "4px",
-            fontFamily: resolvedBodyFont,
+            fontFamily: resolvedContentFont,
             ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
           } as React.CSSProperties}
         >
@@ -1030,7 +1059,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           {wrapBilingual(block.content, originalBlock?.content)}
         </div>
         {block.comment && (
-          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
+          <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedContentFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
             {renderDeMarkers(block.comment, deMarkerColor)}
           </div>
         )}
@@ -1046,7 +1075,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           "--block-color": borderTextColor,
           "--example-radius": mode === "online" ? "5px" : "4px",
           "--example-icon-width": mode === "online" ? "2rem" : "2.5rem",
-          fontFamily: resolvedBodyFont,
+          fontFamily: resolvedContentFont,
           ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
         } as React.CSSProperties}
       >
@@ -1059,7 +1088,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         </div>
       </div>
       {block.comment && (
-        <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedBodyFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
+        <div className={s.commentBox} style={{ "--block-color": borderTextColor, fontFamily: resolvedContentFont, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) } as React.CSSProperties}>
           {renderDeMarkers(block.comment, deMarkerColor)}
         </div>
       )}
@@ -1540,9 +1569,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           className="flex items-center border-b last:border-b-0"
           style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
         >
-          <span className={NUMBER_BADGE_CLASS}>
-            {String(i + 1).padStart(2, "0")}
-          </span>
+          <ItemNumberBadge index={i + 1} />
           <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
         </div>
       ))}
@@ -1643,9 +1670,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
                 }
               }}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
               {showSolutions && isCorrect && !interactive ? (
                 <div className={CONTROL_BOX_FILLED_CLASS} />
               ) : (
@@ -1984,9 +2009,7 @@ function FillInBlankItemsView({
             key={item.id || idx}
             className={ROW_CLASS}
           >
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(idx + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={idx + 1} className="shrink-0" />
             <span className="flex-1 flex flex-wrap items-center leading-5">
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
@@ -2022,7 +2045,7 @@ function FillInBlankItemsView({
                         <span
                           className="absolute inset-x-0 bottom-0 block text-center leading-none"
                           style={{
-                            fontFamily: 'var(--font-handwriting), cursive',
+                            fontFamily: EXAMPLE_HANDWRITING_FONT,
                             color: '#0097dc',
                             fontSize: '18px',
                           }}
@@ -2356,9 +2379,7 @@ function FillInBlankItemsView({
                 key={pair.id}
                 className={CONSISTENT_ROW_CLASS_PRINT}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
                 <span className="flex-1 text-right" style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}>{pair.left}</span>
                 <div
                   className={CONTROL_BOX_CLASS}
@@ -2462,9 +2483,7 @@ function FillInBlankItemsView({
                 key={pair.id}
                 className={`${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} ${rowClass}`}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
                 <button
                   type="button"
                   onClick={() => handleLeftClick(pair.id)}
@@ -2615,9 +2634,7 @@ function FillInBlankItemsView({
                 className="flex min-h-[49px] items-center gap-3 border-b"
                 style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
               >
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
                 {block.fillSide === "left" ? (
                   hasHandwriting(item.left) ? (
                     <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -2690,9 +2707,7 @@ function FillInBlankItemsView({
               className="flex min-h-[49px] items-center gap-3 border-b"
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
               {block.fillSide === "left" ? (
                 hasHandwriting(item.left) ? (
                   <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -2986,9 +3001,7 @@ function renderTfBlanks(text: string): React.ReactNode {
 
             return (
               <div key={stmt.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(stmtIndex + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={stmtIndex + 1} className="shrink-0" />
                 <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
                 <div className="w-20 flex items-center justify-center">
                   {showSolutions && !interactive ? (
@@ -3129,9 +3142,7 @@ function MCQMatrixView({
 
             return (
               <div key={statement.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(statementIndex + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={statementIndex + 1} className="shrink-0" />
                   <span className="flex-1" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.text) }} />
                 {block.options.map((option) => {
                   const isSelected = selectedIds.includes(option.id);
@@ -3243,9 +3254,7 @@ function ArticleTrainingView({
 
           return (
             <div key={item.id} className={ROW_CLASS}>
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(idx + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={idx + 1} className="shrink-0" />
               {articles.map((a) => (
                 <div key={a} className="w-14 shrink-0 flex items-center justify-center">
                   {interactive ? (
@@ -3684,9 +3693,7 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
               key={item.id}
               className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
               {isPrint && <div className={indicatorClass} />}
               <span className="flex-1">{item.text}</span>
               {!isPrint && (
@@ -3805,7 +3812,7 @@ function renderInlineChoiceViewLine(
                       <span
                         className="absolute inset-0 flex items-center justify-center leading-none"
                         style={{
-                          fontFamily: 'var(--font-handwriting), cursive',
+                          fontFamily: EXAMPLE_HANDWRITING_FONT,
                           color: '#0097dc',
                           fontSize: '18px',
                           top: -1,
@@ -3965,9 +3972,7 @@ function InlineChoicesView({
             className="flex items-center border-b last:border-b-0"
             style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
           >
-            <span className={NUMBER_BADGE_CLASS}>
-              {String(items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length} />
             <span className="flex-1">
               {renderInlineChoiceViewLine(
                 item.content,
@@ -4048,7 +4053,7 @@ function MCQRowsView({
             className="flex items-center border-b last:border-b-0"
             style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
           >
-            <span className={NUMBER_BADGE_CLASS}>{String(index + 1).padStart(2, "0")}</span>
+            <ItemNumberBadge index={index + 1} />
             <span className="flex-1 min-w-0" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(item.text) }} />
             <div className="grid shrink-0 gap-2" style={choiceGridStyle}>
               {item.choices.map((choice, choiceIndex) => {
@@ -4436,7 +4441,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                     >
                       <span
                         className="flex-1"
-                        style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc' }}
+                        style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc' }}
                       >
                         {categoryExampleItem.text}
                       </span>
@@ -4476,7 +4481,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                             >
                               <span
                                 className="flex-1"
-                                style={{ fontFamily: 'var(--font-handwriting), cursive' }}
+                                style={{ fontFamily: EXAMPLE_HANDWRITING_FONT }}
                               >
                                 {item.text}
                               </span>
@@ -4633,7 +4638,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                       <span
                         className="flex-1"
                         style={{
-                          fontFamily: isExampleItem ? 'var(--font-handwriting), cursive' : undefined,
+                          fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
                           color: isExampleItem ? '#0097dc' : undefined,
                         }}
                       >
@@ -4829,9 +4834,7 @@ function UnscrambleWordsView({
               key={item.id}
               className="flex min-h-[49px] items-center gap-3 border-b"
             >
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
               <span className="select-none shrink-0 inline-block text-left" style={{ width: `${maxWordLength * 0.7}em` }}>
                 {scrambled}
               </span>
@@ -4936,9 +4939,7 @@ function CorrectSpellingView({
 
           return (
             <div key={item.id} className="flex min-h-[49px] items-center gap-3 border-b">
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
                 {variants.map((variant, variantIndex) => (
                   <span
@@ -5070,9 +5071,7 @@ function FixSentencesView({
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0 mt-1`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={i + 1} className="shrink-0 mt-1" />
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-1.5">
                     {displayParts.map((part, pi) => (
@@ -5132,7 +5131,7 @@ function FixSentencesView({
                   {isExampleSentence ? (
                     <div
                       className="relative mt-2 h-8 overflow-hidden font-medium"
-                      style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
+                      style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
                     >
                       <span className="absolute inset-x-0 bottom-px block leading-none">
                         {correctParts.join(" ")}
@@ -5219,9 +5218,7 @@ function CompleteSentencesView({
             key={item.id}
             className={ROW_CLASS}
           >
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} className="shrink-0" />
             <span className="shrink-0">{item.beginning}</span>
             {interactive ? (
               <input
@@ -5313,16 +5310,14 @@ function TransformSentencesView({
                 </div>
               ) : null}
               <div className={TRANSFORM_ROW_CLASS}>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
                 <span>{item.beginning}</span>
               </div>
               {isExampleSentence ? (
                 <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
                   <span
                     className="flex-1"
-                    style={{ fontFamily: 'var(--font-handwriting), cursive', color: '#0097dc', fontSize: '18px' }}
+                    style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
                   >
                     {item.solution}
                   </span>
@@ -5559,6 +5554,7 @@ function DialogueView({
   accentColor,
   showSolutions = false,
   instructionIndex,
+  brand,
 }: {
   block: DialogueBlock;
   mode: ViewMode;
@@ -5569,31 +5565,13 @@ function DialogueView({
   showSolutions?: boolean;
   accentColor?: string | null;
   instructionIndex?: number;
+  brand?: Brand;
 }) {
   const t = useTranslations("blockRenderer");
   const isOnline = mode === "online";
 
-  const speakerIconMap: Record<string, React.ReactNode> = {
-    triangle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <polygon points="12,3 22,21 2,21" />
-      </svg>
-    ),
-    square: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-      </svg>
-    ),
-    diamond: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <polygon points="12,2 22,12 12,22 2,12" />
-      </svg>
-    ),
-    circle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" />
-      </svg>
-    ),
+  const renderSpeakerIcon = (icon: DialogueSpeakerIcon) => {
+    return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brand} className="w-5 h-5 object-contain" />;
   };
 
   // Collect gap answers for word bank
@@ -5686,7 +5664,7 @@ function DialogueView({
               <span
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
                 style={{
-                  fontFamily: 'var(--font-handwriting)',
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
                   fontWeight: 400,
                   fontSize: '18px',
                   color: '#0097dc',
@@ -5775,14 +5753,12 @@ function DialogueView({
           const isSameSpeaker = prevItem && prevItem.icon === item.icon;
           return (
           <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} className="shrink-0" />
             {isSameSpeaker ? (
               <span className="h-5 w-5 min-w-5 shrink-0" />
             ) : (
               <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
-                {speakerIconMap[item.icon] || speakerIconMap.circle}
+                {renderSpeakerIcon(item.icon)}
               </span>
             )}
             {block.showOriginal ? (
@@ -6080,9 +6056,7 @@ function ChecklistView({
             className={rowClass}
             style={{ borderBottom: "var(--viewer-divider-style, 1px solid var(--border))" }}
           >
-            <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-              {String(index + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={index + 1} className="shrink-0" />
             {showBilingual
               ? (
                 <div style={{ flex: 1, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", columnGap: "1rem" }}>
@@ -6767,6 +6741,7 @@ export function ViewerBlockRenderer({
   headingNumberFormats,
   headingColors,
   headingNumberColors,
+  itemNumberFormat,
   translationScale,
 }: {
   block: WorksheetBlock;
@@ -6791,10 +6766,13 @@ export function ViewerBlockRenderer({
   headingNumberFormats?: Record<string, string>;
   headingColors?: Record<string, string>;
   headingNumberColors?: Record<string, string>;
+  itemNumberFormat?: string;
   isNonLatin?: boolean;
   isRtl?: boolean;
   translationScale?: number;
 }) {
+  const inheritedItemNumberFormat = React.useContext(ItemNumberFormatContext);
+  const resolvedItemNumberFormat = itemNumberFormat || inheritedItemNumberFormat || "default";
   const interactive = mode === "online";
   const noop = () => {};
 
@@ -6814,6 +6792,7 @@ export function ViewerBlockRenderer({
     return undefined;
   }, [allBlocks, block]);
 
+  const renderedBlock = (() => {
   switch (block.type) {
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)}/>;
@@ -7183,6 +7162,7 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
           instructionIndex={instructionIndex}
+          brand={brand}
         />
       );
     case "numbered-label":
@@ -7264,4 +7244,11 @@ export function ViewerBlockRenderer({
     default:
       return null;
   }
+  })();
+
+  return (
+    <ItemNumberFormatContext.Provider value={resolvedItemNumberFormat}>
+      {renderedBlock}
+    </ItemNumberFormatContext.Provider>
+  );
 }

@@ -11,6 +11,7 @@ import Image from "next/image";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
+import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "ps", "ur", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
@@ -169,6 +170,14 @@ export function WorksheetViewer({
   const activeBodyFont = isArabicScript && !translationFontOverride?.fontFamily?.trim()
     ? `"Noto Sans Arabic", ${baseBodyFont}`
     : nonEmpty(translationFontOverride?.fontFamily, baseBodyFont);
+  const exampleFontOverride = resolveBrandFontFamilyOverride(resolvedProfile.exampleTextFont, {
+    fallbackFontFamily: baseBodyFont,
+    generatedFamilyNamePrefix: `worksheet-example-${brandKey}`,
+  });
+  const originalExampleFont = exampleFontOverride.fontFamily;
+  const activeExampleFont = isArabicScript && !translationFontOverride?.fontFamily?.trim()
+    ? `"Noto Sans Arabic", ${originalExampleFont}`
+    : nonEmpty(translationFontOverride?.fontFamily, originalExampleFont);
   const headlineFont = nonEmpty(brandFonts.headlineFont, baseBodyFont);
   const fontStylesheetUrls = Array.from(
     new Set(
@@ -288,6 +297,7 @@ export function WorksheetViewer({
     h3: resolvedProfile.h3NumberFormat || "numbers",
     h4: resolvedProfile.h4NumberFormat || "numbers",
   };
+  const itemNumberFormat = resolvedProfile.itemNumberFormat || "default";
   const headingColors = {
     h1: resolvedProfile.h1HeadingColor || "primary",
     h2: resolvedProfile.h2HeadingColor || "primary",
@@ -326,6 +336,8 @@ export function WorksheetViewer({
   const viewerCssVars = {
     ...headingCssVars,
     ...(printCssVars || {}),
+    ["--worksheet-example-font" as string]: activeExampleFont,
+    ["--worksheet-original-example-font" as string]: originalExampleFont,
   } as React.CSSProperties;
 
   return (
@@ -336,6 +348,7 @@ export function WorksheetViewer({
       {fontStylesheetUrls.map((href) => (
         <link key={href} rel="stylesheet" href={href} />
       ))}
+      {exampleFontOverride.fontFaceCss ? <style>{exampleFontOverride.fontFaceCss}</style> : null}
 
       {mode === "print" ? (
         /* Print mode: table thead/tfoot for repeating header & footer */
@@ -422,7 +435,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} />
                         </div>
                       ))}
                     </div>
@@ -493,6 +506,7 @@ export function WorksheetViewer({
                     headingNumberFormats={headingNumberFormats}
                     headingColors={headingColors}
                     headingNumberColors={headingNumberColors}
+                    itemNumberFormat={itemNumberFormat}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
                     bodyFont={activeBodyFont}

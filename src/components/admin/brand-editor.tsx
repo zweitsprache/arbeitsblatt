@@ -109,6 +109,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     subHeadlineFont: "",
     subHeadlineWeight: 700,
     headerFooterFont: "",
+    exampleTextFont: "",
     googleFontsUrl: "",
     h1Size: "",
     h1Weight: "" as string | number,
@@ -120,6 +121,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2NumberFormat: "numbers",
     h3NumberFormat: "numbers",
     h4NumberFormat: "numbers",
+    itemNumberFormat: "default",
     h1HeadingColor: "primary",
     h2HeadingColor: "primary",
     h3HeadingColor: "primary",
@@ -166,6 +168,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           subHeadlineFont: data.subHeadlineFont,
           subHeadlineWeight: data.subHeadlineWeight,
           headerFooterFont: data.headerFooterFont,
+          exampleTextFont: data.exampleTextFont || "",
           googleFontsUrl: data.googleFontsUrl,
           h1Size: stripPx(data.h1Size),
           h1Weight: data.h1Weight ?? "",
@@ -177,6 +180,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2NumberFormat: data.h2NumberFormat || "numbers",
           h3NumberFormat: data.h3NumberFormat || "numbers",
           h4NumberFormat: data.h4NumberFormat || "numbers",
+          itemNumberFormat: data.itemNumberFormat || "default",
           h1HeadingColor: data.h1HeadingColor || "primary",
           h2HeadingColor: data.h2HeadingColor || "primary",
           h3HeadingColor: data.h3HeadingColor || "primary",
@@ -276,6 +280,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
 
       const payload = {
         ...form,
+        exampleTextFont: form.exampleTextFont.trim(),
         googleFontsUrl: cleanedFontsUrl,
         translationFontOverrides: translationFontOverrideMapFromRows(
           translationFontRows,
@@ -293,6 +298,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2NumberFormat: form.h2NumberFormat,
         h3NumberFormat: form.h3NumberFormat,
         h4NumberFormat: form.h4NumberFormat,
+        itemNumberFormat: form.itemNumberFormat,
         h1HeadingColor: form.h1HeadingColor,
         h2HeadingColor: form.h2HeadingColor,
         h3HeadingColor: form.h3HeadingColor,
@@ -553,6 +559,18 @@ export function BrandEditor({ brandId }: { brandId: string }) {
               />
             </div>
             <div>
+              <Label>{t("exampleTextFont")}</Label>
+              <Input
+                value={form.exampleTextFont}
+                onChange={(e) => update("exampleTextFont", e.target.value)}
+                placeholder="/fonts/feltpen/LinotypeFeltpen-Medium.woff2"
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">{t("exampleTextFontHelp")}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <Label>{t("headerFooterFont")}</Label>
               <Input
                 value={form.headerFooterFont}
@@ -561,8 +579,6 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                 className="mt-1"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>{t("headlineFont")}</Label>
               <Input
@@ -806,6 +822,17 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   <option value="numbers-leading-zero">{t("headingNumberFormatNumbersLeadingZero")}</option>
                   <option value="letters-uppercase">{t("headingNumberFormatUppercase")}</option>
                   <option value="letters-lowercase">{t("headingNumberFormatLowercase")}</option>
+                </select>
+              </div>
+              <div>
+                <Label>{t("itemNumberFormat")}</Label>
+                <select
+                  value={form.itemNumberFormat}
+                  onChange={(e) => update("itemNumberFormat", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 mt-1"
+                >
+                  <option value="default">{t("itemNumberFormatDefault")}</option>
+                  <option value="numbers-with-period">{t("itemNumberFormatNumbersWithPeriod")}</option>
                 </select>
               </div>
             </div>

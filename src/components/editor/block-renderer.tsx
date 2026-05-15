@@ -94,6 +94,9 @@ import dynamic from "next/dynamic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { BlockVisibility } from "@/types/worksheet";
+import {
+  DialogueSpeakerIconGlyph,
+} from "@/lib/dialogue-icons";
 
 // ─── Handwriting helper ──────────────────────────────────────
 /** Check whether a string contains ++…++ handwriting markers */
@@ -366,6 +369,28 @@ function formatHeadingNumber(index: number, format: string | null | undefined): 
     default:
       return String(index);
   }
+}
+
+function formatItemNumberLabel(index: number, format: string | null | undefined): string {
+  if (format === "numbers-with-period") return `${index}.`;
+  return String(index).padStart(2, "0");
+}
+
+function ItemNumberBadge({ index, className = "" }: { index: number; className?: string }) {
+  const { state } = useEditor();
+  const itemNumberFormat = state.brandProfile.itemNumberFormat || "default";
+  const isTextOnly = itemNumberFormat === "numbers-with-period";
+  const layoutClass = "w-6 h-6 rounded flex items-center justify-center shrink-0";
+
+  return (
+    <span
+      className={isTextOnly
+        ? `${layoutClass} min-w-6 justify-start bg-transparent text-[1em] font-medium leading-none text-muted-foreground tabular-nums ${className}`.trim()
+        : `${layoutClass} min-w-6 bg-muted text-xs font-bold text-muted-foreground ${className}`.trim()}
+    >
+      {formatItemNumberLabel(index, itemNumberFormat)}
+    </span>
+  );
 }
 
 function resolveHeadingOverrideColor(
@@ -1274,9 +1299,7 @@ function WritingRowsRenderer({ block }: { block: WritingRowsBlock }) {
     <div>
       {Array.from({ length: block.rowCount }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 border-b last:border-b-0 py-2">
-          <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-            {String(i + 1).padStart(2, "0")}
-          </span>
+          <ItemNumberBadge index={i + 1} />
           <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
         </div>
       ))}
@@ -1362,9 +1385,7 @@ function MultipleChoiceRenderer({
       <div className="space-y-2">
         {block.options.map((opt, i) => (
           <div key={opt.id} className="flex items-center gap-3 p-3 rounded-sm border border-border group">
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} />
             {interactive ? (
               block.allowMultiple ? (
                 <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300" />
@@ -1614,9 +1635,7 @@ function FillInBlankItemsRenderer({
             }`}
             onClick={() => handleRowClick(idx)}
           >
-            <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
-              {String(idx + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={idx + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
             <span className="flex-1 flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
               {parts.map((part, i) => {
                 const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
@@ -1818,9 +1837,7 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
               key={pair.id}
               className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
             >
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} />
               <span
                 ref={pair.id === examplePairId ? (node) => {
                   leftExampleRefs.current[pair.id] = node;
@@ -1903,9 +1920,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
               className={`flex items-center gap-3 ${block.extendedRows ? "py-1" : "py-2"} border-b ${i === 0 ? "border-t" : ""}`}
               style={block.extendedRows ? { minHeight: "3.5rem" } : undefined}
             >
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} />
               {block.fillSide === "left" ? (
                 hasHandwriting(item.left) ? (
                   <span className="flex-1">{renderHandwriting(item.left)}</span>
@@ -2198,9 +2213,7 @@ function TrueFalseMatrixRenderer({
             return orderedStatements.map((stmt, stmtIndex) => (
             <div key={stmt.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
               <div className="flex flex-1 items-center gap-3">
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(stmtIndex + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={stmtIndex + 1} />
                 <span
                   className="outline-none block flex-1"
                   contentEditable
@@ -2425,9 +2438,7 @@ function MCQMatrixRenderer({
           {orderedStatements.map((statement, statementIndex) => (
             <div key={statement.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
               <div className="flex flex-1 items-center gap-3">
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(statementIndex + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={statementIndex + 1} />
                 <InlineHtmlEditable
                   value={statement.text}
                   editable={!interactive}
@@ -2595,9 +2606,7 @@ function MCQRowsRenderer({
       <div>
         {block.items.map((item, itemIndex) => (
           <div key={item.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(itemIndex + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={itemIndex + 1} />
             <InlineHtmlEditable
               value={item.text}
               editable={!interactive}
@@ -2760,9 +2769,7 @@ function ArticleTrainingRenderer({
           {block.items.map((item, idx) => (
             <tr key={item.id} className="group/row border-b last:border-b-0">
               <td className="p-2 text-center">
-                <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                  {String(idx + 1).padStart(2, "0")}
-                </span>
+                <ItemNumberBadge index={idx + 1} />
               </td>
               {articles.map((a) => (
                 <td key={a} className="p-2 text-center">
@@ -3306,9 +3313,7 @@ function InlineChoicesRenderer({
             }`}
             onClick={() => handleRowClick(idx)}
           >
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={items.slice(0, idx + 1).filter((entry) => !entry.isSpacer).length} />
             <span className="flex-1">
               {interactive ? (
                 renderInlineChoiceLine(item.content, item.id === exampleItemId)
@@ -3819,9 +3824,7 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
               key={item.id}
               className="group/item flex h-[37px] items-center gap-3 border-b"
             >
-              <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
               <span className="text-base tracking-widest text-muted-foreground">
                 {scrambled}
               </span>
@@ -3945,9 +3948,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
 
           return (
             <div key={item.id} className="group/item flex min-h-[49px] items-center gap-3 border-b">
-              <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
                 {variants.map((variant, variantIndex) => (
                   <span
@@ -4070,9 +4071,7 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
             key={item.id}
             className="group/item flex min-h-[37px] items-center gap-3 border-b py-2"
           >
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} />
             <span
               className="outline-none block flex-1"
               contentEditable
@@ -4182,9 +4181,7 @@ function CompleteSentencesRenderer({ block }: { block: CompleteSentencesBlock })
             key={item.id}
             className="group/item flex items-center gap-3 py-2 border-b last:border-b-0"
           >
-            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} />
             <span
               className="outline-none block flex-1"
               contentEditable
@@ -4309,9 +4306,7 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
               </div>
             ) : null}
             <div className="flex items-center gap-3 py-2">
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <ItemNumberBadge index={i + 1} />
               <span
                 className="outline-none block flex-1"
                 contentEditable
@@ -5103,29 +5098,11 @@ function DialogueRenderer({
   block: DialogueBlock;
   interactive: boolean;
 }) {
-  const t = useTranslations("blockRenderer");
+  const { state } = useEditor();
+  const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
 
-  const speakerIconMap: Record<string, React.ReactNode> = {
-    triangle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <polygon points="12,3 22,21 2,21" />
-      </svg>
-    ),
-    square: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-      </svg>
-    ),
-    diamond: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-5 h-5">
-        <polygon points="12,2 22,12 12,22 2,12" />
-      </svg>
-    ),
-    circle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" />
-      </svg>
-    ),
+  const renderSpeakerIcon = (icon: DialogueSpeakerIcon) => {
+    return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brandSlug} className="w-5 h-5 object-contain" />;
   };
 
   // Collect gap answers for word bank
@@ -5152,7 +5129,7 @@ function DialogueRenderer({
 
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
     if (variant === "solution") {
-      return text.replace(/\{\{blank\*?(?::[^}]*)?\}\}/g, (_match, raw = "") => {
+      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
         const { answer } = parseBlankContent(raw);
         return answer;
       });
@@ -5294,14 +5271,12 @@ function DialogueRenderer({
           const isSameSpeaker = prevItem && prevItem.icon === item.icon;
           return (
           <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
-            <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-muted text-xs font-bold text-muted-foreground flex items-center justify-center leading-none">
-              {String(i + 1).padStart(2, "0")}
-            </span>
+            <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
             {isSameSpeaker ? (
               <span className="h-5 w-5 min-w-5 shrink-0" />
             ) : (
               <span className="h-5 w-5 min-w-5 shrink-0 text-muted-foreground flex items-center justify-center leading-none">
-                {speakerIconMap[item.icon] || speakerIconMap.circle}
+                {renderSpeakerIcon(item.icon)}
               </span>
             )}
             {block.showOriginal ? (
@@ -6114,10 +6089,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
         setBlockedPreview({ index, objectUrl, blob });
         return;
       }
-
-      const file = new File([blob], `website-preview-${Date.now()}.png`, {
-        type: "image/png",
-      });
+      const file = new File([blob], `website-preview-${Date.now()}.png`, { type: "image/png" });
       const uploadResult = await upload(file);
       updateItem(index, { image: uploadResult.url });
     } catch (error) {

@@ -6,6 +6,8 @@ import {
   WorksheetBlock,
   WorksheetSettings,
   DEFAULT_SETTINGS,
+  BrandProfile,
+  getStaticBrandProfile,
 } from "@/types/worksheet";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 
@@ -45,6 +47,15 @@ export default async function ProjectWorksheetPage({
     ...DEFAULT_SETTINGS,
     ...(worksheet.settings as unknown as Partial<WorksheetSettings>),
   };
+  const brandSlug = (settings.brand || "edoomio") as string;
+
+  const dbBrand = await prisma.brandProfile.findUnique({
+    where: { slug: brandSlug },
+    include: { subProfiles: true },
+  });
+  const brandProfile: BrandProfile = dbBrand
+    ? (dbBrand as unknown as BrandProfile)
+    : getStaticBrandProfile(brandSlug);
 
   return (
     <WorksheetViewer
@@ -53,6 +64,7 @@ export default async function ProjectWorksheetPage({
       settings={settings}
       mode="online"
       worksheetId={worksheet.id}
+      brandProfile={brandProfile}
     />
   );
 }

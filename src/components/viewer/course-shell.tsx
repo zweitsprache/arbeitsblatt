@@ -8,6 +8,7 @@ import { useCourse } from "./course-context";
 import { extractBlocksText } from "@/lib/extract-block-text";
 import { cn } from "@/lib/utils";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
+import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 import {
   ChevronRight,
   ChevronLeft,
@@ -429,6 +430,10 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
       DEFAULT_BRAND_SETTINGS[brandKey]?.logo || DEFAULT_BRAND_SETTINGS.edoomio.logo,
     ),
   );
+  const exampleFontOverride = resolveBrandFontFamilyOverride(resolvedBrandProfile.exampleTextFont, {
+    fallbackFontFamily: brandFonts.bodyFont,
+    generatedFamilyNamePrefix: `course-example-${brandKey}`,
+  });
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
@@ -551,9 +556,16 @@ export function CourseShell({ children }: { children: React.ReactNode }) {
   }, [basePathSegmentCount, pathname, structure]);
 
   return (
-    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-[linear-gradient(180deg,rgba(250,250,249,1)_0%,rgba(245,245,244,1)_100%)]">
+    <div
+      className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden lg:flex lg:flex-col bg-[linear-gradient(180deg,rgba(250,250,249,1)_0%,rgba(245,245,244,1)_100%)]"
+      style={{
+        ["--worksheet-example-font" as string]: exampleFontOverride.fontFamily,
+        ["--worksheet-original-example-font" as string]: exampleFontOverride.fontFamily,
+      } as React.CSSProperties}
+    >
       {/* Load brand fonts */}
       <link rel="stylesheet" href={brandFonts.googleFontsUrl} />
+      {exampleFontOverride.fontFaceCss ? <style>{exampleFontOverride.fontFaceCss}</style> : null}
 
       {/* Top bar (mobile only — below lg) */}
       <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b" style={{ fontFamily: brandFonts.bodyFont }}>
