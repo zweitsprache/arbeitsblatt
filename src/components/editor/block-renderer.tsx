@@ -4,8 +4,6 @@ import React, { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
-  HeadingBlock,
-  NumberedHeadingBlock,
   TextBlock,
   ImageBlock,
   ImageCardsBlock,
@@ -21,10 +19,12 @@ import {
   OpenResponseBlock,
   WordBankBlock,
   NumberLineBlock,
+  TrueFalseMatrixBlock,
+  HeadingBlock,
+  NumberedHeadingBlock,
   ColumnsBlock,
   GridBlock,
   BoardGameBlock,
-  TrueFalseMatrixBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
   OrderItemsBlock,
@@ -36,6 +36,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
   VerbTableRow,
@@ -3077,14 +3078,16 @@ function renderInlineChoiceLine(content: string, showExample = false): React.Rea
       if (renderAsExample) {
         exampleUsed = true;
         return (
-          <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
+          <span key={i} style={{ marginLeft: 2, marginRight: 2 }}>
             {seg.options.map((opt, oi) => {
               const isCorrect = oi === seg.correctIndex;
               const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
               return (
-                <span key={oi} className="inline-flex items-center gap-1.5">
-                  {renderInlineChoiceIndicator(isCorrect, true)}
-                  <span className="font-semibold">{label}</span>
+                <span key={oi} style={{ marginRight: oi < seg.options.length - 1 ? 6 : 0 }}>
+                  <span style={{ display: 'inline-block', verticalAlign: '-3px' }}>
+                    {renderInlineChoiceIndicator(isCorrect, true)}
+                  </span>
+                  <span className="font-semibold" style={{ marginLeft: 3 }}>{label}</span>
                 </span>
               );
             })}
@@ -3176,14 +3179,16 @@ function EditableInlineChoiceLine({
           if (renderAsExample) {
             exampleUsed = true;
             return (
-              <span key={i} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
+              <span key={i} style={{ marginLeft: 2, marginRight: 2 }}>
                 {seg.options.map((opt, oi) => {
                   const isCorrect = oi === seg.correctIndex;
                   const label = atStart ? opt.charAt(0).toUpperCase() + opt.slice(1) : opt;
                   return (
-                    <span key={oi} className="inline-flex items-center gap-1.5">
-                      {renderInlineChoiceIndicator(isCorrect, true)}
-                      <span className="font-semibold">{label}</span>
+                    <span key={oi} style={{ marginRight: oi < seg.options.length - 1 ? 6 : 0 }}>
+                      <span style={{ display: 'inline-block', verticalAlign: '-3px' }}>
+                        {renderInlineChoiceIndicator(isCorrect, true)}
+                      </span>
+                      <span className="font-semibold" style={{ marginLeft: 3 }}>{label}</span>
                     </span>
                   );
                 })}
@@ -4341,6 +4346,187 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
                 </span>
               ) : null}
             </div>
+          </div>
+        ))}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addSentence();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addSentence")}
+      </button>
+    </div>
+  );
+}
+
+function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const isFormLayout = block.layoutType === "form";
+  const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
+  const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
+
+  const updateSentence = (id: string, updates: Partial<{ question: string; beginning: string }>) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.map((s) =>
+            s.id === id ? { ...s, ...updates } : s
+          ),
+        },
+      },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: crypto.randomUUID(), question: "", beginning: "", fieldValues: formFieldLabels.map(() => "") },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (id: string) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((s) => s.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {block.instruction}
+      </div>
+
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className={`group/item border-b ${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}`}
+          >
+            {item.src ? (
+              <div className="row-span-2 pr-3 flex items-center justify-center">
+                <img
+                  src={item.src}
+                  alt=""
+                  className="block max-h-full max-w-full h-auto w-auto object-contain"
+                  style={{ borderRadius: "3px" }}
+                />
+              </div>
+            ) : null}
+            <div className={`flex items-start gap-3 ${isFormLayout ? "pt-2 pb-0" : "py-2"}`}>
+              <ItemNumberBadge index={i + 1} />
+              <div className="flex-1 space-y-1">
+                <div
+                  className="font-medium outline-none"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    const value = e.currentTarget.textContent || "";
+                    localeUpdate(block.id, `sentences.${i}.question`, value, () =>
+                      updateSentence(item.id, { question: value })
+                    );
+                  }}
+                >
+                  {item.question}
+                </div>
+                {!isFormLayout && (
+                  <div
+                    className="outline-none text-sm text-muted-foreground"
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => {
+                      const value = e.currentTarget.textContent || "";
+                      localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                        updateSentence(item.id, { beginning: value })
+                      );
+                    }}
+                  >
+                    {item.beginning}
+                  </div>
+                )}
+              </div>
+              <button
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                  ${block.sentences.length <= 1 ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeSentence(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+            {isFormLayout ? (
+              <div className="flex gap-3 pb-2 pt-0">
+                <div className="w-6 h-6 min-w-6 shrink-0" aria-hidden="true" />
+                <div className="flex-1">
+                  <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
+                    {formFieldLabels.map((label, fieldIndex) => {
+                      const value = item.fieldValues?.[fieldIndex] ?? "";
+                      const isExample = item.id === exampleSentenceId && value.trim() !== "";
+                      return (
+                        <div key={fieldIndex} className="space-y-1 min-w-0">
+                          <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
+                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 text-muted-foreground text-xs min-h-[20px]">
+                            {isExample ? (
+                              <span
+                                className="absolute inset-0 flex items-center justify-center"
+                                style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                              >
+                                {value}
+                              </span>
+                            ) : <span>&nbsp;</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
+                {item.id === exampleSentenceId && item.solution ? (
+                  <span
+                    className="absolute -top-1 left-9 text-[1.15em]"
+                    style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                  >
+                    {item.solution}
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -6709,9 +6895,16 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
         block.firstRowAsExample ? "table-first-row-example" : ""
       }`}
     >
+      {block.instruction && (
+        <p className="text-sm text-slate-600 mb-2">{block.instruction}</p>
+      )}
+      {block.description && (
+        <p className="mt-2 mb-2">{block.description}</p>
+      )}
       <TableEditor
         content={block.content}
         columnWidths={block.columnWidths}
+        hideHeader={block.hideHeader}
         onChange={(html) =>
           localeUpdate(block.id, "content", html, () =>
             dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
@@ -6821,6 +7014,8 @@ export function BlockRenderer({
       return <CompleteSentencesRenderer block={block} />;
     case "transform-sentences":
       return <TransformSentencesRenderer block={block} />;
+    case "reading-comprehension":
+      return <ReadingComprehensionRenderer block={block} />;
     case "verb-table":
       return <VerbTableRenderer block={block} />;
     case "chart":

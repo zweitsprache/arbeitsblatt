@@ -39,6 +39,7 @@ export type BlockType =
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
+  | "reading-comprehension"
   | "transform-sentences"
   | "verb-table"
   | "text-cards"
@@ -189,11 +190,14 @@ export type TableStyle = "default" | "striped" | "bordered" | "minimal";
 export interface TableBlock extends BlockBase {
   type: "table";
   content: string;
+  instruction?: string;
+  description?: string;
   tableStyle?: TableStyle;
   caption?: string;
   columnWidths?: number[];
   bilingual?: boolean;
   firstRowAsExample?: boolean;
+  hideHeader?: boolean;
   skipTranslation?: boolean;
 }
 
@@ -582,6 +586,25 @@ export interface TransformSentenceItem {
   src?: string;
 }
 
+export interface ReadingComprehensionBlock extends BlockBase {
+  type: "reading-comprehension";
+  instruction: string;
+  sentences: ReadingComprehensionItem[];
+  layoutType?: "default" | "form";
+  formFieldLabels?: string[];
+  formColumns?: 1 | 2 | 3 | 4;
+  showFirstAsExample?: boolean;
+}
+
+export interface ReadingComprehensionItem {
+  id: string;
+  question: string;
+  beginning: string;
+  solution?: string;
+  src?: string;
+  fieldValues?: string[];
+}
+
 // ─── Verb Table block ───────────────────────────────────────
 export type VerbTableTense = "praesens" | "praeteritum" | "perfekt" | "plusquamperfekt" | "futur1" | "konjunktiv2";
 
@@ -892,6 +915,7 @@ export type WorksheetBlock =
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
+  | ReadingComprehensionBlock
   | TransformSentencesBlock
   | VerbTableBlock
   | GlossaryBlock
@@ -2014,6 +2038,28 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "reading-comprehension",
+    label: "Reading Comprehension",
+    description: "Answer reading questions with writing lines",
+    labelKey: "readingComprehension",
+    descriptionKey: "readingComprehensionDesc",
+    icon: "BookOpen",
+    category: "interactive",
+    translations: { de: { label: "Leseverstehen", description: "Fragen zum Text mit Schreiblinien beantworten" } },
+    defaultData: {
+      type: "reading-comprehension",
+      instruction: "Beantworte die Fragen zum Text.",
+      layoutType: "default",
+      formFieldLabels: [""],
+      formColumns: 2,
+      sentences: [
+        { id: "rc1", question: "Warum geht Lara früh zur Schule?", beginning: "Lara geht früh zur Schule, weil ...", fieldValues: [""] },
+        { id: "rc2", question: "Was macht sie vor dem Unterricht?", beginning: "Vor dem Unterricht ...", fieldValues: [""] },
+      ],
+      visibility: "both",
+    },
+  },
+  {
     type: "transform-sentences",
     label: "Transform Sentences",
     description: "Rewrite sentences in a different form",
@@ -2416,7 +2462,9 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   defaultData: {
     type: "table",
     content: '<table><tbody><tr><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr></tbody></table>',
+    description: "",
     tableStyle: "default",
+    hideHeader: false,
     visibility: "both",
   },
 },

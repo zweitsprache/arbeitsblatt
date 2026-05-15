@@ -1190,7 +1190,7 @@
   border-right: 0;
   border-bottom: 0;
   padding: 6px 10px;
-  vertical-align: top;
+  vertical-align: middle;
   position: relative;
   min-width: 60px;
 }
@@ -1236,6 +1236,25 @@
   margin: 0;
 }
 
+.table-block [data-table-blank="true"] {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-height: 1.25rem;
+  padding: 0 0.5rem;
+  background-color: #f3f4f6;
+  border-radius: 3px;
+  text-align: center;
+  line-height: 1;
+}
+
+.table-block [data-table-blank-measure="true"] {
+  visibility: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* ── Table style variants ─────────────────────────────────── */
 
 /* Striped rows */
@@ -1272,16 +1291,35 @@
   min-height: 1.5em;
 }
 
-/* First data row as example — blue handwriting style.
-   Case A: row 1 already has <td> → style row 1.
-   Case B: row 1 is header-like (<th>) in <tbody> → style row 2. */
-.table-block.table-first-row-example tbody tr:first-child > td,
-.table-block.table-first-row-example tbody tr:first-child > td p,
-.table-block.table-first-row-example tbody tr:nth-child(2) > td,
-.table-block.table-first-row-example tbody tr:nth-child(2) > td p {
-  color: #3b82f6;
-  font-family: "Shadows Into Light", var(--font-handwriting), cursive !important;
+/* First data row as example — keep cell layout stable and overlay answers in blanks. */
+.table-block.table-first-row-example tr[data-table-example-row="true"] > td,
+.table-block.table-first-row-example tr[data-table-example-row="true"] > th {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table-block.table-first-row-example tr[data-table-example-row="true"] > td > p,
+.table-block.table-first-row-example tr[data-table-example-row="true"] > th > p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.table-block.table-first-row-example tr[data-table-example-row="true"] [data-table-blank="true"][data-answer]::after {
+  content: attr(data-answer);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--worksheet-example-font, var(--font-handwriting)), cursive;
   font-weight: 400;
+  font-size: 18px;
+  line-height: 1;
+  color: #0097dc;
+  white-space: nowrap;
 }
 
 /* ── Editor-specific: Selected cells ─────────────────────── */
@@ -1300,57 +1338,8 @@
   width: 100% !important;
 }
 
-/* ── Viewer: make sure tables look good without editor ───── */
-.tiptap-table-view table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100% !important;
-  table-layout: fixed;
-  border-radius: 4px;
-}
-.tiptap-table-view td,
-.tiptap-table-view th {
-  border: 1px solid #e5e7eb;
-  border-right: 0;
-  border-bottom: 0;
-  padding: 6px 10px;
-  vertical-align: top;
-}
-.tiptap-table-view tr > *:last-child {
-  border-right: 1px solid #e5e7eb;
-}
-.tiptap-table-view tbody tr:last-child td {
-  border-bottom: 1px solid #e5e7eb;
-}
-.tiptap-table-view th {
-  background-color: #f1f5f9;
-  font-weight: 600;
-  text-align: left;
-}
-.tiptap-table-view thead tr:first-child th:first-child {
-  border-top-left-radius: 4px;
-}
-.tiptap-table-view thead tr:first-child th:last-child {
-  border-top-right-radius: 4px;
-}
-.tiptap-table-view tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 4px;
-}
-.tiptap-table-view tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 4px;
-}
+/* ── Viewer: TipTap wrapper normalization only ───────────── */
 .tiptap-table-view td p,
 .tiptap-table-view th p {
-
-  /* ─── TheSansB Font Metric Overrides ──────────────────────
-     Computed from actual font metrics to align with standard x-height baseline.
-     Metrics: unitsPerEm: 1000, ascent: 740, descent: -260, lineGap: 300, xHeight: 497
-     Size adjust: 102.5% (normalized to standard x-height).
-     ──────────────────────────────────────────────────────── */
-  @supports (size-adjust: 102.5%) {
-    .print-worksheet-root {
-      font-size-adjust: 102.5%;
-    }
-  }
   margin: 0;
 }

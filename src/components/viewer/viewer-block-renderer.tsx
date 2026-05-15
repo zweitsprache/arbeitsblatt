@@ -38,6 +38,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
   ChartBlock,
@@ -73,6 +74,7 @@ import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
 import {
@@ -3795,17 +3797,18 @@ function renderInlineChoiceViewLine(
       if (renderAsExample) {
         exampleUsed = true;
         return (
-          <span key={`${lineKey}-${i}`} className="inline-flex items-center gap-3 mx-0.5 align-middle flex-wrap">
+          <span key={`${lineKey}-${i}`} style={{ marginLeft: 2, marginRight: 2 }}>
             {displayed.map((sh, oi) => {
               const isCorrectOpt = sh.originalIndex === correctIndex;
               const label = capitalise(sh.item);
               return (
-                <span key={oi} className="inline-flex items-center gap-1.5">
+                <span key={oi} style={{ marginRight: oi < displayed.length - 1 ? 6 : 0 }}>
                   <span
                     className={CONTROL_BOX_CLASS}
                     style={{
                       position: 'relative',
                       color: '#0097dc',
+                      verticalAlign: '-3px',
                     }}
                   >
                     {isCorrectOpt ? (
@@ -3815,14 +3818,13 @@ function renderInlineChoiceViewLine(
                           fontFamily: EXAMPLE_HANDWRITING_FONT,
                           color: '#0097dc',
                           fontSize: '18px',
-                          top: -1,
                         }}
                       >
                         X
                       </span>
                     ) : null}
                   </span>
-                  <span className="font-semibold" style={{ verticalAlign: 'middle' }}>{label}</span>
+                  <span className="font-semibold" style={{ marginLeft: 3 }}>{label}</span>
                 </span>
               );
             })}
@@ -5366,6 +5368,189 @@ function TransformSentencesView({
   );
 }
 
+function ReadingComprehensionView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+  accentColor,
+  interactiveColor,
+  instructionIndex,
+}: {
+  block: ReadingComprehensionBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  accentColor?: string | null;
+  interactiveColor?: string;
+  instructionIndex?: number;
+}) {
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const isOnline = mode === "online";
+  const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const FOLLOWUP_ROW_CLASS = isOnline
+    ? "flex min-h-[49px] items-center gap-3"
+    : "flex min-h-[32.5px] items-center gap-3";
+  const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const isFormLayout = block.layoutType === "form";
+  const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
+  const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
+
+  return (
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <InstructionBadge instructionIndex={instructionIndex} />
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        )
+      )}
+      <div>
+        {block.sentences.map((item, i) => {
+          const userVal = userAnswers[item.id] || "";
+          const hasSolution = !!item.solution;
+          const isCorrect = showResults && hasSolution && userVal.trim().toLowerCase() === item.solution!.trim().toLowerCase();
+          const isWrong = showResults && hasSolution && userVal.trim() !== "" && !isCorrect;
+          const isExampleSentence = item.id === exampleSentenceId && !!item.solution;
+
+          return (
+            <div key={item.id} className={`${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"} border-b`}>
+              {item.src ? (
+                <div className="row-span-2 pr-3 flex items-center justify-center">
+                  <img
+                    src={item.src}
+                    alt=""
+                    className="block max-h-full max-w-full h-auto w-auto object-contain"
+                    style={{ borderRadius: "3px" }}
+                  />
+                </div>
+              ) : null}
+              <div className={`${isFormLayout ? FOLLOWUP_ROW_CLASS : ROW_CLASS} items-start ${isFormLayout ? 'pt-2 pb-0' : 'py-2'}`}>
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">{item.question}</p>
+                  {!isFormLayout && item.beginning && <p className="text-sm text-muted-foreground">{item.beginning}</p>}
+                </div>
+              </div>
+              {isFormLayout ? (
+                <div className="flex gap-3 pb-2 pt-0">
+                  <div className={NUMBER_BADGE_LAYOUT_CLASS} aria-hidden="true" />
+                  <div className="flex-1">
+                    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
+                      {formFieldLabels.map((label, fieldIndex) => {
+                        const answerKey = `${item.id}_${fieldIndex}`;
+                        const userFieldVal = userAnswers[answerKey] || "";
+                        const solution = item.fieldValues?.[fieldIndex] || "";
+                        const hasFieldSolution = solution.trim() !== "";
+                        const isFieldCorrect = showResults && hasFieldSolution && userFieldVal.trim().toLowerCase() === solution.trim().toLowerCase();
+                        const isFieldWrong = showResults && hasFieldSolution && userFieldVal.trim() !== "" && !isFieldCorrect;
+                        const isExampleField = item.id === exampleSentenceId && hasFieldSolution;
+
+                        return (
+                          <div key={fieldIndex} className="space-y-1 min-w-0">
+                            <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
+                            {isExampleField ? (
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
+                                <span
+                                  className="absolute inset-0 flex items-center justify-center"
+                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                                >
+                                  {solution}
+                                </span>
+                              </div>
+                            ) : interactive ? (
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
+                                <input
+                                  type="text"
+                                  value={userFieldVal}
+                                  onChange={(e) => onAnswer({ ...userAnswers, [answerKey]: e.target.value })}
+                                  disabled={showResults}
+                                  className={`w-full h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none transition-colors ${
+                                    showResults
+                                      ? isFieldCorrect
+                                        ? "bg-green-100 text-green-700"
+                                        : isFieldWrong
+                                          ? "bg-red-50 text-red-700"
+                                          : "text-foreground"
+                                      : "focus:ring-1 focus:ring-primary/50"
+                                  }`}
+                                  style={!showResults && isOnline ? {
+                                    backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                                  } : undefined}
+                                />
+                                {showResults && isFieldWrong && hasFieldSolution && (
+                                  <span className="text-cv-xs text-green-600 mt-0.5 block">{solution}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 text-muted-foreground text-xs min-h-[20px]">&nbsp;</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : isExampleSentence ? (
+                <div className={FOLLOWUP_ROW_CLASS}>
+                  <span
+                    className="flex-1"
+                    style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                  >
+                    {item.solution}
+                  </span>
+                </div>
+              ) : interactive ? (
+                <div className={FOLLOWUP_ROW_CLASS}>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={userVal}
+                      onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
+                      disabled={showResults}
+                      className={`w-full h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors ${
+                        showResults
+                          ? isCorrect
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : isWrong
+                              ? "border-red-500 bg-red-50 text-red-700"
+                              : "border-muted-foreground/40 bg-transparent"
+                          : "border-muted-foreground/40 focus:border-primary"
+                      }`}
+                      style={!showResults && isOnline ? {
+                        backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                      } : undefined}
+                    />
+                    {showResults && isWrong && hasSolution && (
+                      <span className="text-cv-xs text-green-600 mt-0.5 block">{item.solution}</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={FOLLOWUP_ROW_CLASS}>
+                  <span className="flex-1 inline-block h-8 rounded" style={{ opacity: 1.0, minWidth: 80 }}>
+                    &nbsp;
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Verb Table View ────────────────────────────────────────
 function VerbTableView({
   block,
@@ -6670,11 +6855,20 @@ function mergeBilingualTableHtml(originalHtml: string, translatedHtml: string): 
   );
 }
 
-function TableView({ block, originalBlock }: { block: TableBlock; originalBlock?: TableBlock }) {
-  // Strip TipTap's pixel-based widths from saved HTML
-  let html = prepareTiptapHtml(block.content)
-    .replace(/<table([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<table$1")
-    .replace(/<col([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<col$1");
+function TableView({
+  block,
+  originalBlock,
+  mode,
+  accentColor,
+  instructionIndex,
+}: {
+  block: TableBlock;
+  originalBlock?: TableBlock;
+  mode: ViewMode;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  let html = stripTablePixelWidths(prepareTiptapHtml(block.content));
 
   // Inject <colgroup> for column widths if defined on the block
   if (block.columnWidths && block.columnWidths.length > 0) {
@@ -6688,23 +6882,44 @@ function TableView({ block, originalBlock }: { block: TableBlock; originalBlock?
 
   // Bilingual: merge translated content into each cell when enabled + translation is present
   if (block.bilingual && originalBlock && originalBlock.content !== block.content) {
-    const origHtml = prepareTiptapHtml(originalBlock.content)
-      .replace(/<table([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<table$1")
-      .replace(/<col([^>]*) style="[^"]*width:\s*\d+px[^"]*"/gi, "<col$1");
+    const origHtml = stripTablePixelWidths(prepareTiptapHtml(originalBlock.content));
     html = mergeBilingualTableHtml(origHtml, html);
   }
 
+  if (block.hideHeader) {
+    html = hideTableHeaderHtml(html);
+  }
+
+  if (block.firstRowAsExample) {
+    html = markFirstExampleRowHtml(html);
+  }
+
+  html = renderBlankTokensInHtml(html);
+
   return (
-    <div className={`table-block table-style-${block.tableStyle ?? "default"} ${
-      block.firstRowAsExample ? "table-first-row-example" : ""
-    }`}>
-      <div
-        className="tiptap-table-view"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-      {block.caption && (
-        <p className="text-xs text-muted-foreground text-center mt-1 italic">{block.caption}</p>
+    <div>
+      {block.instruction && (
+        <InstructionRow
+          instruction={block.instruction}
+          accentColor={accentColor}
+          mode={mode}
+          instructionIndex={instructionIndex}
+        />
       )}
+      {block.description && (
+        <p className="mt-2 mb-2">{block.description}</p>
+      )}
+      <div className={`table-block table-style-${block.tableStyle ?? "default"} ${
+        block.firstRowAsExample ? "table-first-row-example" : ""
+      }`}>
+        <div
+          className="tiptap-table-view"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+        {block.caption && (
+          <p className="text-xs text-muted-foreground text-center mt-1 italic">{block.caption}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -7133,6 +7348,20 @@ export function ViewerBlockRenderer({
           instructionIndex={instructionIndex}
         />
       );
+    case "reading-comprehension":
+      return (
+        <ReadingComprehensionView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
+        />
+      );
     case "verb-table":
       return (
         <VerbTableView
@@ -7234,7 +7463,7 @@ export function ViewerBlockRenderer({
     case "ai-tool":
       return <AiToolView block={block as AiToolBlock} />;
     case "table":
-      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} />;
+      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} mode={mode} accentColor={accentColor} instructionIndex={instructionIndex} />;
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":

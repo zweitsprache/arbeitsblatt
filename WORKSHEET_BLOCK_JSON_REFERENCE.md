@@ -1239,12 +1239,15 @@ Notes:
   "id": "table-1",
   "type": "table",
   "visibility": "both",
+  "instruction": "Complete the table.",
+  "description": "Use the words from the box and write one answer per cell.",
   "content": "<table><tbody><tr><th colspan=\"1\" rowspan=\"1\"><p>Header 1</p></th><th colspan=\"1\" rowspan=\"1\"><p>Header 2</p></th></tr><tr><td colspan=\"1\" rowspan=\"1\"><p>Cell A</p></td><td colspan=\"1\" rowspan=\"1\"><p>Cell B</p></td></tr></tbody></table>",
   "tableStyle": "default",
   "caption": "Optional caption",
   "columnWidths": [50, 50],
   "bilingual": false,
   "firstRowAsExample": false,
+  "hideHeader": false,
   "skipTranslation": false
 }
 ```

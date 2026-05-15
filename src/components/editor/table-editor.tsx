@@ -233,9 +233,10 @@ interface TableEditorProps {
   onChange: (html: string) => void;
   editable?: boolean;
   columnWidths?: number[];
+  hideHeader?: boolean;
 }
 
-export function TableEditor({ content, onChange, editable = true, columnWidths }: TableEditorProps) {
+export function TableEditor({ content, onChange, editable = true, columnWidths, hideHeader = false }: TableEditorProps) {
   const t = useTranslations("tableEditor");
 
   // Strip TipTap's pixel-based widths from HTML so table uses CSS 100%
@@ -312,6 +313,28 @@ export function TableEditor({ content, onChange, editable = true, columnWidths }
       }
     });
   }, [columnWidths, content]);
+
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+
+    const root = wrapperRef.current;
+    const theads = Array.from(root.querySelectorAll("table thead"));
+    const rows = Array.from(root.querySelectorAll("table tr"));
+
+    theads.forEach((thead) => {
+      (thead as HTMLElement).style.display = hideHeader ? "none" : "";
+    });
+
+    const firstHeaderRow = rows.find((row) => {
+      const hasHeaderCells = row.querySelector("th") !== null;
+      const hasDataCells = row.querySelector("td") !== null;
+      return hasHeaderCells && !hasDataCells;
+    });
+
+    if (firstHeaderRow instanceof HTMLElement) {
+      firstHeaderRow.style.display = hideHeader ? "none" : "";
+    }
+  }, [cleanContent, editor, hideHeader]);
 
   const setLink = useCallback(() => {
     if (!editor) return;

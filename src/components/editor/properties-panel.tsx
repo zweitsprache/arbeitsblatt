@@ -55,6 +55,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
   ChartBlock,
@@ -5847,6 +5848,539 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
   );
 }
 
+function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const { upload } = useUpload();
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [activeSentenceIndex, setActiveSentenceIndex] = React.useState<number | null>(null);
+  const [uploadingSentenceIndex, setUploadingSentenceIndex] = React.useState<number | null>(null);
+  const isFormLayout = block.layoutType === "form";
+  const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
+  const formColumns = String(block.formColumns ?? 2);
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+    const newSentences = lines.map((line, i) => {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+      return {
+        id: `rc${Date.now()}-${i}`,
+        question: parts[0] || "",
+        beginning: isFormLayout ? "" : (parts[1] || ""),
+        ...(isFormLayout
+          ? { fieldValues: parts.slice(1, 1 + formFieldLabels.length) }
+          : parts[2]
+            ? { solution: parts[2] }
+            : {}),
+      };
+    });
+    const sentences = csvMode === "append"
+      ? [...block.sentences, ...newSentences]
+      : newSentences;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences } },
+    });
+    setCsvText("");
+  };
+
+  const updateSentence = (index: number, updates: Partial<{ question: string; beginning: string; solution: string; src?: string; fieldValues: string[] }>) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: `rc${Date.now()}`, question: "", beginning: "", fieldValues: formFieldLabels.map(() => "") },
+          ],
+        },
+      },
+    });
+  };
+
+  const updateFieldLabel = (index: number, value: string) => {
+    const nextLabels = [...formFieldLabels];
+    nextLabels[index] = value;
+    const nextSentences = block.sentences.map((item) => {
+      const nextValues = [...(item.fieldValues ?? [])];
+      while (nextValues.length < nextLabels.length) nextValues.push("");
+      return { ...item, fieldValues: nextValues.slice(0, nextLabels.length) };
+    });
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { formFieldLabels: nextLabels, sentences: nextSentences } },
+    });
+  };
+
+  const addFieldLabel = () => {
+    const nextLabels = [...formFieldLabels, ""];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          formFieldLabels: nextLabels,
+          sentences: block.sentences.map((item) => ({
+            ...item,
+            fieldValues: [...(item.fieldValues ?? []), ""],
+          })),
+        },
+      },
+    });
+  };
+
+  const removeFieldLabel = (index: number) => {
+    if (formFieldLabels.length <= 1) return;
+    const nextLabels = formFieldLabels.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          formFieldLabels: nextLabels,
+          sentences: block.sentences.map((item) => ({
+            ...item,
+            fieldValues: (item.fieldValues ?? []).filter((_, i) => i !== index),
+          })),
+        },
+      },
+    });
+  };
+
+  const updateFieldValue = (sentenceIndex: number, fieldIndex: number, value: string) => {
+    const nextValues = [...(block.sentences[sentenceIndex].fieldValues ?? formFieldLabels.map(() => ""))];
+    while (nextValues.length < formFieldLabels.length) nextValues.push("");
+    nextValues[fieldIndex] = value;
+    updateSentence(sentenceIndex, { fieldValues: nextValues });
+  };
+
+  const removeSentence = (index: number) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  const moveSentence = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.sentences.length) return;
+    const newSentences = [...block.sentences];
+    [newSentences[index], newSentences[newIndex]] = [newSentences[newIndex], newSentences[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { sentences: newSentences },
+      },
+    });
+  };
+
+  const handleFileSelected = (index: number, file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setActiveSentenceIndex(index);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (activeSentenceIndex === null) {
+      URL.revokeObjectURL(result.url);
+      return;
+    }
+
+    setUploadingSentenceIndex(activeSentenceIndex);
+    try {
+      const file = new File([result.blob], "reading-comprehension-image.png", { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateSentence(activeSentenceIndex, { src: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadingSentenceIndex(null);
+      setActiveSentenceIndex(null);
+      if (cropSrc) {
+        URL.revokeObjectURL(cropSrc);
+      }
+      URL.revokeObjectURL(result.url);
+      setCropSrc(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionType")}</Label>
+        <Select
+          value={block.layoutType ?? "default"}
+          onValueChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: {
+                id: block.id,
+                updates: {
+                  layoutType: value as "default" | "form",
+                  formFieldLabels: block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""],
+                  formColumns: block.formColumns ?? 2,
+                  sentences: block.sentences.map((item) => ({
+                    ...item,
+                    fieldValues: item.fieldValues ?? formFieldLabels.map(() => ""),
+                  })),
+                },
+              },
+            })
+          }
+        >
+          <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">{t("readingComprehensionTypeDefault")}</SelectItem>
+            <SelectItem value="form">{t("readingComprehensionTypeForm")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      {isFormLayout && (
+        <>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionFieldLabels")}</Label>
+            {formFieldLabels.map((label, index) => (
+              <div key={index} className="flex items-center gap-1">
+                <Input
+                  value={label}
+                  onChange={(e) => updateFieldLabel(index, e.target.value)}
+                  className="h-8 text-xs"
+                  placeholder={`${tc("fieldLabel")} ${index + 1}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => removeFieldLabel(index)}
+                  disabled={formFieldLabels.length <= 1}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={addFieldLabel} className="w-full">
+              <Plus className="h-3.5 w-3.5 mr-1" /> {tc("addField")}
+            </Button>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+            <Select
+              value={formColumns}
+              onValueChange={(value) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { formColumns: Number(value) as 1 | 2 | 3 | 4 } },
+                })
+              }
+            >
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="4">4</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+        </>
+      )}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">{t(isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="space-y-1">
+            <div className="pl-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.question`}
+                baseValue={item.question}
+                onBaseChange={(v) => updateSentence(i, { question: v })}
+                className="h-8 text-xs"
+                placeholder={tc("question")}
+              />
+            </div>
+            {!isFormLayout ? (
+              <>
+                <div className="flex items-center gap-1">
+                  <div className="flex-1">
+                    <ChInput
+                      blockId={block.id}
+                      fieldPath={`sentences.${i}.beginning`}
+                      baseValue={item.beginning}
+                      onBaseChange={(v) => updateSentence(i, { beginning: v })}
+                      className="h-8 text-xs"
+                      placeholder={t("readingComprehensionBeginningPlaceholder")}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, -1)} disabled={i === 0}>
+                      <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                    </button>
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, 1)} disabled={i === block.sentences.length - 1}>
+                      <ArrowUpDown className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeSentence(i)} disabled={block.sentences.length <= 1}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="pl-1">
+                  <ChInput
+                    blockId={block.id}
+                    fieldPath={`sentences.${i}.solution`}
+                    baseValue={item.solution ?? ""}
+                    onBaseChange={(v) => updateSentence(i, { solution: v || undefined })}
+                    className="h-7 text-xs text-muted-foreground"
+                    placeholder={t("readingComprehensionSolutionPlaceholder")}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-2 pl-1" style={{ gridTemplateColumns: `repeat(${Math.min(Number(formColumns), 2)}, minmax(0, 1fr))` }}>
+                  {formFieldLabels.map((label, fieldIndex) => (
+                    <div key={fieldIndex} className="space-y-1">
+                      <Label className="text-[11px] font-medium text-slate-600">{label || `${tc("fieldLabel")} ${fieldIndex + 1}`}</Label>
+                      <ChInput
+                        blockId={block.id}
+                        fieldPath={`sentences.${i}.fieldValues.${fieldIndex}`}
+                        baseValue={item.fieldValues?.[fieldIndex] ?? ""}
+                        onBaseChange={(v) => updateFieldValue(i, fieldIndex, v)}
+                        className="h-8 text-xs"
+                        placeholder={t("readingComprehensionFieldValuePlaceholder")}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="flex-1" />
+                  <div className="flex flex-col">
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, -1)} disabled={i === 0}>
+                      <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                    </button>
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, 1)} disabled={i === block.sentences.length - 1}>
+                      <ArrowUpDown className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeSentence(i)} disabled={block.sentences.length <= 1}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </>
+            )}
+            <div className="pl-1 space-y-2 rounded-md border border-slate-200 p-2">
+              <Label className="text-[11px] font-medium text-slate-600">{t("imageUrl")}</Label>
+              {item.src ? (
+                <div className="space-y-2">
+                  <div className="relative group/img h-20 w-28 overflow-hidden rounded-sm border bg-slate-50">
+                    <Image src={item.src} alt="" fill unoptimized className="object-contain p-1" />
+                    <button
+                      type="button"
+                      onClick={() => updateSentence(i, { src: undefined })}
+                      className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    <label className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleFileSelected(i, file);
+                            e.currentTarget.value = "";
+                          }
+                        }}
+                      />
+                      <span className="inline-flex h-8 w-full cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+                        {uploadingSentenceIndex === i ? t("uploading") : t("replaceImage")}
+                      </span>
+                    </label>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
+                      setActiveSentenceIndex(i);
+                      setBrowserOpen(true);
+                    }}>
+                      <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                      {t("mediaBrowser")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="flex h-20 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-slate-200 px-3 text-center transition-colors hover:border-slate-300">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileSelected(i, file);
+                          e.currentTarget.value = "";
+                        }
+                      }}
+                    />
+                    {uploadingSentenceIndex === i ? (
+                      <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5 text-muted-foreground/50 mb-1" />
+                        <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                      </>
+                    )}
+                  </label>
+                  <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => {
+                    setActiveSentenceIndex(i);
+                    setBrowserOpen(true);
+                  }}>
+                    <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                    {t("mediaBrowser")}
+                  </Button>
+                </div>
+              )}
+              <Input value={item.src ?? ""} placeholder={t("imageUrlPlaceholder")} onChange={(e) => updateSentence(i, { src: e.target.value || undefined })} className="h-8 text-xs" />
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addSentence} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">{t("csvImportHelpReadingComprehension")}</p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholderReadingComprehension")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+        <div className="flex gap-1 mt-1">
+          <Select value={csvMode} onValueChange={(v) => setCsvMode(v as "replace" | "append")}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleCsvImport} disabled={!csvText.trim()}>
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) => dispatch({
+            type: "UPDATE_BLOCK",
+            payload: { id: block.id, updates: { showFirstAsExample: checked } },
+          })}
+        />
+      </div>
+
+      <MediaBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelectUrl={(url) => {
+          if (activeSentenceIndex === null) return;
+          updateSentence(activeSentenceIndex, { src: url });
+          setBrowserOpen(false);
+          setActiveSentenceIndex(null);
+        }}
+        onSelectFile={(file) => {
+          if (activeSentenceIndex === null) return;
+          handleFileSelected(activeSentenceIndex, file);
+          setBrowserOpen(false);
+        }}
+      />
+      <ImageCropDialog
+        open={cropOpen}
+        imageSrc={cropSrc}
+        aspect={4 / 3}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open) {
+            if (cropSrc) {
+              URL.revokeObjectURL(cropSrc);
+            }
+            setCropSrc(null);
+            setActiveSentenceIndex(null);
+          }
+        }}
+        onCropComplete={handleCropComplete}
+        title={t("cropImage")}
+      />
+    </div>
+  );
+}
+
 function VerbTableProps({ block }: { block: VerbTableBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -8068,6 +8602,7 @@ function ColWidthInput({
 function TableProps({ block }: { block: TableBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const tableStyles: { value: TableStyle; label: string }[] = [
     { value: "default", label: t("tableStyleDefault") },
@@ -8113,6 +8648,39 @@ function TableProps({ block }: { block: TableBlock }) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("description")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="description"
+          baseValue={block.description ?? ""}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { description: v } },
+            })
+          }
+          multiline
+        />
+      </div>
+
+      <Separator />
+
       <div>
         <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
           {t("tableSettings")}
@@ -8218,6 +8786,19 @@ function TableProps({ block }: { block: TableBlock }) {
               dispatch({
                 type: "UPDATE_BLOCK",
                 payload: { id: block.id, updates: { firstRowAsExample: v } },
+              })
+            }
+          />
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <Label className="text-xs">{t("tableHideHeader")}</Label>
+          <Switch
+            checked={block.hideHeader ?? false}
+            onCheckedChange={(v) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { hideHeader: v } },
               })
             }
           />
@@ -8383,6 +8964,8 @@ export function PropertiesPanel() {
         return <FixSentencesProps block={selectedBlock} />;
       case "complete-sentences":
         return <CompleteSentencesProps block={selectedBlock} />;
+      case "reading-comprehension":
+        return <ReadingComprehensionProps block={selectedBlock} />;
       case "transform-sentences":
         return <TransformSentencesProps block={selectedBlock} />;
       case "verb-table":
