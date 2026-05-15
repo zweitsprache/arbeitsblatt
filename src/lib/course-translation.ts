@@ -275,6 +275,23 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "mcq-rows": {
+      add("instruction", () => block.instruction || "", (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+        for (const choice of item.choices) {
+          add(`items.${item.id}.choices.${choice.id}.text`, () => choice.text, (v) => {
+            choice.text = v;
+          });
+        }
+      }
+      break;
+    }
+
     case "inline-choices": {
       for (const item of block.items) {
         add(`items.${item.id}.content`, () => item.content, (v) => {

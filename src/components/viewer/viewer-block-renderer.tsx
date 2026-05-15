@@ -25,6 +25,7 @@ import {
   GridBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
+  MCQRowsBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
   OrderItemsBlock,
@@ -68,6 +69,7 @@ import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkl
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
+import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
@@ -78,7 +80,7 @@ function getBrandFonts(brand: string) {
   return BRAND_FONTS[brand] || BRAND_FONTS["edoomio"];
 }
 
-const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "order-items", "unscramble-words"]);
+const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "mcq-rows", "order-items", "unscramble-words"]);
 const NUMBER_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-transparent text-slate-700 ring-1 ring-inset ring-slate-700 font-normal leading-none tabular-nums pl-px text-[10.5px]`;
 const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
@@ -117,6 +119,10 @@ function injectLiIcons(html: string): string {
     (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}<div class="li-content-no-break">`,
   );
   return withBullets.replace(/<\/li>/gi, "</div></li>");
+}
+
+function normalizeInlineViewerHtml(value: string): string {
+  return stripOuterP(normalizeToHtml(value || ""));
 }
 
 /** Deterministic pseudo-random order for stable render output across re-renders/PDF generation. */
@@ -3125,7 +3131,7 @@ function MCQMatrixView({
                 <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
                   {String(statementIndex + 1).padStart(2, "0")}
                 </span>
-                <span className="flex-1">{renderTfBlanks(statement.text)}</span>
+                  <span className="flex-1" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.text) }} />
                 {block.options.map((option) => {
                   const isSelected = selectedIds.includes(option.id);
                   const isCorrect = statement.correctOptionIds.includes(option.id);
@@ -3832,6 +3838,132 @@ function InlineChoicesView({
           </div>
         )
       ))}
+    </div>
+  );
+}
+
+function MCQRowsView({
+  block,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+  showSolutions = false,
+  mode = "online",
+  accentColor,
+  instructionIndex,
+}: {
+  block: MCQRowsBlock;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  mode?: ViewMode;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const selections = (answer as Record<string, string> | undefined) || {};
+  const isOnline = mode === "online";
+  const choicesPerItem = Math.max(2, Math.min(6, Math.round(block.choicesPerItem || 3)));
+  const choiceGridStyle: React.CSSProperties = {
+    gridTemplateColumns: `repeat(${choicesPerItem}, minmax(0, 120px))`,
+  };
+  const getChoiceLabel = (label: string | undefined, index: number) => {
+    const value = (label || "").trim();
+    return value.length > 0 ? value : String.fromCharCode(65 + index);
+  };
+
+  return (
+    <div>
+      {block.instruction && (
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <p>{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          )}
+          {block.items.length > 0 && <SectionGap size="medium" />}
+        </>
+      )}
+
+      {block.items.map((item, index) => {
+        const selectedChoiceId = selections[item.id] || "";
+        return (
+          <div
+            key={item.id}
+            className="flex items-center border-b last:border-b-0"
+            style={{ gap: 12, paddingTop: 8, paddingBottom: 8 }}
+          >
+            <span className={NUMBER_BADGE_CLASS}>{String(index + 1).padStart(2, "0")}</span>
+            <span className="flex-1 min-w-0" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(item.text) }} />
+            <div className="grid shrink-0 gap-2" style={choiceGridStyle}>
+              {item.choices.map((choice, choiceIndex) => {
+                const isCorrect = item.correctChoiceId === choice.id;
+                const isSelected = selectedChoiceId === choice.id;
+                const showCorrect = showResults || showSolutions;
+                const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
+
+                let className = "inline-flex items-center gap-1.5 text-left transition-colors";
+                if (showCorrect && isCorrect) {
+                  className += " text-green-700";
+                } else if (showResults && isSelected && !isCorrect) {
+                  className += " text-red-700";
+                } else if (isSelected) {
+                  className += " text-primary";
+                } else {
+                  className += " text-foreground";
+                }
+
+                const indicatorClass = showCorrect && isCorrect
+                  ? CONTROL_BOX_FILLED_CLASS
+                  : isSelected
+                    ? `${CONTROL_BOX_CLASS} ${s.controlBoxActive}`
+                    : CONTROL_BOX_CLASS;
+
+                const content = (
+                  <>
+                    <span className="text-[11px] font-bold uppercase text-muted-foreground">
+                      {choiceLabel}
+                    </span>
+                    <span className={indicatorClass} />
+                    <span className="font-semibold">{choice.text}</span>
+                  </>
+                );
+
+                if (interactive) {
+                  return (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      className={className}
+                      onClick={() => {
+                        if (showResults) return;
+                        onAnswer({ ...selections, [item.id]: choice.id });
+                      }}
+                      disabled={showResults}
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <span key={choice.id} className={className}>
+                    {content}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -5329,6 +5461,21 @@ function DialogueView({
       gapIndex++;
     }
   }
+  const exampleAnswers = React.useMemo(() => {
+    const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
+      const raw = match[1] || "";
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (answer) answers.add(answer);
+    }
+    return answers;
+  }, [block.items, block.showFirstAsExample]);
+  const shuffledGapAnswers = React.useMemo(
+    () => deterministicShuffle(gapAnswers, `dialogue:${block.id}:word-bank`),
+    [block.id, gapAnswers]
+  );
 
   // Render text with interactive gaps
   let globalGapIdx = 0;
@@ -5461,12 +5608,13 @@ function DialogueView({
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
         <div className="flex min-h-[49px] flex-wrap items-center gap-2">
-          <span className={`${INSTRUCTION_BADGE_CLASS} shrink-0`}>W</span>
           <div className="flex flex-1 flex-wrap gap-2">
-            {[...gapAnswers]
-              .sort(() => Math.random() - 0.5)
-              .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border">
+            {shuffledGapAnswers.map((text, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-background rounded border"
+                  style={exampleAnswers.has(text) ? { textDecoration: "line-through", color: "#0097dc" } : undefined}
+                >
                   {text}
                 </span>
               ))}
@@ -6697,6 +6845,20 @@ export function ViewerBlockRenderer({
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
           isNonLatin={isNonLatin}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "mcq-rows":
+      return (
+        <MCQRowsView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
           accentColor={accentColor}
           instructionIndex={instructionIndex}
         />

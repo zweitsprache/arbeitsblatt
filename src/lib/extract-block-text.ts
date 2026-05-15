@@ -124,6 +124,16 @@ export function extractBlocksText(
         }
         break;
 
+      case "mcq-rows":
+        if (block.instruction) parts.push(block.instruction);
+        for (const item of block.items ?? []) {
+          const choices = (item.choices ?? [])
+            .map((choice) => (choice.id === item.correctChoiceId ? `*${choice.text}` : choice.text))
+            .join(", ");
+          parts.push(`${item.text} (${choices})`);
+        }
+        break;
+
       case "order-items":
         if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {

@@ -30,6 +30,7 @@ export type BlockType =
   | "columns"
   | "true-false-matrix"
   | "mcq-matrix"
+  | "mcq-rows"
   | "order-items"
   | "inline-choices"
   | "word-search"
@@ -375,6 +376,26 @@ export interface MCQMatrixBlock extends BlockBase {
   options: MCQMatrixOption[];
   statements: MCQMatrixStatement[];
   statementOrder?: string[];
+}
+
+export interface MCQRowsChoice {
+  id: string;
+  label?: string;
+  text: string;
+}
+
+export interface MCQRowsItem {
+  id: string;
+  text: string;
+  choices: MCQRowsChoice[];
+  correctChoiceId: string;
+}
+
+export interface MCQRowsBlock extends BlockBase {
+  type: "mcq-rows";
+  instruction?: string;
+  choicesPerItem: number;
+  items: MCQRowsItem[];
 }
 
 // ─── Article Training block ──────────────────────────────────
@@ -847,6 +868,7 @@ export type WorksheetBlock =
   | ColumnsBlock
   | TrueFalseMatrixBlock
   | MCQMatrixBlock
+  | MCQRowsBlock
   | OrderItemsBlock
   | InlineChoicesBlock
   | WordSearchBlock
@@ -1737,6 +1759,44 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "s1", text: "Statement 1", correctOptionIds: ["o1"] },
         { id: "s2", text: "Statement 2", correctOptionIds: ["o2", "o3"] },
         { id: "s3", text: "Statement 3", correctOptionIds: ["o3"] },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "mcq-rows",
+    label: "MCQ Rows",
+    description: "Each row has its own labeled options",
+    labelKey: "mcqRows",
+    descriptionKey: "mcqRowsDesc",
+    icon: "CheckSquare",
+    category: "interactive",
+    translations: { de: { label: "MCQ-Zeilen", description: "Jede Zeile hat eigene beschriftete Antworten" } },
+    defaultData: {
+      type: "mcq-rows",
+      instruction: "Choose the correct option in each row.",
+      choicesPerItem: 3,
+      items: [
+        {
+          id: "mr1",
+          text: "Capital of Switzerland",
+          correctChoiceId: "mr1c1",
+          choices: [
+            { id: "mr1c1", label: "A", text: "Bern" },
+            { id: "mr1c2", label: "B", text: "Zurich" },
+            { id: "mr1c3", label: "C", text: "Geneva" },
+          ],
+        },
+        {
+          id: "mr2",
+          text: "2 + 2 =",
+          correctChoiceId: "mr2c2",
+          choices: [
+            { id: "mr2c1", label: "A", text: "3" },
+            { id: "mr2c2", label: "B", text: "4" },
+            { id: "mr2c3", label: "C", text: "5" },
+          ],
+        },
       ],
       visibility: "both",
     },

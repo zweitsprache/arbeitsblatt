@@ -25,6 +25,7 @@ import {
   GridBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
+  MCQRowsBlock,
   OrderItemsBlock,
   InlineChoicesBlock,
   migrateInlineChoicesBlock,
@@ -75,6 +76,8 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { normalizeToHtml } from "@/lib/markdown-to-html";
+import { stripOuterP } from "@/lib/print-html-normalize";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
@@ -122,6 +125,49 @@ function hashPreviewKey(value: string): number {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
   return hash;
+}
+
+function normalizeInlineEditableHtml(value: string): string {
+  return stripOuterP(normalizeToHtml(value || ""));
+}
+
+function InlineHtmlEditable({
+  value,
+  editable,
+  className,
+  onCommit,
+}: {
+  value: string;
+  editable: boolean;
+  className?: string;
+  onCommit: (value: string) => void;
+}) {
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+  const isFocusedRef = React.useRef(false);
+  const normalizedValue = React.useMemo(() => normalizeInlineEditableHtml(value), [value]);
+
+  React.useLayoutEffect(() => {
+    if (isFocusedRef.current || !ref.current) return;
+    if (ref.current.innerHTML !== normalizedValue) {
+      ref.current.innerHTML = normalizedValue;
+    }
+  }, [normalizedValue]);
+
+  return (
+    <span
+      ref={ref}
+      className={className}
+      contentEditable={editable}
+      suppressContentEditableWarning
+      onFocus={() => {
+        isFocusedRef.current = true;
+      }}
+      onBlur={(e) => {
+        isFocusedRef.current = false;
+        onCommit(normalizeInlineEditableHtml(e.currentTarget.innerHTML || e.currentTarget.textContent || ""));
+      }}
+    />
+  );
 }
 
 function getDeterministicPreviewOrder<T>(
@@ -2382,21 +2428,18 @@ function MCQMatrixRenderer({
                 <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
                   {String(statementIndex + 1).padStart(2, "0")}
                 </span>
-                <span
+                <InlineHtmlEditable
+                  value={statement.text}
+                  editable={!interactive}
                   className="outline-none block flex-1"
-                  contentEditable={!interactive}
-                  suppressContentEditableWarning
-                  onBlur={(e) => {
+                  onCommit={(value) => {
                     if (interactive) return;
-                    const value = e.currentTarget.textContent || "";
                     const statementPosition = block.statements.findIndex((item) => item.id === statement.id);
                     localeUpdate(block.id, `statements.${statementPosition}.text`, value, () =>
                       updateStatement(statement.id, { text: value })
                     );
                   }}
-                >
-                  {statement.text}
-                </span>
+                />
               </div>
               {block.options.map((option) => {
                 const isSelected = statement.correctOptionIds.includes(option.id);
@@ -2458,6 +2501,183 @@ function MCQMatrixRenderer({
             disabled={block.options.length >= 5}
           >
             <Plus className="h-3 w-3" /> {t("addOption")} ({block.options.length}/5)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MCQRowsRenderer({
+  block,
+  interactive,
+}: {
+  block: MCQRowsBlock;
+  interactive: boolean;
+}) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+  const instructionText = (block.instruction || "").trim() || "Choose the correct option in each row.";
+  const choicesPerItem = Math.max(2, Math.min(6, Math.round(block.choicesPerItem || 3)));
+  const choiceGridStyle: React.CSSProperties = {
+    gridTemplateColumns: `repeat(${choicesPerItem}, minmax(0, 120px))`,
+  };
+  const getChoiceLabel = React.useCallback((label: string | undefined, index: number) => {
+    const value = (label || "").trim();
+    return value.length > 0 ? value : String.fromCharCode(65 + index);
+  }, []);
+
+  const updateItems = (items: MCQRowsBlock["items"]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items },
+      },
+    });
+  };
+
+  const updateItem = (
+    id: string,
+    updates: Partial<Pick<MCQRowsBlock["items"][number], "text" | "choices" | "correctChoiceId">>
+  ) => {
+    updateItems(block.items.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
+
+  const addItem = () => {
+    const choices = Array.from({ length: choicesPerItem }, (_, index) => ({
+      id: crypto.randomUUID(),
+      label: String.fromCharCode(65 + index),
+      text: `${t("newChoice")} ${index + 1}`,
+    }));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...block.items,
+            {
+              id: crypto.randomUUID(),
+              text: t("newItem"),
+              choices,
+              correctChoiceId: choices[0]?.id ?? "",
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeItem = (id: string) => {
+    if (block.items.length <= 1) return;
+    updateItems(block.items.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="space-y-2">
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable={!interactive}
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          if (interactive) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
+
+      <div>
+        {block.items.map((item, itemIndex) => (
+          <div key={item.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
+            <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
+              {String(itemIndex + 1).padStart(2, "0")}
+            </span>
+            <InlineHtmlEditable
+              value={item.text}
+              editable={!interactive}
+              className="outline-none block flex-1 min-w-0"
+              onCommit={(value) => {
+                if (interactive) return;
+                localeUpdate(block.id, `items.${itemIndex}.text`, value, () =>
+                  updateItem(item.id, { text: value })
+                );
+              }}
+            />
+            <div className="grid shrink-0 gap-2" style={choiceGridStyle}>
+              {item.choices.map((choice, choiceIndex) => {
+                const isCorrect = item.correctChoiceId === choice.id;
+                const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
+                return (
+                  <div
+                    key={choice.id}
+                    className={`inline-flex items-center gap-1.5 transition-colors ${
+                      isCorrect
+                        ? "text-green-700"
+                        : "text-foreground"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateItem(item.id, { correctChoiceId: choice.id });
+                    }}
+                  >
+                    <span className="text-[11px] font-bold uppercase text-muted-foreground">
+                      {choiceLabel}
+                    </span>
+                    {renderInlineChoiceIndicator(isCorrect, false)}
+                    <span
+                      className="outline-none block min-w-0 flex-1 text-left font-semibold"
+                      contentEditable={!interactive}
+                      suppressContentEditableWarning
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => {
+                        if (interactive) return;
+                        const value = e.currentTarget.textContent || "";
+                        localeUpdate(block.id, `items.${itemIndex}.choices.${choiceIndex}.text`, value, () =>
+                          updateItem(item.id, {
+                            choices: item.choices.map((currentChoice) =>
+                              currentChoice.id === choice.id ? { ...currentChoice, text: value } : currentChoice
+                            ),
+                          })
+                        );
+                      }}
+                    >
+                      {choice.text}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeItem(item.id);
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {!interactive && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              addItem();
+            }}
+          >
+            <Plus className="h-3 w-3" /> {t("addItem")}
           </button>
         </div>
       )}
@@ -4797,6 +5017,17 @@ function DialogueRenderer({
       if (answer) gapAnswers.push(answer);
     }
   }
+  const exampleAnswers = React.useMemo(() => {
+    const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
+      const raw = match[1] || "";
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (answer) answers.add(answer);
+    }
+    return answers;
+  }, [block.items, block.showFirstAsExample]);
 
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
     if (variant === "solution") {
@@ -4918,14 +5149,17 @@ function DialogueRenderer({
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
         <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
-          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">W</span>
           <div className="flex flex-1 flex-wrap gap-2">
             {getDeterministicPreviewOrder(
               gapAnswers,
               (text, index) => `${text}:${index}`
             )
               .map((text, i) => (
-                <span key={i} className="px-2 py-0.5 bg-background rounded border text-[10px]">
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-background rounded border text-[10px]"
+                  style={exampleAnswers.has(text) ? { color: "#0097dc", textDecoration: "line-through" } : undefined}
+                >
                   {text}
                 </span>
               ))}
@@ -6476,6 +6710,8 @@ export function BlockRenderer({
       return <TrueFalseMatrixRenderer block={block} interactive={interactive} />;
     case "mcq-matrix":
       return <MCQMatrixRenderer block={block} interactive={interactive} />;
+    case "mcq-rows":
+      return <MCQRowsRenderer block={block} interactive={interactive} />;
     case "article-training":
       return <ArticleTrainingRenderer block={block} interactive={interactive} />;
     case "order-items":

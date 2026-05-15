@@ -40,6 +40,7 @@ import {
   GridBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
+  MCQRowsBlock,
   ArticleTrainingBlock,
   ArticleAnswer,
   OrderItemsBlock,
@@ -3992,6 +3993,210 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
         </Button>
       </div>
       <AiVerbExerciseModal open={showAiModal} onOpenChange={setShowAiModal} blockId={block.id} />
+    </div>
+  );
+}
+
+function MCQRowsProps({ block }: { block: MCQRowsBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const choicesPerItem = Math.max(2, Math.min(6, Math.round(block.choicesPerItem || 3)));
+  const getChoiceLabel = (label: string | undefined, index: number) => {
+    const value = (label || "").trim();
+    return value.length > 0 ? value : String.fromCharCode(65 + index);
+  };
+
+  const updateItems = (items: MCQRowsBlock["items"]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items } },
+    });
+  };
+
+  const syncChoiceCount = (nextCount: number) => {
+    const clampedCount = Math.max(2, Math.min(6, Math.round(nextCount || 3)));
+    const items = block.items.map((item) => {
+      const existingChoices = item.choices.slice(0, clampedCount);
+      const missingChoices = Array.from({ length: Math.max(0, clampedCount - existingChoices.length) }, (_, index) => ({
+        id: crypto.randomUUID(),
+        label: String.fromCharCode(65 + existingChoices.length + index),
+        text: `${t("choice")} ${existingChoices.length + index + 1}`,
+      }));
+      const choices = [...existingChoices, ...missingChoices];
+      const correctChoiceId = choices.some((choice) => choice.id === item.correctChoiceId)
+        ? item.correctChoiceId
+        : (choices[0]?.id ?? "");
+      return {
+        ...item,
+        choices,
+        correctChoiceId,
+      };
+    });
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { choicesPerItem: clampedCount, items } },
+    });
+  };
+
+  const updateItem = (
+    itemId: string,
+    updates: Partial<Pick<MCQRowsBlock["items"][number], "text" | "choices" | "correctChoiceId">>
+  ) => {
+    updateItems(block.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
+  };
+
+  const addItem = () => {
+    const choices = Array.from({ length: choicesPerItem }, (_, index) => ({
+      id: crypto.randomUUID(),
+      label: String.fromCharCode(65 + index),
+      text: `${t("choice")} ${index + 1}`,
+    }));
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...block.items,
+            {
+              id: crypto.randomUUID(),
+              text: t("newItem"),
+              choices,
+              correctChoiceId: choices[0]?.id ?? "",
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: value } },
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("choicesPerItem")}</Label>
+        <Input
+          type="number"
+          min={2}
+          max={6}
+          value={choicesPerItem}
+          onChange={(e) => syncChoiceCount(Number(e.target.value))}
+        />
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        {block.items.map((item, itemIndex) => (
+          <div key={item.id} className="space-y-2 rounded-md border border-slate-200 bg-white p-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground bg-muted px-2 h-6 rounded inline-flex items-center justify-center shrink-0">
+                {String(itemIndex + 1).padStart(2, "0")}
+              </span>
+              <div className="flex-1">
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`items.${itemIndex}.text`}
+                  baseValue={item.text}
+                  onBaseChange={(value) => updateItem(item.id, { text: value })}
+                  placeholder={t("itemText")}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  if (block.items.length <= 1) return;
+                  updateItems(block.items.filter((currentItem) => currentItem.id !== item.id));
+                }}
+                disabled={block.items.length <= 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${choicesPerItem}, minmax(0, 1fr))` }}>
+              {item.choices.map((choice, choiceIndex) => {
+                const isCorrect = item.correctChoiceId === choice.id;
+                const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
+                return (
+                  <div key={choice.id} className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{t("label")}</Label>
+                      <Input
+                        className="h-9"
+                        value={choiceLabel}
+                        onChange={(e) =>
+                          updateItem(item.id, {
+                            choices: item.choices.map((currentChoice) =>
+                              currentChoice.id === choice.id
+                                ? { ...currentChoice, label: e.target.value }
+                                : currentChoice
+                            ),
+                          })
+                        }
+                        placeholder={t("label")}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{t("markAsCorrect")}</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={`h-9 w-full justify-center ${isCorrect ? "border-green-500 bg-green-50 text-green-700" : ""}`}
+                        onClick={() => updateItem(item.id, { correctChoiceId: choice.id })}
+                      >
+                        {isCorrect ? <Check className="mr-2 h-4 w-4" /> : null}
+                        {isCorrect ? t("markedAsCorrect") : t("markAsCorrect")}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{t("choice")}</Label>
+                      <ChInput
+                        blockId={block.id}
+                        fieldPath={`items.${itemIndex}.choices.${choiceIndex}.text`}
+                        baseValue={choice.text}
+                        onBaseChange={(value) =>
+                          updateItem(item.id, {
+                            choices: item.choices.map((currentChoice) =>
+                              currentChoice.id === choice.id ? { ...currentChoice, text: value } : currentChoice
+                            ),
+                          })
+                        }
+                        placeholder={`${t("choice")} ${choiceIndex + 1}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Button type="button" variant="outline" className="w-full" onClick={addItem}>
+        <Plus className="mr-2 h-4 w-4" /> {t("addItem")}
+      </Button>
     </div>
   );
 }
@@ -7967,6 +8172,8 @@ export function PropertiesPanel() {
         return <TrueFalseMatrixProps block={selectedBlock} />;
       case "mcq-matrix":
         return <MCQMatrixProps block={selectedBlock} />;
+      case "mcq-rows":
+        return <MCQRowsProps block={selectedBlock} />;
       case "article-training":
         return <ArticleTrainingProps block={selectedBlock} />;
       case "order-items":
