@@ -3837,7 +3837,7 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
-          baseValue={block.instruction}
+          baseValue={block.instruction ?? ""}
           onBaseChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
