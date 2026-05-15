@@ -1,0 +1,94 @@
+function hashString(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function deterministicShuffle<T>(items: T[], rand: () => number): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function jumbleWord(
+  word: string,
+  keepFirstLetter: boolean,
+  keepLastLetter: boolean,
+  seedKey: string,
+): string {
+  if (word.length <= 1) return word;
+
+  const chars = word.split("");
+  const startIndex = keepFirstLetter ? 1 : 0;
+  const endIndex = keepLastLetter ? chars.length - 1 : chars.length;
+  const middle = chars.slice(startIndex, endIndex);
+
+  if (middle.length <= 1) return word;
+
+  const rand = mulberry32(hashString(seedKey));
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const shuffled = deterministicShuffle(middle, rand);
+    const candidate = [
+      ...chars.slice(0, startIndex),
+      ...shuffled,
+      ...chars.slice(endIndex),
+    ].join("");
+    if (candidate !== word) return candidate;
+  }
+
+  const rotated = [...middle.slice(1), middle[0]];
+  const fallback = [
+    ...chars.slice(0, startIndex),
+    ...rotated,
+    ...chars.slice(endIndex),
+  ].join("");
+  return fallback === word ? word : fallback;
+}
+
+export function buildCorrectSpellingRow(
+  word: string,
+  keepFirstLetter: boolean,
+  keepLastLetter: boolean,
+  seedKey: string,
+  slotCount = 10,
+): Array<{ text: string; isOriginal: boolean }> {
+  const safeSlotCount = Math.max(1, slotCount);
+  const rand = mulberry32(hashString(seedKey));
+  const minOriginals = Math.max(1, Math.ceil(safeSlotCount * 0.3));
+  const maxOriginals = Math.max(minOriginals, Math.floor(safeSlotCount * 0.5));
+  const originalCount = minOriginals + Math.floor(rand() * (maxOriginals - minOriginals + 1));
+  const originalPositions = new Set(
+    deterministicShuffle(
+      Array.from({ length: Math.max(0, safeSlotCount - 1) }, (_, index) => index + 1),
+      rand,
+    ).slice(0, Math.max(0, originalCount - 1)),
+  );
+  originalPositions.add(0);
+
+  return Array.from({ length: safeSlotCount }, (_, index) => {
+    if (originalPositions.has(index)) {
+      return { text: word, isOriginal: true };
+    }
+
+    return {
+      text: jumbleWord(word, keepFirstLetter, keepLastLetter, `${seedKey}:${index}`),
+      isOriginal: false,
+    };
+  });
+}

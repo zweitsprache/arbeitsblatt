@@ -4357,28 +4357,6 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
         />
       </div>
       <div className="flex items-center gap-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block">{t("displayCount")}</Label>
-        <Input
-          type="number"
-          min={1}
-          max={20}
-          value={String(block.displayCount)}
-          onChange={(e) => {
-            const value = Number(e.target.value);
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: {
-                id: block.id,
-                updates: {
-                  displayCount: Number.isFinite(value) ? Math.max(1, Math.min(20, value)) : 10,
-                },
-              },
-            });
-          }}
-          className="h-8 w-20 text-xs"
-        />
-      </div>
-      <div className="flex items-center gap-2">
         <Switch
           checked={block.keepFirstLetter}
           onCheckedChange={(v) =>
