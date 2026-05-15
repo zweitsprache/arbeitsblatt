@@ -104,6 +104,10 @@ import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { getChoiceGroups, updateChoiceGroup, validateChoices } from "@/lib/inline-choice-utils";
+import {
+  DIALOGUE_SPEAKER_ICON_OPTIONS,
+  DialogueSpeakerIconGlyph,
+} from "@/lib/dialogue-icons";
 
 // ─── CH Override-aware input wrapper ────────────────────────
 
@@ -5937,39 +5941,14 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
 
 // ─── Dialogue Props ──────────────────────────────────────────
 function DialogueProps({ block }: { block: DialogueBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
 
-  const iconSvgMap: Record<DialogueSpeakerIcon, React.ReactNode> = {
-    triangle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
-        <polygon points="12,3 22,21 2,21" />
-      </svg>
-    ),
-    square: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-      </svg>
-    ),
-    diamond: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="w-4 h-4 inline-block">
-        <polygon points="12,2 22,12 12,22 2,12" />
-      </svg>
-    ),
-    circle: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 inline-block">
-        <circle cx="12" cy="12" r="10" />
-      </svg>
-    ),
+  const renderIcon = (icon: DialogueSpeakerIcon) => {
+    return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brandSlug} className="w-4 h-4 inline-block object-contain" />;
   };
-
-  const iconOptions: { value: DialogueSpeakerIcon; label: string }[] = [
-    { value: "triangle", label: "Triangle" },
-    { value: "square", label: "Square" },
-    { value: "diamond", label: "Diamond" },
-    { value: "circle", label: "Circle" },
-  ];
 
   const updateItem = (index: number, updates: Partial<DialogueItem>) => {
     const newItems = [...block.items];
@@ -5996,7 +5975,7 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
     const lastIcons = block.items.map((i) => i.icon);
     const nextIcon = icons.length >= 2
       ? (lastIcon === icons[0] ? icons[1] : icons[0])
-      : (iconOptions.find((o) => !icons.includes(o.value))?.value ?? "circle");
+      : (DIALOGUE_SPEAKER_ICON_OPTIONS.find((o) => !icons.includes(o.value))?.value ?? "circle");
 
     const newItems = [
       ...block.items,
@@ -6097,7 +6076,7 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
           <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
             <div className="flex items-center gap-1">
               {(() => {
-                const currentIcon = iconOptions.some((opt) => opt.value === item.icon)
+                const currentIcon = DIALOGUE_SPEAKER_ICON_OPTIONS.some((opt) => opt.value === item.icon)
                   ? item.icon
                   : "circle";
 
@@ -6107,12 +6086,20 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
                 onValueChange={(v) => updateItem(i, { icon: v as DialogueSpeakerIcon })}
               >
                 <SelectTrigger className="w-[56px] h-8 text-xs px-1.5">
-                  <SelectValue />
+                  <SelectValue>
+                    <span className="flex items-center justify-center w-full gap-0">
+                      {renderIcon(currentIcon)}
+                      <span className="sr-only">{currentIcon}</span>
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {iconOptions.map((opt) => (
+                  {DIALOGUE_SPEAKER_ICON_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      <span className="flex items-center gap-2">{iconSvgMap[opt.value]}</span>
+                      <span className="flex items-center gap-2">
+                        {renderIcon(opt.value)}
+                        <span className="sr-only">{opt.label}</span>
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
