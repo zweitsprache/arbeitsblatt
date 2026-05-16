@@ -78,7 +78,8 @@ import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegu
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
-import { RoughExampleCircle } from "@/components/ui/rough-example-circle";
+import { RoughExampleCircle, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
+import { findWordSearchPlacements } from "@/lib/word-search";
 import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
@@ -110,6 +111,62 @@ const VIEWER_SECTION_GAP = {
   medium: 12,
   large: 16,
 } as const;
+
+function sampleCubicBezierPoints(
+  start: { x: number; y: number },
+  control1: { x: number; y: number },
+  control2: { x: number; y: number },
+  end: { x: number; y: number },
+  steps = 10,
+): [number, number][] {
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const t = index / steps;
+    const mt = 1 - t;
+    const x =
+      mt * mt * mt * start.x +
+      3 * mt * mt * t * control1.x +
+      3 * mt * t * t * control2.x +
+      t * t * t * end.x;
+    const y =
+      mt * mt * mt * start.y +
+      3 * mt * mt * t * control1.y +
+      3 * mt * t * t * control2.y +
+      t * t * t * end.y;
+    return [x, y];
+  });
+}
+
+function renderHandwrittenMatrixIndicator(color: string) {
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0"
+      style={{
+        boxSizing: "border-box",
+        width: 16,
+        height: 16,
+        minWidth: 16,
+        minHeight: 16,
+        borderRadius: 3,
+        color,
+        boxShadow: "inset 0 0 0 1px currentColor",
+        background: "#fff",
+        position: "relative",
+      }}
+    >
+      <span
+        className="absolute inset-0 flex items-center justify-center leading-none"
+        style={{
+          fontFamily: EXAMPLE_HANDWRITING_FONT,
+          color,
+          fontSize: "22px",
+          top: "-2px",
+        }}
+      >
+        X
+      </span>
+    </span>
+  );
+}
 
 function formatInstructionBadgeLabel(index?: number): string {
   return toAlphabeticLabel((index ?? 0) + 1, true);
@@ -1998,9 +2055,9 @@ function FillInBlankItemsView({
             <span
               key={i}
               className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}
-              style={exampleAnswers.has(word) ? { textDecoration: "line-through" } : undefined}
+              style={undefined}
             >
-              {word}
+              {exampleAnswers.has(word) ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
             </span>
           ))}
         </div>
@@ -2032,27 +2089,36 @@ function FillInBlankItemsView({
                   const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
                   const widthStyle = getBlankWidthStyle(width, false);
                   const spacingClass = noSpace ? '' : 'mx-1';
+                  const blankShellStyle: React.CSSProperties = {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    verticalAlign: 'middle',
+                    position: 'relative',
+                    borderRadius: 3,
+                    backgroundColor: 'rgb(243 244 246)',
+                    lineHeight: '1.25rem',
+                    minHeight: '1.25rem',
+                    ...(width.characterWidth !== null
+                      ? widthStyle
+                      : {
+                          ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
+                        }),
+                  };
 
-                  if (isExampleItem && hasAnswer) {
+                  if (hasAnswer && (isExampleItem || showSolutions)) {
                     return (
                       <span
                         key={i}
-                        className={`relative inline-flex items-center ${spacingClass}`}
-                        style={{
-                          ...widthStyle,
-                          verticalAlign: 'middle',
-                          minHeight: '1.25rem',
-                          lineHeight: '1.25rem',
-                          borderRadius: 3,
-                          backgroundColor: 'rgb(243 244 246)',
-                        }}
+                        className={spacingClass}
+                        style={blankShellStyle}
                       >
                         <span aria-hidden="true">&nbsp;</span>
                         <span
                           className="absolute inset-x-0 bottom-0 block text-center leading-none"
                           style={{
                             fontFamily: EXAMPLE_HANDWRITING_FONT,
-                            color: '#0097dc',
+                            color: isExampleItem ? '#0097dc' : '#15803d',
                             fontSize: '18px',
                           }}
                         >
@@ -2094,15 +2160,7 @@ function FillInBlankItemsView({
                     );
                   }
                   if (showSolutions && hasAnswer) {
-                    return (
-                      <span
-                        key={i}
-                        className={`bg-green-100 text-green-800 font-semibold px-2 ${spacingClass}`}
-                        style={{ display: 'inline-block', verticalAlign: 'middle', borderRadius: 3, lineHeight: '1.25rem', minHeight: '1.25rem' }}
-                      >
-                        {correctAnswer}
-                      </span>
-                    );
+                    return null;
                   }
                   return (
                     <span
@@ -2336,9 +2394,9 @@ function FillInBlankItemsView({
                 <span
                   key={item.id}
                   className="rounded border px-2 py-0.5"
-                  style={item.id === examplePairId ? { textDecoration: "line-through" } : undefined}
+                  style={undefined}
                 >
-                  {item.text}
+                  {item.id === examplePairId ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
                 </span>
               ))}
             </div>
@@ -2355,26 +2413,32 @@ function FillInBlankItemsView({
               viewBox={`0 0 ${solutionSvgSize.width} ${solutionSvgSize.height}`}
               preserveAspectRatio="none"
             >
-              {exampleLine ? (
-                <path
-                  d={`M ${exampleLine.x1} ${exampleLine.y1} C ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.35} ${exampleLine.y1}, ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.65} ${exampleLine.y2}, ${exampleLine.x2} ${exampleLine.y2}`}
-                  stroke="#0097dc"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              ) : null}
-              {solutionLines.map((line, index) => (
-                <path
-                  key={index}
-                  d={`M ${line.x1} ${line.y1} C ${line.x1 + (line.x2 - line.x1) * 0.35} ${line.y1}, ${line.x1 + (line.x2 - line.x1) * 0.65} ${line.y2}, ${line.x2} ${line.y2}`}
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  fill="none"
-                  className="text-slate-500"
-                />
-              ))}
+              <RoughSvgPaths
+                paths={[
+                  ...(exampleLine ? [{
+                    d: `M ${exampleLine.x1} ${exampleLine.y1} C ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.35} ${exampleLine.y1}, ${exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.65} ${exampleLine.y2}, ${exampleLine.x2} ${exampleLine.y2}`,
+                    points: sampleCubicBezierPoints(
+                      { x: exampleLine.x1, y: exampleLine.y1 },
+                      { x: exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.35, y: exampleLine.y1 },
+                      { x: exampleLine.x1 + (exampleLine.x2 - exampleLine.x1) * 0.65, y: exampleLine.y2 },
+                      { x: exampleLine.x2, y: exampleLine.y2 },
+                    ),
+                    stroke: "#0097dc",
+                    strokeWidth: 2,
+                  }] : []),
+                  ...solutionLines.map((line) => ({
+                    d: `M ${line.x1} ${line.y1} C ${line.x1 + (line.x2 - line.x1) * 0.35} ${line.y1}, ${line.x1 + (line.x2 - line.x1) * 0.65} ${line.y2}, ${line.x2} ${line.y2}`,
+                    points: sampleCubicBezierPoints(
+                      { x: line.x1, y: line.y1 },
+                      { x: line.x1 + (line.x2 - line.x1) * 0.35, y: line.y1 },
+                      { x: line.x1 + (line.x2 - line.x1) * 0.65, y: line.y2 },
+                      { x: line.x2, y: line.y2 },
+                    ),
+                    stroke: "#15803d",
+                    strokeWidth: 1.5,
+                  })),
+                ]}
+              />
             </svg>
           )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
@@ -2454,9 +2518,9 @@ function FillInBlankItemsView({
               <span
                 key={item.id}
                 className="rounded border px-2 py-0.5"
-                style={item.id === examplePairId ? { textDecoration: "line-through" } : undefined}
+                style={undefined}
               >
-                {item.text}
+                  {item.id === examplePairId ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
               </span>
             ))}
           </div>
@@ -2900,7 +2964,11 @@ function renderTfBlanks(text: string): React.ReactNode {
   );
 }
 
-function renderMissingLetterText(text: string, showExampleOnFirstBlank = false): React.ReactNode {
+function renderMissingLetterText(
+  text: string,
+  showExampleOnFirstBlank = false,
+  showSolutionsOnRemainingBlanks = false,
+): React.ReactNode {
   const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
   let exampleShown = false;
 
@@ -2915,6 +2983,7 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
     const { answer, width } = parseBlankContent(raw);
     const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
     const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+    const shouldRenderSolution = showSolutionsOnRemainingBlanks && answer.trim() !== "" && !shouldRenderExample;
 
     if (shouldRenderExample) {
       exampleShown = true;
@@ -2932,6 +3001,31 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
               fontWeight: 400,
               fontSize: "18px",
               color: "#0097dc",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {answer}
+          </span>
+        </span>
+      );
+    }
+
+    if (shouldRenderSolution) {
+      return (
+        <span
+          key={index}
+          className={`relative inline-flex rounded-[3px] bg-gray-100 align-middle overflow-hidden ${spacing.className}`}
+          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+        >
+          <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
+          <span
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              fontFamily: EXAMPLE_HANDWRITING_FONT,
+              fontWeight: 400,
+              fontSize: "18px",
+              color: "#15803d",
               lineHeight: 1,
               whiteSpace: "nowrap",
             }}
@@ -3145,9 +3239,11 @@ function MCQMatrixView({
   const answers = (answer as Record<string, string[]> | undefined) || {};
   const fontFamily = bodyFont || "inherit";
   const isOnline = mode === "online";
+  const exampleStatementId = block.showFirstAsExample ? block.statements[0]?.id : undefined;
 
   const handleSelect = (statementId: string, optionId: string) => {
     if (!interactive || showResults) return;
+    if (statementId === exampleStatementId) return;
     const selected = answers[statementId] || [];
     const next = selected.includes(optionId)
       ? selected.filter((id) => id !== optionId)
@@ -3155,12 +3251,20 @@ function MCQMatrixView({
     onAnswer({ ...answers, [statementId]: next });
   };
 
-  const orderedStatements = block.statementOrder
-    ? block.statementOrder
-        .map((id) => block.statements.find((statement) => statement.id === id))
-        .filter((statement): statement is NonNullable<typeof statement> => !!statement)
-        .concat(block.statements.filter((statement) => !block.statementOrder!.includes(statement.id)))
-    : block.statements;
+  const orderedStatements = (() => {
+    const exampleStatement = exampleStatementId
+      ? block.statements.find((statement) => statement.id === exampleStatementId)
+      : undefined;
+    const remainingStatements = block.statements.filter((statement) => statement.id !== exampleStatementId);
+    const orderedRemainingStatements = block.statementOrder
+      ? block.statementOrder
+          .map((id) => remainingStatements.find((statement) => statement.id === id))
+          .filter((statement): statement is NonNullable<typeof statement> => !!statement)
+          .concat(remainingStatements.filter((statement) => !block.statementOrder!.includes(statement.id)))
+      : remainingStatements;
+
+    return exampleStatement ? [exampleStatement, ...orderedRemainingStatements] : orderedRemainingStatements;
+  })();
 
   return (
     <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
@@ -3204,6 +3308,7 @@ function MCQMatrixView({
         <div>
           {orderedStatements.map((statement, statementIndex) => {
             const selectedIds = answers[statement.id] || [];
+            const isExampleRow = statement.id === exampleStatementId;
 
             return (
               <div key={statement.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
@@ -3212,10 +3317,14 @@ function MCQMatrixView({
                 {block.options.map((option) => {
                   const isSelected = selectedIds.includes(option.id);
                   const isCorrect = statement.correctOptionIds.includes(option.id);
+                  const showExampleOverlay = isExampleRow && isCorrect;
+                  const showSolutionOverlay = showSolutions && !interactive && !isExampleRow && isCorrect;
 
                   let optionClass = CONTROL_BOX_CLASS;
-                  if (showSolutions && !interactive) {
-                    optionClass = isCorrect ? CONTROL_BOX_FILLED_CLASS : CONTROL_BOX_CLASS;
+                  if (showExampleOverlay) {
+                    optionClass = CONTROL_BOX_CLASS;
+                  } else if (showSolutionOverlay) {
+                    optionClass = CONTROL_BOX_CLASS;
                   } else if (showResults) {
                     if (isSelected && isCorrect) {
                       optionClass = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
@@ -3230,14 +3339,18 @@ function MCQMatrixView({
 
                   return (
                     <div key={option.id} className="w-20 flex items-center justify-center">
-                      {showSolutions && !interactive ? (
-                        <div className={optionClass} />
+                      {showExampleOverlay || (showSolutions && !interactive) ? (
+                        showExampleOverlay
+                          ? renderHandwrittenMatrixIndicator("#0097dc")
+                          : showSolutionOverlay
+                            ? renderHandwrittenMatrixIndicator("#15803d")
+                            : <div className={optionClass} />
                       ) : (
                         <button
                           type="button"
                           className={`${optionClass} transition-colors ${interactive && !showResults ? "hover:border-primary/50" : ""}`.trim()}
                           onClick={() => handleSelect(statement.id, option.id)}
-                          disabled={!interactive || showResults}
+                          disabled={!interactive || showResults || isExampleRow}
                         />
                       )}
                     </div>
@@ -3870,7 +3983,6 @@ function renderInlineChoiceViewLine(
                     className={CONTROL_BOX_CLASS}
                     style={{
                       position: 'relative',
-                      color: '#0097dc',
                       verticalAlign: '-3px',
                     }}
                   >
@@ -3880,14 +3992,15 @@ function renderInlineChoiceViewLine(
                         style={{
                           fontFamily: EXAMPLE_HANDWRITING_FONT,
                           color: '#0097dc',
-                          fontSize: '18px',
+                          fontSize: '22px',
+                          top: '-2px',
                         }}
                       >
                         X
                       </span>
                     ) : null}
                   </span>
-                  <span className="font-semibold" style={{ marginLeft: 3 }}>{label}</span>
+                  <span className="font-semibold" style={{ marginLeft: 3, ...(isCorrectOpt ? { color: '#0097dc' } : {}) }}>{label}</span>
                 </span>
               );
             })}
@@ -3950,18 +4063,34 @@ function renderInlineChoiceViewLine(
           {displayed.map((sh, oi) => {
             const isCorrectOpt = sh.originalIndex === correctIndex;
             const label = capitalise(sh.item);
-            const filled = showSolutions && isCorrectOpt;
             return (
               <span key={oi} style={{ marginRight: oi < displayed.length - 1 ? 6 : 0 }}>
                 <span
-                  className={filled ? CONTROL_BOX_FILLED_CLASS : CONTROL_BOX_CLASS}
-                  style={{ verticalAlign: '-3px' }}
-                />
+                  className={CONTROL_BOX_CLASS}
+                  style={{
+                    position: 'relative',
+                    verticalAlign: '-3px',
+                  }}
+                >
+                  {isCorrectOpt && showSolutions ? (
+                    <span
+                      className="absolute inset-0 flex items-center justify-center leading-none"
+                      style={{
+                        fontFamily: EXAMPLE_HANDWRITING_FONT,
+                        color: '#15803d',
+                        fontSize: '22px',
+                        top: '-2px',
+                      }}
+                    >
+                      X
+                    </span>
+                  ) : null}
+                </span>
                 <span
                   className="font-semibold"
                   style={{
                     marginLeft: 3,
-                    ...(filled ? { color: '#16a34a' } : {}),
+                    ...(isCorrectOpt && showSolutions ? { color: '#16a34a' } : {}),
                   }}
                 >
                   {label}
@@ -4082,6 +4211,7 @@ function MCQRowsView({
 }) {
   const selections = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
+  const exampleItemId = block.showFirstAsExample ? block.items[0]?.id : undefined;
   const choicesPerItem = Math.max(2, Math.min(6, Math.round(block.choicesPerItem || 3)));
   const choiceGridStyle: React.CSSProperties = {
     gridTemplateColumns: `repeat(${choicesPerItem}, minmax(0, 120px))`,
@@ -4112,6 +4242,7 @@ function MCQRowsView({
 
       {block.items.map((item, index) => {
         const selectedChoiceId = selections[item.id] || "";
+        const isExampleRow = item.id === exampleItemId;
         return (
           <div
             key={item.id}
@@ -4125,10 +4256,15 @@ function MCQRowsView({
                 const isCorrect = item.correctChoiceId === choice.id;
                 const isSelected = selectedChoiceId === choice.id;
                 const showCorrect = showResults || showSolutions;
+                const showSolutionOverlay = showSolutions && isCorrect;
+                const showExampleOverlay = isExampleRow && isCorrect;
                 const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
 
                 let className = "inline-flex items-center gap-1.5 text-left transition-colors";
-                if (showCorrect && isCorrect) {
+                let choiceStyle: React.CSSProperties | undefined;
+                if (showExampleOverlay) {
+                  choiceStyle = { color: "#0097dc" };
+                } else if (showCorrect && isCorrect) {
                   className += " text-green-700";
                 } else if (showResults && isSelected && !isCorrect) {
                   className += " text-red-700";
@@ -4149,8 +4285,12 @@ function MCQRowsView({
                     <span className="text-[11px] font-bold uppercase text-muted-foreground">
                       {choiceLabel}
                     </span>
-                    <span className={indicatorClass} />
-                    <span className="font-semibold">{choice.text}</span>
+                    {showExampleOverlay
+                      ? renderHandwrittenMatrixIndicator("#0097dc")
+                      : showSolutionOverlay
+                      ? renderHandwrittenMatrixIndicator("#15803d")
+                      : <span className={indicatorClass} />}
+                    <span>{choice.text}</span>
                   </>
                 );
 
@@ -4160,11 +4300,12 @@ function MCQRowsView({
                       key={choice.id}
                       type="button"
                       className={className}
+                      style={choiceStyle}
                       onClick={() => {
-                        if (showResults) return;
+                        if (showResults || isExampleRow) return;
                         onAnswer({ ...selections, [item.id]: choice.id });
                       }}
-                      disabled={showResults}
+                      disabled={showResults || isExampleRow}
                     >
                       {content}
                     </button>
@@ -4172,7 +4313,7 @@ function MCQRowsView({
                 }
 
                 return (
-                  <span key={choice.id} className={className}>
+                  <span key={choice.id} className={className} style={choiceStyle}>
                     {content}
                   </span>
                 );
@@ -4231,6 +4372,95 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   const isPrint = mode === "print";
   const isOnline = mode === "online";
   const rowHeight = block.rowHeight ?? 1.9;
+  const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+  const exampleWord = block.showFirstAsExample ? block.words[0] : undefined;
+  const examplePlacement = useMemo(
+    () => (exampleWord ? findWordSearchPlacements(block.grid, [exampleWord], block.allowedDirections)[0] ?? null : null),
+    [block.allowedDirections, block.grid, exampleWord],
+  );
+
+  const solutionPlacements = useMemo(
+    () => (!interactive && showSolutions ? findWordSearchPlacements(block.grid, block.words, block.allowedDirections) : []),
+    [block.allowedDirections, block.grid, block.words, interactive, showSolutions],
+  );
+
+  React.useLayoutEffect(() => {
+    if (interactive || !showSolutions) {
+      setGridSize((current) => (current.width === 0 && current.height === 0 ? current : { width: 0, height: 0 }));
+      return;
+    }
+
+    const container = gridContainerRef.current;
+    if (!container) return;
+
+    const measure = () => {
+      setGridSize({ width: container.offsetWidth, height: container.offsetHeight });
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+    });
+    resizeObserver.observe(container);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [interactive, showSolutions, block.grid]);
+
+  const solutionHighlights = useMemo(() => {
+    if (interactive || gridSize.width <= 0 || gridSize.height <= 0 || block.grid.length === 0) {
+      return [];
+    }
+
+    const colCount = block.grid[0]?.length || 0;
+    const rowCount = block.grid.length;
+    if (colCount === 0 || rowCount === 0) return [];
+
+    const cellWidth = gridSize.width / colCount;
+    const cellHeight = gridSize.height / rowCount;
+
+    const buildHighlight = (placement: { startRow: number; startCol: number; endRow: number; endCol: number }, stroke: string) => {
+      const startX = (placement.startCol + 0.5) * cellWidth;
+      const startY = (placement.startRow + 0.5) * cellHeight;
+      const endX = (placement.endCol + 0.5) * cellWidth;
+      const endY = (placement.endRow + 0.5) * cellHeight;
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const centerX = (startX + endX) / 2;
+      const centerY = (startY + endY) / 2;
+      const segmentLength = Math.hypot(deltaX, deltaY);
+      const unitX = segmentLength > 0 ? deltaX / segmentLength : 1;
+      const unitY = segmentLength > 0 ? deltaY / segmentLength : 0;
+      const alongCellExtent = Math.abs(unitX) * cellWidth + Math.abs(unitY) * cellHeight;
+      const acrossCellExtent = Math.abs(unitY) * cellWidth + Math.abs(unitX) * cellHeight;
+
+      return {
+        x: centerX,
+        y: centerY,
+        width: segmentLength + alongCellExtent * 0.92,
+        height: Math.max(14, acrossCellExtent * 0.76),
+        angle: Math.atan2(deltaY, deltaX) * 180 / Math.PI,
+        stroke,
+      };
+    };
+
+    const highlights = examplePlacement ? [buildHighlight(examplePlacement, "#0097dc")] : [];
+
+    if (showSolutions) {
+      solutionPlacements
+        .filter((placement) => placement.wordIndex !== 0 || !block.showFirstAsExample)
+        .forEach((placement) => {
+          highlights.push(buildHighlight(placement, "#15803d"));
+        });
+    }
+
+    return highlights;
+  }, [showSolutions, interactive, gridSize, block.grid, solutionPlacements, examplePlacement, block.showFirstAsExample]);
 
   const toggleCell = (key: string) => {
     if (!interactive) return;
@@ -4264,15 +4494,24 @@ function renderTextWithSup(text: string): React.ReactNode[] {
         <>
           <div className="flex flex-wrap items-center gap-2">
             {block.words.map((word, i) => (
-              <span key={i} className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}>
-                {word}
+              <span
+                key={i}
+                className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}
+                style={block.showFirstAsExample && i === 0 ? { color: "#0097dc" } : undefined}
+              >
+                {block.showFirstAsExample && i === 0 ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
               </span>
             ))}
           </div>
           {block.grid.length > 0 && <SectionGap size="medium" />}
         </>
       )}
-      <div className="w-full">
+      <div ref={gridContainerRef} className="relative w-full">
+        <RoughRoundedRectHighlights
+          highlights={solutionHighlights}
+          width={gridSize.width}
+          height={gridSize.height}
+        />
         <table className="w-full table-fixed border-separate border-spacing-0">
           <tbody>
             {block.grid.map((row, ri) => (
@@ -4465,11 +4704,10 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               >
                 <span
                   style={{
-                    textDecoration: isExampleItem ? 'line-through' : undefined,
                     color: isExampleItem ? '#0097dc' : undefined,
                   }}
                 >
-                  {item.text}
+                  {isExampleItem ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
                 </span>
               </span>
             );
@@ -4480,6 +4718,12 @@ function renderTextWithSup(text: string): React.ReactNode[] {
           {block.categories.map((cat) => {
             const catTheme = getCategoryTheme(cat.id);
             const categoryExampleItem = exampleCategory?.id === cat.id ? exampleItem : undefined;
+            const remainingSolutionItems = categoryExampleItem
+              ? cat.correctItems
+                  .filter((itemId) => itemId !== categoryExampleItem.id)
+                  .map((itemId) => block.items.find((it) => it.id === itemId))
+                  .filter((item): item is NonNullable<typeof item> => !!item)
+              : [];
             return (
               <div
                 key={cat.id}
@@ -4519,11 +4763,36 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                         </span>
                       </div>
                     </div>
-                    {(block.showWritingLines ?? true) && maxItemsPerCat > 1 && (
+                    {!showSolutions && (block.showWritingLines ?? true) && maxItemsPerCat > 1 && (
                       <div>
                         {Array.from({ length: maxItemsPerCat - 1 }).map((_, i) => (
                           <div key={i} className={SORT_WRITING_ROW_CLASS}>
                             <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {showSolutions && remainingSolutionItems.length > 0 && (
+                      <div>
+                        {remainingSolutionItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
+                            style={colorCodeEnabled
+                              ? {
+                                  color: catTheme.itemText,
+                                  borderBottomColor: catTheme.itemBorder,
+                                }
+                              : undefined}
+                          >
+                            <div className={writingLineBoxClass} style={writingLineStyle}>
+                              <span
+                                className="absolute inset-x-0 block leading-none"
+                                style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
+                              >
+                                {item.text}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -4547,7 +4816,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                               <div className={writingLineBoxClass} style={writingLineStyle}>
                                 <span
                                   className="absolute inset-x-0 block leading-none"
-                                  style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: '18px' }}
+                                  style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
                                 >
                                   {item.text}
                                 </span>
@@ -4621,11 +4890,10 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 >
                   <span
                     style={{
-                      textDecoration: isExampleItem ? 'line-through' : undefined,
                       color: isExampleItem ? '#0097dc' : undefined,
                     }}
                   >
-                    {item.text}
+                      {isExampleItem ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
                   </span>
                 </span>
               );
@@ -5037,14 +5305,17 @@ function CorrectSpellingView({
                       exampleGapShown = true;
                     }
 
+                    const showSolutionCircle =
+                      block.type === "correct-spelling" &&
+                      showSolutions &&
+                      variant.isOriginal &&
+                      variantIndex !== 0 &&
+                      !showExampleChip;
                     const shouldHighlightVariant =
                       block.type === "correct-spelling"
-                        ? variantIndex === 0 || (showSolutions && variant.isOriginal)
+                        ? variantIndex === 0
                         : variantIndex === 0 || (showSolutions && variant.isOriginal);
-                    const highlightClass =
-                      block.type === "correct-spelling"
-                        ? "text-green-700 border-green-300 bg-green-50"
-                        : "text-green-700 border-green-300 bg-green-50";
+                    const highlightClass = "text-green-700 border-green-300 bg-green-50";
 
                     return (
                       <span
@@ -5052,10 +5323,12 @@ function CorrectSpellingView({
                         className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${shouldHighlightVariant ? highlightClass : "bg-background"}`}
                       >
                         {block.type === "missing-letters"
-                          ? renderMissingLetterText(variant.text, showExampleGap)
+                          ? renderMissingLetterText(variant.text, showExampleGap, showSolutions && !variant.isOriginal)
                           : showExampleChip
                             ? <RoughExampleCircle>{variant.text}</RoughExampleCircle>
-                            : variant.text}
+                            : showSolutionCircle
+                              ? <RoughExampleCircle stroke="#15803d">{variant.text}</RoughExampleCircle>
+                              : variant.text}
                       </span>
                     );
                   })()
@@ -5248,22 +5521,32 @@ function FixSentencesView({
                 </div>
               </div>
               {isExampleSentence ? (
-                <div
-                  className="relative mt-2 h-8 overflow-hidden font-medium"
-                  style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
-                >
-                  <span className="absolute inset-x-0 bottom-px block leading-none">
-                    {correctParts.join(" ")}
-                  </span>
+                <div className="mt-2">
+                  <div
+                    className="relative flex-1 h-8 overflow-hidden"
+                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
+                  >
+                    <span
+                      className="absolute inset-x-0 block leading-none"
+                      style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
+                    >
+                      {correctParts.join(" ")}
+                    </span>
+                  </div>
                 </div>
-              ) : isPrint && showSolutions ? (
-                <div
-                  className="relative mt-2 h-8 overflow-hidden text-green-800 font-semibold text-cv-sm"
-                  style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
-                >
-                  <span className="absolute inset-x-0 bottom-px block leading-none">
-                    {correctParts.join(" ")}
-                  </span>
+              ) : isPrint && showSolutions && !block.hideSolutionsInSolutionRender ? (
+                <div className="mt-2">
+                  <div
+                    className="relative flex-1 h-8 overflow-hidden"
+                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
+                  >
+                    <span
+                      className="absolute inset-x-0 block leading-none"
+                      style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#15803d", fontSize: "18px" }}
+                    >
+                      {correctParts.join(" ")}
+                    </span>
+                  </div>
                 </div>
               ) : isPrint ? (
                 <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
@@ -5367,6 +5650,7 @@ function TransformSentencesView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
   accentColor,
   interactiveColor,
   instructionIndex,
@@ -5377,6 +5661,7 @@ function TransformSentencesView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
   accentColor?: string | null;
   interactiveColor?: string;
   instructionIndex?: number;
@@ -5449,6 +5734,20 @@ function TransformSentencesView({
                     </span>
                   </div>
                 </div>
+              ) : !interactive && showSolutions && hasSolution ? (
+                <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
+                  <div
+                    className="relative flex-1 h-8 overflow-hidden"
+                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
+                  >
+                    <span
+                      className="absolute inset-x-0 block leading-none"
+                      style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#15803d", fontSize: "18px" }}
+                    >
+                      {item.solution}
+                    </span>
+                  </div>
+                </div>
               ) : interactive ? (
                 <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
                   <div className="flex-1">
@@ -5498,6 +5797,7 @@ function ReadingComprehensionView({
   answer,
   onAnswer,
   showResults,
+  showSolutions = false,
   accentColor,
   interactiveColor,
   instructionIndex,
@@ -5508,6 +5808,7 @@ function ReadingComprehensionView({
   answer: unknown;
   onAnswer: (value: unknown) => void;
   showResults: boolean;
+  showSolutions?: boolean;
   accentColor?: string | null;
   interactiveColor?: string;
   instructionIndex?: number;
@@ -5579,6 +5880,7 @@ function ReadingComprehensionView({
                         const isFieldCorrect = showResults && hasFieldSolution && userFieldVal.trim().toLowerCase() === solution.trim().toLowerCase();
                         const isFieldWrong = showResults && hasFieldSolution && userFieldVal.trim() !== "" && !isFieldCorrect;
                         const isExampleField = item.id === exampleSentenceId && hasFieldSolution;
+                        const showFieldSolution = !interactive && showSolutions && hasFieldSolution && !isExampleField;
 
                         return (
                           <div key={fieldIndex} className="space-y-1 min-w-0">
@@ -5588,6 +5890,15 @@ function ReadingComprehensionView({
                                 <span
                                   className="absolute inset-0 flex items-center justify-center"
                                   style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                                >
+                                  {solution}
+                                </span>
+                              </div>
+                            ) : showFieldSolution ? (
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
+                                <span
+                                  className="absolute inset-0 flex items-center justify-center"
+                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
                                 >
                                   {solution}
                                 </span>
@@ -5630,6 +5941,15 @@ function ReadingComprehensionView({
                   <span
                     className="flex-1"
                     style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                  >
+                    {item.solution}
+                  </span>
+                </div>
+              ) : !interactive && showSolutions && hasSolution ? (
+                <div className={FOLLOWUP_ROW_CLASS}>
+                  <span
+                    className="flex-1"
+                    style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
                   >
                     {item.solution}
                   </span>
@@ -5914,7 +6234,7 @@ function DialogueView({
   // Render text with interactive gaps
   let globalGapIdx = 0;
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
-    if (variant === "solution") {
+    if (variant === "original") {
       return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
         const { answer } = parseBlankContent(raw);
         return answer;
@@ -5961,6 +6281,7 @@ function DialogueView({
             };
 
         const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        const shouldRenderSolutionOverlay = variant === "solution" || (variant === "default" && showSolutions && hasAnswer);
         if (shouldRenderExample) {
           exampleShown = true;
           return (
@@ -6010,13 +6331,38 @@ function DialogueView({
           );
         }
 
+        if (shouldRenderSolutionOverlay) {
+          return (
+            <span
+              key={i}
+              className="relative inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
+              style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{correctAnswer || "\u00A0"}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#15803d",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {correctAnswer}
+              </span>
+            </span>
+          );
+        }
+
         return (
           <span
             key={i}
-            className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${variant === "default" && showSolutions && hasAnswer ? "bg-green-100 text-green-700 text-cv-xs font-medium" : "bg-gray-100"}`}
+            className="inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
             style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
           >
-            {variant === "default" && showSolutions && hasAnswer ? correctAnswer : "\u00A0"}
+            {"\u00A0"}
           </span>
         );
       }
@@ -6048,9 +6394,9 @@ function DialogueView({
                 <span
                   key={i}
                   className="px-2 py-0.5 bg-background rounded border"
-                  style={exampleAnswers.has(text) ? { textDecoration: "line-through", color: "#0097dc" } : undefined}
+                  style={exampleAnswers.has(text) ? { color: "#0097dc" } : undefined}
                 >
-                  {text}
+                  {exampleAnswers.has(text) ? <RoughExampleStrike>{text}</RoughExampleStrike> : text}
                 </span>
               ))}
           </div>
@@ -6073,11 +6419,15 @@ function DialogueView({
             )}
             {block.showOriginal ? (
               <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
-                <div className="min-w-0">
-                  {renderDialogueText(item.text, "original", !!block.showFirstAsExample && i === 0)}
+                <div className="min-w-0 flex flex-wrap items-center">
+                  {renderDialogueText(
+                    item.text,
+                    showSolutions ? "solution" : "default",
+                    !!block.showFirstAsExample && i === 0,
+                  )}
                 </div>
-                <div className="min-w-0">
-                  {renderDialogueText(item.text, "solution")}
+                <div className="min-w-0 flex flex-wrap items-center">
+                  {renderDialogueText(item.text, "original")}
                 </div>
               </div>
             ) : (
@@ -6984,12 +7334,14 @@ function TableView({
   block,
   originalBlock,
   mode,
+  showSolutions = false,
   accentColor,
   instructionIndex,
 }: {
   block: TableBlock;
   originalBlock?: TableBlock;
   mode: ViewMode;
+  showSolutions?: boolean;
   accentColor?: string | null;
   instructionIndex?: number;
 }) {
@@ -7015,11 +7367,11 @@ function TableView({
     html = hideTableHeaderHtml(html);
   }
 
+  html = renderBlankTokensInHtml(html);
+
   if (block.firstRowAsExample) {
     html = markFirstExampleRowHtml(html);
   }
-
-  html = renderBlankTokensInHtml(html);
 
   return (
     <div>
@@ -7036,7 +7388,7 @@ function TableView({
       )}
       <div className={`table-block table-style-${block.tableStyle ?? "default"} ${
         block.firstRowAsExample ? "table-first-row-example" : ""
-      }`}>
+      } ${showSolutions ? "table-show-solutions" : ""}`.trim()}>
         <div
           className="tiptap-table-view"
           dangerouslySetInnerHTML={{ __html: html }}
@@ -7484,6 +7836,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
           instructionIndex={instructionIndex}
@@ -7498,6 +7851,7 @@ export function ViewerBlockRenderer({
           answer={answer}
           onAnswer={onAnswer || noop}
           showResults={showResults}
+          showSolutions={showSolutions}
           accentColor={accentColor}
           interactiveColor={interactiveColor}
           instructionIndex={instructionIndex}
@@ -7604,7 +7958,7 @@ export function ViewerBlockRenderer({
     case "ai-tool":
       return <AiToolView block={block as AiToolBlock} />;
     case "table":
-      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} mode={mode} accentColor={accentColor} instructionIndex={instructionIndex} />;
+      return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} mode={mode} showSolutions={showSolutions} accentColor={accentColor} instructionIndex={instructionIndex} />;
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":

@@ -24,7 +24,16 @@ export function hideTableHeaderHtml(html: string): string {
 
 export function markFirstExampleRowHtml(html: string): string {
   return html.replace(/<tr\b([^>]*)>([\s\S]*?)<\/tr>/i, (match, attrs, inner) => {
-    return /<td\b/i.test(inner) ? `<tr${attrs} data-table-example-row="true">${inner}</tr>` : match;
+    if (!/<td\b/i.test(inner)) {
+      return match;
+    }
+
+    const markedInner = inner.replace(
+      /<span data-table-blank="true"([^>]*)data-answer="([^"]+)"([^>]*)>/i,
+      '<span data-table-blank="true"$1data-answer="$2" data-table-example-blank="true"$3>',
+    );
+
+    return `<tr${attrs} data-table-example-row="true">${markedInner}</tr>`;
   });
 }
 

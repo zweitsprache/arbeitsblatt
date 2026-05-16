@@ -81,7 +81,8 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
-import { RoughExampleCircle } from "@/components/ui/rough-example-circle";
+import { RoughExampleCircle, RoughExampleStrike } from "@/components/ui/rough-example-circle";
+import { generateWordSearchGrid } from "@/lib/word-search";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,38 @@ import {
 } from "@/lib/dialogue-icons";
 
 const EXAMPLE_HANDWRITING_FONT = "var(--worksheet-example-font, var(--font-handwriting)), cursive";
+
+function renderHandwrittenMatrixIndicator(color: string) {
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0"
+      style={{
+        boxSizing: "border-box",
+        width: 16,
+        height: 16,
+        minWidth: 16,
+        minHeight: 16,
+        borderRadius: 3,
+        color,
+        boxShadow: "inset 0 0 0 1px currentColor",
+        background: "#fff",
+        position: "relative",
+      }}
+    >
+      <span
+        className="absolute inset-0 flex items-center justify-center leading-none"
+        style={{
+          fontFamily: EXAMPLE_HANDWRITING_FONT,
+          color,
+          fontSize: "22px",
+          top: "-3px",
+        }}
+      >
+        X
+      </span>
+    </span>
+  );
+}
 
 // ─── Handwriting helper ──────────────────────────────────────
 /** Check whether a string contains ++…++ handwriting markers */
@@ -1673,9 +1706,9 @@ function FillInBlankItemsRenderer({
             <span
               key={i}
               className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
-              style={exampleAnswers.has(word) ? { textDecoration: 'line-through' } : undefined}
+              style={undefined}
             >
-              {word}
+              {exampleAnswers.has(word) ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
             </span>
           ))}
         </div>
@@ -1864,9 +1897,9 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
             <span
               key={i}
               className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
-              style={exampleAnswers.has(word.text) ? { textDecoration: 'line-through' } : undefined}
+              style={undefined}
             >
-              {word.text}
+              {exampleAnswers.has(word.text) ? <RoughExampleStrike>{word.text}</RoughExampleStrike> : word.text}
             </span>
           ))}
         </div>
@@ -2449,7 +2482,14 @@ function MCQMatrixRenderer({
     );
   };
 
-  const orderedStatements = block.statements;
+  const exampleStatementId = block.showFirstAsExample ? block.statements[0]?.id : undefined;
+  const orderedStatements = (() => {
+    const exampleStatement = exampleStatementId
+      ? block.statements.find((statement) => statement.id === exampleStatementId)
+      : undefined;
+    const remainingStatements = block.statements.filter((statement) => statement.id !== exampleStatementId);
+    return exampleStatement ? [exampleStatement, ...remainingStatements] : remainingStatements;
+  })();
 
   return (
     <div className="space-y-2">
@@ -2522,21 +2562,18 @@ function MCQMatrixRenderer({
               </div>
               {block.options.map((option) => {
                 const isSelected = statement.correctOptionIds.includes(option.id);
+                const isExampleRow = statement.id === exampleStatementId;
                 return (
                   <div key={option.id} className="w-24 flex items-center justify-center">
                     <button
                       type="button"
-                      className={`w-5 h-5 rounded-sm border-2 inline-flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? "bg-green-500 border-green-500 text-white"
-                          : "border-muted-foreground/30 hover:border-green-400"
-                      }`}
+                      className="w-5 h-5 rounded-sm border-2 inline-flex items-center justify-center transition-colors border-muted-foreground/30 hover:border-green-400"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleCorrectOption(statement.id, option.id);
                       }}
                     >
-                      {isSelected && <Check className="h-3 w-3" />}
+                      {isSelected ? renderHandwrittenMatrixIndicator(isExampleRow ? "#0097dc" : "#15803d") : null}
                     </button>
                   </div>
                 );
@@ -2598,6 +2635,7 @@ function MCQRowsRenderer({
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const instructionText = (block.instruction || "").trim() || "Choose the correct option in each row.";
+  const exampleItemId = block.showFirstAsExample ? block.items[0]?.id : undefined;
   const choicesPerItem = Math.max(2, Math.min(6, Math.round(block.choicesPerItem || 3)));
   const choiceGridStyle: React.CSSProperties = {
     gridTemplateColumns: `repeat(${choicesPerItem}, minmax(0, 120px))`,
@@ -2689,15 +2727,17 @@ function MCQRowsRenderer({
             <div className="grid shrink-0 gap-2" style={choiceGridStyle}>
               {item.choices.map((choice, choiceIndex) => {
                 const isCorrect = item.correctChoiceId === choice.id;
+                const isExampleRow = item.id === exampleItemId;
                 const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
                 return (
                   <div
                     key={choice.id}
                     className={`inline-flex items-center gap-1.5 transition-colors ${
-                      isCorrect
+                      isCorrect && !isExampleRow
                         ? "text-green-700"
                         : "text-foreground"
                     }`}
+                    style={isCorrect && isExampleRow ? { color: "#0097dc" } : undefined}
                     onClick={(e) => {
                       e.stopPropagation();
                       updateItem(item.id, { correctChoiceId: choice.id });
@@ -2706,7 +2746,9 @@ function MCQRowsRenderer({
                     <span className="text-[11px] font-bold uppercase text-muted-foreground">
                       {choiceLabel}
                     </span>
-                    {renderInlineChoiceIndicator(isCorrect, false)}
+                    {isCorrect
+                      ? renderHandwrittenMatrixIndicator(isExampleRow ? "#0097dc" : "#15803d")
+                      : renderInlineChoiceIndicator(false, false)}
                     <span
                       className="outline-none block min-w-0 flex-1 text-left font-semibold"
                       contentEditable={!interactive}
@@ -3070,7 +3112,8 @@ function serializeInlineChoiceSegments(segments: Array<{ type: "text"; value: st
 }
 
 function renderInlineChoiceIndicator(isCorrect: boolean, isExample: boolean) {
-  if (isExample) {
+  if (isCorrect) {
+    const color = isExample ? '#0097dc' : '#15803d';
     return (
       <span
         className="relative inline-flex items-center justify-center shrink-0"
@@ -3081,19 +3124,19 @@ function renderInlineChoiceIndicator(isCorrect: boolean, isExample: boolean) {
           minWidth: 16,
           minHeight: 16,
           borderRadius: 3,
-          color: '#0097dc',
+          color: 'var(--color-primary)',
           boxShadow: 'inset 0 0 0 1px currentColor',
-          background: 'rgb(243 244 246)',
+          background: '#fff',
         }}
       >
         {isCorrect ? (
           <span
             className="absolute inset-0 flex items-center justify-center leading-none"
             style={{
-              fontFamily: 'var(--font-handwriting), cursive',
-              color: '#0097dc',
-              fontSize: '18px',
-              top: -2,
+              fontFamily: EXAMPLE_HANDWRITING_FONT,
+              color,
+              fontSize: '22px',
+              top: -3,
             }}
           >
             X
@@ -3106,29 +3149,17 @@ function renderInlineChoiceIndicator(isCorrect: boolean, isExample: boolean) {
   return (
     <span
       className="inline-flex items-center justify-center shrink-0"
-      style={isCorrect
-        ? {
-            boxSizing: 'border-box',
-            width: 16,
-            height: 16,
-            minWidth: 16,
-            minHeight: 16,
-            borderRadius: 3,
-            color: '#22c55e',
-            boxShadow: 'inset 0 0 0 1px #22c55e',
-            background: '#22c55e',
-          }
-        : {
-            boxSizing: 'border-box',
-            width: 16,
-            height: 16,
-            minWidth: 16,
-            minHeight: 16,
-            borderRadius: 3,
-            color: 'var(--color-primary)',
-            boxShadow: 'inset 0 0 0 1px currentColor',
-            background: '#fff',
-          }}
+      style={{
+        boxSizing: 'border-box',
+        width: 16,
+        height: 16,
+        minWidth: 16,
+        minHeight: 16,
+        borderRadius: 3,
+        color: 'var(--color-primary)',
+        boxShadow: 'inset 0 0 0 1px currentColor',
+        background: '#fff',
+      }}
     />
   );
 }
@@ -3154,7 +3185,7 @@ function renderInlineChoiceLine(content: string, showExample = false): React.Rea
                   <span style={{ display: 'inline-block', verticalAlign: '-3px' }}>
                     {renderInlineChoiceIndicator(isCorrect, true)}
                   </span>
-                  <span className="font-semibold" style={{ marginLeft: 3 }}>{label}</span>
+                  <span className="font-semibold" style={{ marginLeft: 3, ...(isCorrect ? { color: '#0097dc' } : {}) }}>{label}</span>
                 </span>
               );
             })}
@@ -3172,7 +3203,7 @@ function renderInlineChoiceLine(content: string, showExample = false): React.Rea
                 <span
                   className={`inline-flex items-center gap-0.5 font-semibold ${
                     isCorrect && !showExample
-                      ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
+                      ? "font-semibold text-green-700"
                       : ""
                   }`}
                 >
@@ -3277,7 +3308,7 @@ function EditableInlineChoiceLine({
                     <span
                       className={`inline-flex items-center gap-0.5 font-semibold ${
                         isCorrect && !showExample
-                          ? "font-semibold text-green-700 bg-green-50 px-1 rounded"
+                          ? "font-semibold text-green-700"
                           : ""
                       }`}
                     >
@@ -3444,75 +3475,6 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   });
 }
 
-// ─── Word Search ────────────────────────────────────────────
-function generateWordSearchGrid(
-  words: string[],
-  cols: number,
-  rows: number
-): string[][] {
-  const grid: string[][] = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => "")
-  );
-
-  const directions = [
-    [0, 1],   // right
-    [1, 0],   // down
-    [1, 1],   // diagonal down-right
-    [-1, 1],  // diagonal up-right
-    [0, -1],  // left
-    [1, -1],  // diagonal down-left
-  ];
-
-  const upperWords = words.map((w) => w.toUpperCase().replace(/\s+/g, ""));
-
-  for (const word of upperWords) {
-    let placed = false;
-    let attempts = 0;
-    while (!placed && attempts < 100) {
-      attempts++;
-      const dir = directions[Math.floor(Math.random() * directions.length)];
-      const startRow = dir[0] < 0
-        ? Math.floor(Math.random() * (rows - word.length)) + word.length - 1
-        : Math.floor(Math.random() * (rows - (dir[0] > 0 ? word.length - 1 : 0)));
-      const startCol = dir[1] < 0
-        ? Math.floor(Math.random() * (cols - word.length)) + word.length - 1
-        : Math.floor(Math.random() * (cols - (dir[1] > 0 ? word.length - 1 : 0)));
-
-      let canPlace = true;
-      for (let k = 0; k < word.length; k++) {
-        const r = startRow + k * dir[0];
-        const c = startCol + k * dir[1];
-        if (r < 0 || r >= rows || c < 0 || c >= cols) {
-          canPlace = false;
-          break;
-        }
-        if (grid[r][c] !== "" && grid[r][c] !== word[k]) {
-          canPlace = false;
-          break;
-        }
-      }
-      if (canPlace) {
-        for (let k = 0; k < word.length; k++) {
-          grid[startRow + k * dir[0]][startCol + k * dir[1]] = word[k];
-        }
-        placed = true;
-      }
-    }
-  }
-
-  // Fill empty cells with random letters
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (grid[r][c] === "") {
-        grid[r][c] = letters[Math.floor(Math.random() * letters.length)];
-      }
-    }
-  }
-
-  return grid;
-}
-
 function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("blockRenderer");
@@ -3524,16 +3486,16 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
   // Generate grid if empty
   React.useEffect(() => {
     if (block.grid.length === 0 && block.words.length > 0) {
-      const newGrid = generateWordSearchGrid(block.words, cols, rows);
+      const newGrid = generateWordSearchGrid(block.words, cols, rows, block.allowedDirections);
       dispatch({
         type: "UPDATE_BLOCK",
         payload: { id: block.id, updates: { grid: newGrid } },
       });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [block.allowedDirections, block.grid.length, block.words, cols, dispatch, rows]);
 
   const regenerateGrid = () => {
-    const newGrid = generateWordSearchGrid(block.words, cols, rows);
+    const newGrid = generateWordSearchGrid(block.words, cols, rows, block.allowedDirections);
     dispatch({
       type: "UPDATE_BLOCK",
       payload: { id: block.id, updates: { grid: newGrid } },
@@ -3581,8 +3543,9 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
             <span
               key={i}
               className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
+              style={block.showFirstAsExample && i === 0 ? { color: "#0097dc" } : undefined}
             >
-              {word}
+              {block.showFirstAsExample && i === 0 ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
             </span>
           ))}
         </div>
@@ -4070,11 +4033,13 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Miss
                       exampleGapShown = true;
                     }
 
-                    const shouldHighlightVariant = variantIndex === 0 || variant.isOriginal;
-                    const highlightClass =
-                      block.type === "correct-spelling"
-                        ? "border-green-300 bg-green-50 text-green-700"
-                        : "border-green-300 bg-green-50 text-green-700";
+                    const showSolutionCircle =
+                      block.type === "correct-spelling" &&
+                      variant.isOriginal &&
+                      variantIndex !== 0 &&
+                      !showExampleChip;
+                    const shouldHighlightVariant = block.type === "correct-spelling" ? variantIndex === 0 : variantIndex === 0 || variant.isOriginal;
+                    const highlightClass = "border-green-300 bg-green-50 text-green-700";
 
                     return (
                       <span
@@ -4085,7 +4050,9 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Miss
                           ? renderMissingLetterText(variant.text, showExampleGap)
                           : showExampleChip
                             ? <RoughExampleCircle>{variant.text}</RoughExampleCircle>
-                            : variant.text}
+                            : showSolutionCircle
+                              ? <RoughExampleCircle stroke="#15803d">{variant.text}</RoughExampleCircle>
+                              : variant.text}
                       </span>
                     );
                   })()
@@ -4229,8 +4196,8 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
             <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
               {item.id === exampleSentenceId ? (
                 <span
-                  className="absolute -top-1 left-0 text-[1.15em]"
-                  style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                  className="absolute inset-x-0 block leading-none"
+                  style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
                 >
                   {item.sentence.split(" | ").map((part) => part.trim()).join(" ")}
                 </span>
@@ -5450,7 +5417,7 @@ function DialogueRenderer({
   }, [block.items, block.showFirstAsExample]);
 
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
-    if (variant === "solution") {
+    if (variant === "original") {
       return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
         const { answer } = parseBlankContent(raw);
         return answer;
@@ -5508,6 +5475,7 @@ function DialogueRenderer({
           };
         }
         const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        const shouldRenderSolutionOverlay = variant === "solution";
         if (shouldRenderExample) {
           exampleShown = true;
           return (
@@ -5541,6 +5509,31 @@ function DialogueRenderer({
             placeholder="…"
             className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${adjustedSpacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
           />
+          );
+        }
+
+        if (shouldRenderSolutionOverlay) {
+          return (
+            <span
+              key={i}
+              className={`relative inline-block rounded-[3px] bg-gray-100 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+              style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || '\u00A0'}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: "var(--font-handwriting)",
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#15803d",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {answer}
+              </span>
+            </span>
           );
         }
 
@@ -5578,9 +5571,9 @@ function DialogueRenderer({
                 <span
                   key={i}
                   className="px-2 py-0.5 bg-background rounded border text-[10px]"
-                  style={exampleAnswers.has(text) ? { textDecoration: 'line-through' } : undefined}
+                  style={undefined}
                 >
-                  {text}
+                  {exampleAnswers.has(text) ? <RoughExampleStrike>{text}</RoughExampleStrike> : text}
                 </span>
               ))}
           </div>
@@ -5604,10 +5597,10 @@ function DialogueRenderer({
             {block.showOriginal ? (
               <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
                 <div className="min-w-0">
-                  {renderDialogueText(item.text, "original", !!block.showFirstAsExample && i === 0)}
+                  {renderDialogueText(item.text, "default", !!block.showFirstAsExample && i === 0)}
                 </div>
                 <div className="min-w-0">
-                  {renderDialogueText(item.text, "solution")}
+                  {renderDialogueText(item.text, "original")}
                 </div>
               </div>
             ) : (

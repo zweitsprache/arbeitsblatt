@@ -94,6 +94,7 @@ import {
   ImageBlockStyle,
   BLOCK_LIBRARY,
 } from "@/types/worksheet";
+import { resolveWordSearchDirections } from "@/lib/word-search";
 import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
@@ -3631,6 +3632,19 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
           </Button>
         )}
       </div>
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -4405,6 +4419,21 @@ function MCQRowsProps({ block }: { block: MCQRowsBlock }) {
       <Button type="button" variant="outline" className="w-full" onClick={addItem}>
         <Plus className="mr-2 h-4 w-4" /> {t("addItem")}
       </Button>
+
+      <Separator />
+
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -4743,6 +4772,17 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const directionKeys = [
+    "leftToRight",
+    "rightToLeft",
+    "upToDown",
+    "downToUp",
+    "nwToSe",
+    "swToNe",
+    "neToSw",
+    "seToNw",
+  ] as const;
+  const activeDirections = new Set(resolveWordSearchDirections(block.allowedDirections));
 
   const updateWord = (index: number, value: string) => {
     const newWords = [...block.words];
@@ -4781,6 +4821,22 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
     dispatch({
       type: "UPDATE_BLOCK",
       payload: { id: block.id, updates: { grid: [] } },
+    });
+  };
+
+  const toggleDirection = (direction: (typeof directionKeys)[number], checked: boolean) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          allowedDirections: {
+            ...block.allowedDirections,
+            [direction]: checked,
+          },
+          grid: [],
+        },
+      },
     });
   };
 
@@ -4875,6 +4931,35 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
           }
         />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showWordList")}</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={block.showFirstAsExample ?? false}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: v } },
+            })
+          }
+        />
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showFirstAsExample")}</Label>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("wordSearchDirections")}</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {directionKeys.map((direction) => {
+            const labelKey = `wordSearchDirection${direction.charAt(0).toUpperCase()}${direction.slice(1)}` as const;
+            return (
+              <label key={direction} className="flex items-center justify-between rounded-md border border-slate-200 px-2 py-1.5 text-xs">
+                <span>{t(labelKey)}</span>
+                <Switch
+                  checked={activeDirections.has(direction)}
+                  onCheckedChange={(checked) => toggleDirection(direction, checked)}
+                />
+              </label>
+            );
+          })}
+        </div>
       </div>
       <Separator />
       <div className="space-y-2">
@@ -5316,6 +5401,18 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("hideSolutionsInSolutionRender")}</Label>
+        <Switch
+          checked={!!block.hideSolutionsInSolutionRender}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { hideSolutionsInSolutionRender: checked } },
             })
           }
         />

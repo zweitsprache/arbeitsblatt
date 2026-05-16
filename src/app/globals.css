@@ -1306,7 +1306,7 @@
   text-align: center;
 }
 
-.table-block.table-first-row-example tr[data-table-example-row="true"] [data-table-blank="true"][data-answer]::after {
+.table-block.table-first-row-example tr[data-table-example-row="true"] [data-table-example-blank="true"][data-answer]::after {
   content: attr(data-answer);
   position: absolute;
   inset: 0;
@@ -1320,6 +1320,26 @@
   line-height: 1;
   color: #0097dc;
   white-space: nowrap;
+}
+
+.table-block.table-show-solutions [data-table-blank="true"][data-answer]::after {
+  content: attr(data-answer);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--worksheet-example-font, var(--font-handwriting)), cursive;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1;
+  color: #15803d;
+  white-space: nowrap;
+}
+
+.table-block.table-show-solutions [data-table-blank="true"][data-answer][data-table-example-blank="true"]::after {
+  color: #0097dc;
 }
 
 /* ── Editor-specific: Selected cells ─────────────────────── */

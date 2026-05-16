@@ -393,6 +393,7 @@ export interface MCQMatrixBlock extends BlockBase {
   instruction: string;
   statementColumnHeader?: string;
   showPill?: boolean;
+  showFirstAsExample?: boolean;
   options: MCQMatrixOption[];
   statements: MCQMatrixStatement[];
   statementOrder?: string[];
@@ -414,6 +415,7 @@ export interface MCQRowsItem {
 export interface MCQRowsBlock extends BlockBase {
   type: "mcq-rows";
   instruction?: string;
+  showFirstAsExample?: boolean;
   choicesPerItem: number;
   items: MCQRowsItem[];
 }
@@ -483,6 +485,16 @@ export function migrateInlineChoicesBlock(block: InlineChoicesBlock): InlineChoi
 }
 
 // ─── Word Search block ──────────────────────────────────────
+export type WordSearchDirection =
+  | "leftToRight"
+  | "rightToLeft"
+  | "upToDown"
+  | "downToUp"
+  | "nwToSe"
+  | "swToNe"
+  | "neToSw"
+  | "seToNw";
+
 export interface WordSearchBlock extends BlockBase {
   type: "word-search";
   words: string[];
@@ -491,6 +503,8 @@ export interface WordSearchBlock extends BlockBase {
   gridRows: number;
   rowHeight?: number;
   grid: string[][]; // generated letter grid
+  allowedDirections?: Partial<Record<WordSearchDirection, boolean>>;
+  showFirstAsExample?: boolean;
   showWordList: boolean;
   instruction?: string;
 }
@@ -572,6 +586,7 @@ export interface FixSentencesBlock extends BlockBase {
   instruction: string;
   sentences: FixSentenceItem[];
   showFirstAsExample?: boolean;
+  hideSolutionsInSolutionRender?: boolean;
 }
 
 // ─── Complete Sentences block ───────────────────────────────
@@ -1830,6 +1845,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "mcq-matrix",
       instruction: "Mark the correct options for each statement.",
+      showFirstAsExample: false,
       options: [
         { id: "o1", text: "Option 1" },
         { id: "o2", text: "Option 2" },
@@ -1855,6 +1871,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "mcq-rows",
       instruction: "Choose the correct option in each row.",
+      showFirstAsExample: false,
       choicesPerItem: 3,
       items: [
         {
@@ -1937,6 +1954,11 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       gridRows: 12,
       rowHeight: 1.9,
       grid: [],
+      allowedDirections: {
+        leftToRight: true,
+        upToDown: true,
+      },
+      showFirstAsExample: false,
       showWordList: true,
       visibility: "both",
     },
@@ -2056,6 +2078,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "fs1", sentence: "The cat | sat on | the mat" },
         { id: "fs2", sentence: "I like | to eat | ice cream" },
       ],
+      hideSolutionsInSolutionRender: false,
       visibility: "both",
     },
   },

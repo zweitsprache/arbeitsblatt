@@ -106,7 +106,7 @@ export function EditorToolbar({
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
 
-  const handleOpenPrintPreviewInNewTab = async () => {
+  const handleOpenPrintPreviewInNewTab = async (showSolutions = false) => {
     if (!state.slug) {
       alert(t("saveFirst"));
       return;
@@ -114,7 +114,11 @@ export function EditorToolbar({
     if (state.isDirty) {
       await save();
     }
-    window.open(`/${locale}/worksheet/${state.slug}/print?scale=140`, "_blank", "noopener,noreferrer");
+    const params = new URLSearchParams({ scale: "140" });
+    if (showSolutions) {
+      params.set("solutions", "1");
+    }
+    window.open(`/${locale}/worksheet/${state.slug}/print?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
 
   const togglePdfLang = (code: string) => {
@@ -514,7 +518,7 @@ export function EditorToolbar({
                 variant="outline"
                 size="sm"
                 className="h-8 px-2"
-                onClick={handleOpenPrintPreviewInNewTab}
+                onClick={() => void handleOpenPrintPreviewInNewTab(false)}
                 disabled={!state.slug}
                 aria-label={t("openInNewTab")}
               >
@@ -522,6 +526,22 @@ export function EditorToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("openInNewTab")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 px-2"
+                onClick={() => void handleOpenPrintPreviewInNewTab(true)}
+                disabled={!state.slug}
+                aria-label={`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-semibold leading-none">{t("pdfSolutionsOnly")}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}</TooltipContent>
           </Tooltip>
         </div>
 
