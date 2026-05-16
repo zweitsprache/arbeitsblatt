@@ -45,10 +45,10 @@ export async function POST(
   const worksheetBlocks = Array.isArray(worksheet.blocks)
     ? (worksheet.blocks as Array<Record<string, unknown>>)
     : [];
-  const dominoForcesCanva = worksheetBlocks.some((block) => block?.type === "domino");
+  const cardBlocksForceCanva = worksheetBlocks.some((block) => block?.type === "domino" || block?.type === "flashcards");
   const requestedOrientation = req.nextUrl.searchParams.get("orientation");
   const orientation =
-    dominoForcesCanva
+    cardBlocksForceCanva
       ? "landscape-canva"
       : requestedOrientation === "landscape" || requestedOrientation === "portrait" || requestedOrientation === "landscape-canva"
         ? requestedOrientation

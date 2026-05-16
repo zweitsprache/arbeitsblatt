@@ -25,6 +25,7 @@ import {
   ColumnsBlock,
   GridBlock,
   DominoBlock,
+  FlashcardsBlock,
   BoardGameBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -76,7 +77,7 @@ import {
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
-import { getDominoItems, getDominoPairs } from "@/lib/domino";
+import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
@@ -216,6 +217,48 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
         <span className="sr-only">missing letter</span>
       </span>
     );
+  });
+}
+
+function renderCardTextWithBlanks(text: string, blankClassName: string): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
+    }
+
+    const noSpace = match[1] === "*";
+    const raw = match[2] || "";
+    const { width } = parseBlankContent(raw);
+    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+
+    return (
+      <span
+        key={index}
+        aria-hidden="true"
+        className={`inline-flex rounded-[3px] bg-background/80 align-middle ${blankClassName} ${spacing.className}`.trim()}
+        style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+      >
+        <span className="sr-only">blank</span>
+      </span>
+    );
+  });
+}
+
+function renderSolvedFlashcardBackText(text: string): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{part}</span>;
+    }
+
+    const raw = match[2] || "";
+    const { answer } = parseBlankContent(raw);
+    return <strong key={index}>{answer}</strong>;
   });
 }
 
@@ -5387,21 +5430,65 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
   const lastItemIndex = Math.max(0, items.length - 1);
   const pairs = getDominoPairs(block);
   const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
+  const textClass = getDominoEditorTextClass(block.textSize);
+  const title = block.title?.trim();
+  const titleColor = resolveHeadingOverrideColor(
+    state.brandProfile.h3HeadingColor,
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+
+  const removePair = (itemIndices: number[]) => {
+    const nextItems = items.filter((_, index) => !itemIndices.includes(index));
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } });
+    if (state.selectedBlockId === block.id) {
+      dispatch({ type: "SET_ACTIVE_ITEM", payload: null });
+    }
+  };
 
   return (
-    <div
-      className="grid gap-4"
-      style={{
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        width: "fit-content",
-        margin: "0 auto",
-      }}
-    >
-      {pairs.map(({ pairIndex, pairLabel, pairItems, itemIndices }) => (
-        <div key={`domino-pair-${pairIndex}`} className="relative">
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? (
+        <h3
+          className="text-xl text-left"
+          style={{
+            width: "100%",
+            fontWeight: 800,
+            fontFamily: state.brandProfile.headlineFont,
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
+        {pairs.map(({ pairIndex, pairLabel, pairItems, itemIndices }) => {
+        const canRemovePair = !itemIndices.includes(0) && !itemIndices.includes(lastItemIndex);
+
+        return (
+        <div key={`domino-pair-${pairIndex}`} className="group relative">
           <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
             {pairLabel}
           </div>
+          {canRemovePair ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                removePair(itemIndices);
+              }}
+              className="absolute right-1 top-1 z-20 rounded-full bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity group-hover:opacity-100 hover:text-red-600"
+              title={state.localeMode === "DE" ? "Paar entfernen" : "Remove pair"}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
           <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background shadow-sm">
             {pairItems.map((item, itemOffset) => {
               const itemIndex = itemIndices[itemOffset] ?? 0;
@@ -5432,7 +5519,7 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
                     <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
                   ) : null}
                   {displayText?.trim() ? (
-                    <div className={`relative z-10 text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : "rounded-sm bg-background/80 px-2 py-1 text-sm leading-snug"}`}>
+                    <div className={`relative z-10 whitespace-pre-wrap text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : `rounded-sm bg-background/80 py-1 ${textClass}`}`}>
                       {displayText}
                     </div>
                   ) : null}
@@ -5447,7 +5534,116 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
             {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
           </div>
         </div>
-      ))}
+      )})}
+      </div>
+    </div>
+  );
+}
+
+function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
+  const { state, dispatch } = useEditor();
+  const items = getFlashcardItems(block.items);
+  const pairs = getFlashcardPairs(block);
+  const flashcardBlankTokenPattern = /\{\{blank\*?(?::[^}]*)?\}\}/;
+  const textClass = getDominoEditorTextClass(block.textSize);
+  const title = block.title?.trim();
+  const titleColor = resolveHeadingOverrideColor(
+    state.brandProfile.h3HeadingColor,
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+
+  const removePair = (itemIndices: number[]) => {
+    const nextItems = items.filter((_, index) => !itemIndices.includes(index));
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } });
+    if (state.selectedBlockId === block.id) {
+      dispatch({ type: "SET_ACTIVE_ITEM", payload: null });
+    }
+  };
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? (
+        <h3
+          className="text-xl text-left"
+          style={{
+            width: "100%",
+            fontWeight: 800,
+            fontFamily: state.brandProfile.headlineFont,
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
+        {pairs.map(({ pairIndex, pairLabel, pairItems, itemIndices }) => (
+          <div key={`flashcards-pair-${pairIndex}`} className="group relative">
+            <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {pairLabel}
+            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                removePair(itemIndices);
+              }}
+              className="absolute right-1 top-1 z-20 rounded-full bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity group-hover:opacity-100 hover:text-red-600"
+              title={state.localeMode === "DE" ? "Paar entfernen" : "Remove pair"}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background shadow-sm">
+              {pairItems.map((item, itemOffset) => {
+                const itemIndex = itemIndices[itemOffset] ?? 0;
+                const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
+                const displayText = getFlashcardDisplayText(pairItems[0], pairItems[1], itemOffset);
+                const isSolvedBackFallback =
+                  itemOffset === 1 &&
+                  !pairItems[1]?.text?.trim() &&
+                  flashcardBlankTokenPattern.test(pairItems[0]?.text ?? "");
+                return (
+                  <button
+                    key={item.id || itemIndex}
+                    type="button"
+                    onClick={() => {
+                      dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                      dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
+                    }}
+                    className={`relative flex h-[28mm] w-[36mm] flex-col p-2 text-left transition-colors ${itemOffset === 0 ? "border-r border-border" : ""} items-center justify-center ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                    style={
+                      item.imageUrl
+                        ? {
+                            backgroundImage: `url(${item.imageUrl})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat",
+                          }
+                        : undefined
+                    }
+                  >
+                    {!item.imageUrl ? (
+                      <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                    ) : null}
+                    {displayText?.trim() ? (
+                      <div className={`relative z-10 whitespace-pre-wrap text-center break-words rounded-sm bg-background/80 py-1 ${textClass}`}>
+                        {isSolvedBackFallback ? renderSolvedFlashcardBackText(pairItems[0]?.text ?? "") : renderCardTextWithBlanks(displayText, "min-h-[1.05em]")}
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              })}
+              {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -7234,6 +7430,8 @@ export function BlockRenderer({
       return <GridRenderer block={block as GridBlock} mode={mode} />;
     case "domino":
       return <DominoRenderer block={block as DominoBlock} />;
+    case "flashcards":
+      return <FlashcardsRenderer block={block as FlashcardsBlock} />;
     case "board-game":
       return <BoardGameRenderer block={block as BoardGameBlock} />;
     case "linked-blocks":

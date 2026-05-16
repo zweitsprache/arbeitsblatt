@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     blocks: unknown,
     fallback: "portrait" | "landscape" | "landscape-canva"
   ): "portrait" | "landscape" | "landscape-canva" {
-    if (Array.isArray(blocks) && blocks.some((block) => typeof block === "object" && block && "type" in (block as Record<string, unknown>) && (block as Record<string, unknown>).type === "domino")) {
+    if (Array.isArray(blocks) && blocks.some((block) => typeof block === "object" && block && "type" in (block as Record<string, unknown>) && ["domino", "flashcards"].includes(String((block as Record<string, unknown>).type)))) {
       return "landscape-canva";
     }
     if (

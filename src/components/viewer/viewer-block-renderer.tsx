@@ -24,6 +24,7 @@ import {
   ColumnsBlock,
   GridBlock,
   DominoBlock,
+  FlashcardsBlock,
   BoardGameBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
@@ -79,7 +80,7 @@ import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegu
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
-import { getDominoItems, getDominoPairs } from "@/lib/domino";
+import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { RoughExampleCircle, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
 import { findWordSearchPlacements } from "@/lib/word-search";
 import {
@@ -3051,6 +3052,52 @@ function renderMissingLetterText(
   });
 }
 
+function renderCardTextWithBlanks(
+  text: string,
+  blankStyle: React.CSSProperties,
+  blankClassName = "",
+): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
+    }
+
+    const noSpace = match[1] === "*";
+    const raw = match[2] || "";
+    const { width } = parseBlankContent(raw);
+    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+
+    return (
+      <span
+        key={index}
+        aria-hidden="true"
+        className={`inline-flex rounded-[3px] bg-gray-100 align-middle ${blankClassName} ${spacing.className}`.trim()}
+        style={{ ...getBlankWidthStyle(width, false), ...spacing.style, ...blankStyle }}
+      >
+        <span className="sr-only">blank</span>
+      </span>
+    );
+  });
+}
+
+function renderSolvedFlashcardBackText(text: string): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{part}</span>;
+    }
+
+    const raw = match[2] || "";
+    const { answer } = parseBlankContent(raw);
+    return <strong key={index}>{answer}</strong>;
+  });
+}
+
  function TrueFalseMatrixView({
   block,
   mode,
@@ -3766,7 +3813,7 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
   );
 }
 
-function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null }) {
+function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
   const items = getDominoItems(block.items);
   const pairs = getDominoPairs(block);
   const orderedEntries = pairs.flatMap(({ pairItems, itemIndices }) =>
@@ -3778,7 +3825,20 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
   const lastItemIndex = Math.max(0, items.length - 1);
   const isPrint = mode === "print";
   const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
-  const secondaryColor = accentColor || primaryColor;
+  const viewerTextClass = getDominoEditorTextClass(block.textSize);
+  const printFontSize = getDominoPrintFontSize(block.textSize);
+  const title = block.title?.trim();
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
+  const printBlockOffsetY = "5mm";
+  const titleStyle: React.CSSProperties = {
+    width: "100%",
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: headingColor || primaryColor,
+    textAlign: "left",
+  };
   const cutIconGap = "2.5mm";
   const printContentOffsetY = "4mm";
   const cutIconStyleBase: React.CSSProperties = {
@@ -3807,12 +3867,19 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
             style={{
               width: "297mm",
               height: "calc(210mm - var(--print-tfoot-height, 0px))",
-              display: "grid",
-              placeItems: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: title ? "4mm" : 0,
+              transform: `translateY(${printBlockOffsetY})`,
               breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
               pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
             }}
           >
+            {title ? (
+              <h3 className="text-cv-xl" style={{ ...titleStyle, width: "270mm" }}>{title}</h3>
+            ) : null}
             <div
               style={{
                 position: "relative",
@@ -3904,7 +3971,6 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                   const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item?.text;
                   const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
                   const isEvenItem = itemIndex !== null ? (itemIndex + 1) % 2 === 0 : false;
-                  const textColor = isSpecialItem ? undefined : (isEvenItem ? secondaryColor : primaryColor);
 
                   return (
                     <div
@@ -3960,13 +4026,13 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                           style={{
                             position: "relative",
                             zIndex: 1,
-                            padding: isSpecialItem ? 0 : "2mm 3mm",
+                            padding: isSpecialItem ? 0 : "2mm 0",
                             borderRadius: isSpecialItem ? 0 : "4px",
                             background: isSpecialItem ? "transparent" : "rgba(255,255,255,0.82)",
-                            fontSize: isSpecialItem ? "24pt" : "14pt",
+                            fontSize: isSpecialItem ? "24pt" : printFontSize,
                             fontWeight: isSpecialItem ? 700 : 500,
                             lineHeight: isSpecialItem ? 1 : 1.2,
-                            color: textColor,
+                            whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
                           }}
                         >
@@ -3985,14 +4051,15 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
   }
 
   return (
-    <div
-      className="grid gap-4"
-      style={{
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        width: "fit-content",
-        margin: "0 auto",
-      }}
-    >
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? <h3 className="text-cv-xl" style={titleStyle}>{title}</h3> : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
       {pairs.map(({ pairItems, pairIndex, itemIndices }) => (
         <div key={`domino-view-pair-${pairIndex}`} className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background break-inside-avoid">
           {pairItems.map((item, itemOffset) => {
@@ -4000,7 +4067,6 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
             const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item.text;
             const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
             const isEvenItem = (itemIndex + 1) % 2 === 0;
-            const textColor = isSpecialItem ? undefined : (isEvenItem ? secondaryColor : primaryColor);
             return (
               <div
                 key={item.id || `${pairIndex}-${itemOffset}`}
@@ -4033,7 +4099,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                   <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
                 ) : null}
                 {displayText?.trim() ? (
-                    <div className={`relative z-10 text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : "rounded-sm bg-background/80 px-2 py-1 text-sm leading-snug"}`} style={textColor ? { color: textColor } : undefined}>
+                    <div className={`relative z-10 whitespace-pre-wrap text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : `rounded-sm bg-background/80 py-1 ${viewerTextClass}`}`}>
                     {displayText}
                   </div>
                 ) : null}
@@ -4043,6 +4109,311 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
           {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
         </div>
       ))}
+      </div>
+    </div>
+  );
+}
+
+function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: FlashcardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+  const items = getFlashcardItems(block.items);
+  const pairs = getFlashcardPairs(block);
+  const flashcardBlankTokenPattern = /\{\{blank\*?(?::[^}]*)?\}\}/;
+  const title = block.title?.trim();
+  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const viewerTextClass = getDominoEditorTextClass(block.textSize);
+  const printFontSize = getDominoPrintFontSize(block.textSize);
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
+  const titleStyle: React.CSSProperties = {
+    width: "100%",
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: headingColor || primaryColor,
+    textAlign: "left",
+  };
+  const printBlockOffsetY = "5mm";
+  const cutIconGap = "2.5mm";
+  const cutIconStyleBase: React.CSSProperties = {
+    position: "absolute",
+    width: "3.5mm",
+    height: "3.5mm",
+    color: "#9ca3af",
+    strokeWidth: 1.75,
+    overflow: "visible",
+  };
+
+  const renderPrintPage = (
+    entries: Array<{ frontItem: FlashcardsBlock["items"][number] | null; backItem: FlashcardsBlock["items"][number] | null; sideIndex: number } | null>,
+    pageKey: string,
+    showLogo: boolean,
+    showTitle: boolean,
+  ) => (
+    <div
+      key={pageKey}
+      style={{
+        width: "297mm",
+        height: "calc(210mm - var(--print-tfoot-height, 0px))",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: title ? "4mm" : 0,
+        transform: `translateY(${printBlockOffsetY})`,
+        breakAfter: "page",
+        pageBreakAfter: "always",
+      }}
+    >
+      {title ? (
+        <h3
+          aria-hidden={showTitle ? undefined : "true"}
+          className="text-cv-xl"
+          style={{
+            ...titleStyle,
+            width: "270mm",
+            visibility: showTitle ? "visible" : "hidden",
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div style={{ position: "relative", width: "270mm", height: "160mm" }}>
+        {Array.from({ length: 4 }, (_, lineIndex) => (
+          <React.Fragment key={`${pageKey}-v-${lineIndex}`}>
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: `${lineIndex * 90}mm`,
+                height: "160mm",
+                borderLeft: "1px dashed #9ca3af",
+              }}
+            />
+            <Scissors
+              aria-hidden="true"
+              style={{
+                ...cutIconStyleBase,
+                left: `calc(${lineIndex * 90}mm - 1.75mm)`,
+                top: `calc(-3.5mm - ${cutIconGap})`,
+                transform: "rotate(90deg)",
+              }}
+            />
+            <Scissors
+              aria-hidden="true"
+              style={{
+                ...cutIconStyleBase,
+                left: `calc(${lineIndex * 90}mm - 1.75mm)`,
+                top: `calc(160mm + ${cutIconGap})`,
+                transform: "rotate(-90deg)",
+              }}
+            />
+          </React.Fragment>
+        ))}
+        {Array.from({ length: 5 }, (_, lineIndex) => (
+          <React.Fragment key={`${pageKey}-h-${lineIndex}`}>
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                top: `${lineIndex * 40}mm`,
+                width: "270mm",
+                borderTop: "1px dashed #9ca3af",
+              }}
+            />
+            <Scissors
+              aria-hidden="true"
+              style={{
+                ...cutIconStyleBase,
+                left: `calc(-3.5mm - ${cutIconGap})`,
+                top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+              }}
+            />
+            <Scissors
+              aria-hidden="true"
+              style={{
+                ...cutIconStyleBase,
+                left: `calc(270mm + ${cutIconGap})`,
+                top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                transform: "rotate(180deg)",
+              }}
+            />
+          </React.Fragment>
+        ))}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 90mm)",
+            gridTemplateRows: "repeat(4, 40mm)",
+            width: "270mm",
+            height: "160mm",
+          }}
+        >
+          {entries.map((entry, index) => {
+            const item = (entry?.sideIndex ?? 0) === 0 ? entry?.frontItem ?? null : entry?.backItem ?? null;
+            const displayText = getFlashcardDisplayText(entry?.frontItem ?? null, entry?.backItem ?? null, entry?.sideIndex ?? 0);
+            const isSolvedBackFallback =
+              (entry?.sideIndex ?? 0) === 1 &&
+              !entry?.backItem?.text?.trim() &&
+              flashcardBlankTokenPattern.test(entry?.frontItem?.text ?? "");
+            return (
+              <div
+                key={item?.id || `${pageKey}-slot-${index}`}
+                style={{
+                  position: "relative",
+                  width: "90mm",
+                  height: "40mm",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "4mm",
+                  textAlign: "center",
+                  backgroundImage: item?.imageUrl ? `url(${item.imageUrl})` : undefined,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              >
+                {showLogo && logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoSrc}
+                    alt=""
+                    style={{
+                      position: "absolute",
+                      top: "2.5mm",
+                      right: "2.5mm",
+                      width: "6.5mm",
+                      height: "6.5mm",
+                      objectFit: "contain",
+                    }}
+                  />
+                ) : null}
+                {displayText?.trim() ? (
+                  <div
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      padding: "2mm 0",
+                      borderRadius: "4px",
+                      background: "rgba(255,255,255,0.82)",
+                      fontSize: printFontSize,
+                      fontWeight: 500,
+                      lineHeight: 1.2,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {isSolvedBackFallback
+                      ? renderSolvedFlashcardBackText(entry?.frontItem?.text ?? "")
+                      : renderCardTextWithBlanks(displayText, {
+                          minHeight: "1.1em",
+                        })}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (mode === "print") {
+    const pairChunks = Array.from({ length: Math.max(1, Math.ceil(pairs.length / 12)) }, (_, pageIndex) =>
+      pairs.slice(pageIndex * 12, pageIndex * 12 + 12),
+    );
+
+    const mirrorBackEntries = <T,>(entries: T[]): T[] => {
+      const mirrored: T[] = [];
+      for (let rowIndex = 0; rowIndex < entries.length / 3; rowIndex += 1) {
+        const row = entries.slice(rowIndex * 3, rowIndex * 3 + 3);
+        mirrored.push(...row.reverse());
+      }
+      return mirrored;
+    };
+
+    return (
+      <>
+        {pairChunks.flatMap((pairChunk, chunkIndex) => {
+          const frontEntries = Array.from({ length: 12 }, (_, index) => ({ frontItem: pairChunk[index]?.pairItems[0] ?? null, backItem: pairChunk[index]?.pairItems[1] ?? null, sideIndex: 0 }));
+          const rawBackEntries = Array.from({ length: 12 }, (_, index) => ({ frontItem: pairChunk[index]?.pairItems[0] ?? null, backItem: pairChunk[index]?.pairItems[1] ?? null, sideIndex: 1 }));
+          const backEntries = mirrorBackEntries(rawBackEntries);
+          const pages = [
+            renderPrintPage(frontEntries, `flashcards-front-${chunkIndex}`, true, true),
+            renderPrintPage(backEntries, `flashcards-back-${chunkIndex}`, false, false),
+          ];
+          const lastPageIndex = pages.length - 1;
+          return pages.map((page, pageIndex) => React.cloneElement(page, {
+            key: page.key,
+            style: {
+              ...(page.props.style || {}),
+              breakAfter: chunkIndex === pairChunks.length - 1 && pageIndex === lastPageIndex ? undefined : "page",
+              pageBreakAfter: chunkIndex === pairChunks.length - 1 && pageIndex === lastPageIndex ? undefined : "always",
+            },
+          }));
+        })}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? <h3 className="text-cv-xl" style={titleStyle}>{title}</h3> : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
+        {pairs.map(({ pairItems, pairIndex }) => (
+          <div key={`flashcards-view-pair-${pairIndex}`} className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background break-inside-avoid">
+            {pairItems.map((item, itemOffset) => (
+              (() => {
+                const displayText = getFlashcardDisplayText(pairItems[0], pairItems[1], itemOffset);
+                const isSolvedBackFallback =
+                  itemOffset === 1 &&
+                  !pairItems[1]?.text?.trim() &&
+                  flashcardBlankTokenPattern.test(pairItems[0]?.text ?? "");
+                return (
+              <div
+                key={item.id || `${pairIndex}-${itemOffset}`}
+                className={`relative flex h-[28mm] w-[36mm] flex-col p-2 ${itemOffset === 0 ? "border-r border-border" : ""} items-center justify-center`}
+                style={
+                  item.imageUrl
+                    ? {
+                        backgroundImage: `url(${item.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : undefined
+                }
+              >
+                {itemOffset === 0 && logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoSrc}
+                    alt=""
+                    className="absolute top-2 right-2 h-[18px] w-[18px] object-contain"
+                  />
+                ) : null}
+                {!item.imageUrl ? (
+                  <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                ) : null}
+                {displayText.trim() ? (
+                  <div className={`relative z-10 whitespace-pre-wrap text-center break-words rounded-sm bg-background/80 py-1 ${viewerTextClass}`}>
+                    {isSolvedBackFallback ? renderSolvedFlashcardBackText(pairItems[0]?.text ?? "") : renderCardTextWithBlanks(displayText, { minHeight: "1.05em" })}
+                  </div>
+                ) : null}
+              </div>
+                );
+              })()
+            ))}
+            {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -8207,7 +8578,9 @@ export function ViewerBlockRenderer({
     case "board-game":
       return <BoardGameView block={block as BoardGameBlock} />;
     case "domino":
-      return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} />;
+      return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+    case "flashcards":
+      return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":

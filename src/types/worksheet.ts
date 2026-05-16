@@ -71,6 +71,7 @@ export type BlockType =
   | "website"
   | "checklist"
   | "domino"
+  | "flashcards"
   | "board-game"
   | "grid";
 
@@ -363,11 +364,23 @@ export interface BoardGameBlock extends BlockBase {
   cells: BoardGameCell[];
 }
 
+export type DominoTextSize = "s" | "m" | "l" | "xl";
+
 export interface DominoBlock extends BlockBase {
   type: "domino";
+  title?: string;
   items: BoardGameCell[];
   shufflePairs?: boolean;
   showSpeakerIcons?: boolean;
+  textSize?: DominoTextSize;
+}
+
+export interface FlashcardsBlock extends BlockBase {
+  type: "flashcards";
+  title?: string;
+  items: BoardGameCell[];
+  shufflePairs?: boolean;
+  textSize?: DominoTextSize;
 }
 
 // ─── True/False Matrix block ─────────────────────────────────
@@ -981,6 +994,7 @@ export type WorksheetBlock =
   | ScheduleBlock
   | WebsiteBlock
   | DominoBlock
+  | FlashcardsBlock
   | BoardGameBlock
   | AiPromptBlock
   | AiToolBlock
@@ -1694,6 +1708,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Domino", description: "Domino-Paare mit Text- und Bildfeldern" } },
     defaultData: {
       type: "domino",
+      title: "",
       items: Array.from({ length: 8 }, (_, index) => ({
         id: `domino-item-${index + 1}`,
         text: index === 0 ? "START" : index === 7 ? "ZIEL" : "",
@@ -1701,6 +1716,29 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       })),
       shufflePairs: false,
       showSpeakerIcons: false,
+      textSize: "m",
+      visibility: "both",
+    },
+  },
+  {
+    type: "flashcards",
+    label: "Flashcards",
+    description: "Front and back flashcard pairs",
+    labelKey: "flashcards",
+    descriptionKey: "flashcardsDesc",
+    icon: "RectangleHorizontal",
+    category: "layout",
+    translations: { de: { label: "Flashcards", description: "Lernkarten mit Vorder- und Rückseite" } },
+    defaultData: {
+      type: "flashcards",
+      title: "",
+      items: Array.from({ length: 8 }, (_, index) => ({
+        id: `flashcard-item-${index + 1}`,
+        text: "",
+        imageUrl: "",
+      })),
+      shufflePairs: false,
+      textSize: "m",
       visibility: "both",
     },
   },

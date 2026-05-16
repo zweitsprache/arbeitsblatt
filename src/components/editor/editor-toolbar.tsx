@@ -105,8 +105,8 @@ export function EditorToolbar({
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
-  const dominoForcesCanva = state.blocks.some((block) => block.type === "domino");
-  const effectivePdfFormat = dominoForcesCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
+  const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards");
+  const effectivePdfFormat = cardBlocksForceCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
 
   const handleOpenPrintPreviewInNewTab = async (showSolutions = false) => {
     if (!state.slug) {

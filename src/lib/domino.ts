@@ -1,4 +1,5 @@
-import { BoardGameCell, DominoBlock } from "@/types/worksheet";
+import { parseBlankContent } from "@/lib/fill-in-blank";
+import { BoardGameCell, DominoBlock, DominoTextSize, FlashcardsBlock } from "@/types/worksheet";
 
 export interface DominoPair {
   pairIndex: number;
@@ -12,7 +13,49 @@ export function getDefaultDominoItems(): BoardGameCell[] {
     id: `domino-item-${index + 1}`,
     text: index === 0 ? "START" : index === 7 ? "ZIEL" : "",
     imageUrl: "",
+    speakerIcon: null,
   }));
+}
+
+export function getDefaultFlashcardItems(): BoardGameCell[] {
+  return Array.from({ length: 8 }, (_, index) => ({
+    id: `flashcard-item-${index + 1}`,
+    text: "",
+    imageUrl: "",
+    speakerIcon: null,
+  }));
+}
+
+export function getDominoTextSize(blockTextSize?: DominoTextSize | null): DominoTextSize {
+  return blockTextSize ?? "m";
+}
+
+export function getDominoEditorTextClass(blockTextSize?: DominoTextSize | null): string {
+  switch (getDominoTextSize(blockTextSize)) {
+    case "s":
+      return "text-xs leading-snug";
+    case "l":
+      return "text-sm leading-snug";
+    case "xl":
+      return "text-base leading-snug";
+    case "m":
+    default:
+      return "text-[13px] leading-snug";
+  }
+}
+
+export function getDominoPrintFontSize(blockTextSize?: DominoTextSize | null): string {
+  switch (getDominoTextSize(blockTextSize)) {
+    case "s":
+      return "11pt";
+    case "l":
+      return "14pt";
+    case "xl":
+      return "16pt";
+    case "m":
+    default:
+      return "12.5pt";
+  }
 }
 
 function hashString(input: string): number {
@@ -48,8 +91,36 @@ export function getDominoItems(items: BoardGameCell[]): BoardGameCell[] {
   return items.length > 0 ? items : getDefaultDominoItems();
 }
 
-export function getDominoPairs(block: Pick<DominoBlock, "id" | "items" | "shufflePairs">): DominoPair[] {
-  const items = getDominoItems(block.items);
+export function getFlashcardItems(items: BoardGameCell[]): BoardGameCell[] {
+  return items.length > 0 ? items : getDefaultFlashcardItems();
+}
+
+const FLASHCARD_BLANK_TOKEN_PATTERN = /\{\{blank\*?(?::[^}]*)?\}\}/;
+const FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN = /\{\{blank\*?(?::([^}]*))?\}\}/g;
+
+export function solveFlashcardBlankText(text: string): string {
+  return text.replace(FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN, (_match, raw = "") => parseBlankContent(raw).answer);
+}
+
+export function getFlashcardDisplayText(frontItem?: BoardGameCell | null, backItem?: BoardGameCell | null, sideIndex = 0): string {
+  if (sideIndex === 0) {
+    return frontItem?.text ?? "";
+  }
+
+  const backText = backItem?.text?.trim() ? backItem.text : "";
+  if (backText) {
+    return backText;
+  }
+
+  const frontText = frontItem?.text ?? "";
+  if (!FLASHCARD_BLANK_TOKEN_PATTERN.test(frontText)) {
+    return backItem?.text ?? "";
+  }
+
+  return solveFlashcardBlankText(frontText);
+}
+
+function buildPairs(id: string, items: BoardGameCell[], shufflePairs?: boolean): DominoPair[] {
   const pairs = Array.from({ length: Math.ceil(items.length / 2) }, (_, pairIndex) => {
     const startIndex = pairIndex * 2;
     const itemIndices = [startIndex, startIndex + 1].filter((itemIndex) => itemIndex < items.length);
@@ -62,9 +133,17 @@ export function getDominoPairs(block: Pick<DominoBlock, "id" | "items" | "shuffl
     };
   });
 
-  if (!block.shufflePairs) {
+  if (!shufflePairs) {
     return pairs;
   }
 
-  return deterministicShuffle(pairs, `domino-pairs:${block.id}`);
+  return deterministicShuffle(pairs, `domino-pairs:${id}`);
+}
+
+export function getDominoPairs(block: Pick<DominoBlock, "id" | "items" | "shufflePairs">): DominoPair[] {
+  return buildPairs(block.id, getDominoItems(block.items), block.shufflePairs);
+}
+
+export function getFlashcardPairs(block: Pick<FlashcardsBlock, "id" | "items" | "shufflePairs">): DominoPair[] {
+  return buildPairs(block.id, getFlashcardItems(block.items), block.shufflePairs);
 }
