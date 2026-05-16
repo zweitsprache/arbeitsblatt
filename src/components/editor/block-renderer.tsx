@@ -33,6 +33,7 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
+  MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -73,13 +74,14 @@ import {
   ViewMode,
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
-import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
+import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
+import { RoughExampleCircle } from "@/components/ui/rough-example-circle";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { Input } from "@/components/ui/input";
@@ -98,6 +100,8 @@ import { BlockVisibility } from "@/types/worksheet";
 import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
+
+const EXAMPLE_HANDWRITING_FONT = "var(--worksheet-example-font, var(--font-handwriting)), cursive";
 
 // ─── Handwriting helper ──────────────────────────────────────
 /** Check whether a string contains ++…++ handwriting markers */
@@ -122,6 +126,61 @@ function renderHandwriting(text: string): React.ReactNode {
       );
     }
     return part;
+  });
+}
+
+function renderMissingLetterText(text: string, showExampleOnFirstBlank = false): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  let exampleShown = false;
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
+    }
+
+    const noSpace = match[1] === "*";
+    const raw = match[2] || "";
+    const { answer, width } = parseBlankContent(raw);
+    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+    const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+
+    if (shouldRenderExample) {
+      exampleShown = true;
+      return (
+        <span
+          key={index}
+          className={`relative inline-flex rounded-[3px] bg-background/80 align-middle overflow-hidden ${spacing.className}`}
+          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+        >
+          <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
+          <span
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              fontFamily: EXAMPLE_HANDWRITING_FONT,
+              fontWeight: 400,
+              fontSize: "18px",
+              color: "#0097dc",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {answer}
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <span
+        key={index}
+        aria-hidden="true"
+        className={`inline-flex rounded-[3px] bg-background/80 align-middle ${spacing.className}`}
+        style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+      >
+        <span className="sr-only">missing letter</span>
+      </span>
+    );
   });
 }
 
@@ -2141,6 +2200,9 @@ function TrueFalseMatrixRenderer({
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const trueLabelText = block.trueLabel || tc("true");
+  const falseLabelText = block.falseLabel || tc("false");
+  const optionColumnWidth = `${Math.max(64, Math.min(160, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 24))}px`;
 
   const updateStatement = (id: string, updates: Partial<{ text: string; correctAnswer: boolean }>) => {
     dispatch({
@@ -2204,13 +2266,18 @@ function TrueFalseMatrixRenderer({
               {block.statementColumnHeader || ""}
             </span>
           </div>
-          <div className="w-16 text-center font-medium text-muted-foreground">{block.trueLabel || tc("true")}</div>
-          <div className="w-16 text-center font-medium text-muted-foreground">{block.falseLabel || tc("false")}</div>
+          <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+          <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
           <div className="w-8"></div>
         </div>
         <div>
           {(() => {
-            const orderedStatements = block.statements;
+            const orderedStatements = block.statementOrder
+              ? block.statementOrder
+                  .map((id) => block.statements.find((statement) => statement.id === id))
+                  .filter((statement): statement is NonNullable<typeof statement> => !!statement)
+                  .concat(block.statements.filter((statement) => !block.statementOrder!.includes(statement.id)))
+              : block.statements;
             return orderedStatements.map((stmt, stmtIndex) => (
             <div key={stmt.id} className="group/row flex items-center gap-3 py-2 border-b last:border-b-0">
               <div className="flex flex-1 items-center gap-3">
@@ -2230,7 +2297,7 @@ function TrueFalseMatrixRenderer({
                   {stmt.text}
                 </span>
               </div>
-              <div className="w-16 flex items-center justify-center">
+              <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${stmt.correctAnswer ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/30 hover:border-green-400"}`}
@@ -2242,7 +2309,7 @@ function TrueFalseMatrixRenderer({
                   {stmt.correctAnswer && <Check className="h-3 w-3" />}
                 </button>
               </div>
-              <div className="w-16 flex items-center justify-center">
+              <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
                 <button
                   className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
                     ${!stmt.correctAnswer ? "bg-red-500 border-red-500 text-white" : "border-muted-foreground/30 hover:border-red-400"}`}
@@ -3637,13 +3704,14 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
           return (
             <div key={cat.id} className="rounded-sm border border-border overflow-hidden">
               <div
-                className="bg-muted min-h-[37px] flex items-center pl-2 pr-2 py-0"
+                className="bg-muted flex items-center pl-2.5 pr-2 py-0.5 border-t border-transparent"
                 style={colorCodeEnabled
                   ? {
                       backgroundColor: catTheme.headerBg,
+                      borderTopColor: catTheme.headerBg,
                       borderBottom: `1px solid ${catTheme.headerBorder}`,
                     }
-                  : { backgroundColor: "#f8fafc" }}
+                  : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottom: "1px solid #f8fafc" }}
               >
                 <span
                   className="font-semibold outline-none block"
@@ -3677,41 +3745,48 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                   return (
                     <div
                       key={item.id}
-                      className="group/item flex min-h-[37px] items-center gap-3 border-b px-2 py-2"
+                      className="group/item px-2"
                     >
-                      <span
-                        contentEditable
-                        suppressContentEditableWarning
-                        className="text-base outline-none flex-1 border-b border-transparent focus:border-muted-foreground/30 transition-colors rounded px-2 py-0.5"
-                        style={colorCodeEnabled
-                          ? {
-                              border: `1px solid ${catTheme.itemBorder}`,
-                              color: isExampleItem ? "#0097dc" : catTheme.itemText,
-                              fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
-                            }
-                          : {
-                              color: isExampleItem ? "#0097dc" : undefined,
-                              fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
+                      <div className="flex min-h-[37px] items-center gap-3">
+                        <div className="relative flex-1 h-8 overflow-hidden border-b border-dashed border-muted-foreground/30">
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            className="absolute inset-x-0 outline-none block leading-none"
+                            style={colorCodeEnabled
+                              ? {
+                                  bottom: isExampleItem ? "6px" : "4px",
+                                  color: isExampleItem ? "#0097dc" : catTheme.itemText,
+                                  fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
+                                  fontSize: isExampleItem ? "18px" : undefined,
+                                }
+                              : {
+                                  bottom: isExampleItem ? "6px" : "4px",
+                                  color: isExampleItem ? "#0097dc" : undefined,
+                                  fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
+                                  fontSize: isExampleItem ? "18px" : undefined,
+                                }}
+                            onBlur={(e) => {
+                              const value = e.currentTarget.textContent || "";
+                              const arrIdx = block.items.findIndex((w) => w.id === item.id);
+                              localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                                updateItem(item.id, value)
+                              );
                             }}
-                        onBlur={(e) => {
-                          const value = e.currentTarget.textContent || "";
-                          const arrIdx = block.items.findIndex((w) => w.id === item.id);
-                          localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                            updateItem(item.id, value)
-                          );
-                        }}
-                      >
-                        {item.text}
-                      </span>
-                      <button
-                        className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeItem(item.id);
-                        }}
-                      >
-                        <X className="h-3 w-3 text-destructive" />
-                      </button>
+                          >
+                            {item.text}
+                          </span>
+                        </div>
+                        <button
+                          className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeItem(item.id);
+                          }}
+                        >
+                          <X className="h-3 w-3 text-destructive" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -3876,11 +3951,26 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
   );
 }
 
-function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
+function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | MissingLettersBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const legacyDisplayCount = block.displayCount ?? 10;
+  const buildRow = block.type === "missing-letters" ? buildMissingLettersRow : buildCorrectSpellingRow;
+  const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
+
+  const orderedWords = React.useMemo(() => {
+    const exampleWord = exampleWordId ? block.words.find((word) => word.id === exampleWordId) : undefined;
+    const remainingWords = block.words.filter((word) => word.id !== exampleWordId);
+    const orderedRemainingWords = block.itemOrder
+      ? block.itemOrder
+          .map((id) => remainingWords.find((word) => word.id === id))
+          .filter((word): word is NonNullable<typeof word> => !!word)
+          .concat(remainingWords.filter((word) => !block.itemOrder!.includes(word.id)))
+      : remainingWords;
+
+    return exampleWord ? [exampleWord, ...orderedRemainingWords] : orderedRemainingWords;
+  }, [block.itemOrder, block.words, exampleWordId]);
 
   const updateWord = (id: string, word: string) => {
     dispatch({
@@ -3941,28 +4031,65 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock }) {
       </div>
 
       <div>
-        {block.words.map((item, i) => {
+        {orderedWords.map((item, i) => {
           const displayCount = item.displayCount ?? legacyDisplayCount;
-          const variants = buildCorrectSpellingRow(
+          const isExampleRow = item.id === exampleWordId;
+          const variants = buildRow(
             item.word,
             block.keepFirstLetter,
             block.keepLastLetter,
             `${block.id}:${item.id}`,
             displayCount,
           );
+          let exampleGapShown = false;
+          let exampleChipShown = false;
 
           return (
             <div key={item.id} className="group/item flex min-h-[49px] items-center gap-3 border-b">
               <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
-                {variants.map((variant, variantIndex) => (
-                  <span
-                    key={`${item.id}-${variantIndex}`}
-                    className={`rounded border px-2 py-0.5 text-xs ${variantIndex === 0 || variant.isOriginal ? "border-green-300 bg-green-50 text-green-700" : "border-border text-muted-foreground"}`}
-                  >
-                    {variant.text}
-                  </span>
-                ))}
+                {variants.map((variant, variantIndex) =>
+                  (() => {
+                    const showExampleChip =
+                      block.type === "correct-spelling" &&
+                      isExampleRow &&
+                      !exampleChipShown &&
+                      variant.isOriginal &&
+                      variantIndex !== 0;
+                    const showExampleGap =
+                      block.type === "missing-letters" &&
+                      isExampleRow &&
+                      !exampleGapShown &&
+                      variant.text.includes("{{blank:");
+
+                    if (showExampleChip) {
+                      exampleChipShown = true;
+                    }
+
+                    if (showExampleGap) {
+                      exampleGapShown = true;
+                    }
+
+                    const shouldHighlightVariant = variantIndex === 0 || variant.isOriginal;
+                    const highlightClass =
+                      block.type === "correct-spelling"
+                        ? "border-green-300 bg-green-50 text-green-700"
+                        : "border-green-300 bg-green-50 text-green-700";
+
+                    return (
+                      <span
+                        key={`${item.id}-${variantIndex}`}
+                        className={`rounded border px-2 py-0.5 text-xs ${shouldHighlightVariant ? highlightClass : "border-border text-muted-foreground"}`}
+                      >
+                        {block.type === "missing-letters"
+                          ? renderMissingLetterText(variant.text, showExampleGap)
+                          : showExampleChip
+                            ? <RoughExampleCircle>{variant.text}</RoughExampleCircle>
+                            : variant.text}
+                      </span>
+                    );
+                  })()
+                )}
               </div>
               <span
                 contentEditable
@@ -4072,34 +4199,43 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
 
       <div>
         {block.sentences.map((item, i) => (
-          <div
-            key={item.id}
-            className="group/item flex min-h-[37px] items-center gap-3 border-b py-2"
-          >
-            <ItemNumberBadge index={i + 1} />
-            <span
-              className="outline-none block flex-1"
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => {
-                const value = e.currentTarget.textContent || "";
-                localeUpdate(block.id, `sentences.${i}.sentence`, value, () =>
-                  updateSentence(item.id, value)
-                );
-              }}
-            >
-              {item.sentence}
-            </span>
-            <button
-              className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
-                ${block.sentences.length <= 1 ? "invisible" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                removeSentence(item.id);
-              }}
-            >
-              <X className="h-3 w-3 text-destructive" />
-            </button>
+          <div key={item.id} className="group/item border-b">
+            <div className="flex min-h-[37px] items-center gap-3 py-2">
+              <ItemNumberBadge index={i + 1} />
+              <span
+                className="outline-none block flex-1"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  localeUpdate(block.id, `sentences.${i}.sentence`, value, () =>
+                    updateSentence(item.id, value)
+                  );
+                }}
+              >
+                {item.sentence}
+              </span>
+              <button
+                className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                  ${block.sentences.length <= 1 ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeSentence(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </div>
+            <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
+              {item.id === exampleSentenceId ? (
+                <span
+                  className="absolute -top-1 left-0 text-[1.15em]"
+                  style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                >
+                  {item.sentence.split(" | ").map((part) => part.trim()).join(" ")}
+                </span>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
@@ -4295,10 +4431,10 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
         {block.sentences.map((item, i) => (
           <div
             key={item.id}
-            className={`group/item border-b ${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}`}
+            className={`group/item ${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}`}
           >
             {item.src ? (
-              <div className="row-span-2 pr-3 flex items-center justify-center">
+              <div className="row-span-2 pr-3 pt-[10px] flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.src}
@@ -4339,8 +4475,8 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
             <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
               {item.id === exampleSentenceId && item.solution ? (
                 <span
-                  className="absolute -top-1 left-9 text-[1.15em]"
-                  style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                  className="absolute left-9 text-[1.15em]"
+                  style={{ bottom: "6px", fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
                 >
                   {item.solution}
                 </span>
@@ -4489,7 +4625,7 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
               </button>
             </div>
             {isFormLayout ? (
-              <div className="flex gap-3 pb-2 pt-0">
+              <div className="flex gap-3 pb-2 pt-2">
                 <div className="w-6 h-6 min-w-6 shrink-0" aria-hidden="true" />
                 <div className="flex-1">
                   <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
@@ -7005,6 +7141,8 @@ export function BlockRenderer({
     case "sorting-categories":
       return <SortingCategoriesRenderer block={block} />;
     case "correct-spelling":
+      return <CorrectSpellingRenderer block={block} />;
+    case "missing-letters":
       return <CorrectSpellingRenderer block={block} />;
     case "unscramble-words":
       return <UnscrambleWordsRenderer block={block} />;

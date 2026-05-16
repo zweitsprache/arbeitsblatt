@@ -35,6 +35,7 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
+  MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -73,10 +74,11 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
-import { getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
-import { buildCorrectSpellingRow } from "@/lib/correct-spelling";
+import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
+import { RoughExampleCircle } from "@/components/ui/rough-example-circle";
 import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
@@ -103,6 +105,7 @@ const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 b
 const CONSISTENT_ITEM_BANK_CLASS = "flex min-h-[49px] flex-wrap items-center gap-2";
 const CONSISTENT_ITEM_BANK_CHIP_CLASS = "px-2 py-0.5 rounded border";
 const VIEWER_SECTION_GAP = {
+  "x-small": 4,
   small: 8,
   medium: 12,
   large: 16,
@@ -1988,6 +1991,7 @@ function FillInBlankItemsView({
       ) : (
         <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
+      {((block.showWordBank && wordBankAnswers.length > 0) || block.items.length > 0) && <SectionGap size="medium" />}
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className={CONSISTENT_ITEM_BANK_CLASS}>
           {wordBankAnswers.map((word, i) => (
@@ -2316,7 +2320,7 @@ function FillInBlankItemsView({
             ) : (
               <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
             )}
-            {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
+            {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="large" />}
           </>
         )}
         {block.textAboveItems?.trim() && (
@@ -2434,7 +2438,7 @@ function FillInBlankItemsView({
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="medium" />}
+          {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="large" />}
         </>
       )}
       {block.textAboveItems?.trim() && (
@@ -2896,6 +2900,61 @@ function renderTfBlanks(text: string): React.ReactNode {
   );
 }
 
+function renderMissingLetterText(text: string, showExampleOnFirstBlank = false): React.ReactNode {
+  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  let exampleShown = false;
+
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+    if (!match) {
+      return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
+    }
+
+    const noSpace = match[1] === "*";
+    const raw = match[2] || "";
+    const { answer, width } = parseBlankContent(raw);
+    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+    const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+
+    if (shouldRenderExample) {
+      exampleShown = true;
+      return (
+        <span
+          key={index}
+          className={`relative inline-flex rounded-[3px] bg-gray-100 align-middle overflow-hidden ${spacing.className}`}
+          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+        >
+          <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
+          <span
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              fontFamily: EXAMPLE_HANDWRITING_FONT,
+              fontWeight: 400,
+              fontSize: "18px",
+              color: "#0097dc",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {answer}
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <span
+        key={index}
+        aria-hidden="true"
+        className={`inline-flex rounded-[3px] bg-gray-100 align-middle ${spacing.className}`}
+        style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+      >
+        <span className="sr-only">missing letter</span>
+      </span>
+    );
+  });
+}
+
  function TrueFalseMatrixView({
   block,
   mode,
@@ -2932,6 +2991,9 @@ function renderTfBlanks(text: string): React.ReactNode {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const fontFamily = bodyFont || "inherit";
   const isOnline = mode === "online";
+  const trueLabelText = block.trueLabel || tc("true");
+  const falseLabelText = block.falseLabel || tc("false");
+  const optionColumnWidth = `${Math.max(80, Math.min(180, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 28))}px`;
 
   const handleSelect = (stmtId: string, value: boolean) => {
     if (stmtId in answers) return; // already answered
@@ -2950,8 +3012,8 @@ function renderTfBlanks(text: string): React.ReactNode {
               <InstructionBadge instructionIndex={instructionIndex} />
               <div className="flex items-center gap-3 flex-1">
                 <p className="flex-1">{block.instruction}</p>
-                <div className="w-20" aria-hidden="true" />
-                <div className="w-20" aria-hidden="true" />
+                <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
               </div>
             </div>
           ) : (
@@ -2962,8 +3024,8 @@ function renderTfBlanks(text: string): React.ReactNode {
               instructionIndex={instructionIndex}
               trailingContent={(
                 <>
-                  <div className="w-20" aria-hidden="true" />
-                  <div className="w-20" aria-hidden="true" />
+                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
                 </>
               )}
             />
@@ -2972,8 +3034,8 @@ function renderTfBlanks(text: string): React.ReactNode {
         <div className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
           <span className="w-6 shrink-0" aria-hidden="true" />
           <div className="flex-1 font-bold text-foreground">{block.statementColumnHeader || ""}</div>
-          <div className="w-20 text-center font-medium text-muted-foreground text-[14px] uppercase">{block.trueLabel || tc("true")}</div>
-          <div className="w-20 text-center font-medium text-muted-foreground text-[14px] uppercase">{block.falseLabel || tc("false")}</div>
+          <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+          <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
         </div>
         <div>
           {(() => {
@@ -3005,7 +3067,7 @@ function renderTfBlanks(text: string): React.ReactNode {
               <div key={stmt.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
                 <ItemNumberBadge index={stmtIndex + 1} className="shrink-0" />
                 <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
-                <div className="w-20 flex items-center justify-center">
+                <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
                       <div className={CONTROL_BOX_FILLED_CLASS} />
@@ -3020,7 +3082,7 @@ function renderTfBlanks(text: string): React.ReactNode {
                     />
                   )}
                 </div>
-                <div className="w-20 flex items-center justify-center">
+                <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
                       <div className={CONTROL_BOX_FILLED_CLASS} />
@@ -3129,6 +3191,7 @@ function MCQMatrixView({
             />
           )
         )}
+        {(block.options.length > 0 || orderedStatements.length > 0) && <SectionGap size="small" />}
         <div className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
           <span className="w-6 shrink-0" aria-hidden="true" />
           <div className="flex-1" aria-hidden="true" />
@@ -3956,7 +4019,7 @@ function InlineChoicesView({
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {items.length > 0 && <SectionGap size="medium" />}
+          {items.length > 0 && <SectionGap size="small" />}
         </>
       )}
       {items.map((item, idx) => (
@@ -4043,7 +4106,7 @@ function MCQRowsView({
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {block.items.length > 0 && <SectionGap size="medium" />}
+          {block.items.length > 0 && <SectionGap size="small" />}
         </>
       )}
 
@@ -4194,7 +4257,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
           ) : (
               <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {(block.showWordList || block.grid.length > 0) && <SectionGap size="medium" />}
+          {(block.showWordList || block.grid.length > 0) && <SectionGap size="large" />}
         </>
       )}
       {block.showWordList && (
@@ -4367,7 +4430,12 @@ function renderTextWithSup(text: string): React.ReactNode[] {
 
   const getItemById = (id: string) => block.items.find((item) => item.id === id);
   const SORT_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const SORT_WRITING_ROW_CLASS = isOnline
+    ? "flex min-h-[49px] items-center gap-3"
+    : "flex min-h-[32.5px] items-center gap-3";
   const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
+  const writingLineStyle = { borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 } as const;
+  const writingLineBoxClass = "relative flex-1 h-8 overflow-hidden";
 
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
@@ -4376,7 +4444,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
         {block.instruction && (
           <>
             <InstructionRow instruction={block.instruction} accentColor={accentColor} instructionIndex={instructionIndex} />
-            <SectionGap size="medium" />
+            <SectionGap size="large" />
           </>
         )}
         <div className={CONSISTENT_ITEM_BANK_CLASS}>
@@ -4390,7 +4458,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 style={colorCodeEnabled
                   ? {
                       backgroundColor: itemTheme.itemBg,
-                      borderColor: itemTheme.itemBorder,
+                      borderColor: itemTheme.itemBg,
                       color: itemTheme.itemText,
                     }
                   : undefined}
@@ -4418,14 +4486,15 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 className="rounded overflow-hidden"
               >
               <div
-                className="min-h-[37px] border-b flex items-center px-3 rounded-bl rounded-br"
+                className="border-b border-t border-t-transparent flex items-center pl-2.5 pr-2 py-0.5 rounded-bl rounded-br"
                 style={colorCodeEnabled
                   ? {
                       backgroundColor: catTheme.headerBg,
                       color: catTheme.headerText,
+                      borderTopColor: catTheme.headerBg,
                       borderBottomColor: catTheme.headerBorder,
                     }
-                  : undefined}
+                  : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottomColor: "#f8fafc" }}
               >
                 <span className="font-semibold">{cat.label}</span>
               </div>
@@ -4433,7 +4502,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 {categoryExampleItem ? (
                   <div>
                     <div
-                      className={`${SORT_ROW_CLASS} text-cv-sm`}
+                      className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
                       style={colorCodeEnabled
                         ? {
                             color: catTheme.itemText,
@@ -4441,26 +4510,20 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                           }
                         : undefined}
                     >
-                      <span
-                        className="flex-1"
-                        style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc' }}
-                      >
-                        {categoryExampleItem.text}
-                      </span>
+                      <div className={writingLineBoxClass} style={writingLineStyle}>
+                        <span
+                          className="absolute inset-x-0 block leading-none"
+                          style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                        >
+                          {categoryExampleItem.text}
+                        </span>
+                      </div>
                     </div>
                     {(block.showWritingLines ?? true) && maxItemsPerCat > 1 && (
                       <div>
                         {Array.from({ length: maxItemsPerCat - 1 }).map((_, i) => (
-                          <div key={i} className={SORT_ROW_CLASS}>
-                            <span
-                              className="flex-1 inline-block h-8 rounded"
-                              style={{
-                                opacity: 1.0,
-                                minWidth: 80,
-                              }}
-                            >
-                              &nbsp;
-                            </span>
+                          <div key={i} className={SORT_WRITING_ROW_CLASS}>
+                            <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
                           </div>
                         ))}
                       </div>
@@ -4473,7 +4536,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                       return item ? (
                             <div
                               key={itemId}
-                              className={`${SORT_ROW_CLASS} text-cv-sm`}
+                              className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
                               style={colorCodeEnabled
                                 ? {
                                     color: catTheme.itemText,
@@ -4481,12 +4544,14 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                                   }
                                 : undefined}
                             >
-                              <span
-                                className="flex-1"
-                                style={{ fontFamily: EXAMPLE_HANDWRITING_FONT }}
-                              >
-                                {item.text}
-                              </span>
+                              <div className={writingLineBoxClass} style={writingLineStyle}>
+                                <span
+                                  className="absolute inset-x-0 block leading-none"
+                                  style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: '18px' }}
+                                >
+                                  {item.text}
+                                </span>
+                              </div>
                             </div>
                       ) : null;
                     })}
@@ -4494,16 +4559,8 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                 ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 && (
                   <div>
                     {Array.from({ length: maxItemsPerCat }).map((_, i) => (
-                      <div key={i} className={SORT_ROW_CLASS}>
-                        <span
-                          className="flex-1 inline-block h-8 rounded"
-                          style={{
-                            opacity: 1.0,
-                            minWidth: 80,
-                          }}
-                        >
-                          &nbsp;
-                        </span>
+                      <div key={i} className={SORT_WRITING_ROW_CLASS}>
+                        <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
                       </div>
                     ))}
                   </div>
@@ -4531,7 +4588,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {(displayUnsorted.length > 0 || block.categories.length > 0) && <SectionGap size="medium" />}
+          {(displayUnsorted.length > 0 || block.categories.length > 0) && <SectionGap size="large" />}
         </>
       )}
       {/* Unsorted items */}
@@ -4554,7 +4611,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                   style={colorCodeEnabled
                     ? {
                         backgroundColor: catTheme.itemBg,
-                        borderColor: catTheme.itemBorder,
+                        borderColor: catTheme.itemBg,
                         color: catTheme.itemText,
                       }
                     : {
@@ -4603,14 +4660,15 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               }}
             >
                 <div
-                  className="min-h-[37px] border-b flex items-center px-3 rounded-bl rounded-br"
+                  className="border-b border-t border-t-transparent flex items-center pl-2.5 pr-2 py-0.5 rounded-bl rounded-br"
                   style={colorCodeEnabled
                     ? {
                         backgroundColor: catTheme.headerBg,
                         color: catTheme.headerText,
+                        borderTopColor: catTheme.headerBg,
                         borderBottomColor: catTheme.headerBorder,
                       }
-                    : undefined}
+                    : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottomColor: "#f8fafc" }}
                 >
                 <span className="font-semibold">{cat.label}</span>
               </div>
@@ -4628,7 +4686,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                   return (
                     <div
                       key={item.id}
-                        className={`${SORT_ROW_CLASS} transition-colors`}
+                        className={`${SORT_WRITING_ROW_CLASS} transition-colors`}
                       style={colorCodeEnabled
                         ? {
                             color: catTheme.itemText,
@@ -4637,15 +4695,19 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                         : undefined}
                     >
                       {!isExampleItem && <div className={indicatorClass} />}
-                      <span
-                        className="flex-1"
-                        style={{
-                          fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
-                          color: isExampleItem ? '#0097dc' : undefined,
-                        }}
-                      >
-                        {item.text}
-                      </span>
+                      <div className={writingLineBoxClass} style={writingLineStyle}>
+                        <span
+                          className="absolute inset-x-0 block leading-none"
+                          style={{
+                            bottom: isExampleItem ? '6px' : '4px',
+                            fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
+                            color: isExampleItem ? '#0097dc' : undefined,
+                            fontSize: isExampleItem ? '18px' : undefined,
+                          }}
+                        >
+                          {item.text}
+                        </span>
+                      </div>
                       {!showResults && !isExampleItem && (
                         <button
                           className="p-0.5 hover:bg-muted rounded text-muted-foreground shrink-0"
@@ -4668,16 +4730,8 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                     {Array.from({ length: maxItemsPerCat - catItemIds.length }).map((_, offset) => {
                       const slotIndex = catItemIds.length + offset;
                       return (
-                        <div key={`empty-${cat.id}-${slotIndex}`} className={SORT_ROW_CLASS}>
-                          <span
-                            className="flex-1 inline-block h-8 rounded"
-                            style={{
-                              opacity: 1.0,
-                              minWidth: 80,
-                            }}
-                          >
-                            &nbsp;
-                          </span>
+                        <div key={`empty-${cat.id}-${slotIndex}`} className={SORT_WRITING_ROW_CLASS}>
+                          <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
                         </div>
                       );
                     })}
@@ -4885,7 +4939,7 @@ function CorrectSpellingView({
   bodyFontSize,
   instructionIndex,
 }: {
-  block: CorrectSpellingBlock;
+  block: CorrectSpellingBlock | MissingLettersBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
@@ -4900,6 +4954,21 @@ function CorrectSpellingView({
   const isOnline = mode === "online";
   const fontFamily = bodyFont || "inherit";
   const legacyDisplayCount = block.displayCount ?? 10;
+  const buildRow = block.type === "missing-letters" ? buildMissingLettersRow : buildCorrectSpellingRow;
+  const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
+
+  const orderedWords = React.useMemo(() => {
+    const exampleWord = exampleWordId ? block.words.find((word) => word.id === exampleWordId) : undefined;
+    const remainingWords = block.words.filter((word) => word.id !== exampleWordId);
+    const orderedRemainingWords = block.itemOrder
+      ? block.itemOrder
+          .map((id) => remainingWords.find((word) => word.id === id))
+          .filter((word): word is NonNullable<typeof word> => !!word)
+          .concat(remainingWords.filter((word) => !block.itemOrder!.includes(word.id)))
+      : remainingWords;
+
+    return exampleWord ? [exampleWord, ...orderedRemainingWords] : orderedRemainingWords;
+  }, [block.itemOrder, block.words, exampleWordId]);
 
   return (
     <div className="text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
@@ -4925,32 +4994,72 @@ function CorrectSpellingView({
               instructionIndex={instructionIndex}
             />
           )}
-          {block.words.length > 0 && <SectionGap size="medium" />}
+          {block.words.length > 0 && <SectionGap size="x-small" />}
         </>
       )}
       <div>
-        {block.words.map((item, i) => {
+        {orderedWords.map((item, i) => {
           const displayCount = item.displayCount ?? legacyDisplayCount;
-          const variants = buildCorrectSpellingRow(
+          const isExampleRow = item.id === exampleWordId;
+          const variants = buildRow(
             item.word,
             block.keepFirstLetter,
             block.keepLastLetter,
             `${block.id}:${item.id}`,
             displayCount,
           );
+          let exampleGapShown = false;
+          let exampleChipShown = false;
 
           return (
             <div key={item.id} className="flex min-h-[49px] items-center gap-3 border-b">
               <ItemNumberBadge index={i + 1} className="shrink-0" />
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
-                {variants.map((variant, variantIndex) => (
-                  <span
-                    key={`${item.id}-${variantIndex}`}
-                    className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${variantIndex === 0 || (showSolutions && variant.isOriginal) ? "text-green-700 border-green-300 bg-green-50" : "bg-background"}`}
-                  >
-                    {variant.text}
-                  </span>
-                ))}
+                {variants.map((variant, variantIndex) =>
+                  (() => {
+                    const showExampleChip =
+                      block.type === "correct-spelling" &&
+                      isExampleRow &&
+                      !exampleChipShown &&
+                      variant.isOriginal &&
+                      variantIndex !== 0;
+                    const showExampleGap =
+                      block.type === "missing-letters" &&
+                      isExampleRow &&
+                      !exampleGapShown &&
+                      variant.text.includes("{{blank:");
+
+                    if (showExampleChip) {
+                      exampleChipShown = true;
+                    }
+
+                    if (showExampleGap) {
+                      exampleGapShown = true;
+                    }
+
+                    const shouldHighlightVariant =
+                      block.type === "correct-spelling"
+                        ? variantIndex === 0 || (showSolutions && variant.isOriginal)
+                        : variantIndex === 0 || (showSolutions && variant.isOriginal);
+                    const highlightClass =
+                      block.type === "correct-spelling"
+                        ? "text-green-700 border-green-300 bg-green-50"
+                        : "text-green-700 border-green-300 bg-green-50";
+
+                    return (
+                      <span
+                        key={`${item.id}-${variantIndex}`}
+                        className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${shouldHighlightVariant ? highlightClass : "bg-background"}`}
+                      >
+                        {block.type === "missing-letters"
+                          ? renderMissingLetterText(variant.text, showExampleGap)
+                          : showExampleChip
+                            ? <RoughExampleCircle>{variant.text}</RoughExampleCircle>
+                            : variant.text}
+                      </span>
+                    );
+                  })()
+                )}
               </div>
             </div>
           );
@@ -5049,6 +5158,7 @@ function FixSentencesView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
+      {block.sentences.length > 0 && <SectionGap size="small" />}
       <div>
         {block.sentences.map((item, i) => {
           const correctParts = item.sentence.split(" | ").map((p) => p.trim());
@@ -5130,20 +5240,6 @@ function FixSentencesView({
                       </div>
                     ))}
                   </div>
-                  {isExampleSentence ? (
-                    <div
-                      className="relative mt-2 h-8 overflow-hidden font-medium"
-                      style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
-                    >
-                      <span className="absolute inset-x-0 bottom-px block leading-none">
-                        {correctParts.join(" ")}
-                      </span>
-                    </div>
-                  ) : isPrint && showSolutions ? (
-                    <div className="mt-2 text-green-800 font-semibold text-cv-sm">{correctParts.join(" ")}</div>
-                  ) : isPrint ? (
-                    <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
-                  ) : null}
                   {showResults && !isExampleSentence && !isFullyCorrect && (
                     <p className="text-cv-xs text-green-600 mt-2">
                       {correctParts.join(" ")}
@@ -5151,6 +5247,27 @@ function FixSentencesView({
                   )}
                 </div>
               </div>
+              {isExampleSentence ? (
+                <div
+                  className="relative mt-2 h-8 overflow-hidden font-medium"
+                  style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0, fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                >
+                  <span className="absolute inset-x-0 bottom-px block leading-none">
+                    {correctParts.join(" ")}
+                  </span>
+                </div>
+              ) : isPrint && showSolutions ? (
+                <div
+                  className="relative mt-2 h-8 overflow-hidden text-green-800 font-semibold text-cv-sm"
+                  style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
+                >
+                  <span className="absolute inset-x-0 bottom-px block leading-none">
+                    {correctParts.join(" ")}
+                  </span>
+                </div>
+              ) : isPrint ? (
+                <div className="mt-2" style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
+              ) : null}
             </div>
           );
         })}
@@ -5266,7 +5383,9 @@ function TransformSentencesView({
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
-  const TRANSFORM_ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const TRANSFORM_ROW_CLASS = isOnline
+    ? "flex min-h-[49px] items-center gap-3"
+    : "flex min-h-[32.5px] items-center gap-3";
   const TRANSFORM_FOLLOWUP_ROW_CLASS = isOnline
     ? "flex min-h-[49px] items-center gap-3"
     : "flex min-h-[32.5px] items-center gap-3";
@@ -5288,6 +5407,7 @@ function TransformSentencesView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
+      {block.sentences.length > 0 && <SectionGap size="small" />}
       <div>
         {block.sentences.map((item, i) => {
           const userVal = userAnswers[item.id] || "";
@@ -5297,9 +5417,9 @@ function TransformSentencesView({
           const isExampleSentence = item.id === exampleSentenceId && !!item.solution;
 
           return (
-            <div key={item.id} className={`${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"} border-b`}>
+            <div key={item.id} className={item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}>
               {item.src ? (
-                <div className="row-span-2 pr-3 flex items-center justify-center">
+                <div className="row-span-2 pr-3 pt-[10px] flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.src}
@@ -5317,12 +5437,17 @@ function TransformSentencesView({
               </div>
               {isExampleSentence ? (
                 <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
-                  <span
-                    className="flex-1"
-                    style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                  <div
+                    className="relative flex-1 h-8 overflow-hidden"
+                    style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1.0 }}
                   >
-                    {item.solution}
-                  </span>
+                    <span
+                      className="absolute inset-x-0 block leading-none"
+                      style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
+                    >
+                      {item.solution}
+                    </span>
+                  </div>
                 </div>
               ) : interactive ? (
                 <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
@@ -5352,12 +5477,10 @@ function TransformSentencesView({
                 </div>
               ) : (
                 <div className={TRANSFORM_FOLLOWUP_ROW_CLASS}>
-                  <span
-                    className="flex-1 inline-block h-8 rounded"
-                    style={{ opacity: 1.0, minWidth: 80 }}
-                  >
-                    &nbsp;
-                  </span>
+                  <div
+                    className="flex-1"
+                    style={{ height: '1.8em', borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0, minWidth: 80 }}
+                  />
                 </div>
               )}
             </div>
@@ -5415,6 +5538,7 @@ function ReadingComprehensionView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
+      {block.sentences.length > 0 && <SectionGap size="medium" />}
       <div>
         {block.sentences.map((item, i) => {
           const userVal = userAnswers[item.id] || "";
@@ -5443,7 +5567,7 @@ function ReadingComprehensionView({
                 </div>
               </div>
               {isFormLayout ? (
-                <div className="flex gap-3 pb-2 pt-0">
+                <div className="flex gap-3 pb-2 pt-2">
                   <div className={NUMBER_BADGE_LAYOUT_CLASS} aria-hidden="true" />
                   <div className="flex-1">
                     <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
@@ -5915,6 +6039,7 @@ function DialogueView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
+      {((block.showWordBank && gapAnswers.length > 0) || block.items.length > 0) && <SectionGap size="medium" />}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
         <div className="flex min-h-[49px] flex-wrap items-center gap-2">
@@ -7275,6 +7400,22 @@ export function ViewerBlockRenderer({
         />
       );
     case "correct-spelling":
+      return (
+        <CorrectSpellingView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          bodyFont={bodyFont}
+          bodyFontSize={bodyFontSize}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "missing-letters":
       return (
         <CorrectSpellingView
           block={block}

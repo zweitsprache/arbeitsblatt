@@ -165,6 +165,7 @@ export function extractBlocksText(
         break;
 
       case "correct-spelling":
+      case "missing-letters":
         if (block.instruction) parts.push(block.instruction);
         for (const w of block.words ?? []) {
           parts.push(w.word);

@@ -36,6 +36,7 @@ export type BlockType =
   | "word-search"
   | "sorting-categories"
   | "correct-spelling"
+  | "missing-letters"
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
@@ -545,6 +546,19 @@ export interface CorrectSpellingBlock extends BlockBase {
   displayCount?: number;
   keepFirstLetter: boolean;
   keepLastLetter: boolean;
+  showFirstAsExample?: boolean;
+  itemOrder?: string[];
+}
+
+export interface MissingLettersBlock extends BlockBase {
+  type: "missing-letters";
+  instruction: string;
+  words: CorrectSpellingItem[];
+  displayCount?: number;
+  keepFirstLetter: boolean;
+  keepLastLetter: boolean;
+  showFirstAsExample?: boolean;
+  itemOrder?: string[];
 }
 
 // ─── Fix Sentences block ────────────────────────────────────
@@ -912,6 +926,7 @@ export type WorksheetBlock =
   | WordSearchBlock
   | SortingCategoriesBlock
   | CorrectSpellingBlock
+  | MissingLettersBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
@@ -1973,6 +1988,32 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       ],
       keepFirstLetter: false,
       keepLastLetter: false,
+      showFirstAsExample: false,
+      itemOrder: undefined,
+      visibility: "both",
+    },
+  },
+  {
+    type: "missing-letters",
+    label: "Missing Letters",
+    description: "Show words with one missing letter per variant",
+    labelKey: "missingLetters",
+    descriptionKey: "missingLettersDesc",
+    icon: "SpellCheck",
+    category: "interactive",
+    translations: { de: { label: "Fehlende Buchstaben", description: "Wörter mit jeweils einem fehlenden Buchstaben anzeigen" } },
+    defaultData: {
+      type: "missing-letters",
+      instruction: "",
+      words: [
+        { id: "ml1", word: "school", displayCount: 10 },
+        { id: "ml2", word: "teacher", displayCount: 10 },
+        { id: "ml3", word: "garden", displayCount: 10 },
+      ],
+      keepFirstLetter: false,
+      keepLastLetter: false,
+      showFirstAsExample: false,
+      itemOrder: undefined,
       visibility: "both",
     },
   },

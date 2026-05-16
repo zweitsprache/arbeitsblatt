@@ -26,6 +26,8 @@ function deterministicShuffle<T>(items: T[], rand: () => number): T[] {
   return out;
 }
 
+type SpellingRowItem = { text: string; isOriginal: boolean };
+
 function jumbleSingleWord(
   word: string,
   keepFirstLetter: boolean,
@@ -130,7 +132,7 @@ export function buildCorrectSpellingRow(
   keepLastLetter: boolean,
   seedKey: string,
   slotCount = 10,
-): Array<{ text: string; isOriginal: boolean }> {
+): SpellingRowItem[] {
   const safeSlotCount = Math.max(1, slotCount);
   const rand = mulberry32(hashString(seedKey));
   const minOriginals = Math.max(1, Math.ceil(safeSlotCount * 0.3));
@@ -154,4 +156,73 @@ export function buildCorrectSpellingRow(
       isOriginal: false,
     };
   });
+}
+
+function getMissingLetterIndices(
+  word: string,
+  keepFirstLetter: boolean,
+  keepLastLetter: boolean,
+): number[] {
+  const chars = Array.from(word);
+  const candidateIndices = chars
+    .map((char, index) => (/\s/.test(char) ? -1 : index))
+    .filter((index) => index >= 0);
+
+  if (candidateIndices.length <= 1) {
+    return candidateIndices;
+  }
+
+  let eligibleIndices = [...candidateIndices];
+
+  if (keepFirstLetter && eligibleIndices.length > 0) {
+    eligibleIndices = eligibleIndices.slice(1);
+  }
+
+  if (keepLastLetter && eligibleIndices.length > 0) {
+    eligibleIndices = eligibleIndices.slice(0, -1);
+  }
+
+  return eligibleIndices.length > 0 ? eligibleIndices : candidateIndices;
+}
+
+function buildMissingLetterVariant(word: string, index: number): string {
+  const chars = Array.from(word);
+  const answer = chars[index] ?? "";
+  chars[index] = `{{blank:${answer},1ch}}`;
+  return chars.join("");
+}
+
+export function buildMissingLettersRow(
+  word: string,
+  keepFirstLetter: boolean,
+  keepLastLetter: boolean,
+  seedKey: string,
+  slotCount = 10,
+): SpellingRowItem[] {
+  const safeSlotCount = Math.max(1, slotCount);
+  const eligibleIndices = getMissingLetterIndices(word, keepFirstLetter, keepLastLetter);
+
+  if (eligibleIndices.length === 0) {
+    return Array.from({ length: safeSlotCount }, (_, index) => ({
+      text: word,
+      isOriginal: index === 0,
+    }));
+  }
+
+  const rand = mulberry32(hashString(seedKey));
+  const shuffledVariants = deterministicShuffle(
+    eligibleIndices.map((index) => ({
+      text: buildMissingLetterVariant(word, index),
+      isOriginal: false,
+    })),
+    rand,
+  );
+
+  const row: SpellingRowItem[] = [{ text: word, isOriginal: true }];
+  while (row.length < safeSlotCount) {
+    const variant = shuffledVariants[(row.length - 1) % shuffledVariants.length];
+    row.push({ ...variant });
+  }
+
+  return row;
 }

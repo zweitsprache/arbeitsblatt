@@ -52,6 +52,7 @@ import {
   SortingCategoriesBlock,
   SortingCategory,
   CorrectSpellingBlock,
+  MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -5057,7 +5058,7 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
   );
 }
 
-function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock }) {
+function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | MissingLettersBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
@@ -5092,6 +5093,20 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock }) {
         id: block.id,
         updates: { words: block.words.filter((_, i) => i !== index) },
       },
+    });
+  };
+
+  const shuffleWords = () => {
+    const lockedExampleId = block.showFirstAsExample ? block.words[0]?.id : undefined;
+    const ids = block.words.filter((word) => word.id !== lockedExampleId).map((word) => word.id);
+    const shuffled = [...ids];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { itemOrder: shuffled } },
     });
   };
 
@@ -5134,6 +5149,18 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock }) {
           }
         />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepLastLetter")}</Label>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={!!block.showFirstAsExample}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
       </div>
       <Separator />
       <div className="space-y-2">
@@ -5180,6 +5207,9 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock }) {
         ))}
         <Button variant="outline" size="sm" onClick={addWord} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addWord")}
+        </Button>
+        <Button variant="outline" size="sm" onClick={shuffleWords} className="w-full">
+          <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
         </Button>
       </div>
     </div>
@@ -8957,6 +8987,8 @@ export function PropertiesPanel() {
       case "sorting-categories":
         return <SortingCategoriesProps block={selectedBlock} />;
       case "correct-spelling":
+        return <CorrectSpellingProps block={selectedBlock} />;
+      case "missing-letters":
         return <CorrectSpellingProps block={selectedBlock} />;
       case "unscramble-words":
         return <UnscrambleWordsProps block={selectedBlock} />;
