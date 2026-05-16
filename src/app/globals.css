@@ -650,6 +650,10 @@
   padding: 0 20mm 0 20mm;
 }
 
+.print-worksheet-root.print-canva .print-body-content {
+  padding: 0;
+}
+
 /* Keep preview typography aligned with PDF output.
    Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
 .print-worksheet-root.print-skin-final {

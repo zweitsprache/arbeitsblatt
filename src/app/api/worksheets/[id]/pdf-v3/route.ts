@@ -42,14 +42,20 @@ export async function POST(
     worksheet.settings && typeof worksheet.settings === "object"
       ? (worksheet.settings as Record<string, unknown>)
       : {};
+  const worksheetBlocks = Array.isArray(worksheet.blocks)
+    ? (worksheet.blocks as Array<Record<string, unknown>>)
+    : [];
+  const dominoForcesCanva = worksheetBlocks.some((block) => block?.type === "domino");
   const requestedOrientation = req.nextUrl.searchParams.get("orientation");
   const orientation =
-    requestedOrientation === "landscape" || requestedOrientation === "portrait"
-      ? requestedOrientation
-      : worksheetSettings.orientation === "landscape"
-        ? "landscape"
-        : "portrait";
-  const isLandscapePdf = orientation === "landscape";
+    dominoForcesCanva
+      ? "landscape-canva"
+      : requestedOrientation === "landscape" || requestedOrientation === "portrait" || requestedOrientation === "landscape-canva"
+        ? requestedOrientation
+        : worksheetSettings.orientation === "landscape" || worksheetSettings.orientation === "landscape-canva"
+          ? "landscape"
+          : "portrait";
+  const isLandscapePdf = orientation === "landscape" || orientation === "landscape-canva";
 
   // Check if preview mode is requested
   let isPreview = false;

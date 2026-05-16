@@ -43,6 +43,7 @@ export default async function PrintWorksheetPage({
   });
 
   let blocks = migratedLocaleData.blocks;
+  const dominoForcesCanva = blocks.some((block) => block.type === "domino");
   const rawSettings = worksheet.settings as unknown as Partial<WorksheetSettings>;
   const brand = ((rawSettings?.brand as string) || "edoomio") as Brand;
   const now = new Date();
@@ -69,9 +70,10 @@ export default async function PrintWorksheetPage({
   const settings: WorksheetSettings = {
     ...DEFAULT_SETTINGS,
     ...migratedLocaleData.settings,
+    orientation: dominoForcesCanva ? "landscape-canva" : migratedLocaleData.settings.orientation,
     brandSettings: resolvedBrandSettings,
   };
-  const effectiveOrientation = settings.orientation === "landscape" ? "landscape" : "portrait";
+  const effectiveOrientation = settings.orientation === "portrait" ? "portrait" : "landscape";
   const pageSizeCss =
     effectiveOrientation === "landscape"
       ? "297mm 210mm"

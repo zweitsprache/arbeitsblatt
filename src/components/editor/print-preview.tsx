@@ -152,7 +152,8 @@ export function PrintPreview({
   const [iframeHeight, setIframeHeight] = useState(5000);
 
   const noWorksheet = !state.worksheetId;
-  const previewPageWidth = state.settings.orientation === "landscape" ? 1123 : 794;
+  const dominoForcesCanva = state.blocks.some((block) => block.type === "domino");
+  const previewPageWidth = dominoForcesCanva || state.settings.orientation !== "portrait" ? 1123 : 794;
   const usePagedMode = engine === "pagedjs" && enablePagedMode;
 
   const injectPagedJsAndPaginate = useCallback(async () => {

@@ -56,7 +56,7 @@ export async function POST(
   }
 
   const settings = (worksheet.settings as Record<string, unknown>) || {};
-  const isLandscape = settings.orientation === "landscape";
+  const isLandscape = settings.orientation === "landscape" || settings.orientation === "landscape-canva";
   const baseUrl = getBaseUrl();
   const printUrl = `${baseUrl}/de/worksheet/${worksheet.slug}/print`;
 

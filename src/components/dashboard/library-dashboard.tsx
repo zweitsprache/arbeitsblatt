@@ -45,7 +45,7 @@ interface LibraryItem {
   title: string;
   slug: string;
   description: string | null;
-  orientation: "portrait" | "landscape";
+  orientation: "portrait" | "landscape" | "landscape-canva";
   thumbnailUrl: string;
   hasThumbnail: boolean;
   itemCount: number;

@@ -24,6 +24,7 @@ import {
   NumberedHeadingBlock,
   ColumnsBlock,
   GridBlock,
+  DominoBlock,
   BoardGameBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -75,6 +76,7 @@ import {
 } from "@/types/worksheet";
 import { useEditor } from "@/store/editor-store";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
+import { getDominoItems, getDominoPairs } from "@/lib/domino";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
@@ -5379,6 +5381,77 @@ function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
   );
 }
 
+function DominoRenderer({ block }: { block: DominoBlock }) {
+  const { state, dispatch } = useEditor();
+  const items = getDominoItems(block.items);
+  const lastItemIndex = Math.max(0, items.length - 1);
+  const pairs = getDominoPairs(block);
+  const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
+
+  return (
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        width: "fit-content",
+        margin: "0 auto",
+      }}
+    >
+      {pairs.map(({ pairIndex, pairLabel, pairItems, itemIndices }) => (
+        <div key={`domino-pair-${pairIndex}`} className="relative">
+          <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {pairLabel}
+          </div>
+          <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background shadow-sm">
+            {pairItems.map((item, itemOffset) => {
+              const itemIndex = itemIndices[itemOffset] ?? 0;
+              const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
+              const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item.text;
+              const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
+              return (
+                <button
+                  key={item.id || itemIndex}
+                  type="button"
+                  onClick={() => {
+                    dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                    dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
+                  }}
+                  className={`relative flex h-[28mm] w-[36mm] flex-col p-2 text-left transition-colors ${itemOffset === 0 ? "border-r border-border" : ""} ${isSpecialItem ? "items-center justify-center" : "items-center justify-center"} ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                  style={
+                    item.imageUrl
+                      ? {
+                          backgroundImage: `url(${item.imageUrl})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                        }
+                      : undefined
+                  }
+                >
+                  {!item.imageUrl ? (
+                    <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                  ) : null}
+                  {displayText?.trim() ? (
+                    <div className={`relative z-10 text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : "rounded-sm bg-background/80 px-2 py-1 text-sm leading-snug"}`}>
+                      {displayText}
+                    </div>
+                  ) : null}
+                  {block.showSpeakerIcons && item.speakerIcon ? (
+                    <div className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background/85 p-1">
+                      <DialogueSpeakerIconGlyph icon={item.speakerIcon} brandSlug={brandSlug} className="h-6 w-6 object-contain" />
+                    </div>
+                  ) : null}
+                </button>
+              );
+            })}
+            {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Dialogue ────────────────────────────────────────────────
 function DialogueRenderer({
   block,
@@ -7159,6 +7232,8 @@ export function BlockRenderer({
       return <ColumnsRenderer block={block} mode={mode} />;
     case "grid":
       return <GridRenderer block={block as GridBlock} mode={mode} />;
+    case "domino":
+      return <DominoRenderer block={block as DominoBlock} />;
     case "board-game":
       return <BoardGameRenderer block={block as BoardGameBlock} />;
     case "linked-blocks":

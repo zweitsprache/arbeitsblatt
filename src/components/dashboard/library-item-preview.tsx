@@ -10,7 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-type Orientation = "portrait" | "landscape";
+type Orientation = "portrait" | "landscape" | "landscape-canva";
 type ContentType = "worksheet" | "cards" | "flashcards" | "grammar-table" | "ebook";
 
 interface LibraryItemPreviewProps {
@@ -34,7 +34,7 @@ export function LibraryItemPreview({
   hasThumbnail,
 }: LibraryItemPreviewProps) {
   const contentType = type as ContentType;
-  const isLandscape = orientation === "landscape";
+  const isLandscape = orientation !== "portrait";
 
   // Paper aspect ratios (A4: 210×297mm)
   const paperW = isLandscape ? 141 : 100;

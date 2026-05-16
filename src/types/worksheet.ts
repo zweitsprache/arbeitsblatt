@@ -70,6 +70,7 @@ export type BlockType =
   | "schedule"
   | "website"
   | "checklist"
+  | "domino"
   | "board-game"
   | "grid";
 
@@ -352,6 +353,7 @@ export interface BoardGameCell {
   id: string;
   text?: string;
   imageUrl?: string;
+  speakerIcon?: DialogueSpeakerIcon | null;
 }
 
 export interface BoardGameBlock extends BlockBase {
@@ -359,6 +361,13 @@ export interface BoardGameBlock extends BlockBase {
   rows: number;
   cols: number;
   cells: BoardGameCell[];
+}
+
+export interface DominoBlock extends BlockBase {
+  type: "domino";
+  items: BoardGameCell[];
+  shufflePairs?: boolean;
+  showSpeakerIcons?: boolean;
 }
 
 // ─── True/False Matrix block ─────────────────────────────────
@@ -971,6 +980,7 @@ export type WorksheetBlock =
   | AudioBlock
   | ScheduleBlock
   | WebsiteBlock
+  | DominoBlock
   | BoardGameBlock
   | AiPromptBlock
   | AiToolBlock
@@ -1368,7 +1378,7 @@ export type ChOverrides = Record<string, Record<string, string>>;
 // ─── Worksheet settings ─────────────────────────────────────
 export interface WorksheetSettings {
   pageSize: "a4" | "letter";
-  orientation: "portrait" | "landscape";
+  orientation: "portrait" | "landscape" | "landscape-canva";
   margins: {
     top: number;
     right: number;
@@ -1670,6 +1680,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         text: index === 0 ? "ZIEL" : index === 35 ? "START" : "",
         imageUrl: "",
       })),
+      visibility: "both",
+    },
+  },
+  {
+    type: "domino",
+    label: "Domino",
+    description: "Domino pairs with text and image items",
+    labelKey: "domino",
+    descriptionKey: "dominoDesc",
+    icon: "Columns2",
+    category: "layout",
+    translations: { de: { label: "Domino", description: "Domino-Paare mit Text- und Bildfeldern" } },
+    defaultData: {
+      type: "domino",
+      items: Array.from({ length: 8 }, (_, index) => ({
+        id: `domino-item-${index + 1}`,
+        text: index === 0 ? "START" : index === 7 ? "ZIEL" : "",
+        imageUrl: "",
+      })),
+      shufflePairs: false,
+      showSpeakerIcons: false,
       visibility: "both",
     },
   },

@@ -84,7 +84,7 @@ export async function GET(
   let thumbBase64: string | null = null;
 
   if (worksheet.type === "worksheet") {
-    thumbBase64 = await generateWorksheetThumbnail(worksheet.slug, worksheet.settings);
+    thumbBase64 = await generateWorksheetThumbnail(worksheet.slug, worksheet.settings, worksheet.blocks);
   } else if (worksheet.type === "cards") {
     thumbBase64 = await generateCardsThumbnail(worksheet.blocks, worksheet.settings);
   } else if (worksheet.type === "flashcards") {
@@ -93,7 +93,7 @@ export async function GET(
     thumbBase64 = await generateGrammarTableThumbnail(worksheet.blocks, worksheet.title);
   } else {
     // Fallback: try worksheet-style thumbnail
-    thumbBase64 = await generateWorksheetThumbnail(worksheet.slug, worksheet.settings);
+    thumbBase64 = await generateWorksheetThumbnail(worksheet.slug, worksheet.settings, worksheet.blocks);
   }
 
   if (thumbBase64) {
@@ -147,10 +147,13 @@ async function hideDevOverlays(page: Awaited<ReturnType<Awaited<ReturnType<typeo
 
 async function generateWorksheetThumbnail(
   slug: string,
-  settingsJson: unknown
+  settingsJson: unknown,
+  blocksJson?: unknown
 ): Promise<string | null> {
   const settings = (settingsJson as Record<string, unknown>) || {};
-  const isLandscape = settings.orientation === "landscape";
+  const blocks = Array.isArray(blocksJson) ? (blocksJson as Array<Record<string, unknown>>) : [];
+  const dominoForcesCanva = blocks.some((block) => block?.type === "domino");
+  const isLandscape = dominoForcesCanva || settings.orientation === "landscape" || settings.orientation === "landscape-canva";
   const baseUrl = getBaseUrl();
   const printUrl = `${baseUrl}/de/worksheet/${slug}/print`;
 

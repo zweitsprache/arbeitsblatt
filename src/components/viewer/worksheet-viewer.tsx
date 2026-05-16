@@ -110,7 +110,8 @@ export function WorksheetViewer({
     return map;
   }, [visibleBlocks]);
 
-  const isLandscape = settings.orientation === "landscape";
+  const isCanvaLandscape = settings.orientation === "landscape-canva";
+  const isLandscape = settings.orientation === "landscape" || isCanvaLandscape;
   const pageWidth = settings.pageSize === "a4"
     ? (isLandscape ? 1123 : 794)
     : (isLandscape ? 1056 : 816);
@@ -284,9 +285,9 @@ export function WorksheetViewer({
   const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
   const hasFooterRight = !!processedFooterRight;
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
-  const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
+  const showPrintHeader = mode === "print" && !isCanvaLandscape && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
-  const printBottomReservePx = Math.max(settings.margins.bottom || 0, 95);
+  const printBottomReservePx = showPrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
@@ -342,7 +343,7 @@ export function WorksheetViewer({
 
   return (
     <div
-      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"}` : "bg-muted/30"}`}
+      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""}` : "bg-muted/30"}`}
       style={viewerCssVars}
     >
       {fontStylesheetUrls.map((href) => (

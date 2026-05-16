@@ -105,6 +105,8 @@ export function EditorToolbar({
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
+  const dominoForcesCanva = state.blocks.some((block) => block.type === "domino");
+  const effectivePdfFormat = dominoForcesCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
 
   const handleOpenPrintPreviewInNewTab = async (showSolutions = false) => {
     if (!state.slug) {
@@ -160,7 +162,7 @@ export function EditorToolbar({
     setLoading(true);
     try {
       const params = new URLSearchParams({ locale });
-      params.set("orientation", state.settings.orientation || "portrait");
+      params.set("orientation", effectivePdfFormat);
       if (outputMode === "solutions") params.set("solutions", "1");
       if (outputMode === "both") params.set("both", "1");
       if (lang && lang !== "de") params.set("lang", lang);
@@ -356,9 +358,11 @@ export function EditorToolbar({
           </Badge>
         )}
 
-        {state.settings.orientation === "landscape" && (
+        {state.settings.orientation !== "portrait" && (
           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-            {t("landscapeMode")}
+            {state.settings.orientation === "landscape-canva"
+              ? t("pdfOrientationLandscapeCanva")
+              : t("landscapeMode")}
           </Badge>
         )}
 
@@ -842,26 +846,6 @@ export function EditorToolbar({
             <DialogTitle>{t("brandSettings")} – {state.brandProfile.name || state.settings.brand || "edoomio"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-sm font-medium">{t("pdfOrientation")}</Label>
-              <Select
-                value={state.settings.orientation || "portrait"}
-                onValueChange={(value) =>
-                  dispatch({
-                    type: "UPDATE_SETTINGS",
-                    payload: { orientation: value as "portrait" | "landscape" },
-                  })
-                }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="portrait">{t("pdfOrientationPortrait")}</SelectItem>
-                  <SelectItem value="landscape">{t("pdfOrientationLandscape")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <Label className="text-sm font-medium">{t("brandLogo")}</Label>
               <Input

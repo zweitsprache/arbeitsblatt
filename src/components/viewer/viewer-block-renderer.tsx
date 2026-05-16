@@ -23,6 +23,7 @@ import {
   NumberLineBlock,
   ColumnsBlock,
   GridBlock,
+  DominoBlock,
   BoardGameBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
@@ -69,7 +70,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -78,6 +79,7 @@ import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegu
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
+import { getDominoItems, getDominoPairs } from "@/lib/domino";
 import { RoughExampleCircle, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
 import { findWordSearchPlacements } from "@/lib/word-search";
 import {
@@ -3760,6 +3762,287 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
         </div>
         );
       })}
+    </div>
+  );
+}
+
+function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null }) {
+  const items = getDominoItems(block.items);
+  const pairs = getDominoPairs(block);
+  const orderedEntries = pairs.flatMap(({ pairItems, itemIndices }) =>
+    pairItems.map((item, itemOffset) => ({
+      item,
+      itemIndex: itemIndices[itemOffset] ?? 0,
+    })),
+  );
+  const lastItemIndex = Math.max(0, items.length - 1);
+  const isPrint = mode === "print";
+  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const secondaryColor = accentColor || primaryColor;
+  const cutIconGap = "2.5mm";
+  const printContentOffsetY = "4mm";
+  const cutIconStyleBase: React.CSSProperties = {
+    position: "absolute",
+    width: "3.5mm",
+    height: "3.5mm",
+    color: "#9ca3af",
+    strokeWidth: 1.75,
+    overflow: "visible",
+  };
+
+  if (isPrint) {
+    const cardsPerPage = 24;
+    const pageCount = Math.max(1, Math.ceil(orderedEntries.length / cardsPerPage));
+    const pages = Array.from({ length: pageCount }, (_, pageIndex) => {
+      const start = pageIndex * cardsPerPage;
+      const pageEntries = orderedEntries.slice(start, start + cardsPerPage);
+      return Array.from({ length: cardsPerPage }, (_, slotIndex) => pageEntries[slotIndex] ?? null);
+    });
+
+    return (
+      <>
+        {pages.map((pageItems, pageIndex) => (
+          <div
+            key={`domino-print-page-${pageIndex}`}
+            style={{
+              width: "297mm",
+              height: "calc(210mm - var(--print-tfoot-height, 0px))",
+              display: "grid",
+              placeItems: "center",
+              breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
+              pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "270mm",
+                height: "160mm",
+                transform: `translateY(${printContentOffsetY})`,
+              }}
+            >
+              {Array.from({ length: 7 }, (_, lineIndex) => {
+                const isDashed = lineIndex % 2 === 0;
+                return (
+                  <React.Fragment key={`domino-v-line-${pageIndex}-${lineIndex}`}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: `${lineIndex * 45}mm`,
+                        height: "160mm",
+                        borderLeft: isDashed ? "1px dashed #9ca3af" : "1px solid #111827",
+                      }}
+                    />
+                    {isDashed ? (
+                      <>
+                        <Scissors
+                          aria-hidden="true"
+                          style={{
+                            ...cutIconStyleBase,
+                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
+                            top: `calc(-3.5mm - ${cutIconGap})`,
+                            transform: "rotate(90deg)",
+                          }}
+                        />
+                        <Scissors
+                          aria-hidden="true"
+                          style={{
+                            ...cutIconStyleBase,
+                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
+                            top: `calc(160mm + ${cutIconGap})`,
+                            transform: "rotate(-90deg)",
+                          }}
+                        />
+                      </>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
+              {Array.from({ length: 5 }, (_, lineIndex) => (
+                <React.Fragment key={`domino-h-line-${pageIndex}-${lineIndex}`}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: `${lineIndex * 40}mm`,
+                      width: "270mm",
+                      borderTop: "1px dashed #9ca3af",
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...cutIconStyleBase,
+                      left: `calc(-3.5mm - ${cutIconGap})`,
+                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...cutIconStyleBase,
+                      left: `calc(270mm + ${cutIconGap})`,
+                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                      transform: "rotate(180deg)",
+                    }}
+                  />
+                </React.Fragment>
+              ))}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(6, 45mm)",
+                  gridTemplateRows: "repeat(4, 40mm)",
+                  width: "270mm",
+                  height: "160mm",
+                }}
+              >
+                {pageItems.map((entry, slotIndex) => {
+                  const item = entry?.item ?? null;
+                  const itemIndex = entry?.itemIndex ?? null;
+                  const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item?.text;
+                  const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
+                  const isEvenItem = itemIndex !== null ? (itemIndex + 1) % 2 === 0 : false;
+                  const textColor = isSpecialItem ? undefined : (isEvenItem ? secondaryColor : primaryColor);
+
+                  return (
+                    <div
+                      key={item?.id || `domino-print-slot-${pageIndex}-${slotIndex}`}
+                      style={{
+                        position: "relative",
+                        width: "45mm",
+                        height: "40mm",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "4mm",
+                        textAlign: "center",
+                        backgroundImage: item?.imageUrl ? `url(${item.imageUrl})` : undefined,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    >
+                      {isEvenItem && logoSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={logoSrc}
+                          alt=""
+                          style={{
+                            position: "absolute",
+                            top: "2.5mm",
+                            right: "2.5mm",
+                            width: "6.5mm",
+                            height: "6.5mm",
+                            objectFit: "contain",
+                          }}
+                        />
+                      ) : null}
+                      {block.showSpeakerIcons && item?.speakerIcon ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "50%",
+                            bottom: "2mm",
+                            transform: "translateX(-50%)",
+                            zIndex: 1,
+                            padding: "1mm",
+                            borderRadius: "999px",
+                            background: "rgba(255,255,255,0.82)",
+                          }}
+                        >
+                          <DialogueSpeakerIconGlyph icon={item.speakerIcon} brandSlug={brand} className="h-[15px] w-[15px] object-contain" />
+                        </div>
+                      ) : null}
+                      {displayText?.trim() ? (
+                        <div
+                          style={{
+                            position: "relative",
+                            zIndex: 1,
+                            padding: isSpecialItem ? 0 : "2mm 3mm",
+                            borderRadius: isSpecialItem ? 0 : "4px",
+                            background: isSpecialItem ? "transparent" : "rgba(255,255,255,0.82)",
+                            fontSize: isSpecialItem ? "24pt" : "14pt",
+                            fontWeight: isSpecialItem ? 700 : 500,
+                            lineHeight: isSpecialItem ? 1 : 1.2,
+                            color: textColor,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {displayText}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        width: "fit-content",
+        margin: "0 auto",
+      }}
+    >
+      {pairs.map(({ pairItems, pairIndex, itemIndices }) => (
+        <div key={`domino-view-pair-${pairIndex}`} className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background break-inside-avoid">
+          {pairItems.map((item, itemOffset) => {
+            const itemIndex = itemIndices[itemOffset] ?? 0;
+            const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item.text;
+            const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
+            const isEvenItem = (itemIndex + 1) % 2 === 0;
+            const textColor = isSpecialItem ? undefined : (isEvenItem ? secondaryColor : primaryColor);
+            return (
+              <div
+                key={item.id || `${pairIndex}-${itemOffset}`}
+                className={`relative flex h-[28mm] w-[36mm] flex-col p-2 ${itemOffset === 0 ? "border-r border-border" : ""} items-center justify-center`}
+                style={
+                  item.imageUrl
+                    ? {
+                        backgroundImage: `url(${item.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : undefined
+                }
+              >
+                  {isEvenItem && logoSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      className="absolute top-2 right-2 h-[18px] w-[18px] object-contain"
+                    />
+                  ) : null}
+                {block.showSpeakerIcons && item.speakerIcon ? (
+                  <div className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background/85 p-1">
+                    <DialogueSpeakerIconGlyph icon={item.speakerIcon} brandSlug={brand} className="h-6 w-6 object-contain" />
+                  </div>
+                ) : null}
+                {!item.imageUrl ? (
+                  <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                ) : null}
+                {displayText?.trim() ? (
+                    <div className={`relative z-10 text-center break-words ${isSpecialItem ? "text-3xl font-bold leading-none" : "rounded-sm bg-background/80 px-2 py-1 text-sm leading-snug"}`} style={textColor ? { color: textColor } : undefined}>
+                    {displayText}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+          {pairItems.length === 1 ? <div className="h-[28mm] w-[36mm] bg-background" /> : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -7923,6 +8206,8 @@ export function ViewerBlockRenderer({
       );
     case "board-game":
       return <BoardGameView block={block as BoardGameBlock} />;
+    case "domino":
+      return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} />;
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":

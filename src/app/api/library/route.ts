@@ -68,14 +68,19 @@ export async function GET(req: NextRequest) {
   // Helper to extract orientation from settings JSON
   function getOrientation(
     settings: unknown,
-    fallback: "portrait" | "landscape"
-  ): "portrait" | "landscape" {
+    blocks: unknown,
+    fallback: "portrait" | "landscape" | "landscape-canva"
+  ): "portrait" | "landscape" | "landscape-canva" {
+    if (Array.isArray(blocks) && blocks.some((block) => typeof block === "object" && block && "type" in (block as Record<string, unknown>) && (block as Record<string, unknown>).type === "domino")) {
+      return "landscape-canva";
+    }
     if (
       settings &&
       typeof settings === "object" &&
       "orientation" in (settings as Record<string, unknown>)
     ) {
       const val = (settings as Record<string, unknown>).orientation;
+      if (val === "landscape-canva") return "landscape-canva";
       if (val === "landscape") return "landscape";
       if (val === "portrait") return "portrait";
     }
@@ -99,7 +104,7 @@ export async function GET(req: NextRequest) {
         title: w.title,
         slug: w.slug,
         description: w.description,
-        orientation: getOrientation(w.settings, defaultOrientation),
+        orientation: getOrientation(w.settings, w.blocks, defaultOrientation),
         thumbnailUrl: `/api/worksheets/${w.id}/thumbnail`,
         hasThumbnail: !!w.thumbnail,
         itemCount: Array.isArray(w.blocks)
