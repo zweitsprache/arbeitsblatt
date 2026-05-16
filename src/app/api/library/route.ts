@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
         title: e.title,
         slug: e.slug,
         description: null,
-        orientation: getOrientation(ebookSettings, "portrait") as
+        orientation: getOrientation(ebookSettings, null, "portrait") as
           | "portrait"
           | "landscape",
         thumbnailUrl: `/api/worksheets/${e.id}/thumbnail`,

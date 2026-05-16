@@ -2991,6 +2991,7 @@ function DominoProps({ block }: { block: DominoBlock }) {
         id: `domino-item-${index + 1}`,
         text: index === 0 ? "START" : index === 7 ? "ZIEL" : "",
         imageUrl: "",
+        speakerIcon: null,
       }));
   const selectedItemIndex = state.activeItemIndex;
   const selectedItem = selectedItemIndex !== null ? items[selectedItemIndex] : null;
@@ -3010,16 +3011,18 @@ function DominoProps({ block }: { block: DominoBlock }) {
     }
 
     return [
-      { id: "domino-item-1", text: "START", imageUrl: "" },
+      { id: "domino-item-1", text: "START", imageUrl: "", speakerIcon: null },
       ...normalizedMiddleTexts.map((text, index) => ({
         id: `domino-item-${index + 2}`,
         text,
         imageUrl: "",
+        speakerIcon: null,
       })),
       {
         id: `domino-item-${normalizedMiddleTexts.length + 2}`,
         text: "ZIEL",
         imageUrl: "",
+        speakerIcon: null,
       },
     ];
   };
