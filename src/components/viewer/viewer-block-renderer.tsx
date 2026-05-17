@@ -4267,7 +4267,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
     color: "#9ca3af",
     strokeWidth: 1.75,
     overflow: "visible",
-    zIndex: 3,
+    zIndex: 4,
     pointerEvents: "none",
   };
 
@@ -4310,78 +4310,6 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                 transform: `translateY(${printContentOffsetY})`,
               }}
             >
-              {Array.from({ length: 7 }, (_, lineIndex) => {
-                const isDashed = lineIndex % 2 === 0;
-                return (
-                  <React.Fragment key={`domino-v-line-${pageIndex}-${lineIndex}`}>
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: `${lineIndex * 45}mm`,
-                        height: "160mm",
-                        borderLeft: isDashed ? "1px dashed #9ca3af" : "1px solid #111827",
-                        zIndex: 3,
-                        pointerEvents: "none",
-                      }}
-                    />
-                    {isDashed ? (
-                      <>
-                        <Scissors
-                          aria-hidden="true"
-                          style={{
-                            ...cutIconStyleBase,
-                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
-                            top: `calc(-3.5mm - ${cutIconGap})`,
-                            transform: "rotate(90deg)",
-                          }}
-                        />
-                        <Scissors
-                          aria-hidden="true"
-                          style={{
-                            ...cutIconStyleBase,
-                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
-                            top: `calc(160mm + ${cutIconGap})`,
-                            transform: "rotate(-90deg)",
-                          }}
-                        />
-                      </>
-                    ) : null}
-                  </React.Fragment>
-                );
-              })}
-              {Array.from({ length: 5 }, (_, lineIndex) => (
-                <React.Fragment key={`domino-h-line-${pageIndex}-${lineIndex}`}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: `${lineIndex * 40}mm`,
-                      width: "270mm",
-                      borderTop: "1px dashed #9ca3af",
-                      zIndex: 3,
-                      pointerEvents: "none",
-                    }}
-                  />
-                  <Scissors
-                    aria-hidden="true"
-                    style={{
-                      ...cutIconStyleBase,
-                      left: `calc(-3.5mm - ${cutIconGap})`,
-                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
-                    }}
-                  />
-                  <Scissors
-                    aria-hidden="true"
-                    style={{
-                      ...cutIconStyleBase,
-                      left: `calc(270mm + ${cutIconGap})`,
-                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
-                      transform: "rotate(180deg)",
-                    }}
-                  />
-                </React.Fragment>
-              ))}
               <div
                 style={{
                   display: "grid",
@@ -4389,6 +4317,8 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                   gridTemplateRows: "repeat(4, 40mm)",
                   width: "270mm",
                   height: "160mm",
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
                 {pageItems.map((entry, slotIndex) => {
@@ -4397,6 +4327,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                   const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item?.text;
                   const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
                   const isEvenItem = itemIndex !== null ? (itemIndex + 1) % 2 === 0 : false;
+                  const showFooter = Boolean(footer) && slotIndex % 2 === 0 && itemIndex !== 0;
 
                   return (
                     <div
@@ -4465,32 +4396,108 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                           {displayText}
                         </div>
                       ) : null}
+                      {showFooter ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "2.5mm",
+                            top: "2mm",
+                            zIndex: 1,
+                            maxWidth: "18mm",
+                            borderRadius: "3px",
+                            background: "rgba(255,255,255,0.82)",
+                            padding: "0.5mm 1mm",
+                            fontSize: "7pt",
+                            fontWeight: 500,
+                            lineHeight: 1.1,
+                            textAlign: "left",
+                            color: "#475569",
+                          }}
+                        >
+                          {footer}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
+              {Array.from({ length: 7 }, (_, lineIndex) => {
+                const isDashed = lineIndex % 2 === 0;
+                return (
+                  <React.Fragment key={`domino-v-line-${pageIndex}-${lineIndex}`}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: `calc(${lineIndex * 45}mm - 0.5px)`,
+                        width: "1px",
+                        height: "160mm",
+                        zIndex: 3,
+                        pointerEvents: "none",
+                        background: isDashed
+                          ? "repeating-linear-gradient(to bottom, #9ca3af 0, #9ca3af 3mm, transparent 3mm, transparent 5mm)"
+                          : "#111827",
+                      }}
+                    />
+                    {isDashed ? (
+                      <>
+                        <Scissors
+                          aria-hidden="true"
+                          style={{
+                            ...cutIconStyleBase,
+                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
+                            top: `calc(-3.5mm - ${cutIconGap})`,
+                            transform: "rotate(90deg)",
+                          }}
+                        />
+                        <Scissors
+                          aria-hidden="true"
+                          style={{
+                            ...cutIconStyleBase,
+                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
+                            top: `calc(160mm + ${cutIconGap})`,
+                            transform: "rotate(-90deg)",
+                          }}
+                        />
+                      </>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
+              {Array.from({ length: 5 }, (_, lineIndex) => (
+                <React.Fragment key={`domino-h-line-${pageIndex}-${lineIndex}`}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: `calc(${lineIndex * 40}mm - 0.5px)`,
+                      width: "270mm",
+                      height: "1px",
+                      zIndex: 3,
+                      pointerEvents: "none",
+                      background: "repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 3mm, transparent 3mm, transparent 5mm)",
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...cutIconStyleBase,
+                      left: `calc(-3.5mm - ${cutIconGap})`,
+                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...cutIconStyleBase,
+                      left: `calc(270mm + ${cutIconGap})`,
+                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                      transform: "rotate(180deg)",
+                    }}
+                  />
+                </React.Fragment>
+              ))}
             </div>
-            {footer ? (
-              <div
-                style={{
-                  position: "absolute",
-                  left: "53.5mm",
-                  bottom: "8mm",
-                  width: "190mm",
-                  zIndex: 4,
-                  borderRadius: "3px",
-                  background: "rgba(255,255,255,0.82)",
-                  padding: "0.5mm 1mm",
-                  fontSize: "7pt",
-                  fontWeight: 500,
-                  lineHeight: 1.1,
-                  textAlign: "left",
-                  color: "#475569",
-                }}
-              >
-                {footer}
-              </div>
-            ) : null}
           </div>
         ))}
       </>

@@ -635,6 +635,12 @@
   line-height: 1.5;
 }
 
+.print-worksheet-root.print-has-domino .print-footer-content {
+  width: 190mm;
+  margin: 0 auto;
+  padding: 0 0 8mm 0;
+}
+
 .print-worksheet-root.print-canva .print-canva-side-header,
 .print-worksheet-root.print-canva .print-canva-side-footer {
   position: fixed;
@@ -664,6 +670,10 @@
   color: hsl(var(--foreground));
   justify-content: flex-start;
   gap: 8mm;
+}
+
+.print-worksheet-root.print-has-domino.print-canva .print-canva-side-footer {
+  width: 190mm;
 }
 
 .print-worksheet-root.print-canva .print-canva-side-header > div,
