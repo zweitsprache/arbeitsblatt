@@ -53,6 +53,7 @@ import {
   InlineChoicesBlock,
   InlineChoiceItem,
   migrateInlineChoicesBlock,
+  CrosswordBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   SortingCategory,
@@ -68,6 +69,7 @@ import {
   ChartDataPoint,
   NumberedItemsBlock,
   QuartettBlock,
+  TabooBlock,
   ChecklistBlock,
   NumberedLabelBlock,
   DialogueBlock,
@@ -102,6 +104,7 @@ import {
 } from "@/types/worksheet";
 import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
+import { formatCrosswordItemsText, parseCrosswordItemsText } from "@/lib/crossword";
 import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
@@ -6211,6 +6214,89 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
   );
 }
 
+function CrosswordProps({ block }: { block: CrosswordBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [itemsText, setItemsText] = React.useState(() => formatCrosswordItemsText(block.items));
+
+  React.useEffect(() => {
+    setItemsText(formatCrosswordItemsText(block.items));
+  }, [block.items]);
+
+  const commitItems = React.useCallback((value: string) => {
+    const parsedItems = parseCrosswordItemsText(value).map((item, index) => ({
+      id: block.items[index]?.id ?? crypto.randomUUID(),
+      answer: item.answer,
+      hint: item.hint,
+    }));
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: parsedItems,
+          grid: [],
+          placements: [],
+          generationError: null,
+        },
+      },
+    });
+  }, [block.id, block.items, dispatch]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Input
+          value={block.instruction ?? ""}
+          onChange={(event) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: event.target.value } },
+            })
+          }
+          className="h-8 text-xs"
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("items")}</Label>
+        <p className="mb-2 text-xs text-muted-foreground">{t("crosswordItemsHelp")}</p>
+        <textarea
+          value={itemsText}
+          onChange={(event) => setItemsText(event.target.value)}
+          onBlur={(event) => commitItems(event.target.value)}
+          className="min-h-40 w-full rounded-md border-0 bg-white px-3 py-2 text-xs shadow-none outline-none"
+          placeholder={t("crosswordItemsPlaceholder")}
+        />
+      </div>
+      {block.generationError ? (
+        <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {t("generationFailed")}
+        </div>
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() =>
+          dispatch({
+            type: "UPDATE_BLOCK",
+            payload: {
+              id: block.id,
+              updates: { grid: [], placements: [], generationError: null },
+            },
+          })
+        }
+      >
+        <ArrowUpDown className="mr-2 h-3.5 w-3.5" /> {t("regenerateGrid")}
+      </Button>
+    </div>
+  );
+}
+
 function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -9078,6 +9164,531 @@ function QuartettProps({ block }: { block: QuartettBlock }) {
   );
 }
 
+type CardListBlock = QuartettBlock | TabooBlock;
+
+function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett" | "taboo" }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [isExportingCards, setIsExportingCards] = React.useState(false);
+  const [generatingStopWordsForItem, setGeneratingStopWordsForItem] = React.useState<number | null>(null);
+  const update = (updates: Partial<CardListBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  const labels = kind === "quartett"
+    ? {
+        title: t("quartettTitle"),
+        titlePlaceholder: t("quartettTitlePlaceholder"),
+        csvImportHelp: t("quartettCsvImportHelp"),
+        csvPlaceholder: t("quartettCsvPlaceholder"),
+        exportCards: t("quartettExportCards"),
+        exportCardsFailed: t("quartettExportCardsFailed"),
+        exportCardsLoading: t("quartettExportCardsLoading"),
+        itemTitle: t("quartettItemTitle"),
+        itemTitlePlaceholder: t("quartettItemTitlePlaceholder"),
+        showFooter: t("quartettShowFooter"),
+        showGroupTitle: t("quartettShowGroupTitle"),
+        subitemPlaceholder: (index: number) => t("quartettSubitemPlaceholder", { index }),
+        subitems: t("quartettSubitems"),
+        tooManyColumns: t("quartettCsvTooManyColumns"),
+      }
+    : {
+        title: t("tabooTitle"),
+        titlePlaceholder: t("tabooTitlePlaceholder"),
+        csvImportHelp: t("tabooCsvImportHelp"),
+        csvPlaceholder: t("tabooCsvPlaceholder"),
+        exportCards: t("tabooExportCards"),
+        exportCardsFailed: t("tabooExportCardsFailed"),
+        exportCardsLoading: t("tabooExportCardsLoading"),
+        generateStopWords: t("tabooGenerateStopWords"),
+        generateStopWordsLoading: t("tabooGenerateStopWordsLoading"),
+        generateStopWordsMissingWord: t("tabooGenerateStopWordsMissingWord"),
+        generateStopWordsFailed: t("tabooGenerateStopWordsFailed"),
+        itemTitle: t("tabooItemTitle"),
+        itemTitlePlaceholder: t("tabooItemTitlePlaceholder"),
+        showFooter: "",
+        showGroupTitle: "",
+        subitemPlaceholder: (index: number) => t("tabooSubitemPlaceholder", { index }),
+        subitems: t("tabooSubitems"),
+        tooManyColumns: t("tabooCsvTooManyColumns"),
+      };
+
+  const createEmptyCardItem = (title = "") => ({
+    id: crypto.randomUUID(),
+    title,
+    subitems: Array.from({ length: 4 }, () => ({
+      id: crypto.randomUUID(),
+      content: "",
+    })),
+  });
+
+  const parseCsvLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      const nextChar = line[index + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
+        values.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    values.push(current.trim());
+    return values;
+  };
+
+  const shuffle = <T,>(items: T[]): T[] => {
+    const next = [...items];
+    for (let index = next.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+    return next;
+  };
+
+  const buildItemsFromSingleColumn = (values: string[]) => {
+    const randomized = shuffle(values.filter(Boolean));
+    const items: CardListBlock["items"] = [];
+
+    for (let index = 0; index < randomized.length; index += 4) {
+      const chunk = randomized.slice(index, index + 4);
+      const item = createEmptyCardItem();
+      item.subitems = item.subitems.map((subitem, subitemIndex) => ({
+        ...subitem,
+        content: chunk[subitemIndex] ?? "",
+      }));
+      items.push(item);
+    }
+
+    return items;
+  };
+
+  const buildItemsFromTwoColumns = (rows: Array<{ title: string; content: string }>) => {
+    const grouped = new Map<string, string[]>();
+    const order: string[] = [];
+
+    for (const row of rows) {
+      const title = row.title.trim();
+      const content = row.content.trim();
+      if (!content) continue;
+      if (!grouped.has(title)) {
+        grouped.set(title, []);
+        order.push(title);
+      }
+      grouped.get(title)!.push(content);
+    }
+
+    const items: CardListBlock["items"] = [];
+    for (const title of order) {
+      const contents = grouped.get(title) ?? [];
+      for (let index = 0; index < contents.length; index += 4) {
+        const chunk = contents.slice(index, index + 4);
+        const item = createEmptyCardItem(title);
+        item.subitems = item.subitems.map((subitem, subitemIndex) => ({
+          ...subitem,
+          content: chunk[subitemIndex] ?? "",
+        }));
+        items.push(item);
+      }
+    }
+
+    return items;
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const parsedRows = lines.map(parseCsvLine);
+    const maxColumns = Math.max(...parsedRows.map((row) => row.length));
+
+    let importedItems: CardListBlock["items"] = [];
+
+    if (maxColumns <= 1) {
+      importedItems = buildItemsFromSingleColumn(parsedRows.map((row) => row[0] ?? ""));
+    } else if (maxColumns === 2) {
+      importedItems = buildItemsFromTwoColumns(
+        parsedRows.map((row) => ({
+          title: row[0] ?? "",
+          content: row[1] ?? "",
+        }))
+      );
+    } else {
+      setCsvError(labels.tooManyColumns);
+      return;
+    }
+
+    if (importedItems.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    update({
+      items: csvMode === "append"
+        ? [...block.items, ...importedItems]
+        : importedItems,
+    });
+    setCsvText("");
+  };
+
+  const updateItem = (itemIndex: number, updates: Partial<CardListBlock["items"][number]>) => {
+    const items = [...block.items];
+    items[itemIndex] = { ...items[itemIndex], ...updates };
+    update({ items });
+  };
+
+  const updateSubitem = (itemIndex: number, subitemIndex: number, content: string) => {
+    const items = [...block.items];
+    const subitems = [...items[itemIndex].subitems];
+    subitems[subitemIndex] = { ...subitems[subitemIndex], content };
+    items[itemIndex] = { ...items[itemIndex], subitems };
+    update({ items });
+  };
+
+  const moveSubitem = (itemIndex: number, subitemIndex: number, direction: -1 | 1) => {
+    const targetIndex = subitemIndex + direction;
+    if (targetIndex < 0 || targetIndex >= block.items[itemIndex].subitems.length) return;
+    const items = [...block.items];
+    const subitems = [...items[itemIndex].subitems];
+    [subitems[subitemIndex], subitems[targetIndex]] = [subitems[targetIndex], subitems[subitemIndex]];
+    items[itemIndex] = { ...items[itemIndex], subitems };
+    update({ items });
+  };
+
+  const addItem = () => {
+    update({
+      items: [
+        ...block.items,
+        createEmptyCardItem(),
+      ],
+    });
+  };
+
+  const removeItem = (itemIndex: number) => {
+    if (block.items.length <= 1) return;
+    update({ items: block.items.filter((_, index) => index !== itemIndex) });
+  };
+
+  const handleGenerateStopWords = async (itemIndex: number) => {
+    if (kind !== "taboo") return;
+
+    const word = block.items[itemIndex]?.title?.trim() || "";
+    if (!word) {
+      alert(labels.generateStopWordsMissingWord);
+      return;
+    }
+
+    setGeneratingStopWordsForItem(itemIndex);
+    try {
+      const activeLocale = window.location.pathname.split("/")[1] || "de";
+      const response = await authFetch("/api/ai/generate-taboo-stop-words", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          word,
+          locale: activeLocale,
+          worksheetTitle: state.title,
+          blockTitle: block.title || "",
+        }),
+      });
+
+      const data = await response.json() as { error?: string; stopWords?: string[] };
+      if (!response.ok) {
+        throw new Error(data.error || labels.generateStopWordsFailed);
+      }
+
+      const stopWords = Array.isArray(data.stopWords) ? data.stopWords.slice(0, 4) : [];
+      if (stopWords.length !== 4) {
+        throw new Error(labels.generateStopWordsFailed);
+      }
+
+      const items = [...block.items];
+      const subitems = [...items[itemIndex].subitems];
+      items[itemIndex] = {
+        ...items[itemIndex],
+        subitems: subitems.map((subitem, subitemIndex) => ({
+          ...subitem,
+          content: stopWords[subitemIndex] ?? "",
+        })),
+      };
+      update({ items });
+    } catch (error) {
+      console.error("[TabooProps] Stop-word generation failed:", error);
+      alert(error instanceof Error ? error.message : tc("generationFailed"));
+    } finally {
+      setGeneratingStopWordsForItem(null);
+    }
+  };
+
+  const handleExportCards = async () => {
+    if (isExportingCards) return;
+
+    setIsExportingCards(true);
+    try {
+      const activeLocale = window.location.pathname.split("/")[1] || "de";
+      const response = await authFetch(`/api/${kind}/export-cards`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          block,
+          settings: state.settings,
+          brandProfile: state.brandProfile,
+          worksheetTitle: state.title,
+          worksheetId: state.worksheetId,
+          locale: activeLocale,
+        }),
+      });
+
+      if (!response.ok) {
+        let message = labels.exportCardsFailed;
+        try {
+          const payload = (await response.json()) as { error?: string };
+          if (payload.error) message = payload.error;
+        } catch {
+          // Ignore JSON parsing failures and keep fallback message.
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${(block.title || state.title || `${kind}-cards`)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `${kind}-cards`}.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`[${kind.toUpperCase()}Props] Export cards failed:`, error);
+      alert(error instanceof Error ? error.message : labels.exportCardsFailed);
+    } finally {
+      setIsExportingCards(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {labels.title}
+        </Label>
+        <Input
+          value={block.title ?? ""}
+          onChange={(e) => update({ title: e.target.value })}
+          placeholder={labels.titlePlaceholder}
+        />
+      </div>
+
+      <div className="rounded-md border border-border p-3 space-y-3">
+        {kind === "quartett" ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm">{labels.showGroupTitle}</Label>
+              <Switch
+                checked={(block as QuartettBlock).showGroupTitle !== false}
+                onCheckedChange={(checked) => update({ showGroupTitle: checked } as Partial<CardListBlock>)}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm">{labels.showFooter}</Label>
+              <Switch
+                checked={(block as QuartettBlock).showFooter !== false}
+                onCheckedChange={(checked) => update({ showFooter: checked } as Partial<CardListBlock>)}
+              />
+            </div>
+          </>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => void handleExportCards()}
+          disabled={isExportingCards}
+        >
+          {isExportingCards ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          {isExportingCards ? labels.exportCardsLoading : labels.exportCards}
+        </Button>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {labels.csvImportHelp}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px] resize-y"
+          placeholder={labels.csvPlaceholder}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+
+      {block.items.map((item, itemIndex) => (
+        <div key={item.id} className="rounded-md border border-border p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              {`#${itemIndex + 1}`}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeItem(itemIndex)}
+              disabled={block.items.length <= 1}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {labels.itemTitle}
+            </Label>
+            <Input
+              value={item.title ?? ""}
+              onChange={(e) => updateItem(itemIndex, { title: e.target.value })}
+              placeholder={labels.itemTitlePlaceholder}
+            />
+            {kind === "taboo" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-2"
+                onClick={() => void handleGenerateStopWords(itemIndex)}
+                disabled={generatingStopWordsForItem !== null || !item.title?.trim()}
+              >
+                {generatingStopWordsForItem === itemIndex ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {generatingStopWordsForItem === itemIndex ? labels.generateStopWordsLoading : labels.generateStopWords}
+              </Button>
+            ) : null}
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {labels.subitems}
+            </Label>
+            <div className="space-y-2">
+              {item.subitems.map((subitem, subitemIndex) => (
+                <div key={subitem.id} className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-xs font-medium text-muted-foreground text-center">
+                    {subitemIndex + 1}
+                  </span>
+                  <Input
+                    value={subitem.content}
+                    onChange={(e) => updateSubitem(itemIndex, subitemIndex, e.target.value)}
+                    placeholder={labels.subitemPlaceholder(subitemIndex + 1)}
+                  />
+                  <div className="flex flex-col shrink-0">
+                    <button
+                      type="button"
+                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      onClick={() => moveSubitem(itemIndex, subitemIndex, -1)}
+                      disabled={subitemIndex === 0}
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      onClick={() => moveSubitem(itemIndex, subitemIndex, 1)}
+                      disabled={subitemIndex === item.subitems.length - 1}
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <Button type="button" variant="outline" className="w-full" onClick={addItem}>
+        <Plus className="h-4 w-4 mr-2" />
+        {t("addItem")}
+      </Button>
+    </div>
+  );
+}
+
+function TabooProps({ block }: { block: TabooBlock }) {
+  return <CardListProps block={block} kind="taboo" />;
+}
+
 function ChecklistProps({ block }: { block: ChecklistBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -10724,6 +11335,8 @@ export function PropertiesPanel() {
         return <OrderItemsProps block={selectedBlock} />;
       case "inline-choices":
         return <InlineChoicesProps block={selectedBlock} />;
+      case "crossword":
+        return <CrosswordProps block={selectedBlock} />;
       case "word-search":
         return <WordSearchProps block={selectedBlock} />;
       case "sorting-categories":
@@ -10762,6 +11375,8 @@ export function PropertiesPanel() {
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
       case "quartett":
         return <QuartettProps block={selectedBlock as QuartettBlock} />;
+      case "taboo":
+        return <TabooProps block={selectedBlock as TabooBlock} />;
       case "checklist":
         return <ChecklistProps block={selectedBlock as ChecklistBlock} />;
       case "accordion":

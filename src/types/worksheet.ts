@@ -35,6 +35,7 @@ export type BlockType =
   | "mcq-rows"
   | "order-items"
   | "inline-choices"
+  | "crossword"
   | "word-search"
   | "sorting-categories"
   | "correct-spelling"
@@ -63,6 +64,7 @@ export type BlockType =
   | "dos-and-donts"
   | "numbered-items"
   | "quartett"
+  | "taboo"
   | "logo-divider"
   | "ai-prompt"
   | "ai-tool"
@@ -77,6 +79,43 @@ export type BlockType =
   | "flashcards"
   | "board-game"
   | "grid";
+
+export type ExclusiveWorksheetBlockType = "flashcards" | "domino" | "quartett" | "taboo" | "syllable-cards";
+
+export const EXCLUSIVE_WORKSHEET_BLOCK_TYPES: ReadonlySet<ExclusiveWorksheetBlockType> = new Set([
+  "flashcards",
+  "domino",
+  "quartett",
+  "taboo",
+  "syllable-cards",
+]);
+
+export function isExclusiveWorksheetBlockType(type: BlockType): type is ExclusiveWorksheetBlockType {
+  return EXCLUSIVE_WORKSHEET_BLOCK_TYPES.has(type as ExclusiveWorksheetBlockType);
+}
+
+export function canAddBlockTypeToWorksheet(
+  existingBlocks: Pick<WorksheetBlock, "type">[],
+  candidateType: BlockType,
+): boolean {
+  const existingExclusiveTypes = new Set<ExclusiveWorksheetBlockType>();
+
+  for (const block of existingBlocks) {
+    if (isExclusiveWorksheetBlockType(block.type)) {
+      existingExclusiveTypes.add(block.type);
+    }
+  }
+
+  if (existingExclusiveTypes.size === 0) {
+    return !isExclusiveWorksheetBlockType(candidateType) || existingBlocks.length === 0;
+  }
+
+  return (
+    isExclusiveWorksheetBlockType(candidateType)
+    && existingExclusiveTypes.size === 1
+    && existingExclusiveTypes.has(candidateType)
+  );
+}
 
 // ─── Base block ──────────────────────────────────────────────
 export interface BlockBase {
@@ -507,6 +546,35 @@ export interface InlineChoicesBlock extends BlockBase {
   content?: string;
 }
 
+export type CrosswordDirection = "across" | "down";
+
+export interface CrosswordItem {
+  id: string;
+  answer: string;
+  hint: string;
+}
+
+export interface CrosswordPlacement {
+  itemId: string;
+  answer: string;
+  hint: string;
+  row: number;
+  col: number;
+  labelRow: number;
+  labelCol: number;
+  direction: CrosswordDirection;
+  clueNumber: number;
+}
+
+export interface CrosswordBlock extends BlockBase {
+  type: "crossword";
+  instruction?: string;
+  items: CrosswordItem[];
+  grid: string[][];
+  placements: CrosswordPlacement[];
+  generationError?: string | null;
+}
+
 /**
  * Migrate legacy InlineChoicesBlock that only has `content` (single string)
  * into the new `items` array format. Each line becomes one item.
@@ -874,6 +942,12 @@ export interface QuartettBlock extends BlockBase {
   items: QuartettItem[];
 }
 
+export interface TabooBlock extends BlockBase {
+  type: "taboo";
+  title?: string;
+  items: QuartettItem[];
+}
+
 // ─── Checklist block ────────────────────────────────────────
 export interface ChecklistItem {
   id: string;
@@ -999,6 +1073,7 @@ export type WorksheetBlock =
   | MCQRowsBlock
   | OrderItemsBlock
   | InlineChoicesBlock
+  | CrosswordBlock
   | WordSearchBlock
   | SortingCategoriesBlock
   | CorrectSpellingBlock
@@ -1027,6 +1102,7 @@ export type WorksheetBlock =
   | DosAndDontsBlock
   | NumberedItemsBlock
   | QuartettBlock
+  | TabooBlock
   | ChecklistBlock
   | LogoDividerBlock
   | AccordionBlock
@@ -2088,6 +2164,29 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "crossword",
+    label: "Crossword",
+    description: "Auto-generated crossword from answer and hint pairs",
+    labelKey: "crossword",
+    descriptionKey: "crosswordDesc",
+    icon: "Grid3X3",
+    category: "interactive",
+    translations: { de: { label: "Kreuzworträtsel", description: "Automatisch erzeugtes Kreuzworträtsel aus Antwort-Hinweis-Paaren" } },
+    defaultData: {
+      type: "crossword",
+      instruction: "Solve the crossword.",
+      items: [
+        { id: "cw1", answer: "apple", hint: "A red or green fruit" },
+        { id: "cw2", answer: "pear", hint: "A green fruit with a narrow top" },
+        { id: "cw3", answer: "grape", hint: "A small fruit that grows in bunches" },
+      ],
+      grid: [],
+      placements: [],
+      generationError: null,
+      visibility: "both",
+    },
+  },
+  {
     type: "word-search",
     label: "Word Search",
     description: "Word search puzzle grid",
@@ -2601,6 +2700,31 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     title: "",
     showGroupTitle: true,
     showFooter: true,
+    items: [
+      {
+        id: crypto.randomUUID(),
+        title: "",
+        subitems: Array.from({ length: 4 }, () => ({
+          id: crypto.randomUUID(),
+          content: "",
+        })),
+      },
+    ],
+    visibility: "both",
+  },
+},
+{
+  type: "taboo",
+  label: "Taboo",
+  description: "Word cards with four stop words",
+  labelKey: "taboo",
+  descriptionKey: "tabooDesc",
+  icon: "TriangleAlert",
+  category: "memory-aids",
+  translations: { de: { label: "Taboo", description: "Wortkarten mit vier Stoppwörtern" } },
+  defaultData: {
+    type: "taboo",
+    title: "",
     items: [
       {
         id: crypto.randomUUID(),

@@ -36,6 +36,7 @@ import {
   OrderItemsBlock,
   InlineChoicesBlock,
   migrateInlineChoicesBlock,
+  CrosswordBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
@@ -60,6 +61,7 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   QuartettBlock,
+  TabooBlock,
   ChecklistBlock,
   AccordionBlock,
   LogoDividerBlock,
@@ -74,7 +76,7 @@ import {
   Brand,
   ViewMode,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors, FileQuestion } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors, FileQuestion, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -97,6 +99,12 @@ type QuartettCardVariant = {
   title: string;
   highlight: string;
   others: string[];
+};
+
+type TabooCardVariant = {
+  id: string;
+  word: string;
+  stopWords: string[];
 };
 
 const CUT_LINE_COLOR = "#9ca3af";
@@ -129,6 +137,16 @@ function buildQuartettCardVariants(items: QuartettBlock["items"]): QuartettCardV
         .filter((entry) => entry.trim().length > 0),
     }))
   );
+}
+
+function buildTabooCardVariants(items: TabooBlock["items"]): TabooCardVariant[] {
+  return items.map((item) => ({
+    id: item.id,
+    word: item.title?.trim() || "",
+    stopWords: item.subitems
+      .map((entry) => entry.content)
+      .filter((entry) => entry.trim().length > 0),
+  }));
 }
 
 function QuartettCardContent({
@@ -175,7 +193,7 @@ function QuartettCardContent({
           position: "absolute",
           top: "3mm",
           left: "3mm",
-          right: logoSrc ? "13mm" : "3mm",
+          right: "3mm",
           minHeight: reservedTitleHeight,
           fontSize: "8pt",
           fontWeight: 700,
@@ -277,6 +295,106 @@ function QuartettCardContent({
   );
 }
 
+function TabooCardContent({
+  card,
+  logoSrc,
+  titleColor,
+  titleFont,
+}: {
+  card: TabooCardVariant;
+  logoSrc?: string;
+  titleColor: string;
+  titleFont?: string;
+}) {
+  const reservedTitleHeight = "10mm";
+
+  return (
+    <>
+      {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoSrc}
+          alt=""
+          style={{
+            position: "absolute",
+            top: "3mm",
+            right: "3mm",
+            width: "7mm",
+            height: "7mm",
+            objectFit: "contain",
+          }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          top: "3mm",
+          left: "3mm",
+          right: logoSrc ? "13mm" : "3mm",
+          minHeight: reservedTitleHeight,
+          fontSize: "8pt",
+          fontWeight: 700,
+          lineHeight: 1.1,
+          color: titleColor,
+          ...(titleFont ? { fontFamily: titleFont } : {}),
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          padding: "16mm 0 0",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "13pt",
+            fontWeight: 700,
+            lineHeight: 1.15,
+            color: "#111827",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            ...(titleFont ? { fontFamily: titleFont } : {}),
+          }}
+        >
+          {card.word || "..."}
+        </div>
+        <div
+          style={{
+            marginTop: "3mm",
+            paddingTop: "2.5mm",
+            borderTop: "1px solid currentColor",
+            display: "grid",
+            gap: "1.5mm",
+            fontSize: "11.5pt",
+            lineHeight: 1.15,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {card.stopWords.map((entry, index) => (
+            <div
+              key={`${card.id}-stop-${index}`}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "1.5mm",
+                ...(index === 0
+                  ? undefined
+                  : { borderTop: "1px solid #e5e7eb", paddingTop: "1.5mm" }),
+              }}
+            >
+              <TriangleAlert style={{ width: "3.4mm", height: "3.4mm", flexShrink: 0, color: "#990000", marginTop: "0.8mm" }} />
+              <span>{entry}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function QuartettView({
   block,
   mode,
@@ -305,13 +423,18 @@ function QuartettView({
   const cardTitleColor = headingColor || primaryColor;
   const blockTitle = block.title?.trim() || "";
   const cardWidthMm = 58;
-  const cardHeightMm = 90;
+  const cardHeightMm = 87;
   const columns = 4;
   const rows = 2;
   const sheetWidthMm = cardWidthMm * columns;
   const sheetHeightMm = cardHeightMm * rows;
   const sideRailWidthMm = 10;
   const printSheetWidthMm = sheetWidthMm + sideRailWidthMm * 2;
+  const quartettPrintPageWidthMm = 297;
+  const quartettPrintPageHeight = "210mm";
+  const quartettTitleBoxWidthMm = 190;
+  const quartettTitleBoxHeightMm = 10;
+  const printContentOffsetY = "0mm";
 
   if (isPrint) {
     const cardsPerPage = 8;
@@ -328,12 +451,13 @@ function QuartettView({
             key={`quartett-print-page-${pageIndex}`}
             style={{
               position: "relative",
-              width: "100%",
+              width: `${quartettPrintPageWidthMm}mm`,
+              height: quartettPrintPageHeight,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              minHeight: "var(--page-height, 210mm)",
               boxSizing: "border-box",
+              transform: `translateY(${printContentOffsetY})`,
               breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
               pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
             }}
@@ -343,12 +467,15 @@ function QuartettView({
                 className="text-cv-xl"
                 style={{
                   position: "absolute",
-                  left: "20mm",
-                  bottom: "10mm",
-                  width: "calc(var(--page-height, 210mm) - 20mm)",
+                  left: `${10 + quartettTitleBoxHeightMm}mm`,
+                  top: `${200 - quartettTitleBoxHeightMm}mm`,
+                  width: `${quartettTitleBoxWidthMm}mm`,
+                  height: `${quartettTitleBoxHeightMm}mm`,
                   transform: "rotate(-90deg)",
                   transformOrigin: "bottom left",
                   margin: 0,
+                  display: "flex",
+                  alignItems: "center",
                   fontWeight: resolvedHeadingWeight,
                   color: cardTitleColor,
                   textAlign: "left",
@@ -506,6 +633,246 @@ function QuartettView({
               titleFont={resolvedHeadlineFont}
               showGroupTitle={showGroupTitle}
               showFooter={showFooter}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TabooView({
+  block,
+  mode,
+  brand = "edoomio",
+  primaryColor = "#1a1a1a",
+  headlineFont,
+  headingWeights,
+  headingColor,
+}: {
+  block: TabooBlock;
+  mode: ViewMode;
+  brand?: Brand;
+  primaryColor?: string;
+  headlineFont?: string;
+  headingWeights?: { h1: number; h2: number; h3: number };
+  headingColor?: string;
+}) {
+  const cards = React.useMemo(() => buildTabooCardVariants(block.items), [block.items]);
+  const isPrint = mode === "print";
+  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
+  const cardTitleColor = headingColor || primaryColor;
+  const blockTitle = block.title?.trim() || "";
+  const cardWidthMm = 58;
+  const cardHeightMm = 87;
+  const columns = 4;
+  const rows = 2;
+  const sheetWidthMm = cardWidthMm * columns;
+  const sheetHeightMm = cardHeightMm * rows;
+  const sideRailWidthMm = 10;
+  const printSheetWidthMm = sheetWidthMm + sideRailWidthMm * 2;
+  const tabooPrintPageWidthMm = 297;
+  const tabooPrintPageHeight = "210mm";
+  const tabooTitleBoxWidthMm = 190;
+  const tabooTitleBoxHeightMm = 10;
+  const printContentOffsetY = "0mm";
+
+  if (isPrint) {
+    const cardsPerPage = 8;
+    const pageCount = Math.max(1, Math.ceil(cards.length / cardsPerPage));
+    const pages = Array.from({ length: pageCount }, (_, pageIndex) => {
+      const start = pageIndex * cardsPerPage;
+      const pageCards = cards.slice(start, start + cardsPerPage);
+      return Array.from({ length: cardsPerPage }, (_, slotIndex) => pageCards[slotIndex] ?? null);
+    });
+    return (
+      <>
+        {pages.map((pageCards, pageIndex) => (
+          <div
+            key={`taboo-print-page-${pageIndex}`}
+            style={{
+              position: "relative",
+              width: `${tabooPrintPageWidthMm}mm`,
+              height: tabooPrintPageHeight,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              boxSizing: "border-box",
+              transform: `translateY(${printContentOffsetY})`,
+              breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
+              pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
+            }}
+          >
+            {blockTitle ? (
+              <h3
+                className="text-cv-xl"
+                style={{
+                  position: "absolute",
+                  left: `${10 + tabooTitleBoxHeightMm}mm`,
+                  top: `${200 - tabooTitleBoxHeightMm}mm`,
+                  width: `${tabooTitleBoxWidthMm}mm`,
+                  height: `${tabooTitleBoxHeightMm}mm`,
+                  transform: "rotate(-90deg)",
+                  transformOrigin: "bottom left",
+                  margin: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  fontWeight: resolvedHeadingWeight,
+                  color: cardTitleColor,
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  zIndex: 2,
+                  ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+                }}
+              >
+                {blockTitle}
+              </h3>
+            ) : null}
+            <div
+              style={{
+                position: "relative",
+                width: `${printSheetWidthMm}mm`,
+                height: `${sheetHeightMm}mm`,
+              }}
+            >
+              {Array.from({ length: columns + 1 }, (_, lineIndex) => (
+                <React.Fragment key={`taboo-v-line-${pageIndex}-${lineIndex}`}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: `${sideRailWidthMm + lineIndex * cardWidthMm}mm`,
+                      width: 0,
+                      height: `${sheetHeightMm}mm`,
+                      borderLeft: CUT_LINE_DASHED_BORDER,
+                      zIndex: 3,
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      top: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                      transform: "rotate(90deg)",
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      top: `calc(${sheetHeightMm}mm + ${CUT_ICON_GAP_MM}mm)`,
+                      transform: "rotate(-90deg)",
+                    }}
+                  />
+                </React.Fragment>
+              ))}
+              {Array.from({ length: rows + 1 }, (_, lineIndex) => (
+                <React.Fragment key={`taboo-h-line-${pageIndex}-${lineIndex}`}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: `${sideRailWidthMm}mm`,
+                      top: `${lineIndex * cardHeightMm}mm`,
+                      width: `${sheetWidthMm}mm`,
+                      height: 0,
+                      borderTop: CUT_LINE_DASHED_BORDER,
+                      zIndex: 3,
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm}mm - ${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                      top: `calc(${lineIndex * cardHeightMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                    }}
+                  />
+                  <Scissors
+                    aria-hidden="true"
+                    style={{
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + sheetWidthMm}mm + ${CUT_ICON_GAP_MM}mm)`,
+                      top: `calc(${lineIndex * cardHeightMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      transform: "rotate(180deg)",
+                    }}
+                  />
+                </React.Fragment>
+              ))}
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 1,
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${columns}, ${cardWidthMm}mm)`,
+                  gridTemplateRows: `repeat(${rows}, ${cardHeightMm}mm)`,
+                  width: `${sheetWidthMm}mm`,
+                  height: `${sheetHeightMm}mm`,
+                  marginLeft: `${sideRailWidthMm}mm`,
+                }}
+              >
+                {pageCards.map((card, slotIndex) => (
+                  <div
+                    key={card?.id || `taboo-print-slot-${pageIndex}-${slotIndex}`}
+                    style={{
+                      position: "relative",
+                      width: `${cardWidthMm}mm`,
+                      height: `${cardHeightMm}mm`,
+                      padding: "4mm",
+                      overflow: "hidden",
+                      backgroundColor: "#fff",
+                    }}
+                    data-taboo-export-card={card ? "true" : undefined}
+                    data-taboo-card-id={card?.id}
+                  >
+                    {card ? (
+                      <TabooCardContent
+                        card={card}
+                        logoSrc={logoSrc}
+                        titleColor={cardTitleColor}
+                        titleFont={resolvedHeadlineFont}
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {blockTitle ? (
+        <h3
+          className="uppercase tracking-[0.18em]"
+          style={{ color: cardTitleColor, ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}) }}
+        >
+          {blockTitle}
+        </h3>
+      ) : null}
+      <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 58mm))" }}>
+        {cards.map((card) => (
+          <div
+            key={card.id}
+            className="relative overflow-hidden rounded-md border border-border bg-background"
+            style={{ width: "58mm", minHeight: "90mm", padding: "4mm" }}
+          >
+            <TabooCardContent
+              card={card}
+              logoSrc={logoSrc}
+              titleColor={cardTitleColor}
+              titleFont={resolvedHeadlineFont}
             />
           </div>
         ))}
@@ -4247,6 +4614,128 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
   );
 }
 
+const CARD_CANVA_PAGE_WIDTH = "297mm";
+const CARD_CANVA_PAGE_HEIGHT = "calc(210mm - var(--print-tfoot-height, 0px))";
+const CARD_CANVA_FRAME_X = "18mm";
+const CARD_CANVA_FRAME_WIDTH = "261mm";
+const CARD_CANVA_TITLE_Y = "10mm";
+const CARD_CANVA_TITLE_HEIGHT = "10mm";
+const CARD_CANVA_LOGO_TOP = "10mm";
+const CARD_CANVA_LOGO_RIGHT = "10mm";
+const CARD_CANVA_LOGO_SIZE = "6.5mm";
+const CARD_CANVA_CONTENT_TOP = "29mm";
+const CARD_CANVA_CONTENT_BOTTOM = "0mm";
+const CARD_CANVA_FOOTER_BOTTOM = "10mm";
+const CARD_CANVA_DOMINO_CELL_WIDTH_MM = 43.5;
+const CARD_CANVA_DOMINO_CELL_HEIGHT_MM = 37;
+const CARD_CANVA_FLASHCARD_CELL_WIDTH_MM = 87;
+const CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM = 37;
+const CARD_CANVA_SYLLABLE_CELL_WIDTH_MM = 87;
+const CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM = 37;
+
+function CardCanvaPrintPageFrame({
+  title,
+  titleStyle,
+  logoSrc,
+  footer,
+  showFooter = false,
+  pageStyle,
+  children,
+}: {
+  title?: string;
+  titleStyle: React.CSSProperties;
+  logoSrc?: string;
+  footer?: string;
+  showFooter?: boolean;
+  pageStyle?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: CARD_CANVA_PAGE_WIDTH,
+        height: CARD_CANVA_PAGE_HEIGHT,
+        ...pageStyle,
+      }}
+    >
+      {title ? (
+        <div
+          style={{
+            position: "absolute",
+            left: CARD_CANVA_FRAME_X,
+            top: CARD_CANVA_TITLE_Y,
+            width: CARD_CANVA_FRAME_WIDTH,
+            height: CARD_CANVA_TITLE_HEIGHT,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            overflow: "hidden",
+          }}
+        >
+          <h3 className="text-cv-xl" style={{ ...titleStyle, margin: 0 }}>
+            {title}
+          </h3>
+        </div>
+      ) : null}
+      {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoSrc}
+          alt=""
+          style={{
+            position: "absolute",
+            top: CARD_CANVA_LOGO_TOP,
+            right: CARD_CANVA_LOGO_RIGHT,
+            width: CARD_CANVA_LOGO_SIZE,
+            height: CARD_CANVA_LOGO_SIZE,
+            objectFit: "contain",
+            zIndex: 2,
+          }}
+        />
+      ) : null}
+      {children}
+      {showFooter && footer ? (
+        <div
+          style={{
+            position: "absolute",
+            left: CARD_CANVA_FRAME_X,
+            bottom: CARD_CANVA_FOOTER_BOTTOM,
+            width: CARD_CANVA_FRAME_WIDTH,
+            fontSize: "7pt",
+            fontWeight: 500,
+            lineHeight: 1.1,
+            textAlign: "left",
+            color: "#475569",
+            margin: 0,
+          }}
+        >
+          {footer}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CardCanvaPrintContentArea({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: CARD_CANVA_FRAME_X,
+        top: CARD_CANVA_CONTENT_TOP,
+        bottom: CARD_CANVA_CONTENT_BOTTOM,
+        width: CARD_CANVA_FRAME_WIDTH,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
   const items = getDominoItems(block.items);
   const pairs = getDominoPairs(block);
@@ -4266,7 +4755,6 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
-  const printBlockOffsetY = "5mm";
   const titleStyle: React.CSSProperties = {
     width: "100%",
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
@@ -4274,7 +4762,6 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
     color: headingColor || primaryColor,
     textAlign: "left",
   };
-  const printContentOffsetY = "4mm";
 
   if (isPrint) {
     const cardsPerPage = 24;
@@ -4288,41 +4775,37 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
     return (
       <>
         {pages.map((pageItems, pageIndex) => (
-          <div
+          <CardCanvaPrintPageFrame
             key={`domino-print-page-${pageIndex}`}
-            style={{
+            title={title}
+            titleStyle={titleStyle}
+            logoSrc={logoSrc}
+            pageStyle={{
               position: "relative",
-              width: "297mm",
-              height: "calc(210mm - var(--print-tfoot-height, 0px))",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
-              gap: title ? "4mm" : 0,
-              transform: `translateY(${printBlockOffsetY})`,
+              justifyContent: "flex-start",
               breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
               pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
             }}
           >
-            {title ? (
-              <h3 className="text-cv-xl" style={{ ...titleStyle, width: "270mm" }}>{title}</h3>
-            ) : null}
-            <div
-              style={{
-                position: "relative",
-                width: "270mm",
-                height: "160mm",
-                transform: `translateY(${printContentOffsetY})`,
-                isolation: "isolate",
-              }}
-            >
+            <CardCanvaPrintContentArea>
+              <div
+                style={{
+                  position: "relative",
+                  width: CARD_CANVA_FRAME_WIDTH,
+                  height: `${CARD_CANVA_DOMINO_CELL_HEIGHT_MM * 4}mm`,
+                  isolation: "isolate",
+                }}
+              >
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(6, 45mm)",
-                  gridTemplateRows: "repeat(4, 40mm)",
-                  width: "270mm",
-                  height: "160mm",
+                  gridTemplateColumns: `repeat(6, ${CARD_CANVA_DOMINO_CELL_WIDTH_MM}mm)`,
+                  gridTemplateRows: `repeat(4, ${CARD_CANVA_DOMINO_CELL_HEIGHT_MM}mm)`,
+                  width: CARD_CANVA_FRAME_WIDTH,
+                  height: `${CARD_CANVA_DOMINO_CELL_HEIGHT_MM * 4}mm`,
                   position: "relative",
                   zIndex: 1,
                 }}
@@ -4340,8 +4823,8 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                       key={item?.id || `domino-print-slot-${pageIndex}-${slotIndex}`}
                       style={{
                         position: "relative",
-                        width: "45mm",
-                        height: "40mm",
+                        width: `${CARD_CANVA_DOMINO_CELL_WIDTH_MM}mm`,
+                        height: `${CARD_CANVA_DOMINO_CELL_HEIGHT_MM}mm`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -4443,9 +4926,9 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                       style={{
                         position: "absolute",
                         top: 0,
-                        left: `${lineIndex * 45}mm`,
+                        left: `${lineIndex * CARD_CANVA_DOMINO_CELL_WIDTH_MM}mm`,
                         width: 0,
-                        height: "160mm",
+                        height: `${CARD_CANVA_DOMINO_CELL_HEIGHT_MM * 4}mm`,
                         borderLeft: isDashed ? CUT_LINE_DASHED_BORDER : CUT_LINE_SOLID_BORDER,
                       }}
                     />
@@ -4457,8 +4940,8 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                     style={{
                       position: "absolute",
                       left: 0,
-                      top: `${lineIndex * 40}mm`,
-                      width: "270mm",
+                      top: `${lineIndex * CARD_CANVA_DOMINO_CELL_HEIGHT_MM}mm`,
+                      width: CARD_CANVA_FRAME_WIDTH,
                       height: 0,
                       borderTop: CUT_LINE_DASHED_BORDER,
                     }}
@@ -4476,7 +4959,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                         aria-hidden="true"
                         style={{
                           ...CUT_ICON_STYLE_BASE,
-                          left: `calc(${lineIndex * 45}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                          left: `calc(${lineIndex * CARD_CANVA_DOMINO_CELL_WIDTH_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
                           top: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
                           transform: "rotate(90deg)",
                         }}
@@ -4485,8 +4968,8 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                         aria-hidden="true"
                         style={{
                           ...CUT_ICON_STYLE_BASE,
-                          left: `calc(${lineIndex * 45}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
-                          top: `calc(160mm + ${CUT_ICON_GAP_MM}mm)`,
+                          left: `calc(${lineIndex * CARD_CANVA_DOMINO_CELL_WIDTH_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                          top: `calc(${CARD_CANVA_DOMINO_CELL_HEIGHT_MM * 4}mm + ${CUT_ICON_GAP_MM}mm)`,
                           transform: "rotate(-90deg)",
                         }}
                       />
@@ -4500,15 +4983,15 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                       style={{
                         ...CUT_ICON_STYLE_BASE,
                         left: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
-                        top: `calc(${lineIndex * 40}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                        top: `calc(${lineIndex * CARD_CANVA_DOMINO_CELL_HEIGHT_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
                       }}
                     />
                     <Scissors
                       aria-hidden="true"
                       style={{
                         ...CUT_ICON_STYLE_BASE,
-                        left: `calc(270mm + ${CUT_ICON_GAP_MM}mm)`,
-                        top: `calc(${lineIndex * 40}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                        left: `calc(${CARD_CANVA_FRAME_WIDTH} + ${CUT_ICON_GAP_MM}mm)`,
+                        top: `calc(${lineIndex * CARD_CANVA_DOMINO_CELL_HEIGHT_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
                         transform: "rotate(180deg)",
                       }}
                     />
@@ -4516,7 +4999,8 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                 ))}
               </div>
             </div>
-          </div>
+            </CardCanvaPrintContentArea>
+          </CardCanvaPrintPageFrame>
         ))}
       </>
     );
@@ -4611,9 +5095,7 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
     color: headingColor || primaryColor,
     textAlign: "left",
   };
-  const printBlockOffsetY = "5mm";
   const cutIconGap = "2.5mm";
-  const printContentOffsetY = "4mm";
   const cutIconStyleBase: React.CSSProperties = {
     position: "absolute",
     width: "3.5mm",
@@ -4626,53 +5108,39 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
   const renderPrintPage = (
     entries: Array<{ frontItem: FlashcardsBlock["items"][number] | null; backItem: FlashcardsBlock["items"][number] | null; sideIndex: number } | null>,
     pageKey: string,
-    showLogo: boolean,
-    showTitle: boolean,
+    showCutLines: boolean,
   ) => (
-    <div
+    <CardCanvaPrintPageFrame
       key={pageKey}
-      style={{
-        width: "297mm",
-        height: "calc(210mm - var(--print-tfoot-height, 0px))",
+      title={title}
+      titleStyle={titleStyle}
+      logoSrc={logoSrc}
+      pageStyle={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: title ? "4mm" : 0,
-        transform: `translateY(${printBlockOffsetY})`,
         breakAfter: "page",
         pageBreakAfter: "always",
       }}
     >
-      {title ? (
-        <h3
-          aria-hidden={showTitle ? undefined : "true"}
-          className="text-cv-xl"
+      <CardCanvaPrintContentArea>
+        <div
           style={{
-            ...titleStyle,
-            width: "270mm",
-            visibility: showTitle ? "visible" : "hidden",
+            position: "relative",
+            width: CARD_CANVA_FRAME_WIDTH,
+            height: `${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM * 4}mm`,
           }}
         >
-          {title}
-        </h3>
-      ) : null}
-      <div
-        style={{
-          position: "relative",
-          width: "270mm",
-          height: "160mm",
-          transform: `translateY(${printContentOffsetY})`,
-        }}
-      >
-        {Array.from({ length: 4 }, (_, lineIndex) => (
+        {showCutLines ? Array.from({ length: 4 }, (_, lineIndex) => (
           <React.Fragment key={`${pageKey}-v-${lineIndex}`}>
             <div
               style={{
                 position: "absolute",
                 top: 0,
-                left: `${lineIndex * 90}mm`,
-                height: "160mm",
+                left: `${lineIndex * CARD_CANVA_FLASHCARD_CELL_WIDTH_MM}mm`,
+                height: `${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM * 4}mm`,
                 borderLeft: "1px dashed #9ca3af",
               }}
             />
@@ -4680,7 +5148,7 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
               aria-hidden="true"
               style={{
                 ...cutIconStyleBase,
-                left: `calc(${lineIndex * 90}mm - 1.75mm)`,
+                left: `calc(${lineIndex * CARD_CANVA_FLASHCARD_CELL_WIDTH_MM}mm - 1.75mm)`,
                 top: `calc(-3.5mm - ${cutIconGap})`,
                 transform: "rotate(90deg)",
               }}
@@ -4689,21 +5157,21 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
               aria-hidden="true"
               style={{
                 ...cutIconStyleBase,
-                left: `calc(${lineIndex * 90}mm - 1.75mm)`,
-                top: `calc(160mm + ${cutIconGap})`,
+                left: `calc(${lineIndex * CARD_CANVA_FLASHCARD_CELL_WIDTH_MM}mm - 1.75mm)`,
+                top: `calc(${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM * 4}mm + ${cutIconGap})`,
                 transform: "rotate(-90deg)",
               }}
             />
           </React.Fragment>
-        ))}
-        {Array.from({ length: 5 }, (_, lineIndex) => (
+        )) : null}
+        {showCutLines ? Array.from({ length: 5 }, (_, lineIndex) => (
           <React.Fragment key={`${pageKey}-h-${lineIndex}`}>
             <div
               style={{
                 position: "absolute",
                 left: 0,
-                top: `${lineIndex * 40}mm`,
-                width: "270mm",
+                top: `${lineIndex * CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM}mm`,
+                width: CARD_CANVA_FRAME_WIDTH,
                 borderTop: "1px dashed #9ca3af",
               }}
             />
@@ -4712,27 +5180,27 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
               style={{
                 ...cutIconStyleBase,
                 left: `calc(-3.5mm - ${cutIconGap})`,
-                top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                top: `calc(${lineIndex * CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM}mm - 1.75mm)`,
               }}
             />
             <Scissors
               aria-hidden="true"
               style={{
                 ...cutIconStyleBase,
-                left: `calc(270mm + ${cutIconGap})`,
-                top: `calc(${lineIndex * 40}mm - 1.75mm)`,
+                left: `calc(${CARD_CANVA_FRAME_WIDTH} + ${cutIconGap})`,
+                top: `calc(${lineIndex * CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM}mm - 1.75mm)`,
                 transform: "rotate(180deg)",
               }}
             />
           </React.Fragment>
-        ))}
+        )) : null}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 90mm)",
-            gridTemplateRows: "repeat(4, 40mm)",
-            width: "270mm",
-            height: "160mm",
+            gridTemplateColumns: `repeat(3, ${CARD_CANVA_FLASHCARD_CELL_WIDTH_MM}mm)`,
+            gridTemplateRows: `repeat(4, ${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM}mm)`,
+            width: CARD_CANVA_FRAME_WIDTH,
+            height: `${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM * 4}mm`,
           }}
         >
           {entries.map((entry, index) => {
@@ -4742,14 +5210,13 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
               (entry?.sideIndex ?? 0) === 1 &&
               !entry?.backItem?.text?.trim() &&
               flashcardBlankTokenPattern.test(entry?.frontItem?.text ?? "");
-            const showFooter = Boolean(footer) && (entry?.sideIndex ?? 0) === 0;
             return (
               <div
                 key={item?.id || `${pageKey}-slot-${index}`}
                 style={{
                   position: "relative",
-                  width: "90mm",
-                  height: "40mm",
+                  width: `${CARD_CANVA_FLASHCARD_CELL_WIDTH_MM}mm`,
+                  height: `${CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM}mm`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -4761,21 +5228,6 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
                   backgroundRepeat: "no-repeat",
                 }}
               >
-                {showLogo && logoSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logoSrc}
-                    alt=""
-                    style={{
-                      position: "absolute",
-                      top: "2.5mm",
-                      right: "2.5mm",
-                      width: "6.5mm",
-                      height: "6.5mm",
-                      objectFit: "contain",
-                    }}
-                  />
-                ) : null}
                 {displayText?.trim() ? (
                   <div
                     style={{
@@ -4798,33 +5250,13 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
                         })}
                   </div>
                 ) : null}
-                {showFooter ? (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "2.5mm",
-                      bottom: "2mm",
-                      zIndex: 1,
-                      maxWidth: "30mm",
-                      borderRadius: "3px",
-                      background: "rgba(255,255,255,0.82)",
-                      padding: "0.5mm 1mm",
-                      fontSize: "7pt",
-                      fontWeight: 500,
-                      lineHeight: 1.1,
-                      textAlign: "left",
-                      color: "#475569",
-                    }}
-                  >
-                    {footer}
-                  </div>
-                ) : null}
               </div>
             );
           })}
         </div>
-      </div>
-    </div>
+        </div>
+      </CardCanvaPrintContentArea>
+    </CardCanvaPrintPageFrame>
   );
 
   if (mode === "print") {
@@ -4848,8 +5280,8 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
           const rawBackEntries = Array.from({ length: 12 }, (_, index) => ({ frontItem: pairChunk[index]?.pairItems[0] ?? null, backItem: pairChunk[index]?.pairItems[1] ?? null, sideIndex: 1 }));
           const backEntries = mirrorBackEntries(rawBackEntries);
           const pages = [
-            renderPrintPage(frontEntries, `flashcards-front-${chunkIndex}`, true, true),
-            renderPrintPage(backEntries, `flashcards-back-${chunkIndex}`, false, false),
+            renderPrintPage(frontEntries, `flashcards-front-${chunkIndex}`, true),
+            renderPrintPage(backEntries, `flashcards-back-${chunkIndex}`, false),
           ];
           const lastPageIndex = pages.length - 1;
           return pages.map((page, pageIndex) => React.cloneElement(page, {
@@ -4950,9 +5382,7 @@ function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a
     color: headingColor || primaryColor,
     textAlign: "left",
   };
-  const printBlockOffsetY = "5mm";
   const cutIconGap = "2.5mm";
-  const printContentOffsetY = "4mm";
   const cutIconStyleBase: React.CSSProperties = {
     position: "absolute",
     width: "3.5mm",
@@ -4961,47 +5391,46 @@ function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a
     strokeWidth: 1.75,
     overflow: "visible",
   };
-
   const renderPrintPage = (pageItems: Array<SyllableCardsBlock["items"][number] | null>, pageKey: string) => (
-    <div
+    <CardCanvaPrintPageFrame
       key={pageKey}
-      style={{
-        width: "297mm",
-        height: "calc(210mm - var(--print-tfoot-height, 0px))",
+      title={title}
+      titleStyle={titleStyle}
+      logoSrc={logoSrc}
+      pageStyle={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: title ? "4mm" : 0,
-        transform: `translateY(${printBlockOffsetY})`,
         breakAfter: "page",
         pageBreakAfter: "always",
       }}
     >
-      {title ? <h3 className="text-cv-xl" style={{ ...titleStyle, width: "270mm" }}>{title}</h3> : null}
-      <div style={{ position: "relative", width: "270mm", height: "160mm", transform: `translateY(${printContentOffsetY})` }}>
+      <CardCanvaPrintContentArea>
+        <div style={{ position: "relative", width: CARD_CANVA_FRAME_WIDTH, height: `${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM * 4}mm` }}>
         {Array.from({ length: 4 }, (_, lineIndex) => (
           <React.Fragment key={`${pageKey}-v-${lineIndex}`}>
-            <div style={{ position: "absolute", top: 0, left: `${lineIndex * 90}mm`, height: "160mm", borderLeft: "1px dashed #9ca3af" }} />
-            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * 90}mm - 1.75mm)`, top: `calc(-3.5mm - ${cutIconGap})`, transform: "rotate(90deg)" }} />
-            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * 90}mm - 1.75mm)`, top: `calc(160mm + ${cutIconGap})`, transform: "rotate(-90deg)" }} />
+            <div style={{ position: "absolute", top: 0, left: `${lineIndex * CARD_CANVA_SYLLABLE_CELL_WIDTH_MM}mm`, height: `${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM * 4}mm`, borderLeft: "1px dashed #9ca3af" }} />
+            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * CARD_CANVA_SYLLABLE_CELL_WIDTH_MM}mm - 1.75mm)`, top: `calc(-3.5mm - ${cutIconGap})`, transform: "rotate(90deg)" }} />
+            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * CARD_CANVA_SYLLABLE_CELL_WIDTH_MM}mm - 1.75mm)`, top: `calc(${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM * 4}mm + ${cutIconGap})`, transform: "rotate(-90deg)" }} />
           </React.Fragment>
         ))}
         {Array.from({ length: 5 }, (_, lineIndex) => (
           <React.Fragment key={`${pageKey}-h-${lineIndex}`}>
-            <div style={{ position: "absolute", left: 0, top: `${lineIndex * 40}mm`, width: "270mm", borderTop: "1px dashed #9ca3af" }} />
-            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(-3.5mm - ${cutIconGap})`, top: `calc(${lineIndex * 40}mm - 1.75mm)` }} />
-            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(270mm + ${cutIconGap})`, top: `calc(${lineIndex * 40}mm - 1.75mm)`, transform: "rotate(180deg)" }} />
+            <div style={{ position: "absolute", left: 0, top: `${lineIndex * CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM}mm`, width: CARD_CANVA_FRAME_WIDTH, borderTop: "1px dashed #9ca3af" }} />
+            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(-3.5mm - ${cutIconGap})`, top: `calc(${lineIndex * CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM}mm - 1.75mm)` }} />
+            <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${CARD_CANVA_FRAME_WIDTH} + ${cutIconGap})`, top: `calc(${lineIndex * CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM}mm - 1.75mm)`, transform: "rotate(180deg)" }} />
           </React.Fragment>
         ))}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 90mm)", gridTemplateRows: "repeat(4, 40mm)", width: "270mm", height: "160mm" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(3, ${CARD_CANVA_SYLLABLE_CELL_WIDTH_MM}mm)`, gridTemplateRows: `repeat(4, ${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM}mm)`, width: CARD_CANVA_FRAME_WIDTH, height: `${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM * 4}mm` }}>
           {pageItems.map((item, index) => (
             <div
               key={item?.id || `${pageKey}-slot-${index}`}
               style={{
                 position: "relative",
-                width: "90mm",
-                height: "40mm",
+                width: `${CARD_CANVA_SYLLABLE_CELL_WIDTH_MM}mm`,
+                height: `${CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM}mm`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -5013,28 +5442,17 @@ function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a
                 backgroundRepeat: "no-repeat",
               }}
             >
-              {logoSrc ? (
-                <img
-                  src={logoSrc}
-                  alt=""
-                  style={{ position: "absolute", top: "2.5mm", right: "2.5mm", width: "6.5mm", height: "6.5mm", objectFit: "contain" }}
-                />
-              ) : null}
               {item?.text?.trim() ? (
                 <div style={{ position: "relative", zIndex: 1, padding: "2mm 0", borderRadius: "4px", background: "rgba(255,255,255,0.82)", fontSize: printFontSize, fontWeight: 500, lineHeight: 1.2, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                   <SyllablesDisplay content={item.text} />
                 </div>
               ) : null}
-              {footer ? (
-                <div style={{ position: "absolute", left: "2.5mm", bottom: "2mm", zIndex: 1, maxWidth: "30mm", borderRadius: "3px", background: "rgba(255,255,255,0.82)", padding: "0.5mm 1mm", fontSize: "7pt", fontWeight: 500, lineHeight: 1.1, textAlign: "left", color: "#475569" }}>
-                  {footer}
-                </div>
-              ) : null}
             </div>
           ))}
         </div>
-      </div>
-    </div>
+        </div>
+      </CardCanvaPrintContentArea>
+    </CardCanvaPrintPageFrame>
   );
 
   if (mode === "print") {
@@ -5057,7 +5475,7 @@ function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a
           });
         })}
       </>
-    );
+      );
   }
 
   return (
@@ -5882,6 +6300,126 @@ function renderTextWithSup(text: string): React.ReactNode[] {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function CrosswordView({
+  block,
+  mode,
+  showSolutions = false,
+  accentColor,
+  instructionIndex,
+}: {
+  block: CrosswordBlock;
+  mode: ViewMode;
+  showSolutions?: boolean;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const t = useTranslations("viewer");
+  const isPrint = mode === "print";
+  const isOnline = mode === "online";
+  const numberMap = useMemo(
+    () => new Map(block.placements.map((placement) => [`${placement.labelRow},${placement.labelCol}`, placement.clueNumber])),
+    [block.placements],
+  );
+
+  if (block.generationError) {
+    return (
+      <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        {t("generationFailed")}
+      </div>
+    );
+  }
+
+  if (block.grid.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      {block.instruction ? (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <InstructionBadge instructionIndex={instructionIndex} />
+            <p>{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        )
+      ) : null}
+      <div
+        className={isPrint ? "mt-5 grid items-start gap-4" : "mt-5 flex flex-col gap-4 lg:flex-row lg:items-start"}
+        style={isPrint ? { gridTemplateColumns: "auto minmax(0, 1fr)" } : undefined}
+      >
+        <div
+          className={`inline-grid overflow-hidden rounded ${isPrint ? "border border-foreground bg-transparent p-0 shrink-0" : "border border-foreground bg-foreground p-px"}`}
+          style={{ gridTemplateColumns: `repeat(${block.grid[0]?.length ?? 0}, minmax(0, 2rem))` }}
+        >
+          {block.grid.flatMap((row, rowIndex) => row.map((cell, colIndex) => {
+            const clueNumber = numberMap.get(`${rowIndex},${colIndex}`);
+            const isGapCell = cell === "-" || cell === " ";
+            const showsGapMarker = cell === "-";
+            const isLetterCell = cell.length > 0 && !isGapCell;
+            const isTop = rowIndex === 0;
+            const isBottom = rowIndex === block.grid.length - 1;
+            const isLeft = colIndex === 0;
+            const isRight = colIndex === row.length - 1;
+            const cornerClass = [
+              isTop && isLeft ? "rounded-tl-[3px]" : "",
+              isTop && isRight ? "rounded-tr-[3px]" : "",
+              isBottom && isLeft ? "rounded-bl-[3px]" : "",
+              isBottom && isRight ? "rounded-br-[3px]" : "",
+            ].filter(Boolean).join(" ");
+            const cellStyle: React.CSSProperties | undefined = isPrint
+              ? {
+                  borderRight: "1px solid var(--color-foreground)",
+                  borderBottom: "1px solid var(--color-foreground)",
+                  ...(rowIndex === 0 ? { borderTop: "1px solid var(--color-foreground)" } : {}),
+                  ...(colIndex === 0 ? { borderLeft: "1px solid var(--color-foreground)" } : {}),
+                }
+              : undefined;
+            return (
+              <div
+                key={`${rowIndex}-${colIndex}`}
+                className={`h-8 w-8 ${isLetterCell ? "bg-white" : "bg-muted"} ${cornerClass}`}
+                style={cellStyle}
+              >
+                {clueNumber ? (
+                  <div className="flex h-full w-full items-center justify-center bg-white">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground bg-white text-center text-xs font-semibold leading-none text-foreground">
+                      {clueNumber}
+                    </span>
+                  </div>
+                ) : null}
+                {isLetterCell ? (
+                  <div className="flex h-full w-full items-center justify-center">
+                    {showSolutions ? <span className="text-sm font-semibold uppercase">{cell}</span> : null}
+                  </div>
+                ) : isGapCell ? (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <span className="text-sm font-semibold leading-none text-muted-foreground">{showsGapMarker ? "-" : ""}</span>
+                  </div>
+                ) : null}
+              </div>
+            );
+          }))}
+        </div>
+        <div className={`min-w-0 ${isPrint ? "w-full max-w-none" : "flex-1"} space-y-2`}>
+          {block.placements.map((placement) => (
+            <div key={`${placement.itemId}-${placement.direction}`} className="flex items-start gap-2 text-sm leading-5">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none text-foreground">
+                {placement.clueNumber}
+              </span>
+              <span className="text-foreground">{placement.hint}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -9049,6 +9587,16 @@ export function ViewerBlockRenderer({
          
         />
       );
+    case "crossword":
+      return (
+        <CrosswordView
+          block={block}
+          mode={mode}
+          showSolutions={showSolutions}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+        />
+      );
     case "word-search":
       return (
         <WordSearchView
@@ -9269,6 +9817,8 @@ export function ViewerBlockRenderer({
       return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "quartett":
       return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+    case "taboo":
+      return <TabooView block={block as TabooBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "checklist":
       return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":

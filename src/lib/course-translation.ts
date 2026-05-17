@@ -431,7 +431,8 @@ function forEachBlockTranslationField(
       break;
     }
 
-    case "quartett": {
+    case "quartett":
+    case "taboo": {
       add("title", () => block.title, (v) => {
         block.title = v;
       });
@@ -524,6 +525,7 @@ function forEachBlockTranslationField(
     case "writing-rows":
     case "number-line":
     case "linked-blocks":
+    case "crossword":
     case "word-search":
     case "job-application":
     case "columns":

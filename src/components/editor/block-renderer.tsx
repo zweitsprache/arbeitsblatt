@@ -34,6 +34,7 @@ import {
   OrderItemsBlock,
   InlineChoicesBlock,
   migrateInlineChoicesBlock,
+  CrosswordBlock,
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
@@ -63,6 +64,7 @@ import {
   NumberedItemsBlock,
   NumberedItem,
   QuartettBlock,
+  TabooBlock,
   ChecklistBlock,
   ChecklistItem,
   AccordionBlock,
@@ -78,6 +80,7 @@ import {
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
+import { TriangleAlert } from "lucide-react";
 import { useEditor } from "@/store/editor-store";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
@@ -89,6 +92,7 @@ import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
 import { RoughExampleCircle, RoughExampleStrike } from "@/components/ui/rough-example-circle";
 import { generateWordSearchGrid } from "@/lib/word-search";
+import { generateCrosswordLayout } from "@/lib/crossword";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
 import { Input } from "@/components/ui/input";
@@ -3622,6 +3626,121 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
   );
 }
 
+function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewMode }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const isPrint = mode === "print";
+
+  React.useEffect(() => {
+    if (block.items.length === 0) return;
+    if (block.grid.length > 0 || block.placements.length > 0 || block.generationError) return;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: generateCrosswordLayout(block.items) },
+    });
+  }, [block.generationError, block.grid.length, block.id, block.items, block.placements.length, dispatch]);
+
+  const regenerate = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: generateCrosswordLayout(block.items) },
+    });
+  };
+
+  const numberMap = new Map(block.placements.map((placement) => [`${placement.labelRow},${placement.labelCol}`, placement.clueNumber]));
+
+  return (
+    <div className="space-y-3">
+      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
+      {block.generationError ? (
+        <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {t("generationFailed")}
+        </div>
+      ) : null}
+      {block.grid.length > 0 ? (
+        <div
+          className={isPrint ? "mt-5 grid items-start gap-4" : "mt-5 flex flex-col gap-3 lg:flex-row lg:items-start"}
+          style={isPrint ? { gridTemplateColumns: "auto minmax(0, 1fr)" } : undefined}
+        >
+          <div
+            className={`inline-grid overflow-hidden rounded ${isPrint ? "border border-foreground bg-transparent p-0 shrink-0" : "border border-foreground bg-foreground p-px"}`}
+            style={{ gridTemplateColumns: `repeat(${block.grid[0]?.length ?? 0}, minmax(0, 2.1rem))` }}
+          >
+            {block.grid.flatMap((row, rowIndex) => row.map((cell, colIndex) => {
+              const clueNumber = numberMap.get(`${rowIndex},${colIndex}`);
+              const isGapCell = cell === "-" || cell === " ";
+              const showsGapMarker = cell === "-";
+              const isLetterCell = cell.length > 0 && !isGapCell;
+              const isTop = rowIndex === 0;
+              const isBottom = rowIndex === block.grid.length - 1;
+              const isLeft = colIndex === 0;
+              const isRight = colIndex === row.length - 1;
+              const cornerClass = [
+                isTop && isLeft ? "rounded-tl-[3px]" : "",
+                isTop && isRight ? "rounded-tr-[3px]" : "",
+                isBottom && isLeft ? "rounded-bl-[3px]" : "",
+                isBottom && isRight ? "rounded-br-[3px]" : "",
+              ].filter(Boolean).join(" ");
+              const cellStyle: React.CSSProperties | undefined = isPrint
+                ? {
+                    borderRight: "1px solid var(--color-foreground)",
+                    borderBottom: "1px solid var(--color-foreground)",
+                    ...(rowIndex === 0 ? { borderTop: "1px solid var(--color-foreground)" } : {}),
+                    ...(colIndex === 0 ? { borderLeft: "1px solid var(--color-foreground)" } : {}),
+                  }
+                : undefined;
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className={`h-[2.1rem] w-[2.1rem] ${isLetterCell ? "bg-white" : "bg-muted"} ${cornerClass}`}
+                  style={cellStyle}
+                >
+                  {clueNumber ? (
+                    <div className="flex h-full w-full items-center justify-center bg-white">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground bg-white text-center text-xs font-semibold leading-none text-foreground">
+                        {clueNumber}
+                      </span>
+                    </div>
+                  ) : null}
+                  {isLetterCell ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <span className="text-sm font-semibold uppercase">{cell}</span>
+                    </div>
+                  ) : isGapCell ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <span className="text-sm font-semibold leading-none text-muted-foreground">{showsGapMarker ? "-" : ""}</span>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }))}
+          </div>
+          <div className={`min-w-0 ${isPrint ? "w-full max-w-none" : "flex-1"} space-y-2`}>
+            {block.placements.map((placement) => (
+              <div key={`${placement.itemId}-${placement.direction}`} className="flex items-start gap-2 text-sm leading-5">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none text-foreground">
+                  {placement.clueNumber}
+                </span>
+                <span className="text-muted-foreground">{placement.hint}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(event) => {
+          event.stopPropagation();
+          regenerate();
+        }}
+      >
+        <ArrowUpDown className="h-3 w-3" /> {t("regenerateGrid")}
+      </button>
+    </div>
+  );
+}
+
 // ─── Sorting Categories ─────────────────────────────────────
 function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
@@ -6436,6 +6555,55 @@ function QuartettRenderer({ block }: { block: QuartettBlock }) {
   );
 }
 
+function TabooRenderer({ block }: { block: TabooBlock }) {
+  const cards = block.items.map((item) => ({
+    id: item.id,
+    word: item.title?.trim() || "",
+    stopWords: item.subitems
+      .map((entry) => entry.content)
+      .filter((entry) => entry.trim().length > 0),
+  }));
+  const blockTitle = block.title?.trim();
+  const reservedTitleHeight = "1.75rem";
+
+  return (
+    <div className="space-y-4">
+      {blockTitle ? (
+        <h3 className="text-lg font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {blockTitle}
+        </h3>
+      ) : null}
+      <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        {cards.map((card) => (
+          <div
+            key={card.id}
+            className="relative overflow-hidden rounded-md border border-border bg-background p-4"
+            style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
+          >
+            <div style={{ minHeight: reservedTitleHeight }} />
+            <div className="space-y-3 pt-3">
+              <div className="text-lg font-bold leading-snug whitespace-pre-wrap break-words text-foreground">
+                {card.word || "..."}
+              </div>
+              <div className="border-t pt-3 space-y-2 text-base leading-snug text-muted-foreground" style={{ borderTopColor: "currentColor" }}>
+                {card.stopWords.map((entry, index) => (
+                  <div
+                    key={`${card.id}-stop-${index}`}
+                    className={`flex items-start gap-2 whitespace-pre-wrap break-words ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}
+                  >
+                    <TriangleAlert className="mt-1 h-4 w-4 shrink-0" style={{ color: "#990000" }} />
+                    <span>{entry}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Checklist block ─────────────────────────────────────────
 function ChecklistRenderer({ block }: { block: ChecklistBlock }) {
   const { dispatch } = useEditor();
@@ -7598,6 +7766,8 @@ export function BlockRenderer({
       return <OrderItemsRenderer block={block} interactive={interactive} />;
     case "inline-choices":
       return <InlineChoicesRenderer block={block} interactive={interactive} />;
+    case "crossword":
+      return <CrosswordRenderer block={block} mode={mode} />;
     case "word-search":
       return <WordSearchRenderer block={block} />;
     case "sorting-categories":
@@ -7652,6 +7822,8 @@ export function BlockRenderer({
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
     case "quartett":
       return <QuartettRenderer block={block as QuartettBlock} />;
+    case "taboo":
+      return <TabooRenderer block={block as TabooBlock} />;
     case "checklist":
       return <ChecklistRenderer block={block as ChecklistBlock} />;
     case "accordion":

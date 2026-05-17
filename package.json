@@ -10,7 +10,7 @@
     "clean:cache": "rm -rf .next tsconfig.tsbuildinfo",
     "dev:clean": "npm run clean:cache && next dev --webpack",
     "dev:polling": "WATCHPACK_POLLING=true next dev --webpack",
-    "build": "prisma generate && node scripts/validate-translations.mjs && next build",
+    "build": "prisma generate && node scripts/validate-translations.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "node scripts/fix-neon-auth-avatar.mjs",

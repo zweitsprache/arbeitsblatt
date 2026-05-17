@@ -48,6 +48,7 @@ import {
   Volume2,
   Clock,
   Globe,
+  TriangleAlert,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -92,12 +93,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Volume2,
   Clock,
   Globe,
+  TriangleAlert,
 };
 
-function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
+function DraggableBlockItem({ definition, disabled = false }: { definition: BlockDefinition; disabled?: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `library-${definition.type}`,
     data: { type: "library-block", blockType: definition.type },
+    disabled,
   });
 
   const Icon = iconMap[definition.icon];
@@ -108,8 +111,10 @@ function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      aria-disabled={disabled}
       className={`flex items-center gap-3 p-3 rounded-lg bg-card cursor-grab
         hover:bg-accent transition-colors
+        ${disabled ? "cursor-not-allowed opacity-50 hover:bg-card" : ""}
         ${isDragging ? "opacity-50 shadow-lg" : ""}`}
     >
       {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
@@ -123,7 +128,13 @@ function DraggableBlockItem({ definition }: { definition: BlockDefinition }) {
   );
 }
 
-export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => void }) {
+export function BlockSidebar({
+  onAddBlock,
+  canAddBlock = () => true,
+}: {
+  onAddBlock: (type: BlockType) => void;
+  canAddBlock?: (type: BlockType) => boolean;
+}) {
   const t = useTranslations("blockSidebar");
   const tb = useTranslations("blocks");
   const [search, setSearch] = useState("");
@@ -148,6 +159,19 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
     };
   }, [search, tb]);
 
+  const renderBlock = (def: BlockDefinition) => {
+    const disabled = !canAddBlock(def.type);
+
+    return (
+      <div
+        key={def.type}
+        onDoubleClick={disabled ? undefined : () => onAddBlock(def.type)}
+      >
+        <DraggableBlockItem definition={def} disabled={disabled} />
+      </div>
+    );
+  };
+
   return (
     <div className="w-80 shrink-0 flex flex-col h-full min-h-0 pt-8 pb-8">
       <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
@@ -171,14 +195,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("contentCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.content.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.content.map(renderBlock)}
               </div>
             </div>
           )}
@@ -190,14 +207,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("imagesCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.images.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.images.map(renderBlock)}
               </div>
             </div>
           )}
@@ -209,14 +219,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("vocabularyCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.vocabulary.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.vocabulary.map(renderBlock)}
               </div>
             </div>
           )}
@@ -228,14 +231,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("mockupCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.mockup.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.mockup.map(renderBlock)}
               </div>
             </div>
           )}
@@ -247,14 +243,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("numberingCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.numbering.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.numbering.map(renderBlock)}
               </div>
             </div>
           )}
@@ -266,14 +255,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("memoryAidsCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.memoryAids.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.memoryAids.map(renderBlock)}
               </div>
             </div>
           )}
@@ -285,14 +267,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("multimediaCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.multimedia.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.multimedia.map(renderBlock)}
               </div>
             </div>
           )}
@@ -304,14 +279,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("layoutCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.layout.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.layout.map(renderBlock)}
               </div>
             </div>
           )}
@@ -323,14 +291,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("interactiveCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.interactive.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.interactive.map(renderBlock)}
               </div>
             </div>
           )}
@@ -342,14 +303,7 @@ export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => 
                 {t("aiToolsCategory")}
               </div>
               <div className="space-y-1.5">
-                {categories.aiTools.map((def) => (
-                  <div
-                    key={def.type}
-                    onDoubleClick={() => onAddBlock(def.type)}
-                  >
-                    <DraggableBlockItem definition={def} />
-                  </div>
-                ))}
+                {categories.aiTools.map(renderBlock)}
               </div>
             </div>
           )}

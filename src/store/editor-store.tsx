@@ -17,6 +17,7 @@ import {
   ChOverrides,
   BrandProfile,
   getStaticBrandProfile,
+  canAddBlockTypeToWorksheet,
 } from "@/types/worksheet";
 
 export type LocaleMode = "DE" | "CH";
@@ -273,6 +274,9 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "ADD_BLOCK": {
       const { block, index } = action.payload;
+      if (!canAddBlockTypeToWorksheet(state.blocks, block.type)) {
+        return state;
+      }
       const newBlocks = [...state.blocks];
       if (index !== undefined) {
         newBlocks.splice(index, 0, block);
@@ -556,6 +560,7 @@ interface EditorContextValue {
   state: EditorState;
   dispatch: React.Dispatch<EditorAction>;
   addBlock: (type: BlockType, index?: number) => void;
+  canAddBlockType: (type: BlockType) => boolean;
   duplicateBlock: (id: string) => void;
   save: () => Promise<void>;
 }
@@ -600,8 +605,14 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
       });
   }, [state.settings.brand, state.brandProfile.slug]);
 
+  const canAddBlockType = useCallback(
+    (type: BlockType) => canAddBlockTypeToWorksheet(state.blocks, type),
+    [state.blocks]
+  );
+
   const addBlock = useCallback(
     (type: BlockType, index?: number) => {
+      if (!canAddBlockTypeToWorksheet(state.blocks, type)) return;
       const def = BLOCK_LIBRARY.find((b) => b.type === type);
       if (!def) return;
       const block: WorksheetBlock = {
@@ -613,7 +624,7 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
       }
       dispatch({ type: "ADD_BLOCK", payload: { block, index } });
     },
-    [state.brandProfile.primaryColor]
+    [state.blocks, state.brandProfile.primaryColor]
   );
 
   const duplicateBlock = useCallback(
@@ -685,7 +696,7 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
   }, [apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
 
   return (
-    <EditorContext.Provider value={{ state, dispatch, addBlock, duplicateBlock, save }}>
+    <EditorContext.Provider value={{ state, dispatch, addBlock, canAddBlockType, duplicateBlock, save }}>
       {children}
     </EditorContext.Provider>
   );

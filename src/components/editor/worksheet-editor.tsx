@@ -33,7 +33,7 @@ function EditorInner({
   initialData?: WorksheetDocument | null;
   editorVersion: "v1" | "v2";
 }) {
-  const { state, dispatch, addBlock, save } = useEditor();
+  const { state, dispatch, addBlock, canAddBlockType, save } = useEditor();
   const dndId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -116,6 +116,9 @@ function EditorInner({
     // ── 1. Dragging from sidebar library ──────────────────────
     if (activeData?.type === "library-block") {
       const blockType = activeData.blockType as BlockType;
+      if (!canAddBlockType(blockType)) {
+        return;
+      }
 
       // Dropped into a container (column or accordion panel)
       if (overData?.type === "column-drop") {
@@ -250,7 +253,7 @@ function EditorInner({
       <div className="h-full flex flex-col">
         <EditorToolbar editorVersion={editorVersion} />
         <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
-          <BlockSidebar onAddBlock={(type) => addBlock(type)} />
+          <BlockSidebar onAddBlock={(type) => addBlock(type)} canAddBlock={canAddBlockType} />
           <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
           <PropertiesPanel />
         </div>

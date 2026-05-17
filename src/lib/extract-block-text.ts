@@ -262,6 +262,7 @@ export function extractBlocksText(
         break;
 
       case "quartett":
+      case "taboo":
         if (block.title) parts.push(block.title);
         for (const item of block.items ?? []) {
           if (item.title) parts.push(item.title);
@@ -276,6 +277,14 @@ export function extractBlocksText(
         for (const item of block.items ?? []) {
           if (item.title) parts.push(item.title);
           if (item.category || item.description) parts.push(item.category || item.description);
+        }
+        break;
+
+      case "crossword":
+        if (block.instruction) parts.push(block.instruction);
+        for (const item of block.items ?? []) {
+          if (item.answer) parts.push(item.answer);
+          if (item.hint) parts.push(item.hint);
         }
         break;
 

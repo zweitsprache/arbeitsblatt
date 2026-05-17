@@ -624,6 +624,63 @@ Rules:
 - The first choice inside `{{...}}` is the correct answer.
 - Legacy `content` as a single string exists in the type for backward compatibility, but AI should generate `items`.
 
+### `crossword`
+
+```json
+{
+  "id": "crossword-1",
+  "type": "crossword",
+  "visibility": "both",
+  "instruction": "Solve the crossword.",
+  "items": [
+    {
+      "id": "cw-item-1",
+      "answer": "apple",
+      "hint": "A red or green fruit"
+    },
+    {
+      "id": "cw-item-2",
+      "answer": "pear",
+      "hint": "A green fruit with a narrow top"
+    }
+  ],
+  "grid": [
+    ["A", "P", "P", "L", "E"],
+    ["", "", "", "", "A"],
+    ["P", "E", "A", "R", "R"]
+  ],
+  "placements": [
+    {
+      "itemId": "cw-item-1",
+      "answer": "apple",
+      "hint": "A red or green fruit",
+      "row": 0,
+      "col": 0,
+      "direction": "across",
+      "clueNumber": 1
+    },
+    {
+      "itemId": "cw-item-2",
+      "answer": "pear",
+      "hint": "A green fruit with a narrow top",
+      "row": 2,
+      "col": 0,
+      "direction": "across",
+      "clueNumber": 2
+    }
+  ],
+  "generationError": null
+}
+```
+
+Notes:
+
+- Authoring format in the editor is one line per item: `answer|hint`.
+- Spaces and hyphens in `answer` are allowed by the editor and normalized away for placement.
+- `grid` should contain only placed letters; use `""` for blocked cells inside the trimmed rectangular bounds.
+- `placements` must already include `row`, `col`, `direction`, and `clueNumber` for each clue.
+- If layout generation fails, persist `grid: []`, `placements: []`, and set `generationError`.
+
 ### `word-search`
 
 ```json

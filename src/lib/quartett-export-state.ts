@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import type { BrandProfile, QuartettBlock, WorksheetSettings } from "@/types/worksheet";
+import type { BrandProfile, QuartettBlock, TabooBlock, WorksheetSettings } from "@/types/worksheet";
 
 const QUARTETT_EXPORT_STATE_DIR = path.join(os.tmpdir(), "arbeitsblatt-quartett-export-state");
 
@@ -13,7 +13,7 @@ export type QuartettExportState = {
   title: string;
   worksheetId?: string | null;
   locale: string;
-  block: QuartettBlock;
+  block: QuartettBlock | TabooBlock;
   settings: WorksheetSettings;
   brandProfile?: BrandProfile | null;
   createdAt: number;

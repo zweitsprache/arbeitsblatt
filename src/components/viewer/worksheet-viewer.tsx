@@ -285,14 +285,21 @@ export function WorksheetViewer({
   const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
   const hasFooterRight = !!processedFooterRight;
   const hasDominoBlock = visibleBlocks.some((block) => block.type === "domino");
+  const hasFlashcardsBlock = visibleBlocks.some((block) => block.type === "flashcards");
   const hasQuartettBlock = visibleBlocks.some((block) => block.type === "quartett");
+  const hasTabooBlock = visibleBlocks.some((block) => block.type === "taboo");
+  const hasSyllableCardsBlock = visibleBlocks.some((block) => block.type === "syllable-cards");
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
-  const useCanvaSideRail = mode === "print" && isCanvaLandscape && (showPrintHeader || showPrintFooter);
-  const showTablePrintHeader = showPrintHeader && !useCanvaSideRail;
-  const showTablePrintFooter = showPrintFooter && !useCanvaSideRail;
-  const printBottomReservePx = showPrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
+  const suppressCanvaSideRail = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
+  const useDedicatedCardPrintHeader = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
+  const useDedicatedCardPrintFooter = false;
+  const useDedicatedQuartettPrintFooter = mode === "print" && isCanvaLandscape && (hasQuartettBlock || hasTabooBlock) && showPrintFooter;
+  const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
+  const showTablePrintHeader = showPrintHeader && !useCanvaSideRail && !useDedicatedCardPrintHeader;
+  const showTablePrintFooter = showPrintFooter && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
+  const printBottomReservePx = showTablePrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
@@ -348,7 +355,7 @@ export function WorksheetViewer({
 
   return (
     <div
-      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""}` : "bg-muted/30"}`}
+      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
       style={viewerCssVars}
     >
       {fontStylesheetUrls.map((href) => (
@@ -395,6 +402,23 @@ export function WorksheetViewer({
           )}
           {useCanvaSideRail && showPrintFooter && (
             <div className="print-canva-side-footer" aria-hidden="true">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+              </div>
+              <div>
+                {processedFooterCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+              </div>
+            </div>
+          )}
+          {useDedicatedQuartettPrintFooter && (
+            <div className="print-canva-side-footer print-quartett-rotated-footer" aria-hidden="true">
               <div>
                 {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
               </div>
