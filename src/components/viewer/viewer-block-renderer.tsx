@@ -99,6 +99,24 @@ type QuartettCardVariant = {
   others: string[];
 };
 
+const CUT_LINE_COLOR = "#9ca3af";
+const CUT_LINE_SOLID_COLOR = "#111827";
+const CUT_LINE_DASHED_BORDER = `1px dashed ${CUT_LINE_COLOR}`;
+const CUT_LINE_SOLID_BORDER = `1px solid ${CUT_LINE_SOLID_COLOR}`;
+const CUT_ICON_SIZE_MM = 3.5;
+const CUT_ICON_HALF_SIZE_MM = CUT_ICON_SIZE_MM / 2;
+const CUT_ICON_GAP_MM = 2.5;
+const CUT_ICON_STYLE_BASE: React.CSSProperties = {
+  position: "absolute",
+  width: `${CUT_ICON_SIZE_MM}mm`,
+  height: `${CUT_ICON_SIZE_MM}mm`,
+  color: CUT_LINE_COLOR,
+  strokeWidth: 1.75,
+  overflow: "visible",
+  zIndex: 4,
+  pointerEvents: "none",
+};
+
 function buildQuartettCardVariants(items: QuartettBlock["items"]): QuartettCardVariant[] {
   return items.flatMap((item) =>
     item.subitems.map((subitem, highlightIndex) => ({
@@ -303,16 +321,6 @@ function QuartettView({
       const pageCards = cards.slice(start, start + cardsPerPage);
       return Array.from({ length: cardsPerPage }, (_, slotIndex) => pageCards[slotIndex] ?? null);
     });
-    const cutIconGap = "2.5mm";
-    const cutIconStyleBase: React.CSSProperties = {
-      position: "absolute",
-      width: "3.5mm",
-      height: "3.5mm",
-      color: "#9ca3af",
-      strokeWidth: 1.75,
-      overflow: "visible",
-    };
-
     return (
       <>
         {pages.map((pageCards, pageIndex) => (
@@ -368,25 +376,28 @@ function QuartettView({
                       position: "absolute",
                       top: 0,
                       left: `${sideRailWidthMm + lineIndex * cardWidthMm}mm`,
+                      width: 0,
                       height: `${sheetHeightMm}mm`,
-                      borderLeft: "1px dashed #9ca3af",
+                      borderLeft: CUT_LINE_DASHED_BORDER,
+                      zIndex: 3,
+                      pointerEvents: "none",
                     }}
                   />
                   <Scissors
                     aria-hidden="true"
                     style={{
-                      ...cutIconStyleBase,
-                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - 1.75mm)`,
-                      top: `calc(-3.5mm - ${cutIconGap})`,
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      top: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
                       transform: "rotate(90deg)",
                     }}
                   />
                   <Scissors
                     aria-hidden="true"
                     style={{
-                      ...cutIconStyleBase,
-                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - 1.75mm)`,
-                      top: `calc(${sheetHeightMm}mm + ${cutIconGap})`,
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + lineIndex * cardWidthMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      top: `calc(${sheetHeightMm}mm + ${CUT_ICON_GAP_MM}mm)`,
                       transform: "rotate(-90deg)",
                     }}
                   />
@@ -400,23 +411,26 @@ function QuartettView({
                       left: `${sideRailWidthMm}mm`,
                       top: `${lineIndex * cardHeightMm}mm`,
                       width: `${sheetWidthMm}mm`,
-                      borderTop: "1px dashed #9ca3af",
+                      height: 0,
+                      borderTop: CUT_LINE_DASHED_BORDER,
+                      zIndex: 3,
+                      pointerEvents: "none",
                     }}
                   />
                   <Scissors
                     aria-hidden="true"
                     style={{
-                      ...cutIconStyleBase,
-                      left: `calc(${sideRailWidthMm}mm - 3.5mm - ${cutIconGap})`,
-                      top: `calc(${lineIndex * cardHeightMm}mm - 1.75mm)`,
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm}mm - ${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                      top: `calc(${lineIndex * cardHeightMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
                     }}
                   />
                   <Scissors
                     aria-hidden="true"
                     style={{
-                      ...cutIconStyleBase,
-                      left: `calc(${sideRailWidthMm + sheetWidthMm}mm + ${cutIconGap})`,
-                      top: `calc(${lineIndex * cardHeightMm}mm - 1.75mm)`,
+                      ...CUT_ICON_STYLE_BASE,
+                      left: `calc(${sideRailWidthMm + sheetWidthMm}mm + ${CUT_ICON_GAP_MM}mm)`,
+                      top: `calc(${lineIndex * cardHeightMm}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
                       transform: "rotate(180deg)",
                     }}
                   />
@@ -424,6 +438,8 @@ function QuartettView({
               ))}
               <div
                 style={{
+                  position: "relative",
+                  zIndex: 1,
                   display: "grid",
                   gridTemplateColumns: `repeat(${columns}, ${cardWidthMm}mm)`,
                   gridTemplateRows: `repeat(${rows}, ${cardHeightMm}mm)`,
@@ -4258,18 +4274,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
     color: headingColor || primaryColor,
     textAlign: "left",
   };
-  const cutIconGap = "2.5mm";
   const printContentOffsetY = "4mm";
-  const cutIconStyleBase: React.CSSProperties = {
-    position: "absolute",
-    width: "3.5mm",
-    height: "3.5mm",
-    color: "#9ca3af",
-    strokeWidth: 1.75,
-    overflow: "visible",
-    zIndex: 4,
-    pointerEvents: "none",
-  };
 
   if (isPrint) {
     const cardsPerPage = 24;
@@ -4308,6 +4313,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                 width: "270mm",
                 height: "160mm",
                 transform: `translateY(${printContentOffsetY})`,
+                isolation: "isolate",
               }}
             >
               <div
@@ -4421,82 +4427,94 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
                   );
                 })}
               </div>
-              {Array.from({ length: 7 }, (_, lineIndex) => {
-                const isDashed = lineIndex % 2 === 0;
-                return (
-                  <React.Fragment key={`domino-v-line-${pageIndex}-${lineIndex}`}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 20,
+                  pointerEvents: "none",
+                }}
+              >
+                {Array.from({ length: 7 }, (_, lineIndex) => {
+                  const isDashed = lineIndex % 2 === 0;
+                  return (
                     <div
+                      key={`domino-v-line-stroke-${pageIndex}-${lineIndex}`}
                       style={{
                         position: "absolute",
                         top: 0,
-                        left: `calc(${lineIndex * 45}mm - 0.5px)`,
-                        width: "1px",
+                        left: `${lineIndex * 45}mm`,
+                        width: 0,
                         height: "160mm",
-                        zIndex: 3,
-                        pointerEvents: "none",
-                        background: isDashed
-                          ? "repeating-linear-gradient(to bottom, #9ca3af 0, #9ca3af 3mm, transparent 3mm, transparent 5mm)"
-                          : "#111827",
+                        borderLeft: isDashed ? CUT_LINE_DASHED_BORDER : CUT_LINE_SOLID_BORDER,
                       }}
                     />
-                    {isDashed ? (
-                      <>
-                        <Scissors
-                          aria-hidden="true"
-                          style={{
-                            ...cutIconStyleBase,
-                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
-                            top: `calc(-3.5mm - ${cutIconGap})`,
-                            transform: "rotate(90deg)",
-                          }}
-                        />
-                        <Scissors
-                          aria-hidden="true"
-                          style={{
-                            ...cutIconStyleBase,
-                            left: `calc(${lineIndex * 45}mm - 1.75mm)`,
-                            top: `calc(160mm + ${cutIconGap})`,
-                            transform: "rotate(-90deg)",
-                          }}
-                        />
-                      </>
-                    ) : null}
-                  </React.Fragment>
-                );
-              })}
-              {Array.from({ length: 5 }, (_, lineIndex) => (
-                <React.Fragment key={`domino-h-line-${pageIndex}-${lineIndex}`}>
+                  );
+                })}
+                {Array.from({ length: 5 }, (_, lineIndex) => (
                   <div
+                    key={`domino-h-line-stroke-${pageIndex}-${lineIndex}`}
                     style={{
                       position: "absolute",
                       left: 0,
-                      top: `calc(${lineIndex * 40}mm - 0.5px)`,
+                      top: `${lineIndex * 40}mm`,
                       width: "270mm",
-                      height: "1px",
-                      zIndex: 3,
-                      pointerEvents: "none",
-                      background: "repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 3mm, transparent 3mm, transparent 5mm)",
+                      height: 0,
+                      borderTop: CUT_LINE_DASHED_BORDER,
                     }}
                   />
-                  <Scissors
-                    aria-hidden="true"
-                    style={{
-                      ...cutIconStyleBase,
-                      left: `calc(-3.5mm - ${cutIconGap})`,
-                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
-                    }}
-                  />
-                  <Scissors
-                    aria-hidden="true"
-                    style={{
-                      ...cutIconStyleBase,
-                      left: `calc(270mm + ${cutIconGap})`,
-                      top: `calc(${lineIndex * 40}mm - 1.75mm)`,
-                      transform: "rotate(180deg)",
-                    }}
-                  />
-                </React.Fragment>
-              ))}
+                ))}
+                {Array.from({ length: 7 }, (_, lineIndex) => {
+                  const isDashed = lineIndex % 2 === 0;
+                  if (!isDashed) {
+                    return null;
+                  }
+
+                  return (
+                    <React.Fragment key={`domino-v-line-scissors-${pageIndex}-${lineIndex}`}>
+                      <Scissors
+                        aria-hidden="true"
+                        style={{
+                          ...CUT_ICON_STYLE_BASE,
+                          left: `calc(${lineIndex * 45}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                          top: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                          transform: "rotate(90deg)",
+                        }}
+                      />
+                      <Scissors
+                        aria-hidden="true"
+                        style={{
+                          ...CUT_ICON_STYLE_BASE,
+                          left: `calc(${lineIndex * 45}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                          top: `calc(160mm + ${CUT_ICON_GAP_MM}mm)`,
+                          transform: "rotate(-90deg)",
+                        }}
+                      />
+                    </React.Fragment>
+                  );
+                })}
+                {Array.from({ length: 5 }, (_, lineIndex) => (
+                  <React.Fragment key={`domino-h-line-scissors-${pageIndex}-${lineIndex}`}>
+                    <Scissors
+                      aria-hidden="true"
+                      style={{
+                        ...CUT_ICON_STYLE_BASE,
+                        left: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                        top: `calc(${lineIndex * 40}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                      }}
+                    />
+                    <Scissors
+                      aria-hidden="true"
+                      style={{
+                        ...CUT_ICON_STYLE_BASE,
+                        left: `calc(270mm + ${CUT_ICON_GAP_MM}mm)`,
+                        top: `calc(${lineIndex * 40}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                        transform: "rotate(180deg)",
+                      }}
+                    />
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
           </div>
         ))}

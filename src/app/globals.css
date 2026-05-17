@@ -668,12 +668,28 @@
   bottom: 10mm;
   width: 190mm;
   color: hsl(var(--foreground));
-  justify-content: flex-start;
-  gap: 8mm;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0;
 }
 
 .print-worksheet-root.print-has-domino.print-canva .print-canva-side-footer {
   width: 190mm;
+}
+
+.print-worksheet-root.print-has-quartett.print-canva .print-canva-side-header {
+  width: calc(var(--page-height, 210mm) - 20mm);
+  bottom: 10mm;
+}
+
+.print-worksheet-root.print-has-quartett.print-canva .print-canva-side-footer {
+  width: 190mm;
+  bottom: 10mm;
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  align-items: stretch;
+  gap: 0;
 }
 
 .print-worksheet-root.print-canva .print-canva-side-header > div,
@@ -688,6 +704,10 @@
 
 .print-worksheet-root.print-canva .print-canva-side-footer > div {
   text-align: left;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-footer > div:nth-child(2) {
+  text-align: center;
 }
 
 .print-worksheet-root.print-canva .print-canva-side-logo {
