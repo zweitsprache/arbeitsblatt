@@ -24,12 +24,12 @@ function pushTextToken(tokens: Token[], value: string) {
 }
 
 function splitSyllablePart(part: string): { leading: string; core: string; trailing: string } {
-  const match = part.match(/^(?<leading>[^\p{L}\p{M}]*)((?<core>[\p{L}\p{M}]+(?:[\u2019'\-][\p{L}\p{M}]+)*)?)(?<trailing>[^\p{L}\p{M}]*)$/u);
+  const match = part.match(/^([^\p{L}\p{M}]*)((?:[\p{L}\p{M}]+(?:[\u2019'\-][\p{L}\p{M}]+)*)?)([^\p{L}\p{M}]*)$/u);
 
   return {
-    leading: match?.groups?.leading ?? "",
-    core: match?.groups?.core ?? "",
-    trailing: match?.groups?.trailing ?? "",
+    leading: match?.[1] ?? "",
+    core: match?.[2] ?? "",
+    trailing: match?.[3] ?? "",
   };
 }
 
