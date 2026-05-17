@@ -90,6 +90,8 @@
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.4",
     "framer-motion": "^12.38.0",
+    "hyphenation.de": "^0.2.1",
+    "hypher": "^0.2.5",
     "lucide-react": "^0.563.0",
     "mediabunny": "^1.40.1",
     "nanoid": "^5.1.6",

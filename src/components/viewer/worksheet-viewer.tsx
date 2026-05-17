@@ -285,8 +285,11 @@ export function WorksheetViewer({
   const hasFooterCenter = !!processedFooterCenter || !!settings.footerText;
   const hasFooterRight = !!processedFooterRight;
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
-  const showPrintHeader = mode === "print" && !isCanvaLandscape && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
+  const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
+  const useCanvaSideRail = mode === "print" && isCanvaLandscape && (showPrintHeader || showPrintFooter);
+  const showTablePrintHeader = showPrintHeader && !useCanvaSideRail;
+  const showTablePrintFooter = showPrintFooter && !useCanvaSideRail;
   const printBottomReservePx = showPrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
@@ -371,8 +374,42 @@ export function WorksheetViewer({
               Lösung
             </div>
           )}
+          {useCanvaSideRail && hasLogo && (
+            <img src={brandSettings.logo} alt="" className="print-canva-side-logo" />
+          )}
+          {useCanvaSideRail && showPrintHeader && (
+            <div className="print-canva-side-header" aria-hidden="true">
+              <div>
+                {hasHeaderLeft ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                ) : (
+                  hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                )}
+              </div>
+              <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                {hasHeaderLeft && hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+              </div>
+            </div>
+          )}
+          {useCanvaSideRail && showPrintFooter && (
+            <div className="print-canva-side-footer" aria-hidden="true">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+              </div>
+              <div>
+                {processedFooterCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+              </div>
+            </div>
+          )}
           <table className="print-table">
-            {showPrintHeader && (
+            {showTablePrintHeader && (
               <thead>
                 <tr>
                   <td>
@@ -393,7 +430,7 @@ export function WorksheetViewer({
                 </tr>
               </thead>
             )}
-            {showPrintFooter && (
+            {showTablePrintFooter && (
               <tfoot>
                 <tr>
                   <td>

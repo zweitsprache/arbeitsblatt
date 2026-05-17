@@ -635,6 +635,63 @@
   line-height: 1.5;
 }
 
+.print-worksheet-root.print-canva .print-canva-side-header,
+.print-worksheet-root.print-canva .print-canva-side-footer {
+  position: fixed;
+  transform: rotate(-90deg);
+  transform-origin: bottom left;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  pointer-events: none;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #666;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-header {
+  left: 287mm;
+  bottom: 10mm;
+  width: calc(var(--page-height, 210mm) - 20mm);
+}
+
+.print-worksheet-root.print-canva .print-canva-side-footer {
+  left: 287mm;
+  bottom: 10mm;
+  width: 190mm;
+  color: hsl(var(--foreground));
+  justify-content: flex-start;
+  gap: 8mm;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-header > div,
+.print-worksheet-root.print-canva .print-canva-side-footer > div {
+  min-width: 0;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-header > div:last-child,
+.print-worksheet-root.print-canva .print-canva-side-footer > div:last-child {
+  text-align: right;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-footer > div {
+  text-align: left;
+}
+
+.print-worksheet-root.print-canva .print-canva-side-logo {
+  position: fixed;
+  left: 2mm;
+  top: 10mm;
+  height: 8mm;
+  width: 8mm;
+  object-fit: contain;
+  transform: rotate(-90deg);
+  transform-origin: top right;
+  pointer-events: none;
+}
+
 /* Screen preview: show placeholder page numbers when spans are empty.
    Puppeteer sets textContent making them non-empty, so ::before won't fire in PDF mode. */
 .print-worksheet-root .var-current-page:empty::before {

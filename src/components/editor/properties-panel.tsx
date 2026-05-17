@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import {
   HeadingBlock,
   NumberedHeadingBlock,
   TextBlock,
+  SyllablesBlock,
   ImageBlock,
   ImageCardsBlock,
   TextCardsBlock,
@@ -41,6 +43,7 @@ import {
   BoardGameBlock,
   DominoBlock,
   FlashcardsBlock,
+  SyllableCardsBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -64,6 +67,7 @@ import {
   ChartBlock,
   ChartDataPoint,
   NumberedItemsBlock,
+  QuartettBlock,
   ChecklistBlock,
   NumberedLabelBlock,
   DialogueBlock,
@@ -96,8 +100,9 @@ import {
   ImageBlockStyle,
   BLOCK_LIBRARY,
 } from "@/types/worksheet";
+import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -3147,6 +3152,21 @@ function DominoProps({ block }: { block: DominoBlock }) {
           placeholder={t("title")}
         />
       </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("footer")}
+        </Label>
+        <Input
+          value={block.footer ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { footer: e.target.value } },
+            })
+          }
+          placeholder={t("footer")}
+        />
+      </div>
       <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
         <Label className="text-sm">{t("shufflePairs")}</Label>
         <Switch
@@ -3553,6 +3573,21 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
           placeholder={t("title")}
         />
       </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("footer")}
+        </Label>
+        <Input
+          value={block.footer ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { footer: e.target.value } },
+            })
+          }
+          placeholder={t("footer")}
+        />
+      </div>
       <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
         <Label className="text-sm">{t("shufflePairs")}</Label>
         <Switch
@@ -3736,6 +3771,351 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
       <Button type="button" variant="outline" onClick={clearItems}>
         Clear flashcards
       </Button>
+    </div>
+  );
+}
+
+function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const items = block.items.length > 0 ? block.items : getDefaultFlashcardItems();
+  const selectedItemIndex = state.activeItemIndex;
+  const selectedItem = selectedItemIndex !== null ? items[selectedItemIndex] : null;
+  const selectedDisplayText = selectedItem?.text ?? "";
+
+  const buildItems = (texts: string[]) => {
+    return texts.map((text, index) => ({
+      id: `syllable-card-item-${index + 1}`,
+      text,
+      imageUrl: "",
+      speakerIcon: null,
+    }));
+  };
+
+  const updateItem = (index: number, updates: Partial<SyllableCardsBlock["items"][number]>) => {
+    const nextItems = items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...updates } : item));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
+  const handleFileSelected = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (selectedItemIndex === null) return;
+    setIsUploading(true);
+    try {
+      const file = new File([result.blob], `syllable-card-item-${selectedItemIndex + 1}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateItem(selectedItemIndex, { imageUrl: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelected(file);
+    }
+  };
+
+  const clearItems = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: items.map((item) => ({
+            ...item,
+            text: "",
+            imageUrl: "",
+            speakerIcon: null,
+          })),
+        },
+      },
+    });
+  };
+
+  const addCard = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...items,
+            {
+              id: `syllable-card-item-${items.length + 1}`,
+              text: "",
+              imageUrl: "",
+              speakerIcon: null,
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const parsed = text
+      .split("|")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const existingItems = items.map((item) => item.text || "");
+    const nextTexts = csvMode === "append" ? [...existingItems, ...parsed] : parsed;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: buildItems(nextTexts) },
+      },
+    });
+    setCsvText("");
+  };
+
+  const syllabifySelectedItem = () => {
+    if (selectedItemIndex === null) return;
+    updateItem(selectedItemIndex, { text: syllabifyGermanText(selectedDisplayText) });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("title")}
+        </Label>
+        <Input
+          value={block.title ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { title: e.target.value } },
+            })
+          }
+          placeholder={t("title")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("footer")}
+        </Label>
+        <Input
+          value={block.footer ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { footer: e.target.value } },
+            })
+          }
+          placeholder={t("footer")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <div className="flex gap-1">
+          {(["s", "m", "l", "xl"] as const).map((size) => (
+            <Button
+              key={size}
+              variant={(block.textSize ?? "xl") === size ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1 uppercase"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textSize: size } },
+                })
+              }
+            >
+              {size}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("selectedItem")}
+        </Label>
+        <Input readOnly value={selectedItemIndex === null ? t("clickCardToEdit") : `Item ${selectedItemIndex + 1}`} />
+      </div>
+      {selectedItemIndex !== null && selectedItem ? (
+        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
+          {selectedItem.imageUrl ? (
+            <div className="space-y-2">
+              <div className="relative group/img rounded overflow-hidden border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedItem.imageUrl} alt={selectedDisplayText || "Syllable card item"} className="w-full" />
+                <button
+                  type="button"
+                  onClick={() => updateItem(selectedItemIndex, { imageUrl: "" })}
+                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                {t("replaceImage")}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                />
+                {isUploading ? (
+                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                  </>
+                )}
+              </label>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                {t("mediaBrowser")}
+              </Button>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {t("cardText")}
+            </Label>
+            <textarea
+              value={selectedDisplayText}
+              onChange={(e) => updateItem(selectedItemIndex, { text: e.target.value })}
+              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              placeholder={t("syllablesPlaceholder")}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2"
+              onClick={syllabifySelectedItem}
+              disabled={!stripSyllableMarkers(selectedDisplayText).trim()}
+            >
+              <Scissors className="h-4 w-4 mr-2" />
+              {t("syllabify")}
+            </Button>
+          </div>
+
+          <MediaBrowserDialog
+            open={browserOpen}
+            onOpenChange={setBrowserOpen}
+            onSelectUrl={(url) => {
+              if (selectedItemIndex === null) return;
+              updateItem(selectedItemIndex, { imageUrl: url });
+            }}
+            onSelectFile={handleFileSelected}
+          />
+
+          <ImageCropDialog
+            imageSrc={cropSrc}
+            open={cropOpen}
+            onOpenChange={(open) => {
+              setCropOpen(open);
+              if (!open && cropSrc) {
+                URL.revokeObjectURL(cropSrc);
+                setCropSrc(null);
+              }
+            }}
+            onCropComplete={handleCropComplete}
+            title={t("cropImage")}
+          />
+        </div>
+      ) : null}
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">{t("syllableCardsCsvHelp")}</p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[96px] resize-y"
+          placeholder={t("syllableCardsCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+        <div className="flex gap-1 mt-1">
+          <Select value={csvMode} onValueChange={(value) => setCsvMode(value as "replace" | "append")}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleCsvImport} disabled={!csvText.trim()}>
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={addCard}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("addCard")}
+        </Button>
+        <Button variant="outline" size="sm" className="flex-1" onClick={clearItems}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          {t("clear")}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -4028,6 +4408,65 @@ function TextProps({ block }: { block: TextBlock }) {
         onCropComplete={handleCropComplete}
         title={t("cropImage")}
       />
+    </div>
+  );
+}
+
+function SyllablesProps({ block }: { block: SyllablesBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const overrideValue = state.settings.chOverrides?.[block.id]?.content;
+  const effectiveContent = state.localeMode === "DE" && overrideValue !== undefined
+    ? overrideValue
+    : block.content;
+
+  const updateContent = (content: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { content } },
+    });
+  };
+
+  const handleSyllabify = () => {
+    const syllabified = syllabifyGermanText(effectiveContent);
+    if (state.localeMode === "DE") {
+      if (syllabified === block.content) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content", value: syllabified } });
+      }
+      return;
+    }
+    updateContent(syllabified);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="content"
+          baseValue={block.content}
+          onBaseChange={updateContent}
+          placeholder={t("syllablesPlaceholder")}
+          multiline
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("syllablesHelp")}
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={handleSyllabify}
+        disabled={!stripSyllableMarkers(effectiveContent).trim()}
+      >
+        <Scissors className="h-4 w-4 mr-2" />
+        {t("syllabify")}
+      </Button>
     </div>
   );
 }
@@ -8231,6 +8670,414 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+function QuartettProps({ block }: { block: QuartettBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [isExportingCards, setIsExportingCards] = React.useState(false);
+  const update = (updates: Partial<QuartettBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  const createEmptyQuartettItem = (title = "") => ({
+    id: crypto.randomUUID(),
+    title,
+    subitems: Array.from({ length: 4 }, () => ({
+      id: crypto.randomUUID(),
+      content: "",
+    })),
+  });
+
+  const parseCsvLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      const nextChar = line[index + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
+        values.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    values.push(current.trim());
+    return values;
+  };
+
+  const shuffle = <T,>(items: T[]): T[] => {
+    const next = [...items];
+    for (let index = next.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+    return next;
+  };
+
+  const buildItemsFromSingleColumn = (values: string[]) => {
+    const randomized = shuffle(values.filter(Boolean));
+    const items: QuartettBlock["items"] = [];
+
+    for (let index = 0; index < randomized.length; index += 4) {
+      const chunk = randomized.slice(index, index + 4);
+      const item = createEmptyQuartettItem();
+      item.subitems = item.subitems.map((subitem, subitemIndex) => ({
+        ...subitem,
+        content: chunk[subitemIndex] ?? "",
+      }));
+      items.push(item);
+    }
+
+    return items;
+  };
+
+  const buildItemsFromTwoColumns = (rows: Array<{ title: string; content: string }>) => {
+    const grouped = new Map<string, string[]>();
+    const order: string[] = [];
+
+    for (const row of rows) {
+      const title = row.title.trim();
+      const content = row.content.trim();
+      if (!content) continue;
+      if (!grouped.has(title)) {
+        grouped.set(title, []);
+        order.push(title);
+      }
+      grouped.get(title)!.push(content);
+    }
+
+    const items: QuartettBlock["items"] = [];
+    for (const title of order) {
+      const contents = grouped.get(title) ?? [];
+      for (let index = 0; index < contents.length; index += 4) {
+        const chunk = contents.slice(index, index + 4);
+        const item = createEmptyQuartettItem(title);
+        item.subitems = item.subitems.map((subitem, subitemIndex) => ({
+          ...subitem,
+          content: chunk[subitemIndex] ?? "",
+        }));
+        items.push(item);
+      }
+    }
+
+    return items;
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const parsedRows = lines.map(parseCsvLine);
+    const maxColumns = Math.max(...parsedRows.map((row) => row.length));
+
+    let importedItems: QuartettBlock["items"] = [];
+
+    if (maxColumns <= 1) {
+      importedItems = buildItemsFromSingleColumn(parsedRows.map((row) => row[0] ?? ""));
+    } else if (maxColumns === 2) {
+      importedItems = buildItemsFromTwoColumns(
+        parsedRows.map((row) => ({
+          title: row[0] ?? "",
+          content: row[1] ?? "",
+        }))
+      );
+    } else {
+      setCsvError(t("quartettCsvTooManyColumns"));
+      return;
+    }
+
+    if (importedItems.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    update({
+      items: csvMode === "append"
+        ? [...block.items, ...importedItems]
+        : importedItems,
+    });
+    setCsvText("");
+  };
+
+  const updateItem = (itemIndex: number, updates: Partial<QuartettBlock["items"][number]>) => {
+    const items = [...block.items];
+    items[itemIndex] = { ...items[itemIndex], ...updates };
+    update({ items });
+  };
+
+  const updateSubitem = (itemIndex: number, subitemIndex: number, content: string) => {
+    const items = [...block.items];
+    const subitems = [...items[itemIndex].subitems];
+    subitems[subitemIndex] = { ...subitems[subitemIndex], content };
+    items[itemIndex] = { ...items[itemIndex], subitems };
+    update({ items });
+  };
+
+  const moveSubitem = (itemIndex: number, subitemIndex: number, direction: -1 | 1) => {
+    const targetIndex = subitemIndex + direction;
+    if (targetIndex < 0 || targetIndex >= block.items[itemIndex].subitems.length) return;
+    const items = [...block.items];
+    const subitems = [...items[itemIndex].subitems];
+    [subitems[subitemIndex], subitems[targetIndex]] = [subitems[targetIndex], subitems[subitemIndex]];
+    items[itemIndex] = { ...items[itemIndex], subitems };
+    update({ items });
+  };
+
+  const addItem = () => {
+    update({
+      items: [
+        ...block.items,
+        createEmptyQuartettItem(),
+      ],
+    });
+  };
+
+  const removeItem = (itemIndex: number) => {
+    if (block.items.length <= 1) return;
+    update({ items: block.items.filter((_, index) => index !== itemIndex) });
+  };
+
+  const handleExportCards = async () => {
+    if (isExportingCards) return;
+
+    setIsExportingCards(true);
+    try {
+      const activeLocale = window.location.pathname.split("/")[1] || "de";
+      const response = await authFetch("/api/quartett/export-cards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          block,
+          settings: state.settings,
+          brandProfile: state.brandProfile,
+          worksheetTitle: state.title,
+          worksheetId: state.worksheetId,
+          locale: activeLocale,
+        }),
+      });
+
+      if (!response.ok) {
+        let message = t("quartettExportCardsFailed");
+        try {
+          const payload = (await response.json()) as { error?: string };
+          if (payload.error) message = payload.error;
+        } catch {
+          // Ignore JSON parsing failures and keep fallback message.
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${(block.title || state.title || "quartett-cards")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "quartett-cards"}.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("[QuartettProps] Export cards failed:", error);
+      alert(error instanceof Error ? error.message : t("quartettExportCardsFailed"));
+    } finally {
+      setIsExportingCards(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("quartettTitle")}
+        </Label>
+        <Input
+          value={block.title ?? ""}
+          onChange={(e) => update({ title: e.target.value })}
+          placeholder={t("quartettTitlePlaceholder")}
+        />
+      </div>
+
+      <div className="rounded-md border border-border p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-sm">{t("quartettShowGroupTitle")}</Label>
+          <Switch
+            checked={block.showGroupTitle !== false}
+            onCheckedChange={(checked) => update({ showGroupTitle: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-sm">{t("quartettShowFooter")}</Label>
+          <Switch
+            checked={block.showFooter !== false}
+            onCheckedChange={(checked) => update({ showFooter: checked })}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => void handleExportCards()}
+          disabled={isExportingCards}
+        >
+          {isExportingCards ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          {isExportingCards ? t("quartettExportCardsLoading") : t("quartettExportCards")}
+        </Button>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("quartettCsvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px] resize-y"
+          placeholder={t("quartettCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+
+      {block.items.map((item, itemIndex) => (
+        <div key={item.id} className="rounded-md border border-border p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              {`#${itemIndex + 1}`}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeItem(itemIndex)}
+              disabled={block.items.length <= 1}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {t("quartettItemTitle")}
+            </Label>
+            <Input
+              value={item.title ?? ""}
+              onChange={(e) => updateItem(itemIndex, { title: e.target.value })}
+              placeholder={t("quartettItemTitlePlaceholder")}
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              {t("quartettSubitems")}
+            </Label>
+            <div className="space-y-2">
+              {item.subitems.map((subitem, subitemIndex) => (
+                <div key={subitem.id} className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-xs font-medium text-muted-foreground text-center">
+                    {subitemIndex + 1}
+                  </span>
+                  <Input
+                    value={subitem.content}
+                    onChange={(e) => updateSubitem(itemIndex, subitemIndex, e.target.value)}
+                    placeholder={t("quartettSubitemPlaceholder", { index: subitemIndex + 1 })}
+                  />
+                  <div className="flex flex-col shrink-0">
+                    <button
+                      type="button"
+                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      onClick={() => moveSubitem(itemIndex, subitemIndex, -1)}
+                      disabled={subitemIndex === 0}
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      onClick={() => moveSubitem(itemIndex, subitemIndex, 1)}
+                      disabled={subitemIndex === item.subitems.length - 1}
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <Button type="button" variant="outline" className="w-full" onClick={addItem}>
+        <Plus className="h-4 w-4 mr-2" />
+        {t("addItem")}
+      </Button>
+    </div>
+  );
+}
+
 function ChecklistProps({ block }: { block: ChecklistBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -9861,6 +10708,8 @@ export function PropertiesPanel() {
         return <DominoProps block={selectedBlock as DominoBlock} />;
       case "flashcards":
         return <FlashcardsProps block={selectedBlock as FlashcardsBlock} />;
+      case "syllable-cards":
+        return <SyllableCardsProps block={selectedBlock as SyllableCardsBlock} />;
       case "board-game":
         return <BoardGameProps block={selectedBlock as BoardGameBlock} />;
       case "true-false-matrix":
@@ -9911,6 +10760,8 @@ export function PropertiesPanel() {
         return <TextComparisonProps block={selectedBlock as TextComparisonBlock} />;
       case "numbered-items":
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
+      case "quartett":
+        return <QuartettProps block={selectedBlock as QuartettBlock} />;
       case "checklist":
         return <ChecklistProps block={selectedBlock as ChecklistBlock} />;
       case "accordion":
@@ -9931,6 +10782,8 @@ export function PropertiesPanel() {
         return <NumberedLabelProps block={selectedBlock} />;
       case "text":
         return <TextProps block={selectedBlock} />;
+      case "syllables":
+        return <SyllablesProps block={selectedBlock as SyllablesBlock} />;
       default:
         return null;
     }

@@ -17,6 +17,8 @@ export type BlockType =
   | "heading"
   | "numbered-heading"
   | "text"
+  | "syllables"
+  | "syllable-cards"
   | "image"
   | "image-cards"
   | "spacer"
@@ -60,6 +62,7 @@ export type BlockType =
   | "job-application"
   | "dos-and-donts"
   | "numbered-items"
+  | "quartett"
   | "logo-divider"
   | "ai-prompt"
   | "ai-tool"
@@ -115,6 +118,11 @@ export interface TextBlock extends BlockBase {
   bilingualDivider?: boolean; // Show vertical divider in bilingual two-column layout
   skipTranslation?: boolean;
   tightTop?: boolean; // Collapse block gap above so spacing equals p-to-p spacing
+}
+
+export interface SyllablesBlock extends BlockBase {
+  type: "syllables";
+  content: string;
 }
 
 // ─── Image block ─────────────────────────────────────────────
@@ -369,6 +377,7 @@ export type DominoTextSize = "s" | "m" | "l" | "xl";
 export interface DominoBlock extends BlockBase {
   type: "domino";
   title?: string;
+  footer?: string;
   items: BoardGameCell[];
   shufflePairs?: boolean;
   showSpeakerIcons?: boolean;
@@ -378,8 +387,17 @@ export interface DominoBlock extends BlockBase {
 export interface FlashcardsBlock extends BlockBase {
   type: "flashcards";
   title?: string;
+  footer?: string;
   items: BoardGameCell[];
   shufflePairs?: boolean;
+  textSize?: DominoTextSize;
+}
+
+export interface SyllableCardsBlock extends BlockBase {
+  type: "syllable-cards";
+  title?: string;
+  footer?: string;
+  items: BoardGameCell[];
   textSize?: DominoTextSize;
 }
 
@@ -836,6 +854,26 @@ export interface NumberedItemsBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
+// ─── Quartett block ─────────────────────────────────────────
+export interface QuartettSubItem {
+  id: string;
+  content: string;
+}
+
+export interface QuartettItem {
+  id: string;
+  title?: string;
+  subitems: QuartettSubItem[];
+}
+
+export interface QuartettBlock extends BlockBase {
+  type: "quartett";
+  title?: string;
+  showGroupTitle?: boolean;
+  showFooter?: boolean;
+  items: QuartettItem[];
+}
+
 // ─── Checklist block ────────────────────────────────────────
 export interface ChecklistItem {
   id: string;
@@ -943,6 +981,7 @@ export type WorksheetBlock =
   | HeadingBlock
   | NumberedHeadingBlock
   | TextBlock
+  | SyllablesBlock
   | ImageBlock
   | ImageCardsBlock
   | TextCardsBlock
@@ -987,6 +1026,7 @@ export type WorksheetBlock =
   | TextComparisonBlock
   | DosAndDontsBlock
   | NumberedItemsBlock
+  | QuartettBlock
   | ChecklistBlock
   | LogoDividerBlock
   | AccordionBlock
@@ -995,6 +1035,7 @@ export type WorksheetBlock =
   | WebsiteBlock
   | DominoBlock
   | FlashcardsBlock
+  | SyllableCardsBlock
   | BoardGameBlock
   | AiPromptBlock
   | AiToolBlock
@@ -1527,6 +1568,21 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "syllables",
+    label: "Sylables",
+    description: "Text with syllable arches",
+    labelKey: "syllables",
+    descriptionKey: "syllablesDesc",
+    icon: "Scissors",
+    category: "content",
+    translations: { de: { label: "Silben", description: "Text mit Silbenbögen" } },
+    defaultData: {
+      type: "syllables",
+      content: "",
+      visibility: "both",
+    },
+  },
+  {
     type: "image",
     label: "Image",
     description: "Insert an image",
@@ -1709,6 +1765,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "domino",
       title: "",
+      footer: "",
       items: Array.from({ length: 8 }, (_, index) => ({
         id: `domino-item-${index + 1}`,
         text: index === 0 ? "START" : index === 7 ? "ZIEL" : "",
@@ -1732,6 +1789,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "flashcards",
       title: "",
+      footer: "",
       items: Array.from({ length: 8 }, (_, index) => ({
         id: `flashcard-item-${index + 1}`,
         text: "",
@@ -1739,6 +1797,28 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       })),
       shufflePairs: false,
       textSize: "m",
+      visibility: "both",
+    },
+  },
+  {
+    type: "syllable-cards",
+    label: "Syllable Cards",
+    description: "Single-sided cards with syllable arches",
+    labelKey: "syllableCards",
+    descriptionKey: "syllableCardsDesc",
+    icon: "ClipboardCopy",
+    category: "layout",
+    translations: { de: { label: "Silbenkarten", description: "Einseitige Karten mit Silbenbögen" } },
+    defaultData: {
+      type: "syllable-cards",
+      title: "",
+      footer: "",
+      items: Array.from({ length: 8 }, (_, index) => ({
+        id: `syllable-card-item-${index + 1}`,
+        text: "",
+        imageUrl: "",
+      })),
+      textSize: "xl",
       visibility: "both",
     },
   },
@@ -2504,6 +2584,33 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     startNumber: 1,
     bgColor: "",
     borderRadius: 6,
+    visibility: "both",
+  },
+},
+{
+  type: "quartett",
+  label: "QUARTETT",
+  description: "Items with four reorderable subitems",
+  labelKey: "quartett",
+  descriptionKey: "quartettDesc",
+  icon: "Grid3X3",
+  category: "memory-aids",
+  translations: { de: { label: "QUARTETT", description: "Elemente mit vier umsortierbaren Unterpunkten" } },
+  defaultData: {
+    type: "quartett",
+    title: "",
+    showGroupTitle: true,
+    showFooter: true,
+    items: [
+      {
+        id: crypto.randomUUID(),
+        title: "",
+        subitems: Array.from({ length: 4 }, () => ({
+          id: crypto.randomUUID(),
+          content: "",
+        })),
+      },
+    ],
     visibility: "both",
   },
 },

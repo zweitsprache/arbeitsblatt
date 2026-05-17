@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
   TextBlock,
+  SyllablesBlock,
   ImageBlock,
   ImageCardsBlock,
   TextCardsBlock,
@@ -26,6 +27,7 @@ import {
   GridBlock,
   DominoBlock,
   FlashcardsBlock,
+  SyllableCardsBlock,
   BoardGameBlock,
   MCQMatrixBlock,
   MCQRowsBlock,
@@ -60,6 +62,7 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
+  QuartettBlock,
   ChecklistBlock,
   ChecklistItem,
   AccordionBlock,
@@ -81,7 +84,7 @@ import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardD
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
-import { getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
 import { RoughExampleCircle, RoughExampleStrike } from "@/components/ui/rough-example-circle";
@@ -92,7 +95,7 @@ import { Input } from "@/components/ui/input";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square } from "lucide-react";
+import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square, FileQuestion } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -101,6 +104,7 @@ import dynamic from "next/dynamic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { BlockVisibility } from "@/types/worksheet";
+import { SyllablesDisplay } from "@/components/worksheet/syllables-display";
 import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
@@ -226,7 +230,7 @@ function renderCardTextWithBlanks(text: string, blankClassName: string): React.R
   return parts.map((part, index) => {
     const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
     if (!match) {
-      return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
+      return <span key={index}>{doubleInnerRegularSpaces(part)}</span>;
     }
 
     const noSpace = match[1] === "*";
@@ -253,7 +257,7 @@ function renderSolvedFlashcardBackText(text: string): React.ReactNode {
   return parts.map((part, index) => {
     const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
     if (!match) {
-      return <span key={index}>{part}</span>;
+      return <span key={index}>{doubleInnerRegularSpaces(part)}</span>;
     }
 
     const raw = match[2] || "";
@@ -748,6 +752,14 @@ function TextRenderer({ block }: { block: TextBlock }) {
         blockId={block.id}
       />
     </>
+  );
+}
+
+function SyllablesRenderer({ block }: { block: SyllablesBlock }) {
+  return (
+    <div className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-3 text-center text-2xl font-semibold tracking-[0.01em] text-slate-900">
+      <SyllablesDisplay content={block.content} textClassName="text-inherit" />
+    </div>
   );
 }
 
@@ -5432,6 +5444,7 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
   const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
   const textClass = getDominoEditorTextClass(block.textSize);
   const title = block.title?.trim();
+  const footer = block.footer?.trim();
   const titleColor = resolveHeadingOverrideColor(
     state.brandProfile.h3HeadingColor,
     state.brandProfile.primaryColor,
@@ -5495,6 +5508,7 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
               const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
               const displayText = itemIndex === 0 ? "START" : itemIndex === lastItemIndex ? "ZIEL" : item.text;
               const isSpecialItem = itemIndex === 0 || itemIndex === lastItemIndex;
+              const showFooter = Boolean(footer) && itemOffset === 0 && itemIndex !== 0;
               return (
                 <button
                   key={item.id || itemIndex}
@@ -5528,6 +5542,11 @@ function DominoRenderer({ block }: { block: DominoBlock }) {
                       <DialogueSpeakerIconGlyph icon={item.speakerIcon} brandSlug={brandSlug} className="h-6 w-6 object-contain" />
                     </div>
                   ) : null}
+                  {showFooter ? (
+                    <div className="absolute left-2 top-1.5 z-10 max-w-[24mm] rounded-sm bg-background/80 px-1 py-0.5 text-left text-[8px] font-medium leading-none text-slate-600">
+                      {footer}
+                    </div>
+                  ) : null}
                 </button>
               );
             })}
@@ -5547,6 +5566,7 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
   const flashcardBlankTokenPattern = /\{\{blank\*?(?::[^}]*)?\}\}/;
   const textClass = getDominoEditorTextClass(block.textSize);
   const title = block.title?.trim();
+  const footer = block.footer?.trim();
   const titleColor = resolveHeadingOverrideColor(
     state.brandProfile.h3HeadingColor,
     state.brandProfile.primaryColor,
@@ -5608,6 +5628,7 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
                   itemOffset === 1 &&
                   !pairItems[1]?.text?.trim() &&
                   flashcardBlankTokenPattern.test(pairItems[0]?.text ?? "");
+                const showFooter = Boolean(footer) && itemOffset === 0;
                 return (
                   <button
                     key={item.id || itemIndex}
@@ -5636,6 +5657,11 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
                         {isSolvedBackFallback ? renderSolvedFlashcardBackText(pairItems[0]?.text ?? "") : renderCardTextWithBlanks(displayText, "min-h-[1.05em]")}
                       </div>
                     ) : null}
+                    {showFooter ? (
+                      <div className="absolute bottom-1.5 left-2 z-10 max-w-[24mm] rounded-sm bg-background/80 px-1 py-0.5 text-left text-[8px] font-medium leading-none text-slate-600">
+                        {footer}
+                      </div>
+                    ) : null}
                   </button>
                 );
               })}
@@ -5643,6 +5669,98 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function SyllableCardsRenderer({ block }: { block: SyllableCardsBlock }) {
+  const { state, dispatch } = useEditor();
+  const items = getFlashcardItems(block.items);
+  const textClass = getDominoEditorTextClass(block.textSize);
+  const title = block.title?.trim();
+  const footer = block.footer?.trim();
+  const titleColor = resolveHeadingOverrideColor(
+    state.brandProfile.h3HeadingColor,
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+
+  const removeItem = (itemIndex: number) => {
+    const nextItems = items.filter((_, index) => index !== itemIndex);
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } });
+    if (state.selectedBlockId === block.id) {
+      dispatch({ type: "SET_ACTIVE_ITEM", payload: null });
+    }
+  };
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? (
+        <h3
+          className="text-xl text-left"
+          style={{
+            width: "100%",
+            fontWeight: 800,
+            fontFamily: state.brandProfile.headlineFont,
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", width: "fit-content" }}>
+        {items.map((item, itemIndex) => {
+          const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
+          return (
+            <div key={item.id || itemIndex} className="group relative">
+              <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {itemIndex + 1}
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removeItem(itemIndex);
+                }}
+                className="absolute right-1 top-1 z-20 rounded-full bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity group-hover:opacity-100 hover:text-red-600"
+                title={state.localeMode === "DE" ? "Karte entfernen" : "Remove card"}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                  dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
+                }}
+                className={`relative flex h-[28mm] w-[36mm] flex-col items-center justify-center overflow-hidden rounded-md border border-border bg-background px-2 pb-4 pt-2 text-left transition-colors ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                style={
+                  item.imageUrl
+                    ? {
+                        backgroundImage: `url(${item.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : undefined
+                }
+              >
+                {!item.imageUrl ? <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
+                {item.text?.trim() ? (
+                  <div className={`relative z-10 rounded-sm bg-background/80 px-1 py-1 ${textClass}`}>
+                    <SyllablesDisplay content={item.text} textClassName="text-inherit whitespace-pre-wrap text-center break-words" />
+                  </div>
+                ) : null}
+                {footer ? (
+                  <div className="absolute bottom-1.5 left-2 z-10 max-w-[24mm] rounded-sm bg-background/80 px-1 py-0.5 text-left text-[8px] font-medium leading-none text-slate-600">
+                    {footer}
+                  </div>
+                ) : null}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -6234,6 +6352,86 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
       >
         <Plus className="h-3 w-3" /> Add
       </button>
+    </div>
+  );
+}
+
+function QuartettRenderer({ block }: { block: QuartettBlock }) {
+  const showGroupTitle = block.showGroupTitle !== false;
+  const showFooter = block.showFooter !== false;
+  const cards = block.items.flatMap((item) =>
+    item.subitems.map((subitem, highlightIndex) => ({
+      id: `${item.id}-${subitem.id}`,
+      title: item.title?.trim() || "",
+      highlight: subitem.content,
+      others: item.subitems
+        .filter((_, index) => index !== highlightIndex)
+        .map((entry) => entry.content)
+        .filter((entry) => entry.trim().length > 0),
+    }))
+  );
+  const blockTitle = block.title?.trim();
+  const promptLines = [
+    { id: "question", icon: FileQuestion, text: "Hast du… ?" },
+    { id: "yes", icon: Plus, text: "Ja, … habe ich. Hier bitte." },
+    { id: "no", icon: Minus, text: "Nein, … habe ich nicht." },
+  ];
+  const reservedTitleHeight = "1.75rem";
+
+  return (
+    <div className="space-y-4">
+      {blockTitle ? (
+        <h3 className="text-lg font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {blockTitle}
+        </h3>
+      ) : null}
+      <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        {cards.map((card) => (
+          <div
+            key={card.id}
+            className="relative overflow-hidden rounded-md border border-border bg-background p-4"
+            style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
+          >
+            <div
+              className="pr-10 text-xs font-semibold uppercase tracking-wider text-primary"
+              style={{ minHeight: reservedTitleHeight }}
+            >
+              {showGroupTitle ? card.title : ""}
+            </div>
+            <div className="space-y-3 pt-3">
+              <div className="text-base font-bold leading-snug whitespace-pre-wrap break-words">
+                {card.highlight || "..."}
+              </div>
+              <div className="border-t pt-3 space-y-2 text-base leading-snug text-muted-foreground" style={{ borderTopColor: "currentColor" }}>
+                {card.others.map((entry, index) => (
+                  <div
+                    key={`${card.id}-other-${index}`}
+                    className={`whitespace-pre-wrap break-words ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}
+                  >
+                    {entry}
+                  </div>
+                ))}
+              </div>
+              {showFooter ? (
+                <div className="mt-auto w-full pt-3 text-[13px] leading-tight text-muted-foreground">
+                  {promptLines.map((line, index) => {
+                    const Icon = line.icon;
+                    return (
+                      <div
+                        key={`${card.id}-prompt-${line.id}`}
+                        className={`flex items-center justify-start gap-1.5 text-left ${index === 0 ? "" : "border-t border-slate-100 pt-2"}`}
+                      >
+                        <Icon className="h-3 w-3 shrink-0" />
+                        <span>{line.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -7350,6 +7548,8 @@ export function BlockRenderer({
       return <NumberedHeadingRenderer block={block} />;
     case "text":
       return <TextRenderer block={block} />;
+    case "syllables":
+      return <SyllablesRenderer block={block} />;
     case "image":
       return <ImageRenderer block={block} />;
     case "image-cards":
@@ -7432,6 +7632,8 @@ export function BlockRenderer({
       return <DominoRenderer block={block as DominoBlock} />;
     case "flashcards":
       return <FlashcardsRenderer block={block as FlashcardsBlock} />;
+    case "syllable-cards":
+      return <SyllableCardsRenderer block={block as SyllableCardsBlock} />;
     case "board-game":
       return <BoardGameRenderer block={block as BoardGameBlock} />;
     case "linked-blocks":
@@ -7448,6 +7650,8 @@ export function BlockRenderer({
       return <TextComparisonRenderer block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
+    case "quartett":
+      return <QuartettRenderer block={block as QuartettBlock} />;
     case "checklist":
       return <ChecklistRenderer block={block as ChecklistBlock} />;
     case "accordion":

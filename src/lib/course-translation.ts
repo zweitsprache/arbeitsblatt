@@ -431,6 +431,23 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "quartett": {
+      add("title", () => block.title, (v) => {
+        block.title = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.title`, () => item.title, (v) => {
+          item.title = v;
+        });
+        for (const subitem of item.subitems) {
+          add(`items.${item.id}.subitems.${subitem.id}.content`, () => subitem.content, (v) => {
+            subitem.content = v;
+          });
+        }
+      }
+      break;
+    }
+
     case "table": {
       if (!block.skipTranslation) {
         add("content", () => block.content, (v) => {

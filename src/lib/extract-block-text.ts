@@ -261,6 +261,16 @@ export function extractBlocksText(
         }
         break;
 
+      case "quartett":
+        if (block.title) parts.push(block.title);
+        for (const item of block.items ?? []) {
+          if (item.title) parts.push(item.title);
+          for (const subitem of item.subitems ?? []) {
+            if (subitem.content) parts.push(subitem.content);
+          }
+        }
+        break;
+
       case "website":
         if (block.title) parts.push(block.title);
         for (const item of block.items ?? []) {

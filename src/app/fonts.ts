@@ -87,6 +87,49 @@ export const fontTheSansB = localFont({
   // @supports only in @font-face (browser support: Chrome 92+, Firefox 89+, Safari 16.4+)
 });
 
+export const fontAbeZehEdu = localFont({
+  src: [
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-Thin.otf",
+      weight: "100",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-ExtraLight.otf",
+      weight: "200",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-Light.otf",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-Regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-Medium.otf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-Bold.otf",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ABeZeh/ABeZehEDU-ExtraBold.otf",
+      weight: "800",
+      style: "normal",
+    },
+  ],
+  variable: "--font-abe-zeh-edu",
+  fallback: ["sans-serif"],
+  display: "swap",
+});
+
 /**
  * CSS to be added to globals.css for font-metric-overrides (or use @supports rule):
  *

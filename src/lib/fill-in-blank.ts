@@ -10,7 +10,7 @@ export type BlankSpacing = {
   style?: CSSProperties;
 };
 
-export function tripleInnerRegularSpaces(text: string): string {
+function multiplyInnerRegularSpaces(text: string, multiplier: number): string {
   if (!text || text.length < 3) return text;
 
   let out = "";
@@ -21,13 +21,21 @@ export function tripleInnerRegularSpaces(text: string): string {
       const next = i < text.length - 1 ? text[i + 1] : "";
       const prevVisible = prev !== "" && !/\s/.test(prev);
       const nextVisible = next !== "" && !/\s/.test(next);
-      out += prevVisible && nextVisible ? "\u00A0\u00A0\u00A0" : ch;
+      out += prevVisible && nextVisible ? "\u00A0".repeat(multiplier) : ch;
       continue;
     }
     out += ch;
   }
 
   return out;
+}
+
+export function doubleInnerRegularSpaces(text: string): string {
+  return multiplyInnerRegularSpaces(text, 2);
+}
+
+export function tripleInnerRegularSpaces(text: string): string {
+  return multiplyInnerRegularSpaces(text, 3);
 }
 
 export function parseBlankContent(raw: string): { answer: string; width: BlankWidthSpec } {
