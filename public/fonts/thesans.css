@@ -1,0 +1,17 @@
+@font-face {
+  font-family: "TheSans";
+  src: url("/fonts/thesans/BJVNLV+TheSans-LP4SeLig.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  ascent-override: 100%;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans";
+  src: url("/fonts/thesans/BJVNLV+TheSans-LP7Bld.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  ascent-override: 100%;
+  font-display: swap;
+}
