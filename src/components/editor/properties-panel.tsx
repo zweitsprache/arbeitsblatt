@@ -9283,6 +9283,13 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     return items;
   };
 
+  const buildTabooItemsFromSingleColumn = (values: string[]) => {
+    return values
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => createEmptyCardItem(value));
+  };
+
   const buildItemsFromTwoColumns = (rows: Array<{ title: string; content: string }>) => {
     const grouped = new Map<string, string[]>();
     const order: string[] = [];
@@ -9315,6 +9322,22 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     return items;
   };
 
+  const buildTabooItemsFromFiveColumns = (rows: string[][]) => {
+    return rows
+      .map((row) => {
+        const word = row[0]?.trim() ?? "";
+        if (!word) return null;
+
+        const item = createEmptyCardItem(word);
+        item.subitems = item.subitems.map((subitem, subitemIndex) => ({
+          ...subitem,
+          content: row[subitemIndex + 1]?.trim() ?? "",
+        }));
+        return item;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  };
+
   const handleCsvImport = () => {
     setCsvError(null);
     const text = csvText.trim();
@@ -9336,7 +9359,10 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     let importedItems: CardListBlock["items"] = [];
 
     if (maxColumns <= 1) {
-      importedItems = buildItemsFromSingleColumn(parsedRows.map((row) => row[0] ?? ""));
+      const values = parsedRows.map((row) => row[0] ?? "");
+      importedItems = kind === "taboo"
+        ? buildTabooItemsFromSingleColumn(values)
+        : buildItemsFromSingleColumn(values);
     } else if (maxColumns === 2) {
       importedItems = buildItemsFromTwoColumns(
         parsedRows.map((row) => ({
@@ -9344,6 +9370,8 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
           content: row[1] ?? "",
         }))
       );
+    } else if (kind === "taboo" && maxColumns === 5) {
+      importedItems = buildTabooItemsFromFiveColumns(parsedRows);
     } else {
       setCsvError(labels.tooManyColumns);
       return;

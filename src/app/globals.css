@@ -828,6 +828,24 @@
   margin-top: var(--print-block-gap, 1.5rem);
 }
 
+/* Card-sheet blocks already render page-sized print layouts, so extra block spacing
+   between them can create a trailing blank page in the final PDF. */
+.print-worksheet-root.print-skin-final :is(
+  .worksheet-block-domino,
+  .worksheet-block-flashcards,
+  .worksheet-block-quartett,
+  .worksheet-block-taboo,
+  .worksheet-block-syllable-cards
+) + :is(
+  .worksheet-block-domino,
+  .worksheet-block-flashcards,
+  .worksheet-block-quartett,
+  .worksheet-block-taboo,
+  .worksheet-block-syllable-cards
+) {
+  margin-top: 0;
+}
+
 /* After a page break, next block starts at page-top baseline in preview too */
 .print-worksheet-root.print-skin-final .worksheet-block-page-break + .worksheet-block {
   margin-top: 0 !important;
