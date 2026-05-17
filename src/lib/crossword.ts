@@ -55,7 +55,11 @@ function cloneBoard(board: BoardState): BoardState {
     cells: new Map(
       Array.from(board.cells.entries(), ([key, cell]) => [
         key,
-        { letter: cell.letter, directions: new Set(cell.directions) },
+        {
+          kind: cell.kind,
+          letter: cell.letter,
+          directions: new Set(cell.directions),
+        },
       ]),
     ),
   };
