@@ -1,0 +1,23 @@
+@font-face {
+  font-family: "Brix Sans";
+  src: url("/fonts/Brix_Sans/HvDTrial_BrixSans-Regular-BF64c3379310193.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Brix Sans";
+  src: url("/fonts/Brix_Sans/HvDTrial_BrixSans-Bold-BF64c33792e9cc8.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kalam";
+  src: url("/fonts/Kalam/Kalam-Light.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
