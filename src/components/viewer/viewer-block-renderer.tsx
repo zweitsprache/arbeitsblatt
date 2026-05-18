@@ -10,6 +10,7 @@ import {
   SyllablesBlock,
   ImageBlock,
   ImageCardsBlock,
+  ImageTextTableBlock,
   TextCardsBlock,
   SpacerBlock,
   DividerBlock,
@@ -17,6 +18,7 @@ import {
   FillInBlankBlock,
   FillInBlankItemsBlock,
   MatchingBlock,
+  PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
   OpenResponseBlock,
@@ -25,6 +27,7 @@ import {
   ColumnsBlock,
   GridBlock,
   DominoBlock,
+  CardPairsBlock,
   FlashcardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
@@ -85,7 +88,7 @@ import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBla
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
-import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
+import { getCardPairDisplayText, getCardPairItems, getCardPairs, getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { RoughExampleCircle, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
 import { findWordSearchPlacements } from "@/lib/word-search";
 import {
@@ -1227,6 +1230,127 @@ function renderHandwriting(text: string): React.ReactNode {
   });
 }
 
+type ReadingComprehensionFieldSegment = {
+  prefilled: string;
+  solution: string;
+  hasCorrection: boolean;
+};
+
+function parseReadingComprehensionFieldValue(rawValue: string | undefined) {
+  const value = rawValue ?? "";
+  const inlinePattern = /(\{\{.*?(?:\|.*?)?\}\})/g;
+
+  if (value.includes("{{") && value.includes("}}")) {
+    const segments = value.split(inlinePattern).filter((part) => part.length > 0).map<ReadingComprehensionFieldSegment>((part) => {
+      const correctionMatch = part.match(/^\{\{(.*?)\|(.*?)\}\}$/);
+      if (correctionMatch) {
+        const prefilled = correctionMatch[1].trim();
+        const solution = correctionMatch[2].trim();
+        return {
+          prefilled,
+          solution,
+          hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase(),
+        };
+      }
+
+      const deletionMatch = part.match(/^\{\{(.*?)\}\}$/);
+      if (deletionMatch) {
+        const prefilled = deletionMatch[1].trim();
+        return {
+          prefilled,
+          solution: "",
+          hasCorrection: prefilled.length > 0,
+        };
+      }
+
+      if (!part.includes("{{")) {
+        return {
+          prefilled: part,
+          solution: part,
+          hasCorrection: false,
+        };
+      }
+
+      return {
+        prefilled: part,
+        solution: part,
+        hasCorrection: false,
+      };
+    });
+
+    return {
+      prefilled: segments.map((segment) => segment.prefilled).join(""),
+      solution: segments.map((segment) => segment.solution).join(""),
+      hasCorrection: segments.some((segment) => segment.hasCorrection),
+      inlineSyntax: true,
+      segments,
+    };
+  }
+
+  const [prefilledPart, ...solutionParts] = value.split("|");
+  if (solutionParts.length === 0) {
+    const normalized = value.trim();
+    return {
+      prefilled: normalized,
+      solution: normalized,
+      hasCorrection: false,
+      inlineSyntax: false,
+      segments: [{ prefilled: normalized, solution: normalized, hasCorrection: false }],
+    };
+  }
+
+  const prefilled = prefilledPart.trim();
+  const solution = solutionParts.join("|").trim();
+  return {
+    prefilled,
+    solution,
+    hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase(),
+    inlineSyntax: false,
+    segments: [{ prefilled, solution, hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase() }],
+  };
+}
+
+function renderReadingComprehensionCorrectionSegments(
+  parsedValue: ReturnType<typeof parseReadingComprehensionFieldValue>,
+  correctionColor?: string,
+) {
+  if (parsedValue.inlineSyntax) {
+    const appendedCorrections = parsedValue.segments
+      .filter((segment) => segment.hasCorrection && segment.solution)
+      .map((segment) => segment.solution);
+
+    return (
+      <>
+        {parsedValue.segments.map((segment, index) => {
+          if (!segment.hasCorrection) {
+            return <span key={index}>{segment.prefilled}</span>;
+          }
+
+          return <RoughExampleStrike tight tightTop="58%" key={index} style={{ verticalAlign: "-0.18em" }}>{segment.prefilled}</RoughExampleStrike>;
+        })}
+        {appendedCorrections.length > 0 ? (
+          <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>
+            {appendedCorrections.join(", ")}
+          </span>
+        ) : null}
+      </>
+    );
+  }
+
+  return parsedValue.segments.map((segment, index) => {
+    if (!segment.hasCorrection) {
+      return <span key={index}>{segment.prefilled}</span>;
+    }
+
+    return (
+      <span key={index} className="inline-flex items-center">
+        <RoughExampleStrike tight>{segment.prefilled}</RoughExampleStrike>
+        <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>{segment.solution}</span>
+      </span>
+    );
+  });
+}
+
 // ─── Static blocks ──────────────────────────────────────────
 
 // Helper: collect all numbered-label blocks in document order (top-level + inside columns/accordion)
@@ -1354,7 +1478,10 @@ function collectNumberedHeadingSequences(blocks: WorksheetBlock[]): Map<string, 
     for (const block of items) {
       if (block.type === "numbered-heading") {
         const levelIndex = block.level - 1;
-        counters[levelIndex] += 1;
+        const explicitStart = Math.max(1, Math.floor(block.startNumber ?? 1));
+        counters[levelIndex] = counters[levelIndex] === 0
+          ? explicitStart
+          : Math.max(counters[levelIndex] + 1, explicitStart);
         for (let index = levelIndex + 1; index < counters.length; index += 1) {
           counters[index] = 0;
         }
@@ -2321,6 +2448,100 @@ function ImageCardsView({ block }: { block: ImageCardsBlock }) {
   );
 }
 
+function ImageTextTableView({ block, accentColor, mode, instructionIndex, showSolutions }: { block: ImageTextTableBlock; accentColor?: string | null; mode?: ViewMode; instructionIndex?: number; showSolutions?: boolean; }) {
+  const exampleItemId = block.showFirstAsExample ? block.items[0]?.id : undefined;
+  const interactive = mode === "online";
+  const displayItems = useMemo(
+    () => (block.shuffleItems
+      ? deterministicShuffle(
+          block.items.map((item, index) => ({ item, originalIndex: index })),
+          `image-text-table:${block.id}`,
+        )
+      : block.items.map((item, index) => ({ item, originalIndex: index }))),
+    [block.id, block.items, block.shuffleItems],
+  );
+  return (
+    <div className="space-y-4">
+      {block.instruction && (
+        <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {displayItems.map(({ item, originalIndex }) => {
+          const [arW, arH] = (block.imageAspectRatio ?? "1:1").split(":").map(Number);
+          return (
+            <div key={item.id} className="border rounded overflow-hidden bg-card image-text-table-card">
+              {item.src && (
+                <div
+                  className="overflow-hidden relative mx-auto"
+                  style={{
+                    width: `${block.imageScale ?? 100}%`,
+                    aspectRatio: `${arW} / ${arH}`,
+                  }}
+                >
+                  {block.showImageNumberBadge !== false && (
+                    <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md bg-background/85 text-[10px] font-semibold leading-none text-foreground shadow-sm backdrop-blur-[1px]">
+                      {originalIndex + 1}
+                    </span>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.src}
+                    alt={item.alt}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="p-2 text-center">
+                {item.text && <span>{item.text}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        {block.items.map((item, index) => (
+          <div key={item.id} className="image-text-table-row grid grid-cols-[auto_1fr] gap-2 items-end">
+            <span className="text-cv-base font-medium text-muted-foreground">{index + 1}.</span>
+            {item.id === exampleItemId ? (
+              <div
+                className="relative h-8 overflow-hidden"
+                style={{ borderBottom: "1px dashed var(--color-muted-foreground)" }}
+              >
+                <span
+                  className="absolute inset-x-0 block leading-none"
+                  style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
+                >
+                  {item.text || ""}
+                </span>
+              </div>
+            ) : !interactive && showSolutions && item.text ? (
+              <div
+                className="relative h-8 overflow-hidden"
+                style={{ borderBottom: "1px dashed var(--color-muted-foreground)" }}
+              >
+                <span
+                  className="absolute inset-x-0 block leading-none"
+                  style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#15803d", fontSize: "18px" }}
+                >
+                  {item.text}
+                </span>
+              </div>
+            ) : (
+              <div
+                className="relative h-8 overflow-hidden"
+                style={{ borderBottom: "1px dashed var(--color-muted-foreground)" }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TextCardsView({ block }: { block: TextCardsBlock }) {
   const shuffledItems = useMemo(() => {
     if (!block.showWordBank) return [];
@@ -3008,7 +3229,7 @@ function FillInBlankItemsView({
   accentColor,
   instructionIndex,
 }: {
-  block: MatchingBlock;
+  block: MatchingBlock | PronunciationBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
@@ -3020,6 +3241,8 @@ function FillInBlankItemsView({
 })  {
   const t = useTranslations("viewer");
   const isOnline = mode === "online";
+  const isPronunciation = block.type === "pronunciation";
+  const headerRowClass = `${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} font-semibold text-foreground`;
   const [activeLeftId, setActiveLeftId] = useState<string | null>(null);
   const lineContainerRef = React.useRef<HTMLDivElement | null>(null);
   const leftSolutionBoxRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -3028,11 +3251,23 @@ function FillInBlankItemsView({
   const [exampleLine, setExampleLine] = React.useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
   const [solutionSvgSize, setSolutionSvgSize] = React.useState({ width: 0, height: 0 });
   const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+  const orderedPairs = useMemo(() => {
+    const examplePair = examplePairId ? block.pairs.find((pair) => pair.id === examplePairId) : undefined;
+    const remainingPairs = block.pairs.filter((pair) => pair.id !== examplePairId);
+    const orderedRemainingPairs = block.pairOrder
+      ? block.pairOrder
+          .map((id) => remainingPairs.find((pair) => pair.id === id))
+          .filter((pair): pair is NonNullable<typeof pair> => !!pair)
+          .concat(remainingPairs.filter((pair) => !block.pairOrder!.includes(pair.id)))
+      : remainingPairs;
+
+    return examplePair ? [examplePair, ...orderedRemainingPairs] : orderedRemainingPairs;
+  }, [block.pairOrder, block.pairs, examplePairId]);
 
   // Stable derangement based on block id so matches never stay on the same row.
   const shuffledRight = useMemo(() => {
-    return deterministicDerangement(block.pairs, `matching:${block.id}`);
-  }, [block.pairs, block.id]);
+    return deterministicDerangement(orderedPairs, `matching:${block.id}`);
+  }, [orderedPairs, block.id]);
   const wordBankItems = useMemo(() => {
     if (!block.showWordBank) return [];
     return deterministicShuffle(
@@ -3131,7 +3366,7 @@ function FillInBlankItemsView({
         setExampleLine(null);
       }
 
-      const nextLines = block.pairs.flatMap((pair) => {
+      const nextLines = orderedPairs.flatMap((pair) => {
         if (pair.id === examplePairId) return [];
         const leftBox = leftSolutionBoxRefs.current[pair.id];
         const rightBox = rightSolutionBoxRefs.current[pair.id];
@@ -3163,7 +3398,7 @@ function FillInBlankItemsView({
       resizeObserver.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [block.pairs, interactive, showSolutions, shuffledRight, examplePairId]);
+  }, [orderedPairs, interactive, showSolutions, shuffledRight, examplePairId]);
 
   // ── Print / non-interactive mode: row-based layout like T/F and Order ──
   if (!interactive) {
@@ -3182,13 +3417,13 @@ function FillInBlankItemsView({
             ) : (
               <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
             )}
-            {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="large" />}
+            {(block.textAboveItems?.trim() || orderedPairs.length > 0) && <SectionGap size="large" />}
           </>
         )}
         {block.textAboveItems?.trim() && (
           <>
             <p className="whitespace-pre-line text-sm">{block.textAboveItems}</p>
-            {block.pairs.length > 0 && <SectionGap size="medium" />}
+            {orderedPairs.length > 0 && <SectionGap size="medium" />}
           </>
         )}
         {block.showWordBank && wordBankItems.length > 0 && (
@@ -3204,7 +3439,7 @@ function FillInBlankItemsView({
                 </span>
               ))}
             </div>
-            {block.pairs.length > 0 && <SectionGap size="medium" />}
+            {orderedPairs.length > 0 && <SectionGap size="medium" />}
           </>
         )}
         <div ref={lineContainerRef} className="relative">
@@ -3245,10 +3480,24 @@ function FillInBlankItemsView({
               />
             </svg>
           )}
+        {isPronunciation && (
+          <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
+            <div className={headerRowClass}>
+              <span className="w-6 shrink-0" />
+              <span className="flex-1 text-right">{block.leftHeader ?? ""}</span>
+              <span className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />
+            </div>
+            <div className={headerRowClass}>
+              <span className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />
+              <span className="flex-1">{block.rightHeader ?? ""}</span>
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`} style={{ visibility: "hidden" }} aria-hidden="true">a</span>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
           {/* Left column */}
           <div>
-            {block.pairs.map((pair, i) => (
+            {orderedPairs.map((pair, i) => (
               <div
                 key={pair.id}
                 className={CONSISTENT_ROW_CLASS_PRINT}
@@ -3306,13 +3555,13 @@ function FillInBlankItemsView({
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {(block.textAboveItems?.trim() || block.pairs.length > 0) && <SectionGap size="large" />}
+          {(block.textAboveItems?.trim() || orderedPairs.length > 0) && <SectionGap size="large" />}
         </>
       )}
       {block.textAboveItems?.trim() && (
         <>
           <p className="whitespace-pre-line text-sm">{block.textAboveItems}</p>
-          {block.pairs.length > 0 && <SectionGap size="medium" />}
+          {orderedPairs.length > 0 && <SectionGap size="medium" />}
         </>
       )}
       {block.showWordBank && wordBankItems.length > 0 && (
@@ -3328,13 +3577,27 @@ function FillInBlankItemsView({
               </span>
             ))}
           </div>
-          {block.pairs.length > 0 && <SectionGap size="medium" />}
+          {orderedPairs.length > 0 && <SectionGap size="medium" />}
         </>
       )}
       <div className="grid grid-cols-2 gap-4">
+        {isPronunciation && (
+          <>
+            <div className={headerRowClass}>
+              <span className="w-6 shrink-0" />
+              <span className="flex-1 text-right">{block.leftHeader ?? ""}</span>
+              {!isOnline && <div className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />}
+            </div>
+            <div className={headerRowClass}>
+              {!isOnline && <div className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />}
+              <span className="flex-1 text-left">{block.rightHeader ?? ""}</span>
+              <span className={`${NUMBER_BADGE_CLASS} shrink-0`} style={{ visibility: "hidden" }} aria-hidden="true">a</span>
+            </div>
+          </>
+        )}
         {/* Left side */}
         <div>
-          {block.pairs.map((pair, i) => {
+          {orderedPairs.map((pair, i) => {
             const isMatched = !!selections[pair.id];
             const isActive = activeLeftId === pair.id;
             const isCorrect = selections[pair.id] === pair.id;
@@ -4628,6 +4891,8 @@ const CARD_CANVA_CONTENT_BOTTOM = "0mm";
 const CARD_CANVA_FOOTER_BOTTOM = "10mm";
 const CARD_CANVA_DOMINO_CELL_WIDTH_MM = 43.5;
 const CARD_CANVA_DOMINO_CELL_HEIGHT_MM = 37;
+const CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM = CARD_CANVA_DOMINO_CELL_WIDTH_MM;
+const CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM = CARD_CANVA_DOMINO_CELL_WIDTH_MM;
 const CARD_CANVA_FLASHCARD_CELL_WIDTH_MM = 87;
 const CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM = 37;
 const CARD_CANVA_SYLLABLE_CELL_WIDTH_MM = 87;
@@ -5365,6 +5630,367 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
   );
 }
 
+function CardPairsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: CardPairsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+  const items = getCardPairItems(block.items);
+  const pairs = getCardPairs(block);
+  const pairingMode = block.pairingMode ?? "same";
+  const title = block.title?.trim();
+  const footer = block.footer?.trim();
+  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const viewerTextClass = getDominoEditorTextClass(block.textSize);
+  const printFontSize = getDominoPrintFontSize(block.textSize);
+  const previewImageInset = "2.5mm";
+  const printImageInset = "2.5mm";
+  const printRows = 3;
+  const printColumns = 6;
+  const cardsPerPrintPage = printRows * printColumns;
+  const printGridHeightMm = CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM * printRows;
+  const printGridTopOffsetMm = (CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM * 4 - printGridHeightMm) / 2;
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
+  const resolvedAccentColor = accentColor || primaryColor;
+  const titleStyle: React.CSSProperties = {
+    width: "100%",
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: headingColor || primaryColor,
+    textAlign: "left",
+  };
+
+  const renderCardBackSymbol = (sideIndex: number) => {
+    const isFirstSymbol = sideIndex === 0;
+    const color = isFirstSymbol ? primaryColor : resolvedAccentColor;
+    return (
+      <div
+        style={{
+          width: "18mm",
+          height: "18mm",
+          borderRadius: isFirstSymbol ? "9999px" : "2mm",
+          background: color,
+        }}
+      />
+    );
+  };
+
+  const renderPrintPage = (
+    entries: Array<{ frontItem: CardPairsBlock["items"][number] | null; backItem: CardPairsBlock["items"][number] | null; sideIndex: number } | null>,
+    pageKey: string,
+    isBackSide: boolean,
+  ) => (
+    <CardCanvaPrintPageFrame
+      key={pageKey}
+      title={title}
+      titleStyle={titleStyle}
+      logoSrc={logoSrc}
+      pageStyle={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        breakAfter: "page",
+        pageBreakAfter: "always",
+      }}
+    >
+      <CardCanvaPrintContentArea>
+        <div
+          style={{
+            position: "relative",
+            width: CARD_CANVA_FRAME_WIDTH,
+            height: `${CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM * 4}mm`,
+            isolation: "isolate",
+          }}
+        >
+          {Array.from({ length: 7 }, (_, lineIndex) => (
+            <React.Fragment key={`${pageKey}-v-${lineIndex}`}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: `${printGridTopOffsetMm}mm`,
+                  left: `${lineIndex * CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM}mm`,
+                  height: `${printGridHeightMm}mm`,
+                  borderLeft: CUT_LINE_DASHED_BORDER,
+                  zIndex: 3,
+                }}
+              />
+              <Scissors
+                aria-hidden="true"
+                style={{
+                  ...CUT_ICON_STYLE_BASE,
+                  left: `calc(${lineIndex * CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                  top: `calc(${printGridTopOffsetMm}mm - ${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                  transform: "rotate(90deg)",
+                }}
+              />
+              <Scissors
+                aria-hidden="true"
+                style={{
+                  ...CUT_ICON_STYLE_BASE,
+                  left: `calc(${lineIndex * CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                  top: `calc(${printGridTopOffsetMm + printGridHeightMm}mm + ${CUT_ICON_GAP_MM}mm)`,
+                  transform: "rotate(-90deg)",
+                }}
+              />
+            </React.Fragment>
+          ))}
+          {Array.from({ length: printRows + 1 }, (_, lineIndex) => (
+            <React.Fragment key={`${pageKey}-h-${lineIndex}`}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: `${printGridTopOffsetMm + lineIndex * CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM}mm`,
+                  width: CARD_CANVA_FRAME_WIDTH,
+                  borderTop: CUT_LINE_DASHED_BORDER,
+                  zIndex: 3,
+                }}
+              />
+              <Scissors
+                aria-hidden="true"
+                style={{
+                  ...CUT_ICON_STYLE_BASE,
+                  left: `calc(-${CUT_ICON_SIZE_MM}mm - ${CUT_ICON_GAP_MM}mm)`,
+                  top: `calc(${printGridTopOffsetMm + lineIndex * CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                }}
+              />
+              <Scissors
+                aria-hidden="true"
+                style={{
+                  ...CUT_ICON_STYLE_BASE,
+                  left: `calc(${CARD_CANVA_FRAME_WIDTH} + ${CUT_ICON_GAP_MM}mm)`,
+                  top: `calc(${printGridTopOffsetMm + lineIndex * CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM}mm - ${CUT_ICON_HALF_SIZE_MM}mm)`,
+                  transform: "rotate(180deg)",
+                }}
+              />
+            </React.Fragment>
+          ))}
+          <div
+            style={{
+              position: "absolute",
+              top: `${printGridTopOffsetMm}mm`,
+              left: 0,
+              display: "grid",
+              gridTemplateColumns: `repeat(${printColumns}, ${CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM}mm)`,
+              gridTemplateRows: `repeat(${printRows}, ${CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM}mm)`,
+              width: CARD_CANVA_FRAME_WIDTH,
+              height: `${printGridHeightMm}mm`,
+              zIndex: 1,
+            }}
+          >
+            {entries.map((entry, index) => {
+              const displayItem = (entry?.sideIndex ?? 0) === 0
+                ? entry?.frontItem ?? null
+                : pairingMode === "same"
+                  ? entry?.frontItem ?? null
+                  : entry?.backItem ?? null;
+              const displayText = getCardPairDisplayText(entry?.frontItem ?? null, entry?.backItem ?? null, entry?.sideIndex ?? 0, pairingMode);
+              const showLogo = !isBackSide && ((index + 1) % 2 === 0);
+              const showFooter = !isBackSide && Boolean(footer) && index % 2 === 0;
+
+              return (
+                <div
+                  key={displayItem?.id || `${pageKey}-slot-${index}`}
+                  style={{
+                    position: "relative",
+                    width: `${CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM}mm`,
+                    height: `${CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM}mm`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4mm",
+                    textAlign: "center",
+                    background: isBackSide ? "#ffffff" : undefined,
+                  }}
+                >
+                  {!isBackSide && displayItem?.imageUrl ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: printImageInset,
+                        borderRadius: "1.5mm",
+                        overflow: "hidden",
+                        backgroundImage: `url(${displayItem.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                  ) : null}
+                  {showLogo && logoSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      style={{
+                        position: "absolute",
+                        top: "2.5mm",
+                        right: "2.5mm",
+                        width: "6.5mm",
+                        height: "6.5mm",
+                        objectFit: "contain",
+                        zIndex: 1,
+                      }}
+                    />
+                  ) : null}
+                  {isBackSide ? (
+                    renderCardBackSymbol(entry?.sideIndex ?? 0)
+                  ) : displayText?.trim() ? (
+                    <div
+                      style={{
+                        position: "relative",
+                        zIndex: 1,
+                        padding: "1mm 2mm",
+                        borderRadius: "1.5mm",
+                        background: "rgba(255,255,255,0.9)",
+                        fontSize: printFontSize,
+                        fontWeight: 400,
+                        lineHeight: 1.2,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        width: "100%",
+                      }}
+                    >
+                      {renderCardTextWithBlanks(displayText, { minHeight: "1.1em" })}
+                    </div>
+                  ) : null}
+                  {showFooter ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "2.5mm",
+                        top: "2mm",
+                        fontSize: "7pt",
+                        fontWeight: 500,
+                        lineHeight: 1.1,
+                        maxWidth: "18mm",
+                        textAlign: "left",
+                        color: "#475569",
+                        background: "rgba(255,255,255,0.82)",
+                        borderRadius: "3px",
+                        padding: "0.5mm 1mm",
+                        zIndex: 1,
+                      }}
+                    >
+                      {footer}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </CardCanvaPrintContentArea>
+    </CardCanvaPrintPageFrame>
+  );
+
+  if (mode === "print") {
+    const pairChunks = Array.from({ length: Math.max(1, Math.ceil(pairs.length / 9)) }, (_, pageIndex) =>
+      pairs.slice(pageIndex * 9, pageIndex * 9 + 9),
+    );
+
+    const mirrorBackEntries = <T,>(entries: T[]): T[] => {
+      const mirrored: T[] = [];
+      for (let rowIndex = 0; rowIndex < entries.length / printColumns; rowIndex += 1) {
+        const row = entries.slice(rowIndex * printColumns, rowIndex * printColumns + printColumns);
+        mirrored.push(...row.reverse());
+      }
+      return mirrored;
+    };
+
+    return (
+      <>
+        {pairChunks.flatMap((pairChunk, chunkIndex) => {
+          const faceEntries = pairChunk.flatMap((pair) => ([
+            { frontItem: pair?.pairItems[0] ?? null, backItem: pair?.pairItems[1] ?? null, sideIndex: 0 },
+            { frontItem: pair?.pairItems[0] ?? null, backItem: pair?.pairItems[1] ?? null, sideIndex: 1 },
+          ]));
+          const frontEntries = Array.from({ length: cardsPerPrintPage }, (_, index) => faceEntries[index] ?? null);
+          const backEntries = mirrorBackEntries(Array.from({ length: cardsPerPrintPage }, (_, index) => faceEntries[index] ?? null));
+          const pages = [
+            renderPrintPage(frontEntries, `card-pairs-front-${chunkIndex}`, false),
+            renderPrintPage(backEntries, `card-pairs-back-${chunkIndex}`, true),
+          ];
+          const lastPageIndex = pages.length - 1;
+          return pages.map((page, pageIndex) => React.cloneElement(page, {
+            key: page.key,
+            style: {
+              ...(page.props.style || {}),
+              breakAfter: chunkIndex === pairChunks.length - 1 && pageIndex === lastPageIndex ? undefined : "page",
+              pageBreakAfter: chunkIndex === pairChunks.length - 1 && pageIndex === lastPageIndex ? undefined : "always",
+            },
+          }));
+        })}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? <h3 className="text-cv-xl" style={titleStyle}>{title}</h3> : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
+        {pairs.map(({ pairItems, pairIndex }) => (
+          <div key={`card-pairs-view-pair-${pairIndex}`} className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background break-inside-avoid">
+            {pairItems.map((item, itemOffset) => {
+              const displayItem = pairingMode === "same" && itemOffset === 1 ? pairItems[0] : item;
+              const displayText = getCardPairDisplayText(pairItems[0], pairItems[1], itemOffset, pairingMode);
+              const showLogo = itemOffset === 1;
+              const showFooter = Boolean(footer) && itemOffset === 0;
+              return (
+                <div
+                  key={item.id || `${pairIndex}-${itemOffset}`}
+                  className={`relative flex h-[34mm] w-[34mm] flex-col p-2 ${itemOffset === 0 ? "border-r border-border" : ""} items-center justify-center`}
+                >
+                  {showLogo && logoSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      className="absolute top-2 right-2 h-[18px] w-[18px] object-contain"
+                    />
+                  ) : null}
+                  {displayItem?.imageUrl ? (
+                    <div
+                      className="absolute overflow-hidden"
+                      style={{
+                        inset: previewImageInset,
+                        borderRadius: "1.5mm",
+                        backgroundImage: `url(${displayItem.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                  )}
+                  {displayText.trim() ? (
+                    <div className={`relative z-10 whitespace-pre-wrap text-center break-words bg-background/90 px-1 py-0.5 ${viewerTextClass}`} style={{ borderRadius: "1.5mm" }}>
+                      {renderCardTextWithBlanks(displayText, { minHeight: "1.05em" })}
+                    </div>
+                  ) : null}
+                  {showFooter ? (
+                    <div className="absolute left-2 top-1.5 z-10 max-w-[24mm] rounded-sm bg-background/80 px-1 py-0.5 text-left text-[8px] font-medium leading-none text-slate-600">
+                      {footer}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+            {pairItems.length === 1 ? <div className="h-[34mm] w-[34mm] bg-background" /> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: SyllableCardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
   const items = getFlashcardItems(block.items);
   const title = block.title?.trim();
@@ -5832,7 +6458,7 @@ function renderInlineChoiceViewLine(
                   className="font-semibold"
                   style={{
                     marginLeft: 3,
-                    ...(isCorrectOpt && showSolutions ? { color: '#16a34a' } : {}),
+                    ...(isCorrectOpt && showSolutions ? { color: '#15803d' } : {}),
                   }}
                 >
                   {label}
@@ -6453,6 +7079,7 @@ function CrosswordView({
   const [dragItem, setDragItem] = useState<string | null>(null);
   const isOnline = mode === "online";
   const colorCodeEnabled = !!block.colorCode;
+  const useTwoColumnCategoryLines = block.categories.length === 2 && !!block.twoColumnCategoryLines;
 
   const categoryPalette = [
     { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
@@ -6508,6 +7135,11 @@ function CrosswordView({
     return correctCat ? getCategoryTheme(correctCat.id) : categoryPalette[0];
   };
 
+  const splitItemsLeftFirst = <T,>(items: T[]): [T[], T[]] => {
+    const leftCount = Math.ceil(items.length / 2);
+    return [items.slice(0, leftCount), items.slice(leftCount)];
+  };
+
   const displayUnsorted = shuffledItems.filter(
     (item) => item.id === exampleItemId || !Object.values(effectiveAnswer).flat().includes(item.id)
   );
@@ -6537,6 +7169,19 @@ function CrosswordView({
   const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
   const writingLineStyle = { borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 } as const;
   const writingLineBoxClass = "relative flex-1 h-8 overflow-hidden";
+  const renderWritingRows = (rows: React.ReactElement[]) => {
+    if (!useTwoColumnCategoryLines) {
+      return <div>{rows}</div>;
+    }
+
+    const [leftRows, rightRows] = splitItemsLeftFirst(rows);
+    return (
+      <div className="grid grid-cols-2 gap-x-3">
+        <div>{leftRows}</div>
+        <div>{rightRows}</div>
+      </div>
+    );
+  };
 
   // Print mode: show all items as chips + empty category boxes with writing lines
   if (!interactive) {
@@ -6605,9 +7250,10 @@ function CrosswordView({
                 <span className="font-semibold">{cat.label}</span>
               </div>
               <div>
-                {categoryExampleItem ? (
-                  <div>
+                {categoryExampleItem ? (() => {
+                  const rows: React.ReactElement[] = [
                     <div
+                      key={`${cat.id}-example`}
                       className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
                       style={colorCodeEnabled
                         ? {
@@ -6624,78 +7270,78 @@ function CrosswordView({
                           {categoryExampleItem.text}
                         </span>
                       </div>
-                    </div>
-                    {!showSolutions && (block.showWritingLines ?? true) && maxItemsPerCat > 1 && (
-                      <div>
-                        {Array.from({ length: maxItemsPerCat - 1 }).map((_, i) => (
-                          <div key={i} className={SORT_WRITING_ROW_CLASS}>
-                            <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {showSolutions && remainingSolutionItems.length > 0 && (
-                      <div>
-                        {remainingSolutionItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
-                            style={colorCodeEnabled
-                              ? {
-                                  color: catTheme.itemText,
-                                  borderBottomColor: catTheme.itemBorder,
-                                }
-                              : undefined}
-                          >
-                            <div className={writingLineBoxClass} style={writingLineStyle}>
-                              <span
-                                className="absolute inset-x-0 block leading-none"
-                                style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
-                              >
-                                {item.text}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : showSolutions ? (
-                  <div>
-                    {cat.correctItems.map((itemId, rowIndex) => {
-                      const item = block.items.find((it) => it.id === itemId);
-                      return item ? (
-                            <div
-                              key={itemId}
-                              className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
-                              style={colorCodeEnabled
-                                ? {
-                                    color: catTheme.itemText,
-                                    borderBottomColor: catTheme.itemBorder,
-                                  }
-                                : undefined}
+                    </div>,
+                  ];
+
+                  if (!showSolutions && (block.showWritingLines ?? true) && maxItemsPerCat > 1) {
+                    rows.push(
+                      ...Array.from({ length: maxItemsPerCat - 1 }).map((_, i) => (
+                        <div key={`${cat.id}-empty-${i}`} className={SORT_WRITING_ROW_CLASS}>
+                          <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
+                        </div>
+                      ))
+                    );
+                  }
+
+                  if (showSolutions && remainingSolutionItems.length > 0) {
+                    rows.push(
+                      ...remainingSolutionItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
+                          style={colorCodeEnabled
+                            ? {
+                                color: catTheme.itemText,
+                                borderBottomColor: catTheme.itemBorder,
+                              }
+                            : undefined}
+                        >
+                          <div className={writingLineBoxClass} style={writingLineStyle}>
+                            <span
+                              className="absolute inset-x-0 block leading-none"
+                              style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
                             >
-                              <div className={writingLineBoxClass} style={writingLineStyle}>
-                                <span
-                                  className="absolute inset-x-0 block leading-none"
-                                  style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
-                                >
-                                  {item.text}
-                                </span>
-                              </div>
-                            </div>
-                      ) : null;
-                    })}
-                  </div>
-                ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 && (
-                  <div>
-                    {Array.from({ length: maxItemsPerCat }).map((_, i) => (
-                      <div key={i} className={SORT_WRITING_ROW_CLASS}>
-                        <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
+                              {item.text}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    );
+                  }
+
+                  return renderWritingRows(rows);
+                })() : showSolutions ? renderWritingRows(
+                  cat.correctItems.flatMap((itemId) => {
+                    const item = block.items.find((it) => it.id === itemId);
+                    return item ? [
+                      <div
+                        key={itemId}
+                        className={`${SORT_WRITING_ROW_CLASS} text-cv-sm`}
+                        style={colorCodeEnabled
+                          ? {
+                              color: catTheme.itemText,
+                              borderBottomColor: catTheme.itemBorder,
+                            }
+                          : undefined}
+                      >
+                        <div className={writingLineBoxClass} style={writingLineStyle}>
+                          <span
+                            className="absolute inset-x-0 block leading-none"
+                            style={{ bottom: '6px', fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
+                          >
+                            {item.text}
+                          </span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ] : [];
+                  })
+                ) : (block.showWritingLines ?? true) && maxItemsPerCat > 0 ? renderWritingRows(
+                  Array.from({ length: maxItemsPerCat }).map((_, i) => (
+                    <div key={`${cat.id}-blank-${i}`} className={SORT_WRITING_ROW_CLASS}>
+                      <div className={writingLineBoxClass} style={{ ...writingLineStyle, minWidth: 80 }} />
+                    </div>
+                  ))
+                ) : null}
               </div>
             </div>
           );})}
@@ -7682,7 +8328,8 @@ function ReadingComprehensionView({
     ? "flex min-h-[49px] items-center gap-3"
     : "flex min-h-[32.5px] items-center gap-3";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
-  const isFormLayout = block.layoutType === "form";
+  const isPrefilledFormLayout = block.layoutType === "prefilled-form";
+  const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
 
@@ -7730,49 +8377,89 @@ function ReadingComprehensionView({
                 </div>
               </div>
               {isFormLayout ? (
-                <div className="flex gap-3 pb-2 pt-2">
+                <div className="flex gap-3 pb-4 pt-2">
                   <div className={NUMBER_BADGE_LAYOUT_CLASS} aria-hidden="true" />
                   <div className="flex-1">
                     <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
                       {formFieldLabels.map((label, fieldIndex) => {
+                        const shouldStretchLastField =
+                          fieldIndex === formFieldLabels.length - 1 &&
+                          formFieldLabels.length % formColumns === 1;
                         const answerKey = `${item.id}_${fieldIndex}`;
-                        const userFieldVal = userAnswers[answerKey] || "";
-                        const solution = item.fieldValues?.[fieldIndex] || "";
+                        const parsedValue = parseReadingComprehensionFieldValue(item.fieldValues?.[fieldIndex]);
+                        const prefilledValue = parsedValue.prefilled || parsedValue.solution;
+                        const userFieldVal = userAnswers[answerKey] ?? (isPrefilledFormLayout ? prefilledValue : "");
+                        const solution = parsedValue.solution;
                         const hasFieldSolution = solution.trim() !== "";
                         const isFieldCorrect = showResults && hasFieldSolution && userFieldVal.trim().toLowerCase() === solution.trim().toLowerCase();
                         const isFieldWrong = showResults && hasFieldSolution && userFieldVal.trim() !== "" && !isFieldCorrect;
-                        const isExampleField = item.id === exampleSentenceId && hasFieldSolution;
+                        const isExampleField = item.id === exampleSentenceId && fieldIndex === 0 && hasFieldSolution;
                         const showFieldSolution = !interactive && showSolutions && hasFieldSolution && !isExampleField;
+                        const renderPrefilledCorrection = () => (
+                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                            <span
+                              className="inline-block min-h-[20px] px-0 py-0.5"
+                              style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
+                            >
+                              {renderReadingComprehensionCorrectionSegments(parsedValue, "#15803d")}
+                            </span>
+                          </div>
+                        );
+                        const renderPrefilledExample = () => (
+                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                            <span
+                              className="inline-block min-h-[20px] px-0 py-0.5"
+                              style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
+                            >
+                              {renderReadingComprehensionCorrectionSegments(parsedValue, "#0097dc")}
+                            </span>
+                          </div>
+                        );
 
                         return (
-                          <div key={fieldIndex} className="space-y-1 min-w-0">
+                          <div
+                            key={fieldIndex}
+                            className="space-y-1 min-w-0"
+                            style={shouldStretchLastField ? { gridColumn: "1 / -1" } : undefined}
+                          >
                             <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
-                            {isExampleField ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
+                            {isPrefilledFormLayout && isExampleField ? renderPrefilledExample() : isPrefilledFormLayout && !interactive && !showFieldSolution ? (
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
                                 <span
-                                  className="absolute inset-0 flex items-center justify-center"
+                                  className="absolute inset-0 flex items-center px-2"
+                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: "currentColor", fontSize: "18px" }}
+                                >
+                                  {prefilledValue}
+                                </span>
+                              </div>
+                            ) : isExampleField ? (
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                                <span
+                                  className="absolute inset-0 flex items-center px-2"
                                   style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
                                 >
                                   {solution}
                                 </span>
                               </div>
                             ) : showFieldSolution ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
-                                <span
-                                  className="absolute inset-0 flex items-center justify-center"
-                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
-                                >
-                                  {solution}
-                                </span>
-                              </div>
+                              isPrefilledFormLayout ? renderPrefilledCorrection() : (
+                                <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                                  <span
+                                    className="absolute inset-0 flex items-center px-2"
+                                    style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
+                                  >
+                                    {solution}
+                                  </span>
+                                </div>
+                              )
                             ) : interactive ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 min-h-[20px]">
+                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
                                 <input
                                   type="text"
                                   value={userFieldVal}
                                   onChange={(e) => onAnswer({ ...userAnswers, [answerKey]: e.target.value })}
                                   disabled={showResults}
-                                  className={`w-full h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none transition-colors ${
+                                  className={`w-full h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-left leading-5 focus:outline-none transition-colors ${
                                     showResults
                                       ? isFieldCorrect
                                         ? "bg-green-100 text-green-700"
@@ -7781,16 +8468,21 @@ function ReadingComprehensionView({
                                           : "text-foreground"
                                       : "focus:ring-1 focus:ring-primary/50"
                                   }`}
-                                  style={!showResults && isOnline ? {
-                                    backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
-                                  } : undefined}
+                                  style={{
+                                    fontFamily: isPrefilledFormLayout ? EXAMPLE_HANDWRITING_FONT : undefined,
+                                    ...(!showResults && isOnline ? {
+                                      backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                                    } : undefined),
+                                  }}
                                 />
-                                {showResults && isFieldWrong && hasFieldSolution && (
+                                {showResults && isFieldWrong && hasFieldSolution && isPrefilledFormLayout ? (
+                                  <div className="mt-1">{renderPrefilledCorrection()}</div>
+                                ) : showResults && isFieldWrong && hasFieldSolution ? (
                                   <span className="text-cv-xs text-green-600 mt-0.5 block">{solution}</span>
-                                )}
+                                ) : null}
                               </div>
                             ) : (
-                              <div className="w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 text-muted-foreground text-xs min-h-[20px]">&nbsp;</div>
+                              <div className="w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">&nbsp;</div>
                             )}
                           </div>
                         );
@@ -8060,6 +8752,13 @@ function DialogueView({
 }) {
   const t = useTranslations("blockRenderer");
   const isOnline = mode === "online";
+  const originalLeftColWidth = Math.max(
+    20,
+    Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)),
+  );
+  const originalColumnsStyle: React.CSSProperties = {
+    gridTemplateColumns: `minmax(0, ${originalLeftColWidth}fr) minmax(0, ${100 - originalLeftColWidth}fr)`,
+  };
 
   const renderSpeakerIcon = (icon: DialogueSpeakerIcon) => {
     return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brand} className="w-5 h-5 object-contain" />;
@@ -8280,7 +8979,7 @@ function DialogueView({
               </span>
             )}
             {block.showOriginal ? (
-              <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
+              <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
                 <div className="min-w-0 flex flex-wrap items-center">
                   {renderDialogueText(
                     item.text,
@@ -9378,6 +10077,8 @@ export function ViewerBlockRenderer({
       return <ImageView block={block} />;
     case "image-cards":
       return <ImageCardsView block={block} />;
+    case "image-text-table":
+      return <ImageTextTableView block={block} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} showSolutions={showSolutions} />;
     case "text-cards":
       return <TextCardsView block={block} />;
     case "spacer":
@@ -9444,6 +10145,20 @@ export function ViewerBlockRenderer({
           interactive={interactive}
           answer={answer}
           onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "pronunciation":
+      return (
+        <MatchingView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer}
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
@@ -9799,6 +10514,8 @@ export function ViewerBlockRenderer({
       return <BoardGameView block={block as BoardGameBlock} />;
     case "domino":
       return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+    case "card-pairs":
+      return <CardPairsView block={block as CardPairsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "flashcards":
       return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "syllable-cards":

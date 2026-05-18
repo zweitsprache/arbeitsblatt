@@ -29,6 +29,7 @@ Purpose:
 - Container blocks can contain nested blocks:
   - `columns.children` is an array of block arrays.
   - `accordion.items[].children` is an array of blocks.
+  - `grid.children` is an array of block arrays, one array per cell.
 - Some fields are runtime-oriented and should normally start empty:
   - `ai-prompt.userInput`
   - `ai-prompt.aiResult`
@@ -179,6 +180,17 @@ Allowed `textStyle` values:
 - `metadaten`
 - `rows`
 
+### `syllables`
+
+```json
+{
+  "id": "syllables-1",
+  "type": "syllables",
+  "visibility": "both",
+  "content": "Sil | ben | tren | nen"
+}
+```
+
 ### `image`
 
 ```json
@@ -224,6 +236,44 @@ Allowed `imageStyle` values:
   "columns": 2,
   "imageAspectRatio": "1:1",
   "imageScale": 100,
+  "showWritingLines": false,
+  "writingLinesCount": 1,
+  "showWordBank": false
+}
+```
+
+Rules:
+
+- `columns` must be `2`, `3`, or `4`.
+- `imageAspectRatio` must be `16:9`, `4:3`, `1:1`, `3:4`, or `9:16`.
+
+### `image-text-table`
+
+```json
+{
+  "id": "image-text-table-1",
+  "type": "image-text-table",
+  "visibility": "both",
+  "instruction": "Look at the pictures and copy the captions.",
+  "items": [
+    {
+      "id": "card-1",
+      "src": "/samples/apple.jpg",
+      "alt": "Apple",
+      "text": "Apple"
+    },
+    {
+      "id": "card-2",
+      "src": "/samples/banana.jpg",
+      "alt": "Banana",
+      "text": "Banana"
+    }
+  ],
+  "columns": 2,
+  "imageAspectRatio": "1:1",
+  "imageScale": 100,
+  "showImageNumberBadge": true,
+  "showFirstAsExample": false,
   "showWritingLines": false,
   "writingLinesCount": 1,
   "showWordBank": false
@@ -354,6 +404,196 @@ Rules:
 - `columns` can be `1` to `4`.
 - `children.length` should match `columns`.
 
+### `grid`
+
+```json
+{
+  "id": "grid-1",
+  "type": "grid",
+  "visibility": "both",
+  "rows": 2,
+  "cols": 2,
+  "rowGap": 12,
+  "colGap": 12,
+  "children": [
+    [
+      {
+        "id": "grid-cell-1-heading",
+        "type": "heading",
+        "visibility": "both",
+        "content": "Top left",
+        "level": 3
+      }
+    ],
+    [
+      {
+        "id": "grid-cell-2-text",
+        "type": "text",
+        "visibility": "both",
+        "content": "<p>Top right</p>"
+      }
+    ],
+    [],
+    []
+  ],
+  "showBorder": false
+}
+```
+
+Rules:
+
+- `children.length` should equal `rows * cols`.
+- Each `children` entry is the block array for one grid cell.
+
+### `board-game`
+
+```json
+{
+  "id": "board-game-1",
+  "type": "board-game",
+  "visibility": "both",
+  "rows": 4,
+  "cols": 4,
+  "cells": [
+    {
+      "id": "cell-1",
+      "text": "Start"
+    },
+    {
+      "id": "cell-2",
+      "text": "Was machst du am Morgen?"
+    }
+  ]
+}
+```
+
+Rules:
+
+- `cells` should usually contain `rows * cols` items.
+- Each cell may use `text`, `imageUrl`, or both.
+
+### `domino`
+
+```json
+{
+  "id": "domino-1",
+  "type": "domino",
+  "visibility": "both",
+  "title": "Domino",
+  "footer": "Schneiden und mischen",
+  "items": [
+    {
+      "id": "domino-1-a",
+      "text": "Guten Morgen"
+    },
+    {
+      "id": "domino-1-b",
+      "text": "Good morning"
+    }
+  ],
+  "shufflePairs": true,
+  "showSpeakerIcons": false,
+  "textSize": "m"
+}
+```
+
+Notes:
+
+- `items` reuse the `BoardGameCell` shape.
+- `textSize` must be `s`, `m`, `l`, or `xl`.
+- `domino` is a worksheet-exclusive block type.
+
+### `card-pairs`
+
+```json
+{
+  "id": "card-pairs-1",
+  "type": "card-pairs",
+  "visibility": "both",
+  "title": "Card Pairs",
+  "footer": "Cut out and mix",
+  "items": [
+    {
+      "id": "card-pair-1-a",
+      "text": "Hund"
+    },
+    {
+      "id": "card-pair-1-b",
+      "text": "dog"
+    }
+  ],
+  "shufflePairs": false,
+  "pairingMode": "different",
+  "textSize": "m"
+}
+```
+
+Notes:
+
+- `items` reuse the `BoardGameCell` shape.
+- `pairingMode` supports `same` for duplicated fronts or `different` for A/B pairs.
+- `textSize` must be `s`, `m`, `l`, or `xl`.
+- `card-pairs` is a worksheet-exclusive block type.
+
+### `flashcards`
+
+```json
+{
+  "id": "flashcards-1",
+  "type": "flashcards",
+  "visibility": "both",
+  "title": "Flashcards",
+  "footer": "Vorher ausschneiden",
+  "items": [
+    {
+      "id": "flashcard-1-front",
+      "text": "Hund"
+    },
+    {
+      "id": "flashcard-1-back",
+      "text": "dog"
+    }
+  ],
+  "shufflePairs": false,
+  "textSize": "m"
+}
+```
+
+Notes:
+
+- `items` reuse the `BoardGameCell` shape.
+- `textSize` must be `s`, `m`, `l`, or `xl`.
+- `flashcards` is a worksheet-exclusive block type.
+
+### `syllable-cards`
+
+```json
+{
+  "id": "syllable-cards-1",
+  "type": "syllable-cards",
+  "visibility": "both",
+  "title": "Silbenkarten",
+  "footer": "Ausschneiden",
+  "items": [
+    {
+      "id": "syllable-card-1",
+      "text": "Ba"
+    },
+    {
+      "id": "syllable-card-2",
+      "text": "na"
+    }
+  ],
+  "textSize": "l"
+}
+```
+
+Notes:
+
+- `items` reuse the `BoardGameCell` shape.
+- `textSize` must be `s`, `m`, `l`, or `xl`.
+- `syllable-cards` is a worksheet-exclusive block type.
+
 ### `multiple-choice`
 
 ```json
@@ -440,9 +680,47 @@ Rule:
       "right": "cat"
     }
   ],
+  "pairOrder": ["pair-2", "pair-1"],
   "extendedRows": false
 }
 ```
+
+Notes:
+
+- `pairOrder` is optional persisted shuffle order for rows.
+
+### `pronunciation`
+
+```json
+{
+  "id": "pronunciation-1",
+  "type": "pronunciation",
+  "visibility": "both",
+  "instruction": "Match the words with their pronunciation.",
+  "leftHeader": "Word",
+  "rightHeader": "Pronunciation",
+  "pairs": [
+    {
+      "id": "pair-1",
+      "left": "through",
+      "right": "/θruː/"
+    },
+    {
+      "id": "pair-2",
+      "left": "thought",
+      "right": "/θɔːt/"
+    }
+  ],
+  "pairOrder": ["pair-2", "pair-1"],
+  "extendedRows": false,
+  "showWordBank": false,
+  "showFirstAsExample": false
+}
+```
+
+Notes:
+
+- `pairOrder` is optional persisted shuffle order for rows.
 
 ### `two-column-fill`
 
@@ -574,6 +852,48 @@ Notes:
 
 - `options` supports up to 5 entries.
 - `correctOptionIds` allows multiple correct options per statement.
+
+### `mcq-rows`
+
+```json
+{
+  "id": "mcq-rows-1",
+  "type": "mcq-rows",
+  "visibility": "both",
+  "instruction": "Wahle pro Zeile die richtige Antwort.",
+  "showFirstAsExample": false,
+  "choicesPerItem": 3,
+  "items": [
+    {
+      "id": "row-1",
+      "text": "Ich ___ nach Hause.",
+      "choices": [
+        {
+          "id": "choice-1",
+          "label": "A",
+          "text": "gehe"
+        },
+        {
+          "id": "choice-2",
+          "label": "B",
+          "text": "gehst"
+        },
+        {
+          "id": "choice-3",
+          "label": "C",
+          "text": "geht"
+        }
+      ],
+      "correctChoiceId": "choice-1"
+    }
+  ]
+}
+```
+
+Rules:
+
+- `choicesPerItem` should match the intended row layout.
+- Each item's `correctChoiceId` must reference one of its own `choices`.
 
 ### `order-items`
 
@@ -777,6 +1097,66 @@ Notes:
 
 - `itemOrder` is optional persisted shuffle order.
 
+### `correct-spelling`
+
+```json
+{
+  "id": "correct-spelling-1",
+  "type": "correct-spelling",
+  "visibility": "both",
+  "instruction": "Schreibe die Worter richtig.",
+  "words": [
+    {
+      "id": "word-1",
+      "word": "Schule",
+      "displayCount": 6
+    },
+    {
+      "id": "word-2",
+      "word": "Lehrer"
+    }
+  ],
+  "displayCount": 6,
+  "keepFirstLetter": true,
+  "keepLastLetter": false,
+  "showFirstAsExample": false,
+  "itemOrder": ["word-2", "word-1"]
+}
+```
+
+Notes:
+
+- `displayCount` can be set globally and optionally per word.
+- `itemOrder` is optional persisted shuffle order.
+
+### `missing-letters`
+
+```json
+{
+  "id": "missing-letters-1",
+  "type": "missing-letters",
+  "visibility": "both",
+  "instruction": "Erganze die fehlenden Buchstaben.",
+  "words": [
+    {
+      "id": "word-1",
+      "word": "Schule",
+      "displayCount": 4
+    }
+  ],
+  "displayCount": 4,
+  "keepFirstLetter": true,
+  "keepLastLetter": true,
+  "showFirstAsExample": false,
+  "itemOrder": ["word-1"]
+}
+```
+
+Notes:
+
+- `displayCount` can be set globally and optionally per word.
+- `itemOrder` is optional persisted shuffle order.
+
 ### `fix-sentences`
 
 ```json
@@ -822,6 +1202,61 @@ Rule:
   ]
 }
 ```
+
+### `transform-sentences`
+
+```json
+{
+  "id": "transform-sentences-1",
+  "type": "transform-sentences",
+  "visibility": "both",
+  "instruction": "Formuliere die Satze neu.",
+  "sentences": [
+    {
+      "id": "sentence-1",
+      "beginning": "Ich wohne in Bern.",
+      "solution": "Ich lebe in Bern.",
+      "src": "src-1"
+    }
+  ],
+  "showFirstAsExample": false
+}
+```
+
+### `reading-comprehension`
+
+```json
+{
+  "id": "reading-comprehension-1",
+  "type": "reading-comprehension",
+  "visibility": "both",
+  "instruction": "Beantworte die Fragen zum Text.",
+  "sentences": [
+    {
+      "id": "question-1",
+      "question": "Wo wohnt Anna?",
+      "beginning": "Anna wohnt in ...",
+      "solution": "Bern",
+      "src": "src-1",
+      "fieldValues": ["Bern"]
+    }
+  ],
+  "layoutType": "form",
+  "formFieldLabels": ["Ort"],
+  "formColumns": 1,
+  "showFirstAsExample": false
+}
+```
+
+Allowed `layoutType` values:
+
+- `default`
+- `form`
+
+Rules:
+
+- `formColumns` must be `1`, `2`, `3`, or `4` when used.
+- `fieldValues` and `formFieldLabels` should align by position.
 
 ### `verb-table`
 
@@ -1201,6 +1636,79 @@ Allowed `layout` values:
 }
 ```
 
+### `quartett`
+
+```json
+{
+  "id": "quartett-1",
+  "type": "quartett",
+  "visibility": "both",
+  "title": "Berufe",
+  "showGroupTitle": true,
+  "showFooter": true,
+  "items": [
+    {
+      "id": "quartett-item-1",
+      "title": "Pflege",
+      "subitems": [
+        {
+          "id": "quartett-sub-1",
+          "content": "Pflegefachperson"
+        },
+        {
+          "id": "quartett-sub-2",
+          "content": "Arztin"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+
+- `quartett` is a worksheet-exclusive block type.
+
+### `taboo`
+
+```json
+{
+  "id": "taboo-1",
+  "type": "taboo",
+  "visibility": "both",
+  "title": "Taboo",
+  "items": [
+    {
+      "id": "taboo-item-1",
+      "title": "Bahnhof",
+      "subitems": [
+        {
+          "id": "taboo-sub-1",
+          "content": "Zug"
+        },
+        {
+          "id": "taboo-sub-2",
+          "content": "Gleis"
+        },
+        {
+          "id": "taboo-sub-3",
+          "content": "Ticket"
+        },
+        {
+          "id": "taboo-sub-4",
+          "content": "reisen"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+
+- `taboo` reuses the `QuartettItem` shape.
+- `taboo` is a worksheet-exclusive block type.
+
 ### `accordion`
 
 ```json
@@ -1481,7 +1989,9 @@ When AI generates worksheet JSON, it should follow these rules:
 Normal sidebar blocks:
 
 - `heading`
+- `numbered-heading`
 - `text`
+- `syllables`
 - `image`
 - `image-cards`
 - `text-cards`
@@ -1489,21 +1999,35 @@ Normal sidebar blocks:
 - `divider`
 - `logo-divider`
 - `columns`
+- `grid`
+- `board-game`
+- `card-pairs`
+- `domino`
+- `flashcards`
+- `syllable-cards`
 - `multiple-choice`
 - `fill-in-blank`
 - `fill-in-blank-items`
 - `matching`
+- `pronunciation`
 - `two-column-fill`
 - `open-response`
 - `word-bank`
+- `mcq-matrix`
+- `mcq-rows`
 - `true-false-matrix`
 - `order-items`
 - `inline-choices`
+- `crossword`
 - `word-search`
 - `sorting-categories`
+- `correct-spelling`
+- `missing-letters`
 - `unscramble-words`
 - `fix-sentences`
 - `complete-sentences`
+- `transform-sentences`
+- `reading-comprehension`
 - `verb-table`
 - `glossary`
 - `article-training`
@@ -1519,6 +2043,8 @@ Normal sidebar blocks:
 - `text-comparison`
 - `dos-and-donts`
 - `numbered-items`
+- `quartett`
+- `taboo`
 - `accordion`
 - `checklist`
 - `ai-prompt`

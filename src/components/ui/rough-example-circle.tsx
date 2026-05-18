@@ -102,7 +102,19 @@ export function RoughExampleCircle({ children, stroke = "#0097dc" }: { children:
   );
 }
 
-export function RoughExampleStrike({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+export function RoughExampleStrike({
+  children,
+  className,
+  style,
+  tight = false,
+  tightTop,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  tight?: boolean;
+  tightTop?: string;
+}) {
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -112,19 +124,22 @@ export function RoughExampleStrike({ children, className, style }: { children: R
   const paths = isMounted ? roughStrikePaths : FALLBACK_STRIKE_PATHS;
 
   return (
-    <span className={`relative inline-block ${className || ""}`.trim()} style={style}>
-      <span>{children}</span>
+    <span
+      className={`relative inline-block align-baseline ${tight ? "overflow-hidden" : ""} ${className || ""}`.trim()}
+      style={{ verticalAlign: "baseline", ...(style || {}) }}
+    >
+      <span className="inline-block align-baseline" style={tight ? { lineHeight: "inherit" } : undefined}>{children}</span>
       <svg
         aria-hidden="true"
-        className="absolute pointer-events-none overflow-visible"
+        className={`absolute pointer-events-none ${tight ? "overflow-hidden" : "overflow-visible"}`}
         viewBox="0 0 160 40"
         preserveAspectRatio="none"
         style={{
-          left: "-0.35rem",
-          top: "50%",
-          width: "calc(100% + 0.7rem)",
-          height: "1.15rem",
-          transform: "translateY(-50%) rotate(-4deg)",
+          left: tight ? "0" : "-0.35rem",
+          top: tight ? (tightTop || "50%") : "50%",
+          width: tight ? "100%" : "calc(100% + 0.7rem)",
+          height: tight ? "1rem" : "1.15rem",
+          transform: tight ? "translateY(-50%) rotate(-3deg)" : "translateY(-50%) rotate(-4deg)",
         }}
       >
         {paths.map((path, index) => (

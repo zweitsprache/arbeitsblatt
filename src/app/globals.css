@@ -528,6 +528,7 @@
 /* Interactive blocks must stay together */
 .worksheet-block-multiple-choice,
 .worksheet-block-matching,
+.worksheet-block-pronunciation,
 .worksheet-block-true-false-matrix,
 .worksheet-block-mcq-matrix,
 .worksheet-block-mcq-rows,
@@ -638,10 +639,43 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content,
 .print-worksheet-root.print-has-flashcards .print-footer-content,
+.print-worksheet-root.print-has-card-pairs .print-footer-content,
 .print-worksheet-root.print-has-syllable-cards .print-footer-content {
   width: 261mm;
   margin: 0 auto;
   padding: 0 0 8mm 0;
+}
+
+.print-worksheet-root.print-has-domino .print-footer-content,
+.print-worksheet-root.print-has-flashcards .print-footer-content,
+.print-worksheet-root.print-has-card-pairs .print-footer-content,
+.print-worksheet-root.print-has-syllable-cards .print-footer-content {
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  align-items: end;
+  justify-content: initial;
+}
+
+.print-worksheet-root.print-has-domino .print-footer-content > div,
+.print-worksheet-root.print-has-flashcards .print-footer-content > div,
+.print-worksheet-root.print-has-card-pairs .print-footer-content > div,
+.print-worksheet-root.print-has-syllable-cards .print-footer-content > div {
+  min-width: 0;
+  text-align: left;
+}
+
+.print-worksheet-root.print-has-domino .print-footer-content > div:nth-child(2),
+.print-worksheet-root.print-has-flashcards .print-footer-content > div:nth-child(2),
+.print-worksheet-root.print-has-card-pairs .print-footer-content > div:nth-child(2),
+.print-worksheet-root.print-has-syllable-cards .print-footer-content > div:nth-child(2) {
+  text-align: center;
+}
+
+.print-worksheet-root.print-has-domino .print-footer-content > div:last-child,
+.print-worksheet-root.print-has-flashcards .print-footer-content > div:last-child,
+.print-worksheet-root.print-has-card-pairs .print-footer-content > div:last-child,
+.print-worksheet-root.print-has-syllable-cards .print-footer-content > div:last-child {
+  text-align: right;
 }
 
 .print-worksheet-root.print-canva .print-canva-side-header,
@@ -1091,6 +1125,8 @@
   .worksheet-block-crossword,
   .worksheet-block-word-search,
   .worksheet-block-image-cards .image-card-row,
+  .worksheet-block-image-text-table .image-text-table-card,
+  .worksheet-block-image-text-table .image-text-table-row,
   .worksheet-block-text-cards .text-card-row,
   .glossary-row,
   .tiptap-rows p,
@@ -1121,10 +1157,12 @@
   .worksheet-block-verb-table,
   .worksheet-block-order-items,
   .worksheet-block-matching,
+  .worksheet-block-pronunciation,
   .worksheet-block-fill-in-blank,
   .worksheet-block-fill-in-blank-items,
   .worksheet-block-inline-choices,
   .worksheet-block-image-cards,
+  .worksheet-block-image-text-table,
   .worksheet-block-text-cards,
   .worksheet-block-glossary {
     break-inside: auto;

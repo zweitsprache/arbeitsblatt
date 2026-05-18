@@ -1,5 +1,5 @@
 import { parseBlankContent } from "@/lib/fill-in-blank";
-import { BoardGameCell, DominoBlock, DominoTextSize, FlashcardsBlock } from "@/types/worksheet";
+import { BoardGameCell, CardPairsBlock, CardPairsPairingMode, DominoBlock, DominoTextSize, FlashcardsBlock } from "@/types/worksheet";
 
 export interface DominoPair {
   pairIndex: number;
@@ -20,6 +20,15 @@ export function getDefaultDominoItems(): BoardGameCell[] {
 export function getDefaultFlashcardItems(): BoardGameCell[] {
   return Array.from({ length: 8 }, (_, index) => ({
     id: `flashcard-item-${index + 1}`,
+    text: "",
+    imageUrl: "",
+    speakerIcon: null,
+  }));
+}
+
+export function getDefaultCardPairItems(): BoardGameCell[] {
+  return Array.from({ length: 8 }, (_, index) => ({
+    id: `card-pair-item-${index + 1}`,
     text: "",
     imageUrl: "",
     speakerIcon: null,
@@ -95,6 +104,14 @@ export function getFlashcardItems(items: BoardGameCell[]): BoardGameCell[] {
   return items.length > 0 ? items : getDefaultFlashcardItems();
 }
 
+export function getCardPairItems(items: BoardGameCell[]): BoardGameCell[] {
+  return items.length > 0 ? items : getDefaultCardPairItems();
+}
+
+export function getCardPairsPairingMode(pairingMode?: CardPairsPairingMode | null): CardPairsPairingMode {
+  return pairingMode ?? "same";
+}
+
 const FLASHCARD_BLANK_TOKEN_PATTERN = /\{\{blank\*?(?::[^}]*)?\}\}/;
 const FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN = /\{\{blank\*?(?::([^}]*))?\}\}/g;
 
@@ -118,6 +135,19 @@ export function getFlashcardDisplayText(frontItem?: BoardGameCell | null, backIt
   }
 
   return solveFlashcardBlankText(frontText);
+}
+
+export function getCardPairDisplayText(
+  frontItem?: BoardGameCell | null,
+  backItem?: BoardGameCell | null,
+  sideIndex = 0,
+  pairingMode?: CardPairsPairingMode | null,
+): string {
+  if (getCardPairsPairingMode(pairingMode) === "same" && sideIndex === 1) {
+    return frontItem?.text ?? "";
+  }
+
+  return getFlashcardDisplayText(frontItem, backItem, sideIndex);
 }
 
 function buildPairs(id: string, items: BoardGameCell[], shufflePairs?: boolean): DominoPair[] {
@@ -146,4 +176,8 @@ export function getDominoPairs(block: Pick<DominoBlock, "id" | "items" | "shuffl
 
 export function getFlashcardPairs(block: Pick<FlashcardsBlock, "id" | "items" | "shufflePairs">): DominoPair[] {
   return buildPairs(block.id, getFlashcardItems(block.items), block.shufflePairs);
+}
+
+export function getCardPairs(block: Pick<CardPairsBlock, "id" | "items" | "shufflePairs">): DominoPair[] {
+  return buildPairs(block.id, getCardPairItems(block.items), block.shufflePairs);
 }

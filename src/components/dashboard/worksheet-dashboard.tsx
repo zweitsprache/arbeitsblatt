@@ -102,6 +102,8 @@ export function WorksheetDashboard() {
   const [newFolderName, setNewFolderName] = useState("");
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
   const [renameFolderName, setRenameFolderName] = useState("");
+  const [renameWorksheetId, setRenameWorksheetId] = useState<string | null>(null);
+  const [renameWorksheetTitle, setRenameWorksheetTitle] = useState("");
   const [moveWorksheetId, setMoveWorksheetId] = useState<string | null>(null);
   const [moveTargetFolders, setMoveTargetFolders] = useState<FolderItem[]>([]);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
@@ -173,6 +175,30 @@ export function WorksheetDashboard() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const refreshSearchResults = useCallback(async () => {
+    if (!search.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const res = await authFetch(
+        `/api/worksheets?search=${encodeURIComponent(search.trim())}`
+      );
+      if (!res.ok) {
+        setSearchResults([]);
+        return;
+      }
+      const data = await res.json();
+      setSearchResults(data);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [search]);
+
   const navigateToFolder = async (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
     setBreadcrumbs((prev) => [...prev, { id: folderId, name: folderName }]);
@@ -216,6 +242,35 @@ export function WorksheetDashboard() {
       fetchContents(currentFolderId);
     } catch (err) {
       console.error("Failed to rename folder:", err);
+    }
+  };
+
+  const renameWorksheet = async () => {
+    const trimmedTitle = renameWorksheetTitle.trim();
+    if (!renameWorksheetId || !trimmedTitle) return;
+
+    try {
+      await authFetch(`/api/worksheets/${renameWorksheetId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmedTitle }),
+      });
+
+      setWorksheets((prev) =>
+        prev.map((ws) =>
+          ws.id === renameWorksheetId ? { ...ws, title: trimmedTitle } : ws
+        )
+      );
+
+      if (searchResults !== null) {
+        await refreshSearchResults();
+      }
+
+      setRenameWorksheetId(null);
+      setRenameWorksheetTitle("");
+      fetchContents(currentFolderId);
+    } catch (err) {
+      console.error("Failed to rename worksheet:", err);
     }
   };
 
@@ -568,6 +623,15 @@ export function WorksheetDashboard() {
                           {tc("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={() => {
+                            setRenameWorksheetId(ws.id);
+                            setRenameWorksheetTitle(ws.title);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-2" />
+                          {tc("rename")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => duplicateWorksheet(ws.id)}
                         >
                           <Copy className="h-3.5 w-3.5 mr-2" />
@@ -672,6 +736,48 @@ export function WorksheetDashboard() {
               <Button
                 onClick={renameFolder}
                 disabled={!renameFolderName.trim()}
+              >
+                {tc("rename")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={renameWorksheetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameWorksheetId(null);
+            setRenameWorksheetTitle("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("renameWorksheetTitle")}</DialogTitle>
+            <DialogDescription>{t("renameWorksheetDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={renameWorksheetTitle}
+              onChange={(e) => setRenameWorksheetTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && renameWorksheet()}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRenameWorksheetId(null);
+                  setRenameWorksheetTitle("");
+                }}
+              >
+                {tc("cancel")}
+              </Button>
+              <Button
+                onClick={renameWorksheet}
+                disabled={!renameWorksheetTitle.trim()}
               >
                 {tc("rename")}
               </Button>

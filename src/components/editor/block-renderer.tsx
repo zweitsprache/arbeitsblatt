@@ -8,6 +8,7 @@ import {
   SyllablesBlock,
   ImageBlock,
   ImageCardsBlock,
+  ImageTextTableBlock,
   TextCardsBlock,
   SpacerBlock,
   DividerBlock,
@@ -15,6 +16,7 @@ import {
   FillInBlankBlock,
   FillInBlankItemsBlock,
   MatchingBlock,
+  PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
   OpenResponseBlock,
@@ -26,6 +28,7 @@ import {
   ColumnsBlock,
   GridBlock,
   DominoBlock,
+  CardPairsBlock,
   FlashcardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
@@ -83,7 +86,7 @@ import {
 import { TriangleAlert } from "lucide-react";
 import { useEditor } from "@/store/editor-store";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
-import { getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
+import { getCardPairDisplayText, getCardPairs, getCardPairItems, getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
@@ -170,6 +173,127 @@ function renderHandwriting(text: string): React.ReactNode {
       );
     }
     return part;
+  });
+}
+
+type ReadingComprehensionFieldSegment = {
+  prefilled: string;
+  solution: string;
+  hasCorrection: boolean;
+};
+
+function parseReadingComprehensionFieldValue(rawValue: string | undefined) {
+  const value = rawValue ?? "";
+  const inlinePattern = /(\{\{.*?(?:\|.*?)?\}\})/g;
+
+  if (value.includes("{{") && value.includes("}}")) {
+    const segments = value.split(inlinePattern).filter((part) => part.length > 0).map<ReadingComprehensionFieldSegment>((part) => {
+      const correctionMatch = part.match(/^\{\{(.*?)\|(.*?)\}\}$/);
+      if (correctionMatch) {
+        const prefilled = correctionMatch[1].trim();
+        const solution = correctionMatch[2].trim();
+        return {
+          prefilled,
+          solution,
+          hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase(),
+        };
+      }
+
+      const deletionMatch = part.match(/^\{\{(.*?)\}\}$/);
+      if (deletionMatch) {
+        const prefilled = deletionMatch[1].trim();
+        return {
+          prefilled,
+          solution: "",
+          hasCorrection: prefilled.length > 0,
+        };
+      }
+
+      if (!part.includes("{{")) {
+        return {
+          prefilled: part,
+          solution: part,
+          hasCorrection: false,
+        };
+      }
+
+      return {
+        prefilled: part,
+        solution: part,
+        hasCorrection: false,
+      };
+    });
+
+    return {
+      prefilled: segments.map((segment) => segment.prefilled).join(""),
+      solution: segments.map((segment) => segment.solution).join(""),
+      hasCorrection: segments.some((segment) => segment.hasCorrection),
+      inlineSyntax: true,
+      segments,
+    };
+  }
+
+  const [prefilledPart, ...solutionParts] = value.split("|");
+  if (solutionParts.length === 0) {
+    const normalized = value.trim();
+    return {
+      prefilled: normalized,
+      solution: normalized,
+      hasCorrection: false,
+      inlineSyntax: false,
+      segments: [{ prefilled: normalized, solution: normalized, hasCorrection: false }],
+    };
+  }
+
+  const prefilled = prefilledPart.trim();
+  const solution = solutionParts.join("|").trim();
+  return {
+    prefilled,
+    solution,
+    hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase(),
+    inlineSyntax: false,
+    segments: [{ prefilled, solution, hasCorrection: prefilled.toLowerCase() !== solution.toLowerCase() }],
+  };
+}
+
+function renderReadingComprehensionCorrectionSegments(
+  parsedValue: ReturnType<typeof parseReadingComprehensionFieldValue>,
+  correctionColor?: string,
+) {
+  if (parsedValue.inlineSyntax) {
+    const appendedCorrections = parsedValue.segments
+      .filter((segment) => segment.hasCorrection && segment.solution)
+      .map((segment) => segment.solution);
+
+    return (
+      <>
+        {parsedValue.segments.map((segment, index) => {
+          if (!segment.hasCorrection) {
+            return <span key={index}>{segment.prefilled}</span>;
+          }
+
+          return <RoughExampleStrike tight tightTop="58%" key={index} style={{ verticalAlign: "-0.18em" }}>{segment.prefilled}</RoughExampleStrike>;
+        })}
+        {appendedCorrections.length > 0 ? (
+          <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>
+            {appendedCorrections.join(", ")}
+          </span>
+        ) : null}
+      </>
+    );
+  }
+
+  return parsedValue.segments.map((segment, index) => {
+    if (!segment.hasCorrection) {
+      return <span key={index}>{segment.prefilled}</span>;
+    }
+
+    return (
+      <span key={index} className="inline-flex items-center">
+        <RoughExampleStrike tight>{segment.prefilled}</RoughExampleStrike>
+        <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>{segment.solution}</span>
+      </span>
+    );
   });
 }
 
@@ -467,7 +591,10 @@ function collectNumberedHeadingBlocks(blocks: WorksheetBlock[]): { id: string; l
     for (const block of items) {
       if (block.type === "numbered-heading") {
         const levelIndex = block.level - 1;
-        counters[levelIndex] += 1;
+        const explicitStart = Math.max(1, Math.floor(block.startNumber ?? 1));
+        counters[levelIndex] = counters[levelIndex] === 0
+          ? explicitStart
+          : Math.max(counters[levelIndex] + 1, explicitStart);
         for (let index = levelIndex + 1; index < counters.length; index += 1) {
           counters[index] = 0;
         }
@@ -1231,6 +1358,255 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
   );
 }
 
+function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+  const { upload } = useUpload();
+  const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+  const exampleItemId = block.showFirstAsExample ? block.items[0]?.id : undefined;
+  const displayItems = React.useMemo(
+    () => (block.shuffleItems
+      ? getDeterministicPreviewOrder(
+          block.items.map((item, index) => ({ item, originalIndex: index })),
+          (entry) => `${block.id}:${entry.item.id}:${entry.originalIndex}`,
+        )
+      : block.items.map((item, index) => ({ item, originalIndex: index }))),
+    [block.id, block.items, block.shuffleItems],
+  );
+
+  const handleImageUpload = async (file: File, index: number) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingIndex(index);
+    try {
+      const result = await upload(file);
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], src: result.url, alt: file.name };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(null);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleImageUpload(file, index);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(null);
+  };
+
+  const updateItemText = (index: number, text: string) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], text };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addCard = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), src: "", alt: "", text: `Caption ${block.items.length + 1}` },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeCard = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {block.instruction && (
+        <div
+          className="text-sm text-muted-foreground outline-none"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            const value = e.currentTarget.textContent || "";
+            localeUpdate(block.id, "instruction", value, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+            );
+          }}
+        >
+          {block.instruction}
+        </div>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${block.columns}, 1fr)` }}
+      >
+        {displayItems.map(({ item, originalIndex }) => {
+          const [arW, arH] = (block.imageAspectRatio ?? "1:1").split(":").map(Number);
+          return (
+            <div key={item.id} className="relative group/card">
+              <div
+                className={`border rounded overflow-hidden bg-card transition-all ${
+                  dragOverIndex === originalIndex ? "ring-2 ring-primary border-primary" : ""
+                }`}
+                onDrop={(e) => handleDrop(e, originalIndex)}
+                onDragOver={(e) => handleDragOver(e, originalIndex)}
+                onDragLeave={handleDragLeave}
+              >
+                {item.src ? (
+                  <div
+                    className="relative overflow-hidden mx-auto"
+                    style={{
+                      width: `${block.imageScale ?? 100}%`,
+                      aspectRatio: `${arW} / ${arH}`,
+                    }}
+                  >
+                    {block.showImageNumberBadge !== false && (
+                      <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md bg-background/85 text-[10px] font-semibold leading-none text-foreground shadow-sm backdrop-blur-[1px]">
+                        {originalIndex + 1}
+                      </span>
+                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.src}
+                      alt={item.alt}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newItems = [...block.items];
+                        newItems[originalIndex] = { ...newItems[originalIndex], src: "", alt: "" };
+                        dispatch({
+                          type: "UPDATE_BLOCK",
+                          payload: { id: block.id, updates: { items: newItems } },
+                        });
+                      }}
+                      className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    className={`w-full aspect-square flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      dragOverIndex === originalIndex ? "bg-primary/10" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, originalIndex);
+                        }}
+                      />
+                      {uploadingIndex === originalIndex ? (
+                        <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                      ) : dragOverIndex === originalIndex ? (
+                        <>
+                          <Upload className="h-8 w-8 text-primary mb-2" />
+                          <span className="text-xs text-primary font-medium">{t("dropImage")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                          <span className="text-xs text-muted-foreground">{t("dragOrClick")}</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                )}
+                <div className="p-2">
+                  <input
+                    type="text"
+                    value={item.text}
+                    onChange={(e) => updateItemText(originalIndex, e.target.value)}
+                    className="w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1"
+                    placeholder={t("caption")}
+                  />
+                </div>
+              </div>
+              {block.items.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeCard(originalIndex)}
+                  className="absolute -top-2 -right-2 opacity-0 group-hover/card:opacity-100 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-1 shadow transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="space-y-2 rounded border border-dashed border-muted-foreground/30 p-3">
+        {block.items.map((item, index) => (
+          <div key={item.id} className="grid grid-cols-[auto_1fr] gap-2 items-end">
+            <span className="text-sm font-medium text-muted-foreground">{index + 1}.</span>
+            <div className="min-w-0">
+              {item.id === exampleItemId ? (
+                <div
+                  className="relative mt-1 min-h-[14px] border-b border-dashed border-muted-foreground/30"
+                >
+                  <span
+                    className="absolute inset-x-0 block leading-none"
+                    style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
+                  >
+                    {item.text || t("caption")}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm text-muted-foreground truncate">{item.text || t("caption")}</div>
+                  <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30" />
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addCard}
+        className="w-full py-2 border-2 border-dashed border-muted-foreground/25 rounded-sm text-muted-foreground text-sm hover:border-muted-foreground/50 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus className="h-4 w-4" />
+        {t("addCard")}
+      </button>
+    </div>
+  );
+}
+
 // ─── Text Cards ──────────────────────────────────────────────
 function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
   const { dispatch } = useEditor();
@@ -1877,12 +2253,29 @@ function FillInBlankItemsRenderer({
 }
 
 // ─── Matching ────────────────────────────────────────────────
-function MatchingRenderer({ block }: { block: MatchingBlock }) {
-  const shuffledRight = React.useMemo(() => getDeterministicPreviewDerangement(
-    block.pairs,
-    (pair, index) => `${pair.id}:${pair.right}:${index}`
-  ), [block.pairs]);
+function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock }) {
+  const isPronunciation = block.type === "pronunciation";
+  const rowClass = isPronunciation
+    ? `flex min-h-[32.5px] items-center gap-3 border-b ${block.extendedRows ? "py-1" : "py-2"}`
+    : undefined;
+  const rowStyle = isPronunciation && block.extendedRows ? { minHeight: "3.5rem" } : undefined;
   const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+  const orderedPairs = React.useMemo(() => {
+    const examplePair = examplePairId ? block.pairs.find((pair) => pair.id === examplePairId) : undefined;
+    const remainingPairs = block.pairs.filter((pair) => pair.id !== examplePairId);
+    const orderedRemainingPairs = block.pairOrder
+      ? block.pairOrder
+          .map((id) => remainingPairs.find((pair) => pair.id === id))
+          .filter((pair): pair is NonNullable<typeof pair> => !!pair)
+          .concat(remainingPairs.filter((pair) => !block.pairOrder!.includes(pair.id)))
+      : remainingPairs;
+
+    return examplePair ? [examplePair, ...orderedRemainingPairs] : orderedRemainingPairs;
+  }, [block.pairOrder, block.pairs, examplePairId]);
+  const shuffledRight = React.useMemo(() => getDeterministicPreviewDerangement(
+    orderedPairs,
+    (pair, index) => `${pair.id}:${pair.right}:${index}`
+  ), [orderedPairs]);
   const exampleAnswers = React.useMemo(() => {
     if (!examplePairId) return new Set<string>();
     const examplePair = block.pairs.find((pair) => pair.id === examplePairId);
@@ -1944,7 +2337,7 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
       resizeObserver.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [block.pairs, shuffledRight, examplePairId]);
+  }, [orderedPairs, shuffledRight, examplePairId]);
 
   return (
     <div className="space-y-3">
@@ -1986,10 +2379,17 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
         )}
       <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
         <div className="space-y-0">
-          {block.pairs.map((pair, i) => (
+          {isPronunciation && (
+            <div className="flex min-h-[32.5px] items-center gap-3 border-y py-2 text-sm font-semibold text-foreground">
+              <span className="w-6 shrink-0" />
+              <span className="flex-1 text-right">{block.leftHeader ?? ""}</span>
+            </div>
+          )}
+          {orderedPairs.map((pair, i) => (
             <div
               key={pair.id}
-              className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
+              className={rowClass ?? `flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
+              style={rowStyle}
             >
               <ItemNumberBadge index={i + 1} />
               <span
@@ -2005,10 +2405,18 @@ function MatchingRenderer({ block }: { block: MatchingBlock }) {
           ))}
         </div>
         <div className="space-y-0">
+          {isPronunciation && (
+            <div className="flex min-h-[32.5px] items-center gap-3 border-y py-2 text-sm font-semibold text-foreground">
+              <span className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{block.rightHeader ?? ""}</span>
+              <span className="w-6 shrink-0" />
+            </div>
+          )}
           {shuffledRight.map((pair, i) => (
             <div
               key={`right-${pair.id}`}
-              className={`flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
+              className={rowClass ?? `flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
+              style={rowStyle}
             >
               <div className="h-4 w-4 rounded-[3px] border border-muted-foreground/40 shrink-0" />
               <span
@@ -3262,11 +3670,8 @@ function renderInlineChoiceLine(content: string, showExample = false): React.Rea
               <span key={oi} className="inline-flex items-center">
                 {oi > 0 && <span className="mx-0.5 text-muted-foreground">/</span>}
                 <span
-                  className={`inline-flex items-center gap-0.5 font-semibold ${
-                    isCorrect && !showExample
-                      ? "font-semibold text-green-700"
-                      : ""
-                  }`}
+                  className="inline-flex items-center gap-0.5 font-semibold"
+                  style={isCorrect && !showExample ? { color: "#15803d" } : undefined}
                 >
                   {renderInlineChoiceIndicator(isCorrect, showExample)}
                   <span>{label}</span>
@@ -3747,6 +4152,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const colorCodeEnabled = !!block.colorCode;
+  const useTwoColumnCategoryLines = block.categories.length === 2 && !!block.twoColumnCategoryLines;
   const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
   const exampleItemId = exampleItem?.id;
   const exampleCategoryId = exampleItem
@@ -3768,6 +4174,11 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
     const catIndex = block.categories.findIndex((cat) => cat.id === catId);
     const index = catIndex >= 0 ? catIndex : 0;
     return categoryPalette[index % categoryPalette.length];
+  };
+
+  const splitItemsLeftFirst = <T,>(items: T[]): [T[], T[]] => {
+    const leftCount = Math.ceil(items.length / 2);
+    return [items.slice(0, leftCount), items.slice(leftCount)];
   };
 
   const updateItem = (id: string, text: string) => {
@@ -3879,56 +4290,70 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                 </span>
               </div>
               <div className="min-h-[60px]">
-                {catItems.map((item) => {
-                  const isExampleItem = item.id === exampleItemId && cat.id === exampleCategoryId;
-                  return (
-                    <div
-                      key={item.id}
-                      className="group/item px-2"
-                    >
-                      <div className="flex min-h-[37px] items-center gap-3">
-                        <div className="relative flex-1 h-8 overflow-hidden border-b border-dashed border-muted-foreground/30">
-                          <span
-                            contentEditable
-                            suppressContentEditableWarning
-                            className="absolute inset-x-0 outline-none block leading-none"
-                            style={colorCodeEnabled
-                              ? {
-                                  bottom: isExampleItem ? "6px" : "4px",
-                                  color: isExampleItem ? "#0097dc" : catTheme.itemText,
-                                  fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
-                                  fontSize: isExampleItem ? "18px" : undefined,
-                                }
-                              : {
-                                  bottom: isExampleItem ? "6px" : "4px",
-                                  color: isExampleItem ? "#0097dc" : undefined,
-                                  fontFamily: isExampleItem ? "var(--font-handwriting), cursive" : undefined,
-                                  fontSize: isExampleItem ? "18px" : undefined,
-                                }}
-                            onBlur={(e) => {
-                              const value = e.currentTarget.textContent || "";
-                              const arrIdx = block.items.findIndex((w) => w.id === item.id);
-                              localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                                updateItem(item.id, value)
-                              );
+                {(() => {
+                  const renderedItems = catItems.map((item) => {
+                    const isExampleItem = item.id === exampleItemId && cat.id === exampleCategoryId;
+                    return (
+                      <div
+                        key={item.id}
+                        className="group/item px-2"
+                      >
+                        <div className="flex min-h-[37px] items-center gap-3">
+                          <div className="relative flex-1 h-8 overflow-hidden border-b border-dashed border-muted-foreground/30">
+                            <span
+                              contentEditable
+                              suppressContentEditableWarning
+                              className="absolute inset-x-0 outline-none block leading-none"
+                              style={colorCodeEnabled
+                                ? {
+                                    bottom: isExampleItem ? "6px" : "4px",
+                                    color: isExampleItem ? "#0097dc" : catTheme.itemText,
+                                    fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
+                                    fontSize: isExampleItem ? "18px" : undefined,
+                                  }
+                                : {
+                                    bottom: isExampleItem ? "6px" : "4px",
+                                    color: isExampleItem ? "#0097dc" : undefined,
+                                    fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
+                                    fontSize: isExampleItem ? "18px" : undefined,
+                                  }}
+                              onBlur={(e) => {
+                                const value = e.currentTarget.textContent || "";
+                                const arrIdx = block.items.findIndex((w) => w.id === item.id);
+                                localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                                  updateItem(item.id, value)
+                                );
+                              }}
+                            >
+                              {item.text}
+                            </span>
+                          </div>
+                          <button
+                            className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeItem(item.id);
                             }}
                           >
-                            {item.text}
-                          </span>
+                            <X className="h-3 w-3 text-destructive" />
+                          </button>
                         </div>
-                        <button
-                          className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeItem(item.id);
-                          }}
-                        >
-                          <X className="h-3 w-3 text-destructive" />
-                        </button>
                       </div>
+                    );
+                  });
+
+                  if (!useTwoColumnCategoryLines) {
+                    return renderedItems;
+                  }
+
+                  const [leftItems, rightItems] = splitItemsLeftFirst(renderedItems);
+                  return (
+                    <div className="grid grid-cols-2 gap-x-3">
+                      <div>{leftItems}</div>
+                      <div>{rightItems}</div>
                     </div>
                   );
-                })}
+                })()}
               </div>
             </div>
           );
@@ -4646,7 +5071,8 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
-  const isFormLayout = block.layoutType === "form";
+  const isPrefilledFormLayout = block.layoutType === "prefilled-form";
+  const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
 
@@ -4768,21 +5194,49 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
               </button>
             </div>
             {isFormLayout ? (
-              <div className="flex gap-3 pb-2 pt-2">
+              <div className="flex gap-3 pb-4 pt-2">
                 <div className="w-6 h-6 min-w-6 shrink-0" aria-hidden="true" />
                 <div className="flex-1">
                   <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${formColumns}, minmax(0, 1fr))` }}>
                     {formFieldLabels.map((label, fieldIndex) => {
+                      const shouldStretchLastField =
+                        fieldIndex === formFieldLabels.length - 1 &&
+                        formFieldLabels.length % formColumns === 1;
                       const value = item.fieldValues?.[fieldIndex] ?? "";
-                      const isExample = item.id === exampleSentenceId && value.trim() !== "";
+                      const parsedValue = parseReadingComprehensionFieldValue(value);
+                      const previewValue = isPrefilledFormLayout ? (parsedValue.prefilled || parsedValue.solution) : value;
+                      const isExample = item.id === exampleSentenceId && fieldIndex === 0 && value.trim() !== "";
+                      const renderPrefilledExample = () => (
+                        <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">
+                          <span
+                            className="inline-block min-h-[20px] px-0 py-0.5"
+                            style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
+                          >
+                            {renderReadingComprehensionCorrectionSegments(parsedValue, "#0097dc")}
+                          </span>
+                        </div>
+                      );
                       return (
-                        <div key={fieldIndex} className="space-y-1 min-w-0">
+                        <div
+                          key={fieldIndex}
+                          className="space-y-1 min-w-0"
+                          style={shouldStretchLastField ? { gridColumn: "1 / -1" } : undefined}
+                        >
                           <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
-                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 text-muted-foreground text-xs min-h-[20px]">
-                            {isExample ? (
+                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">
+                            {isPrefilledFormLayout && isExample ? renderPrefilledExample() : isPrefilledFormLayout ? (
+                              previewValue ? (
+                                <span
+                                  className="absolute inset-0 flex items-center px-2"
+                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: "currentColor", fontSize: "18px" }}
+                                >
+                                  {previewValue}
+                                </span>
+                              ) : <span>&nbsp;</span>
+                            ) : isExample ? (
                               <span
-                                className="absolute inset-0 flex items-center justify-center"
-                                style={{ fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
+                                className="absolute inset-0 flex items-center px-2"
+                                style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
                               >
                                 {value}
                               </span>
@@ -5793,6 +6247,133 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
   );
 }
 
+function CardPairsRenderer({ block }: { block: CardPairsBlock }) {
+  const { state, dispatch } = useEditor();
+  const items = getCardPairItems(block.items);
+  const pairs = getCardPairs(block);
+  const pairingMode = block.pairingMode ?? "same";
+  const textClass = getDominoEditorTextClass(block.textSize);
+  const title = block.title?.trim();
+  const footer = block.footer?.trim();
+  const imageInset = "2.5mm";
+  const titleColor = resolveHeadingOverrideColor(
+    state.brandProfile.h3HeadingColor,
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+
+  const removePair = (itemIndices: number[]) => {
+    const nextItems = items.filter((_, index) => !itemIndices.includes(index));
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } });
+    if (state.selectedBlockId === block.id) {
+      dispatch({ type: "SET_ACTIVE_ITEM", payload: null });
+    }
+  };
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? (
+        <h3
+          className="text-xl text-left"
+          style={{
+            width: "100%",
+            fontWeight: 800,
+            fontFamily: state.brandProfile.headlineFont,
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          width: "fit-content",
+        }}
+      >
+        {pairs.map(({ pairIndex, pairLabel, pairItems, itemIndices }) => {
+          const selectedAnchorIndex =
+            state.activeItemIndex === null || pairingMode !== "same"
+              ? state.activeItemIndex
+              : state.activeItemIndex - (state.activeItemIndex % 2);
+
+          return (
+            <div key={`card-pairs-pair-${pairIndex}`} className="group relative">
+              <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {pairLabel}
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removePair(itemIndices);
+                }}
+                className="absolute right-1 top-1 z-20 rounded-full bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity group-hover:opacity-100 hover:text-red-600"
+                title={state.localeMode === "DE" ? "Paar entfernen" : "Remove pair"}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background shadow-sm">
+                {pairItems.map((item, itemOffset) => {
+                  const itemIndex = itemIndices[itemOffset] ?? 0;
+                  const displayItem = pairingMode === "same" && itemOffset === 1 ? pairItems[0] : item;
+                  const isSelected =
+                    state.selectedBlockId === block.id && (
+                      state.activeItemIndex === itemIndex
+                      || (pairingMode === "same" && selectedAnchorIndex === itemIndices[0])
+                    );
+                  const displayText = getCardPairDisplayText(pairItems[0], pairItems[1], itemOffset, pairingMode);
+                  const showFooter = Boolean(footer) && itemOffset === 0;
+
+                  return (
+                    <button
+                      key={item.id || itemIndex}
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                        dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
+                      }}
+                      className={`relative flex h-[34mm] w-[34mm] flex-col p-2 text-left transition-colors ${itemOffset === 0 ? "border-r border-border" : ""} items-center justify-center ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                    >
+                      {displayItem?.imageUrl ? (
+                        <div
+                          className="absolute overflow-hidden"
+                          style={{
+                            inset: imageInset,
+                            borderRadius: "1.5mm",
+                            backgroundImage: `url(${displayItem.imageUrl})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat",
+                          }}
+                        />
+                      ) : (
+                        <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" />
+                      )}
+                      {displayText?.trim() ? (
+                        <div className={`relative z-10 whitespace-pre-wrap text-center break-words bg-background/90 px-1 py-0.5 ${textClass}`} style={{ borderRadius: "1.5mm" }}>
+                          {renderCardTextWithBlanks(displayText, "min-h-[1.05em]")}
+                        </div>
+                      ) : null}
+                      {showFooter ? (
+                        <div className="absolute left-2 top-1.5 z-10 max-w-[24mm] rounded-sm bg-background/80 px-1 py-0.5 text-left text-[8px] font-medium leading-none text-slate-600">
+                          {footer}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+                {pairItems.length === 1 ? <div className="h-[34mm] w-[34mm] bg-background" /> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SyllableCardsRenderer({ block }: { block: SyllableCardsBlock }) {
   const { state, dispatch } = useEditor();
   const items = getFlashcardItems(block.items);
@@ -5895,6 +6476,13 @@ function DialogueRenderer({
 }) {
   const { state } = useEditor();
   const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
+  const originalLeftColWidth = Math.max(
+    20,
+    Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)),
+  );
+  const originalColumnsStyle: React.CSSProperties = {
+    gridTemplateColumns: `minmax(0, ${originalLeftColWidth}fr) minmax(0, ${100 - originalLeftColWidth}fr)`,
+  };
 
   const renderSpeakerIcon = (icon: DialogueSpeakerIcon) => {
     return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brandSlug} className="w-5 h-5 object-contain" />;
@@ -6101,7 +6689,7 @@ function DialogueRenderer({
               </span>
             )}
             {block.showOriginal ? (
-              <div className="grid flex-1 grid-cols-2 gap-8 leading-5">
+              <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
                 <div className="min-w-0">
                   {renderDialogueText(item.text, "default", !!block.showFirstAsExample && i === 0)}
                 </div>
@@ -7722,6 +8310,8 @@ export function BlockRenderer({
       return <ImageRenderer block={block} />;
     case "image-cards":
       return <ImageCardsRenderer block={block} />;
+    case "image-text-table":
+      return <ImageTextTableRenderer block={block} />;
     case "text-cards":
       return <TextCardsRenderer block={block} />;
     case "spacer":
@@ -7743,6 +8333,8 @@ export function BlockRenderer({
     case "fill-in-blank-items":
       return <FillInBlankItemsRenderer block={block} interactive={interactive} />;
     case "matching":
+      return <MatchingRenderer block={block} />;
+    case "pronunciation":
       return <MatchingRenderer block={block} />;
     case "two-column-fill":
       return <TwoColumnFillRenderer block={block} />;
@@ -7800,6 +8392,8 @@ export function BlockRenderer({
       return <GridRenderer block={block as GridBlock} mode={mode} />;
     case "domino":
       return <DominoRenderer block={block as DominoBlock} />;
+    case "card-pairs":
+      return <CardPairsRenderer block={block as CardPairsBlock} />;
     case "flashcards":
       return <FlashcardsRenderer block={block as FlashcardsBlock} />;
     case "syllable-cards":

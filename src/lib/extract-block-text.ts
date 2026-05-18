@@ -88,6 +88,16 @@ export function extractBlocksText(
         }
         break;
 
+      case "pronunciation":
+        if (block.instruction) parts.push(block.instruction);
+        if (block.leftHeader) parts.push(block.leftHeader);
+        if (block.rightHeader) parts.push(block.rightHeader);
+        if (block.textAboveItems) parts.push(block.textAboveItems);
+        for (const pair of block.pairs ?? []) {
+          parts.push(`${pair.left} → ${pair.right}`);
+        }
+        break;
+
       case "two-column-fill":
         if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {
@@ -209,6 +219,8 @@ export function extractBlocksText(
         break;
 
       case "image-cards":
+      case "image-text-table":
+        if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {
           if (item.text) parts.push(item.text);
         }

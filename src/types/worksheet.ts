@@ -21,11 +21,13 @@ export type BlockType =
   | "syllable-cards"
   | "image"
   | "image-cards"
+  | "image-text-table"
   | "spacer"
   | "divider"
   | "multiple-choice"
   | "fill-in-blank"
   | "matching"
+  | "pronunciation"
   | "open-response"
   | "word-bank"
   | "number-line"
@@ -75,15 +77,17 @@ export type BlockType =
   | "schedule"
   | "website"
   | "checklist"
+  | "card-pairs"
   | "domino"
   | "flashcards"
   | "board-game"
   | "grid";
 
-export type ExclusiveWorksheetBlockType = "flashcards" | "domino" | "quartett" | "taboo" | "syllable-cards";
+export type ExclusiveWorksheetBlockType = "flashcards" | "card-pairs" | "domino" | "quartett" | "taboo" | "syllable-cards";
 
 export const EXCLUSIVE_WORKSHEET_BLOCK_TYPES: ReadonlySet<ExclusiveWorksheetBlockType> = new Set([
   "flashcards",
+  "card-pairs",
   "domino",
   "quartett",
   "taboo",
@@ -138,6 +142,7 @@ export interface NumberedHeadingBlock extends BlockBase {
   type: "numbered-heading";
   content: string;
   level: 1 | 2 | 3 | 4;
+  startNumber: number;
   bilingual?: boolean;
   skipTranslation?: boolean;
 }
@@ -191,6 +196,21 @@ export interface ImageCardsBlock extends BlockBase {
   columns: 2 | 3 | 4;
   imageAspectRatio: "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
   imageScale: number; // 10-100
+  showWritingLines: boolean;
+  writingLinesCount: number;
+  showWordBank: boolean;
+}
+
+export interface ImageTextTableBlock extends BlockBase {
+  type: "image-text-table";
+  instruction?: string;
+  items: ImageCardItem[];
+  columns: 2 | 3 | 4;
+  imageAspectRatio: "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
+  imageScale: number; // 10-100
+  showImageNumberBadge: boolean;
+  shuffleItems?: boolean;
+  showFirstAsExample?: boolean;
   showWritingLines: boolean;
   writingLinesCount: number;
   showWordBank: boolean;
@@ -314,6 +334,20 @@ export interface MatchingBlock extends BlockBase {
   instruction: string;
   textAboveItems?: string;
   pairs: MatchingPair[];
+  pairOrder?: string[];
+  extendedRows?: boolean;
+  showWordBank?: boolean;
+  showFirstAsExample?: boolean;
+}
+
+export interface PronunciationBlock extends BlockBase {
+  type: "pronunciation";
+  instruction: string;
+  textAboveItems?: string;
+  leftHeader?: string;
+  rightHeader?: string;
+  pairs: MatchingPair[];
+  pairOrder?: string[];
   extendedRows?: boolean;
   showWordBank?: boolean;
   showFirstAsExample?: boolean;
@@ -430,6 +464,18 @@ export interface FlashcardsBlock extends BlockBase {
   items: BoardGameCell[];
   shufflePairs?: boolean;
   textSize?: DominoTextSize;
+}
+
+export type CardPairsPairingMode = "same" | "different";
+
+export interface CardPairsBlock extends BlockBase {
+  type: "card-pairs";
+  title?: string;
+  footer?: string;
+  items: BoardGameCell[];
+  shufflePairs?: boolean;
+  textSize?: DominoTextSize;
+  pairingMode?: CardPairsPairingMode;
 }
 
 export interface SyllableCardsBlock extends BlockBase {
@@ -635,6 +681,7 @@ export interface SortingCategoriesBlock extends BlockBase {
   categories: SortingCategory[];
   items: SortingItem[];
   showWritingLines: boolean;
+  twoColumnCategoryLines?: boolean;
   colorCode?: boolean;
   showFirstAsExample?: boolean;
 }
@@ -727,7 +774,7 @@ export interface ReadingComprehensionBlock extends BlockBase {
   type: "reading-comprehension";
   instruction: string;
   sentences: ReadingComprehensionItem[];
-  layoutType?: "default" | "form";
+  layoutType?: "default" | "form" | "prefilled-form";
   formFieldLabels?: string[];
   formColumns?: 1 | 2 | 3 | 4;
   showFirstAsExample?: boolean;
@@ -784,6 +831,8 @@ export interface DialogueBlock extends BlockBase {
   items: DialogueItem[];
   showWordBank: boolean;
   showOriginal?: boolean;
+  originalColumnRatio?: "1:1" | "3:2";
+  originalLeftColWidth?: number;
   showFirstAsExample?: boolean;
 }
 
@@ -1058,12 +1107,14 @@ export type WorksheetBlock =
   | SyllablesBlock
   | ImageBlock
   | ImageCardsBlock
+  | ImageTextTableBlock
   | TextCardsBlock
   | SpacerBlock
   | DividerBlock
   | MultipleChoiceBlock
   | FillInBlankBlock
   | MatchingBlock
+  | PronunciationBlock
   | OpenResponseBlock
   | WordBankBlock
   | NumberLineBlock
@@ -1110,6 +1161,7 @@ export type WorksheetBlock =
   | ScheduleBlock
   | WebsiteBlock
   | DominoBlock
+  | CardPairsBlock
   | FlashcardsBlock
   | SyllableCardsBlock
   | BoardGameBlock
@@ -1624,6 +1676,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "numbered-heading",
       content: "Heading",
       level: 1,
+      startNumber: 1,
       visibility: "both",
     },
   },
@@ -1692,6 +1745,35 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       columns: 2,
       imageAspectRatio: "1:1",
       imageScale: 100,
+      showImageNumberBadge: false,
+      showWritingLines: false,
+      writingLinesCount: 1,
+      showWordBank: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "image-text-table",
+    label: "Image - Text Table",
+    description: "Image grid with numbered writing rows below",
+    labelKey: "imageTextTable",
+    descriptionKey: "imageTextTableDesc",
+    icon: "LayoutGrid",
+    category: "images",
+    translations: { de: { label: "Bild-Text-Tabelle", description: "Bildraster mit nummerierten Schreibzeilen darunter" } },
+    defaultData: {
+      type: "image-text-table",
+      instruction: "",
+      items: [
+        { id: "card1", src: "", alt: "", text: "Caption 1" },
+        { id: "card2", src: "", alt: "", text: "Caption 2" },
+      ],
+      columns: 2,
+      imageAspectRatio: "1:1",
+      imageScale: 100,
+      showImageNumberBadge: true,
+      shuffleItems: false,
+      showFirstAsExample: false,
       showWritingLines: false,
       writingLinesCount: 1,
       showWordBank: false,
@@ -1854,6 +1936,30 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "card-pairs",
+    label: "Card Pairs",
+    description: "Double-sided square matching cards",
+    labelKey: "cardPairs",
+    descriptionKey: "cardPairsDesc",
+    icon: "Square",
+    category: "layout",
+    translations: { de: { label: "Kartenpaare", description: "Doppelseitige quadratische Kartenpaare" } },
+    defaultData: {
+      type: "card-pairs",
+      title: "",
+      footer: "",
+      items: Array.from({ length: 8 }, (_, index) => ({
+        id: `card-pair-item-${index + 1}`,
+        text: "",
+        imageUrl: "",
+      })),
+      shufflePairs: false,
+      textSize: "m",
+      pairingMode: "same",
+      visibility: "both",
+    },
+  },
+  {
     type: "flashcards",
     label: "Flashcards",
     description: "Front and back flashcard pairs",
@@ -1977,6 +2083,34 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "p2", left: "Item 2", right: "Match 2" },
         { id: "p3", left: "Item 3", right: "Match 3" },
       ],
+      pairOrder: undefined,
+      extendedRows: false,
+      showWordBank: false,
+      showFirstAsExample: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "pronunciation",
+    label: "Pronunciation",
+    description: "Match words and pronunciations with column headers",
+    labelKey: "pronunciation",
+    descriptionKey: "pronunciationDesc",
+    icon: "ArrowLeftRight",
+    category: "interactive",
+    translations: { de: { label: "Pronunciation", description: "Wort- und Aussprachepaare mit Spaltenköpfen verbinden" } },
+    defaultData: {
+      type: "pronunciation",
+      instruction: "Match the words with their pronunciation.",
+      textAboveItems: "",
+      leftHeader: "Word",
+      rightHeader: "Pronunciation",
+      pairs: [
+        { id: "p1", left: "through", right: "/θruː/" },
+        { id: "p2", left: "thought", right: "/θɔːt/" },
+        { id: "p3", left: "though", right: "/ðoʊ/" },
+      ],
+      pairOrder: undefined,
       extendedRows: false,
       showWordBank: false,
       showFirstAsExample: false,
@@ -2234,6 +2368,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "si4", text: "Item 4" },
       ],
       showWritingLines: true,
+      twoColumnCategoryLines: false,
       colorCode: false,
       showFirstAsExample: false,
       visibility: "both",
@@ -2504,6 +2639,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       ],
       showWordBank: false,
       showOriginal: false,
+      originalColumnRatio: "1:1",
+      originalLeftColWidth: 50,
       showFirstAsExample: false,
       visibility: "both",
     },

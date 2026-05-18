@@ -176,6 +176,18 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "image-text-table": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text, (v) => {
+          item.text = v;
+        });
+      }
+      break;
+    }
+
     case "text-cards": {
       for (const item of block.items) {
         add(`items.${item.id}.text`, () => item.text, (v) => {
@@ -208,6 +220,27 @@ function forEachBlockTranslationField(
     case "matching": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;
+      });
+      for (const pair of block.pairs) {
+        add(`pairs.${pair.id}.left`, () => pair.left, (v) => {
+          pair.left = v;
+        });
+        add(`pairs.${pair.id}.right`, () => pair.right, (v) => {
+          pair.right = v;
+        });
+      }
+      break;
+    }
+
+    case "pronunciation": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      add("leftHeader", () => block.leftHeader || "", (v) => {
+        block.leftHeader = v;
+      });
+      add("rightHeader", () => block.rightHeader || "", (v) => {
+        block.rightHeader = v;
       });
       for (const pair of block.pairs) {
         add(`pairs.${pair.id}.left`, () => pair.left, (v) => {

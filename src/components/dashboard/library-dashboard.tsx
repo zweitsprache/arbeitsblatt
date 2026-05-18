@@ -16,6 +16,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,6 +40,8 @@ import {
   BookOpen,
   Library,
   Loader2,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
@@ -78,6 +86,12 @@ export function LibraryDashboard() {
     open: boolean;
     item?: LibraryItem;
   }>({ open: false });
+  const [renameDialog, setRenameDialog] = useState<{
+    open: boolean;
+    item?: LibraryItem;
+  }>({ open: false });
+  const [renameTitle, setRenameTitle] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -128,6 +142,64 @@ export function LibraryDashboard() {
       setPdfLocaleDialog({ open: true, item });
     } else {
       handleDownload(item);
+    }
+  };
+
+  const refreshSearchResults = useCallback(async () => {
+    if (!search.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const typeParam = typeFilter !== "all" ? `&type=${typeFilter}` : "";
+      const res = await authFetch(
+        `/api/library?search=${encodeURIComponent(search.trim())}${typeParam}`
+      );
+      const data = await res.json();
+      setSearchResults(data);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [search, typeFilter]);
+
+  const openRenameDialog = (item: LibraryItem) => {
+    setRenameTitle(item.title);
+    setRenameDialog({ open: true, item });
+  };
+
+  const renameWorksheet = async () => {
+    const item = renameDialog.item;
+    const trimmedTitle = renameTitle.trim();
+
+    if (!item || item.type !== "worksheet" || !trimmedTitle) return;
+
+    setRenamingId(item.id);
+    try {
+      await authFetch(`/api/worksheets/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmedTitle }),
+      });
+
+      setItems((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id ? { ...entry, title: trimmedTitle } : entry
+        )
+      );
+      if (searchResults !== null) {
+        await refreshSearchResults();
+      }
+
+      setRenameDialog({ open: false });
+      setRenameTitle("");
+    } catch (err) {
+      console.error("Failed to rename worksheet:", err);
+    } finally {
+      setRenamingId(null);
     }
   };
 
@@ -287,8 +359,30 @@ export function LibraryDashboard() {
             return (
               <Card
                 key={item.id}
-                className="hover:border-primary/50 hover:shadow-lg transition-all h-full flex flex-col overflow-hidden group"
+                className="hover:border-primary/50 hover:shadow-lg transition-all h-full flex flex-col overflow-hidden group relative"
               >
+                {item.type === "worksheet" && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/85"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openRenameDialog(item)}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" />
+                          {tc("rename")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
                 {/* Preview area */}
                 <LibraryItemPreview
                   type={item.type}
@@ -397,6 +491,63 @@ export function LibraryDashboard() {
             >
               {"🌐 Neutral"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={renameDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameDialog({ open: false });
+            setRenameTitle("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("renameWorksheetTitle")}</DialogTitle>
+            <DialogDescription>{t("renameWorksheetDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <Input
+              value={renameTitle}
+              onChange={(e) => setRenameTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  void renameWorksheet();
+                }
+              }}
+              disabled={renamingId !== null}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRenameDialog({ open: false });
+                  setRenameTitle("");
+                }}
+                disabled={renamingId !== null}
+              >
+                {tc("cancel")}
+              </Button>
+              <Button
+                onClick={() => {
+                  void renameWorksheet();
+                }}
+                disabled={
+                  renamingId !== null ||
+                  !renameTitle.trim() ||
+                  renameTitle.trim() === renameDialog.item?.title
+                }
+              >
+                {renamingId !== null ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  tc("rename")
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

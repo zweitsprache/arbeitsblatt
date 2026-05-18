@@ -19,7 +19,7 @@ bun dev
 Use these scripts to keep hot reload behavior predictable:
 
 ```bash
-# Default and recommended (Webpack)
+# Default and recommended (Webpack, native file watching)
 npm run dev
 
 # Force-clean Next cache and start fresh
@@ -35,6 +35,7 @@ npm run dev:polling
 Rule of thumb:
 - Use `npm run dev` for daily work.
 - If changes stop appearing, use `npm run dev:clean` once.
+- If your machine misses file updates, switch to `npm run dev:polling`.
 - Avoid switching bundlers repeatedly during the same debugging session.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

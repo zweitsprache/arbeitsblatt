@@ -26,6 +26,7 @@ import {
   SyllablesBlock,
   ImageBlock,
   ImageCardsBlock,
+  ImageTextTableBlock,
   TextCardsBlock,
   SpacerBlock,
   DividerBlock,
@@ -35,6 +36,7 @@ import {
   FillInBlankItemsBlock,
   FillInBlankItem,
   MatchingBlock,
+  PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
   WordBankBlock,
@@ -42,6 +44,7 @@ import {
   GridBlock,
   BoardGameBlock,
   DominoBlock,
+  CardPairsBlock,
   FlashcardsBlock,
   SyllableCardsBlock,
   TrueFalseMatrixBlock,
@@ -121,7 +124,7 @@ import {
   DIALOGUE_SPEAKER_ICON_OPTIONS,
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
-import { getDefaultFlashcardItems } from "@/lib/domino";
+import { getDefaultCardPairItems, getDefaultFlashcardItems } from "@/lib/domino";
 
 // ─── CH Override-aware input wrapper ────────────────────────
 
@@ -312,6 +315,25 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
           </SelectContent>
         </Select>
       </div>
+      {isNumberedHeading && (
+        <div>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
+          <Input
+            type="number"
+            min={1}
+            value={block.startNumber}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: { startNumber: Math.max(1, Number(e.target.value) || 1) },
+                },
+              })
+            }
+          />
+        </div>
+      )}
       <Separator />
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("bilingual")}</Label>
@@ -642,7 +664,7 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
   const addItem = () => {
     const newItems = [
       ...block.items,
-      { id: crypto.randomUUID(), imageUrl: "", text: "" },
+      { id: crypto.randomUUID(), src: "", alt: "", text: "" },
     ];
     dispatch({
       type: "UPDATE_BLOCK",
@@ -806,6 +828,220 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { showWordBank: checked } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= block.items.length) return;
+    const newItems = [...block.items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const updateItem = (index: number, updates: Partial<{ text: string; imageUrl: string }>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), src: "", alt: "", text: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: value } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+        <Select
+          value={String(block.columns)}
+          onValueChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 } },
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 {tc("columns")}</SelectItem>
+            <SelectItem value="3">3 {tc("columns")}</SelectItem>
+            <SelectItem value="4">4 {tc("columns")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
+            {item.src ? (
+              <div className="w-8 h-8 rounded overflow-hidden shrink-0 bg-slate-100">
+                <img src={item.src} alt="" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded shrink-0 bg-slate-200 flex items-center justify-center">
+                <span className="text-xs text-muted-foreground">—</span>
+              </div>
+            )}
+            <Input
+              value={item.text}
+              onChange={(e) => updateItem(i, { text: e.target.value })}
+              placeholder={t("caption")}
+              className="flex-1 h-8 text-xs"
+            />
+            <div className="flex flex-col">
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, -1)}
+                disabled={i === 0}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+              </button>
+              <button
+                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                onClick={() => moveItem(i, 1)}
+                disabled={i === block.items.length - 1}
+              >
+                <ArrowUpDown className="h-2.5 w-2.5" />
+              </button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeItem(i)}
+              disabled={block.items.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCard")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageAspectRatio")}</Label>
+        <div className="flex gap-1">
+          {(["16:9", "4:3", "1:1", "3:4", "9:16"] as const).map((ratio) => (
+            <Button
+              key={ratio}
+              variant={(block.imageAspectRatio ?? "1:1") === ratio ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { imageAspectRatio: ratio } },
+                })
+              }
+            >
+              {ratio}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-sm">{t("imageScale")}</Label>
+          <span className="text-xs text-muted-foreground">{block.imageScale ?? 100}%</span>
+        </div>
+        <Slider
+          value={[block.imageScale ?? 100]}
+          min={10}
+          max={100}
+          step={5}
+          onValueChange={([value]) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { imageScale: value } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showNumbers")}</Label>
+        <Switch
+          checked={block.showImageNumberBadge !== false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showImageNumberBadge: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("shuffleItems")}</Label>
+        <Switch
+          checked={block.shuffleItems ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { shuffleItems: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={block.showFirstAsExample ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
             })
           }
         />
@@ -1689,10 +1925,11 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
   );
 }
 
-function MatchingProps({ block }: { block: MatchingBlock }) {
+function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const isPronunciation = block.type === "pronunciation";
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
@@ -1738,7 +1975,23 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
     setCsvText("");
   };
 
-  const updatePair = (index: number, updates: Partial<{ left: string; right: string }>) => {
+  const orderedPairs = React.useMemo(() => {
+    const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+    const examplePair = examplePairId ? block.pairs.find((pair) => pair.id === examplePairId) : undefined;
+    const remainingPairs = block.pairs.filter((pair) => pair.id !== examplePairId);
+    const orderedRemainingPairs = block.pairOrder
+      ? block.pairOrder
+          .map((id) => remainingPairs.find((pair) => pair.id === id))
+          .filter((pair): pair is NonNullable<typeof pair> => !!pair)
+          .concat(remainingPairs.filter((pair) => !block.pairOrder!.includes(pair.id)))
+      : remainingPairs;
+
+    return examplePair ? [examplePair, ...orderedRemainingPairs] : orderedRemainingPairs;
+  }, [block.pairOrder, block.pairs, block.showFirstAsExample]);
+
+  const updatePair = (pairId: string, updates: Partial<{ left: string; right: string }>) => {
+    const index = block.pairs.findIndex((pair) => pair.id === pairId);
+    if (index === -1) return;
     const newPairs = [...block.pairs];
     newPairs[index] = { ...newPairs[index], ...updates };
     dispatch({
@@ -1758,11 +2011,25 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
     });
   };
 
-  const removePair = (index: number) => {
-    const newPairs = block.pairs.filter((_, i) => i !== index);
+  const removePair = (pairId: string) => {
+    const newPairs = block.pairs.filter((pair) => pair.id !== pairId);
     dispatch({
       type: "UPDATE_BLOCK",
       payload: { id: block.id, updates: { pairs: newPairs } },
+    });
+  };
+
+  const shufflePairs = () => {
+    const lockedExampleId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+    const ids = block.pairs.filter((pair) => pair.id !== lockedExampleId).map((pair) => pair.id);
+    const shuffled = [...ids];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairOrder: shuffled } },
     });
   };
 
@@ -1796,6 +2063,40 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
           }
         />
       </div>
+      {isPronunciation && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("headerLeft")}</Label>
+              <ChInput
+                blockId={block.id}
+                fieldPath="leftHeader"
+                baseValue={block.leftHeader ?? ""}
+                onBaseChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { leftHeader: v } },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("headerRight")}</Label>
+              <ChInput
+                blockId={block.id}
+                fieldPath="rightHeader"
+                baseValue={block.rightHeader ?? ""}
+                onBaseChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { rightHeader: v } },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
       <Separator />
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("extendedRows")}</Label>
@@ -1836,14 +2137,16 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
       <Separator />
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("pairs")}</Label>
-        {block.pairs.map((pair, i) => (
+        {orderedPairs.map((pair) => {
+          const pairIndex = block.pairs.findIndex((currentPair) => currentPair.id === pair.id);
+          return (
           <div key={pair.id} className="flex items-center gap-1">
             <div className="flex-1">
               <ChInput
                 blockId={block.id}
-                fieldPath={`pairs.${i}.left`}
+                fieldPath={`pairs.${pairIndex}.left`}
                 baseValue={pair.left}
-                onBaseChange={(v) => updatePair(i, { left: v })}
+                onBaseChange={(v) => updatePair(pair.id, { left: v })}
                 className="h-8 text-xs"
                 placeholder={t("left")}
               />
@@ -1852,9 +2155,9 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
             <div className="flex-1">
               <ChInput
                 blockId={block.id}
-                fieldPath={`pairs.${i}.right`}
+                fieldPath={`pairs.${pairIndex}.right`}
                 baseValue={pair.right}
-                onBaseChange={(v) => updatePair(i, { right: v })}
+                onBaseChange={(v) => updatePair(pair.id, { right: v })}
                 className="h-8 text-xs"
                 placeholder={t("right")}
               />
@@ -1863,15 +2166,33 @@ function MatchingProps({ block }: { block: MatchingBlock }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() => removePair(i)}
+              onClick={() => removePair(pair.id)}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
-        ))}
+        );})}
         <Button variant="outline" size="sm" onClick={addPair} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
         </Button>
+        <Button variant="outline" size="sm" onClick={shufflePairs} className="w-full">
+          <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
+        </Button>
+        {block.pairOrder && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-muted-foreground"
+            onClick={() =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { pairOrder: undefined } },
+              })
+            }
+          >
+            {t("resetOrder")}
+          </Button>
+        )}
       </div>
       <Separator />
       <div>
@@ -3401,6 +3722,431 @@ function DominoProps({ block }: { block: DominoBlock }) {
       </div>
       <Button type="button" variant="outline" onClick={clearItems}>
         Clear domino
+      </Button>
+    </div>
+  );
+}
+
+function CardPairsProps({ block }: { block: CardPairsBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const pairingMode = block.pairingMode ?? "same";
+  const items = block.items.length > 0 ? block.items : getDefaultCardPairItems();
+  const rawSelectedItemIndex = state.activeItemIndex;
+  const selectedItemIndex =
+    rawSelectedItemIndex === null
+      ? null
+      : pairingMode === "same"
+        ? rawSelectedItemIndex - (rawSelectedItemIndex % 2)
+        : rawSelectedItemIndex;
+  const selectedItem = selectedItemIndex !== null ? items[selectedItemIndex] : null;
+  const selectedDisplayText = selectedItem?.text ?? "";
+  const isLinkedBackSelection = pairingMode === "same" && rawSelectedItemIndex !== null && rawSelectedItemIndex % 2 === 1;
+
+  const buildCardPairItems = (texts: string[], nextPairingMode: "same" | "different") => {
+    if (nextPairingMode === "same") {
+      return texts.flatMap((text, pairIndex) => ([
+        {
+          id: `card-pair-item-${pairIndex * 2 + 1}`,
+          text,
+          imageUrl: "",
+          speakerIcon: null,
+        },
+        {
+          id: `card-pair-item-${pairIndex * 2 + 2}`,
+          text: "",
+          imageUrl: "",
+          speakerIcon: null,
+        },
+      ]));
+    }
+
+    const normalizedTexts = [...texts];
+    if (normalizedTexts.length % 2 !== 0) {
+      normalizedTexts.push("");
+    }
+
+    return normalizedTexts.map((text, index) => ({
+      id: `card-pair-item-${index + 1}`,
+      text,
+      imageUrl: "",
+      speakerIcon: null,
+    }));
+  };
+
+  const updateItem = (index: number, updates: Partial<CardPairsBlock["items"][number]>) => {
+    const nextItems = items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...updates } : item));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
+  const handleFileSelected = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (selectedItemIndex === null) return;
+    setIsUploading(true);
+    try {
+      const file = new File([result.blob], `card-pair-item-${selectedItemIndex + 1}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateItem(selectedItemIndex, { imageUrl: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelected(file);
+    }
+  };
+
+  const clearItems = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: items.map((item, itemIndex) => ({
+            ...item,
+            text: "",
+            imageUrl: "",
+            speakerIcon: null,
+            ...(pairingMode === "same" && itemIndex % 2 === 1 ? { text: "" } : {}),
+          })),
+        },
+      },
+    });
+  };
+
+  const addPair = () => {
+    const nextItems = [
+      ...items,
+      {
+        id: `card-pair-item-${items.length + 1}`,
+        text: "",
+        imageUrl: "",
+        speakerIcon: null,
+      },
+      {
+        id: `card-pair-item-${items.length + 2}`,
+        text: "",
+        imageUrl: "",
+        speakerIcon: null,
+      },
+    ];
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: nextItems },
+      },
+    });
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const parsed = text
+      .split("|")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const existingItems = pairingMode === "same"
+      ? items.filter((_, index) => index % 2 === 0).map((item) => item.text || "")
+      : items
+        .filter((item, index, arr) => {
+          const isTrailingFiller =
+            index === arr.length - 1 &&
+            !item.text?.trim() &&
+            !item.imageUrl;
+          return !isTrailingFiller;
+        })
+        .map((item) => item.text || "");
+
+    const nextTexts = csvMode === "append" ? [...existingItems, ...parsed] : parsed;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: buildCardPairItems(nextTexts, pairingMode) },
+      },
+    });
+    setCsvText("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("title")}
+        </Label>
+        <Input
+          value={block.title ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { title: e.target.value } },
+            })
+          }
+          placeholder={t("title")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("footer")}
+        </Label>
+        <Input
+          value={block.footer ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { footer: e.target.value } },
+            })
+          }
+          placeholder={t("footer")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          {t("pairingMode")}
+        </Label>
+        <Select
+          value={pairingMode}
+          onValueChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { pairingMode: value as "same" | "different" } },
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="same">{t("pairingModeSame")}</SelectItem>
+            <SelectItem value="different">{t("pairingModeDifferent")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
+        <Label className="text-sm">{t("shufflePairs")}</Label>
+        <Switch
+          checked={block.shufflePairs ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { shufflePairs: checked } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <div className="flex gap-1">
+          {(["s", "m", "l", "xl"] as const).map((size) => (
+            <Button
+              key={size}
+              variant={(block.textSize ?? "m") === size ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1 uppercase"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textSize: size } },
+                })
+              }
+            >
+              {size}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          Selected Item
+        </Label>
+        <Input
+          readOnly
+          value={rawSelectedItemIndex === null ? t("clickCardPairItem") : `Item ${rawSelectedItemIndex + 1}`}
+        />
+        {isLinkedBackSelection ? (
+          <p className="mt-2 text-xs text-muted-foreground">{t("cardPairsLinkedBackHelp", { item: selectedItemIndex !== null ? selectedItemIndex + 1 : 1 })}</p>
+        ) : null}
+      </div>
+      {selectedItemIndex !== null && selectedItem ? (
+        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
+          {selectedItem.imageUrl ? (
+            <div className="space-y-2">
+              <div className="relative group/img rounded overflow-hidden border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedItem.imageUrl} alt={selectedDisplayText || "Card pair item"} className="w-full" />
+                <button
+                  type="button"
+                  onClick={() => updateItem(selectedItemIndex, { imageUrl: "" })}
+                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                {t("replaceImage")}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                />
+                {isUploading ? (
+                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                  </>
+                )}
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => setBrowserOpen(true)}
+              >
+                <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                {t("mediaBrowser")}
+              </Button>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+              Text
+            </Label>
+            <textarea
+              value={selectedDisplayText}
+              onChange={(e) => updateItem(selectedItemIndex, { text: e.target.value })}
+              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              placeholder="Item text"
+            />
+          </div>
+
+          <MediaBrowserDialog
+            open={browserOpen}
+            onOpenChange={setBrowserOpen}
+            onSelectUrl={(url) => {
+              if (selectedItemIndex === null) return;
+              updateItem(selectedItemIndex, { imageUrl: url });
+            }}
+            onSelectFile={handleFileSelected}
+          />
+
+          <ImageCropDialog
+            imageSrc={cropSrc}
+            open={cropOpen}
+            onOpenChange={(open) => {
+              setCropOpen(open);
+              if (!open && cropSrc) {
+                URL.revokeObjectURL(cropSrc);
+                setCropSrc(null);
+              }
+            }}
+            onCropComplete={handleCropComplete}
+            title={t("cropImage")}
+          />
+        </div>
+      ) : null}
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          {pairingMode === "same" ? t("cardPairsCsvImportHelpSame") : t("cardPairsCsvImportHelpDifferent")}
+        </p>
+        <textarea
+          className="w-full min-h-[110px] rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+          placeholder={pairingMode === "same" ? t("cardPairsCsvPlaceholderSame") : t("cardPairsCsvPlaceholderDifferent")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="mt-2 flex items-center gap-2">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="h-8 w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8" onClick={handleCsvImport} disabled={!csvText.trim()}>
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <Button type="button" variant="outline" onClick={addPair}>
+        <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
+      </Button>
+      <Button type="button" variant="outline" onClick={clearItems}>
+        {t("clearCardPairs")}
       </Button>
     </div>
   );
@@ -5761,6 +6507,122 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const parseCsvLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      const nextChar = line[index + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
+        values.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    values.push(current.trim());
+    return values;
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const parsedRows = lines.map(parseCsvLine);
+    const maxColumns = Math.max(...parsedRows.map((row) => row.length));
+
+    if (maxColumns > 2) {
+      setCsvError(t("sortingCategoriesCsvTooManyColumns"));
+      return;
+    }
+
+    const categoryIdByLabel = new Map(
+      block.categories.map((category) => [category.label.trim().toLocaleLowerCase(), category.id])
+    );
+
+    const nextItems = csvMode === "append" ? [...block.items] : [];
+    const nextCategories = csvMode === "append"
+      ? block.categories.map((cat) => ({ ...cat, correctItems: [...cat.correctItems] }))
+      : block.categories.map((cat) => ({ ...cat, correctItems: [] }));
+
+    let importedCount = 0;
+
+    parsedRows.forEach((row, rowIndex) => {
+      const itemText = (row[0] ?? "").trim();
+      const categoryLabel = (row[1] ?? "").trim();
+      if (!itemText || !categoryLabel) return;
+
+      const normalizedCategoryLabel = categoryLabel.toLocaleLowerCase();
+      let categoryId = categoryIdByLabel.get(normalizedCategoryLabel);
+      if (!categoryId) {
+        categoryId = `cat-${Date.now()}-${rowIndex}-${importedCount}`;
+        nextCategories.push({
+          id: categoryId,
+          label: categoryLabel,
+          correctItems: [],
+        });
+        categoryIdByLabel.set(normalizedCategoryLabel, categoryId);
+      }
+
+      const categoryIndex = nextCategories.findIndex((category) => category.id === categoryId);
+      if (categoryIndex < 0) return;
+
+      const itemId = `si-${Date.now()}-${rowIndex}-${importedCount}`;
+      nextItems.push({ id: itemId, text: itemText });
+      nextCategories[categoryIndex] = {
+        ...nextCategories[categoryIndex],
+        correctItems: [...nextCategories[categoryIndex].correctItems, itemId],
+      };
+      importedCount += 1;
+    });
+
+    if (importedCount === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: nextItems,
+          categories: nextCategories,
+        },
+      },
+    });
+    setCsvText("");
+  };
 
   const addCategory = () => {
     const newCat: SortingCategory = {
@@ -5862,6 +6724,50 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   return (
     <div className="space-y-3">
       <div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("sortingCategoriesCsvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("sortingCategoriesCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <Separator />
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
@@ -5952,6 +6858,20 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
           }
         />
       </div>
+      {block.categories.length === 2 && (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">{t("twoWritingColumnsPerCategory")}</Label>
+          <Switch
+            checked={!!block.twoColumnCategoryLines}
+            onCheckedChange={(v) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { twoColumnCategoryLines: v } },
+              })
+            }
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <Label className="text-xs">{t("colorCode")}</Label>
         <Switch
@@ -7283,7 +8203,8 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const [activeSentenceIndex, setActiveSentenceIndex] = React.useState<number | null>(null);
   const [uploadingSentenceIndex, setUploadingSentenceIndex] = React.useState<number | null>(null);
-  const isFormLayout = block.layoutType === "form";
+  const isPrefilledFormLayout = block.layoutType === "prefilled-form";
+  const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = String(block.formColumns ?? 2);
 
@@ -7485,7 +8406,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
               payload: {
                 id: block.id,
                 updates: {
-                  layoutType: value as "default" | "form",
+                  layoutType: value as "default" | "form" | "prefilled-form",
                   formFieldLabels: block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""],
                   formColumns: block.formColumns ?? 2,
                   sentences: block.sentences.map((item) => ({
@@ -7503,6 +8424,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
           <SelectContent>
             <SelectItem value="default">{t("readingComprehensionTypeDefault")}</SelectItem>
             <SelectItem value="form">{t("readingComprehensionTypeForm")}</SelectItem>
+            <SelectItem value="prefilled-form">{t("readingComprehensionTypePrefilledForm")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -7561,7 +8483,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       )}
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
-        <p className="text-xs text-muted-foreground">{t(isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
+        <p className="text-xs text-muted-foreground">{t(isPrefilledFormLayout ? "readingComprehensionPrefilledFormHelp" : isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
         {block.sentences.map((item, i) => (
           <div key={item.id} className="space-y-1">
             <div className="pl-1">
@@ -7622,7 +8544,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
                         baseValue={item.fieldValues?.[fieldIndex] ?? ""}
                         onBaseChange={(v) => updateFieldValue(i, fieldIndex, v)}
                         className="h-8 text-xs"
-                        placeholder={t("readingComprehensionFieldValuePlaceholder")}
+                        placeholder={t(isPrefilledFormLayout ? "readingComprehensionPrefilledFieldValuePlaceholder" : "readingComprehensionFieldValuePlaceholder")}
                       />
                     </div>
                   ))}
@@ -8008,6 +8930,34 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
           }
         />
       </div>
+      {block.showOriginal && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm">{t("colRatio")}</Label>
+            <span className="text-xs text-muted-foreground">
+              {Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}% / {100 - Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}%
+            </span>
+          </div>
+          <Slider
+            value={[Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))]}
+            min={20}
+            max={80}
+            step={5}
+            onValueChange={([value]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: {
+                    originalLeftColWidth: value,
+                    originalColumnRatio: undefined,
+                  },
+                },
+              })
+            }
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("showFirstAsExample")}</Label>
         <Switch
@@ -11309,6 +12259,8 @@ export function PropertiesPanel() {
         return <ImageProps block={selectedBlock} />;
       case "image-cards":
         return <ImageCardsProps block={selectedBlock} />;
+      case "image-text-table":
+        return <ImageTextTableProps block={selectedBlock} />;
       case "text-cards":
         return <TextCardsProps block={selectedBlock} />;
       case "spacer":
@@ -11333,6 +12285,8 @@ export function PropertiesPanel() {
         return <FillInBlankItemsProps block={selectedBlock} />;
       case "matching":
         return <MatchingProps block={selectedBlock} />;
+      case "pronunciation":
+        return <MatchingProps block={selectedBlock} />;
       case "two-column-fill":
         return <TwoColumnFillProps block={selectedBlock} />;
       case "glossary":
@@ -11345,6 +12299,8 @@ export function PropertiesPanel() {
         return <GridProps block={selectedBlock as GridBlock} />;
       case "domino":
         return <DominoProps block={selectedBlock as DominoBlock} />;
+      case "card-pairs":
+        return <CardPairsProps block={selectedBlock as CardPairsBlock} />;
       case "flashcards":
         return <FlashcardsProps block={selectedBlock as FlashcardsBlock} />;
       case "syllable-cards":
