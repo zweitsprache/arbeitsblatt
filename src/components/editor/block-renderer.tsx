@@ -5206,15 +5206,15 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                       const parsedValue = parseReadingComprehensionFieldValue(value);
                       const previewValue = isPrefilledFormLayout ? (parsedValue.prefilled || parsedValue.solution) : value;
                       const isExample = item.id === exampleSentenceId && fieldIndex === 0 && value.trim() !== "";
-                      const renderPrefilledExample = () => (
-                        <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">
+                      const renderPrefilledValue = (color?: string) => (
+                        previewValue ? (
                           <span
-                            className="inline-block min-h-[20px] px-0 py-0.5"
-                            style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
+                            className="absolute inset-0 flex items-center px-2"
+                            style={color ? { color } : { color: "currentColor" }}
                           >
-                            {renderReadingComprehensionCorrectionSegments(parsedValue, "#0097dc")}
+                            {previewValue}
                           </span>
-                        </div>
+                        ) : <span>&nbsp;</span>
                       );
                       return (
                         <div
@@ -5223,16 +5223,9 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                           style={shouldStretchLastField ? { gridColumn: "1 / -1" } : undefined}
                         >
                           <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
-                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">
-                            {isPrefilledFormLayout && isExample ? renderPrefilledExample() : isPrefilledFormLayout ? (
-                              previewValue ? (
-                                <span
-                                  className="absolute inset-0 flex items-center px-2"
-                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: "currentColor", fontSize: "18px" }}
-                                >
-                                  {previewValue}
-                                </span>
-                              ) : <span>&nbsp;</span>
+                          <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs">
+                            {isPrefilledFormLayout ? (
+                              renderPrefilledValue()
                             ) : isExample ? (
                               <span
                                 className="absolute inset-0 flex items-center px-2"

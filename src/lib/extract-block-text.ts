@@ -219,6 +219,11 @@ export function extractBlocksText(
         break;
 
       case "image-cards":
+        for (const item of block.items ?? []) {
+          if (item.text) parts.push(item.text);
+        }
+        break;
+
       case "image-text-table":
         if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {

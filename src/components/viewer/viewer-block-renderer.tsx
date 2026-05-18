@@ -1313,6 +1313,7 @@ function parseReadingComprehensionFieldValue(rawValue: string | undefined) {
 function renderReadingComprehensionCorrectionSegments(
   parsedValue: ReturnType<typeof parseReadingComprehensionFieldValue>,
   correctionColor?: string,
+  prefilledColor?: string,
 ) {
   if (parsedValue.inlineSyntax) {
     const appendedCorrections = parsedValue.segments
@@ -1323,13 +1324,24 @@ function renderReadingComprehensionCorrectionSegments(
       <>
         {parsedValue.segments.map((segment, index) => {
           if (!segment.hasCorrection) {
-            return <span key={index}>{segment.prefilled}</span>;
+            return <span key={index} style={prefilledColor ? { color: prefilledColor } : undefined}>{segment.prefilled}</span>;
           }
 
-          return <RoughExampleStrike tight tightTop="58%" key={index} style={{ verticalAlign: "-0.18em" }}>{segment.prefilled}</RoughExampleStrike>;
+          return (
+            <RoughExampleStrike tight tightTop="58%" key={index} style={{ verticalAlign: "-0.18em" }}>
+              <span style={prefilledColor ? { color: prefilledColor } : undefined}>{segment.prefilled}</span>
+            </RoughExampleStrike>
+          );
         })}
         {appendedCorrections.length > 0 ? (
-          <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>
+          <span
+            className="ml-2"
+            style={{
+              fontFamily: EXAMPLE_HANDWRITING_FONT,
+              fontSize: "18px",
+              ...(correctionColor ? { color: correctionColor } : undefined),
+            }}
+          >
             {appendedCorrections.join(", ")}
           </span>
         ) : null}
@@ -1339,13 +1351,24 @@ function renderReadingComprehensionCorrectionSegments(
 
   return parsedValue.segments.map((segment, index) => {
     if (!segment.hasCorrection) {
-      return <span key={index}>{segment.prefilled}</span>;
+      return <span key={index} style={prefilledColor ? { color: prefilledColor } : undefined}>{segment.prefilled}</span>;
     }
 
     return (
       <span key={index} className="inline-flex items-center">
-        <RoughExampleStrike tight>{segment.prefilled}</RoughExampleStrike>
-        <span className="ml-2" style={correctionColor ? { color: correctionColor } : undefined}>{segment.solution}</span>
+        <RoughExampleStrike tight>
+          <span style={prefilledColor ? { color: prefilledColor } : undefined}>{segment.prefilled}</span>
+        </RoughExampleStrike>
+        <span
+          className="ml-2"
+          style={{
+            fontFamily: EXAMPLE_HANDWRITING_FONT,
+            fontSize: "18px",
+            ...(correctionColor ? { color: correctionColor } : undefined),
+          }}
+        >
+          {segment.solution}
+        </span>
       </span>
     );
   });
@@ -8395,23 +8418,28 @@ function ReadingComprehensionView({
                         const isFieldWrong = showResults && hasFieldSolution && userFieldVal.trim() !== "" && !isFieldCorrect;
                         const isExampleField = item.id === exampleSentenceId && fieldIndex === 0 && hasFieldSolution;
                         const showFieldSolution = !interactive && showSolutions && hasFieldSolution && !isExampleField;
-                        const renderPrefilledCorrection = () => (
-                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
-                            <span
-                              className="inline-block min-h-[20px] px-0 py-0.5"
-                              style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
-                            >
-                              {renderReadingComprehensionCorrectionSegments(parsedValue, "#15803d")}
-                            </span>
+                        const shouldShowPrefilledCorrection = parsedValue.hasCorrection && (
+                          (interactive && showResults && isFieldWrong) ||
+                          (!interactive && showSolutions)
+                        );
+                        const renderPrefilledValue = (color?: string) => (
+                          <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
+                            {prefilledValue ? (
+                              <span
+                                className="absolute inset-0 flex items-center px-2"
+                                style={color ? { color } : { color: "currentColor" }}
+                              >
+                                {prefilledValue}
+                              </span>
+                            ) : <span>&nbsp;</span>}
                           </div>
                         );
-                        const renderPrefilledExample = () => (
-                          <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                        const renderPrefilledCorrection = (correctionColor: string, prefilledColor?: string) => (
+                          <div className="relative h-7 w-full overflow-hidden rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
                             <span
-                              className="inline-block min-h-[20px] px-0 py-0.5"
-                              style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" }}
+                              className="absolute inset-0 flex items-center px-2"
                             >
-                              {renderReadingComprehensionCorrectionSegments(parsedValue, "#0097dc")}
+                              {renderReadingComprehensionCorrectionSegments(parsedValue, correctionColor, prefilledColor)}
                             </span>
                           </div>
                         );
@@ -8423,17 +8451,40 @@ function ReadingComprehensionView({
                             style={shouldStretchLastField ? { gridColumn: "1 / -1" } : undefined}
                           >
                             <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
-                            {isPrefilledFormLayout && isExampleField ? renderPrefilledExample() : isPrefilledFormLayout && !interactive && !showFieldSolution ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
-                                <span
-                                  className="absolute inset-0 flex items-center px-2"
-                                  style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: "currentColor", fontSize: "18px" }}
-                                >
-                                  {prefilledValue}
-                                </span>
-                              </div>
+                            {isPrefilledFormLayout ? (
+                              interactive && !isExampleField ? (
+                                <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
+                                  <input
+                                    type="text"
+                                    value={userFieldVal}
+                                    onChange={(e) => onAnswer({ ...userAnswers, [answerKey]: e.target.value })}
+                                    disabled={showResults}
+                                    className={`w-full h-7 rounded-[3px] border-0 bg-transparent px-2 py-0 text-left leading-5 focus:outline-none transition-colors ${
+                                      showResults
+                                        ? isFieldCorrect
+                                          ? "bg-green-100 text-green-700"
+                                          : isFieldWrong
+                                            ? "bg-red-50 text-red-700"
+                                            : "text-foreground"
+                                        : "focus:ring-1 focus:ring-primary/50"
+                                    }`}
+                                    style={{
+                                      ...(!showResults && isOnline ? {
+                                        backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
+                                      } : undefined),
+                                    }}
+                                  />
+                                  {shouldShowPrefilledCorrection ? (
+                                    <div className="mt-1">{renderPrefilledCorrection("#15803d")}</div>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                shouldShowPrefilledCorrection
+                                  ? renderPrefilledCorrection(isExampleField ? "#0097dc" : "#15803d")
+                                  : renderPrefilledValue()
+                              )
                             ) : isExampleField ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                              <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
                                 <span
                                   className="absolute inset-0 flex items-center px-2"
                                   style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#0097dc', fontSize: '18px' }}
@@ -8442,8 +8493,8 @@ function ReadingComprehensionView({
                                 </span>
                               </div>
                             ) : showFieldSolution ? (
-                              isPrefilledFormLayout ? renderPrefilledCorrection() : (
-                                <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                              (
+                                <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
                                   <span
                                     className="absolute inset-0 flex items-center px-2"
                                     style={{ fontFamily: EXAMPLE_HANDWRITING_FONT, color: '#15803d', fontSize: '18px' }}
@@ -8453,13 +8504,13 @@ function ReadingComprehensionView({
                                 </div>
                               )
                             ) : interactive ? (
-                              <div className="relative w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 min-h-[20px]">
+                              <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
                                 <input
                                   type="text"
                                   value={userFieldVal}
                                   onChange={(e) => onAnswer({ ...userAnswers, [answerKey]: e.target.value })}
                                   disabled={showResults}
-                                  className={`w-full h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-left leading-5 focus:outline-none transition-colors ${
+                                  className={`w-full h-7 rounded-[3px] border-0 bg-transparent px-2 py-0 text-left leading-5 focus:outline-none transition-colors ${
                                     showResults
                                       ? isFieldCorrect
                                         ? "bg-green-100 text-green-700"
@@ -8469,20 +8520,17 @@ function ReadingComprehensionView({
                                       : "focus:ring-1 focus:ring-primary/50"
                                   }`}
                                   style={{
-                                    fontFamily: isPrefilledFormLayout ? EXAMPLE_HANDWRITING_FONT : undefined,
                                     ...(!showResults && isOnline ? {
                                       backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)",
                                     } : undefined),
                                   }}
                                 />
-                                {showResults && isFieldWrong && hasFieldSolution && isPrefilledFormLayout ? (
-                                  <div className="mt-1">{renderPrefilledCorrection()}</div>
-                                ) : showResults && isFieldWrong && hasFieldSolution ? (
+                                {showResults && isFieldWrong && hasFieldSolution ? (
                                   <span className="text-cv-xs text-green-600 mt-0.5 block">{solution}</span>
                                 ) : null}
                               </div>
                             ) : (
-                              <div className="w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs min-h-[20px]">&nbsp;</div>
+                              <div className="h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs">&nbsp;</div>
                             )}
                           </div>
                         );
@@ -10158,7 +10206,7 @@ export function ViewerBlockRenderer({
           mode={mode}
           interactive={interactive}
           answer={answer}
-          onAnswer={onAnswer}
+            onAnswer={onAnswer || noop}
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
