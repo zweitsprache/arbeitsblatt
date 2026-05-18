@@ -8416,18 +8416,19 @@ function ReadingComprehensionView({
                         const hasFieldSolution = solution.trim() !== "";
                         const isFieldCorrect = showResults && hasFieldSolution && userFieldVal.trim().toLowerCase() === solution.trim().toLowerCase();
                         const isFieldWrong = showResults && hasFieldSolution && userFieldVal.trim() !== "" && !isFieldCorrect;
-                        const isExampleField = item.id === exampleSentenceId && fieldIndex === 0 && hasFieldSolution;
+                        const isExampleField = item.id === exampleSentenceId && fieldIndex === 0 && prefilledValue.trim() !== "";
                         const showFieldSolution = !interactive && showSolutions && hasFieldSolution && !isExampleField;
                         const shouldShowPrefilledCorrection = parsedValue.hasCorrection && (
+                          isExampleField ||
                           (interactive && showResults && isFieldWrong) ||
                           (!interactive && showSolutions)
                         );
-                        const renderPrefilledValue = (color?: string) => (
+                        const renderPrefilledValue = () => (
                           <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5">
                             {prefilledValue ? (
                               <span
                                 className="absolute inset-0 flex items-center px-2"
-                                style={color ? { color } : { color: "currentColor" }}
+                                style={{ color: "currentColor" }}
                               >
                                 {prefilledValue}
                               </span>

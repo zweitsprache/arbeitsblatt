@@ -5205,12 +5205,12 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                       const value = item.fieldValues?.[fieldIndex] ?? "";
                       const parsedValue = parseReadingComprehensionFieldValue(value);
                       const previewValue = isPrefilledFormLayout ? (parsedValue.prefilled || parsedValue.solution) : value;
-                      const isExample = item.id === exampleSentenceId && fieldIndex === 0 && value.trim() !== "";
-                      const renderPrefilledValue = (color?: string) => (
+                      const isExample = item.id === exampleSentenceId && fieldIndex === 0 && previewValue.trim() !== "";
+                      const renderPrefilledValue = () => (
                         previewValue ? (
                           <span
                             className="absolute inset-0 flex items-center px-2"
-                            style={color ? { color } : { color: "currentColor" }}
+                            style={{ color: "currentColor" }}
                           >
                             {previewValue}
                           </span>
@@ -5225,7 +5225,11 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                           <div className="font-semibold">{label || `Field ${fieldIndex + 1}`}</div>
                           <div className="relative h-7 w-full rounded-[3px] bg-gray-100 px-2 py-0 leading-5 text-muted-foreground text-xs">
                             {isPrefilledFormLayout ? (
-                              renderPrefilledValue()
+                              isExample && parsedValue.hasCorrection ? (
+                                <span className="absolute inset-0 flex items-center px-2">
+                                  {renderReadingComprehensionCorrectionSegments(parsedValue, "#0097dc")}
+                                </span>
+                              ) : renderPrefilledValue()
                             ) : isExample ? (
                               <span
                                 className="absolute inset-0 flex items-center px-2"
