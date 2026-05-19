@@ -440,6 +440,8 @@
     "writeAnswerHere": "Antwort hier schreiben…"
   },
   "blocks": {
+    "bingoCards": "Bingo-Karten",
+    "bingoCardsDesc": "Bingo-Karten mit anpassbarem Raster und Modi",
     "accordion": "Akkordeon",
     "accordionDesc": "Aufklappbare Abschnitte mit verschachtelten Blöcken",
     "aiPrompt": "KI-Prompt",

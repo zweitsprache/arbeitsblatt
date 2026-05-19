@@ -118,6 +118,7 @@ import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
+import { BingoCardsPropEditor } from "./BingoCardsPropEditor";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { getChoiceGroups, updateChoiceGroup, validateChoices } from "@/lib/inline-choice-utils";
 import {
@@ -681,7 +682,7 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
           onValueChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 } },
+              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 | 5 } },
             })
           }
         >
@@ -692,6 +693,7 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
             <SelectItem value="2">2 {tc("columns")}</SelectItem>
             <SelectItem value="3">3 {tc("columns")}</SelectItem>
             <SelectItem value="4">4 {tc("columns")}</SelectItem>
+            <SelectItem value="5">5 {tc("columns")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -904,7 +906,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
           onValueChange={(v) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 } },
+              payload: { id: block.id, updates: { columns: Number(v) as 2 | 3 | 4 | 5 } },
             })
           }
         >
@@ -915,6 +917,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
             <SelectItem value="2">2 {tc("columns")}</SelectItem>
             <SelectItem value="3">3 {tc("columns")}</SelectItem>
             <SelectItem value="4">4 {tc("columns")}</SelectItem>
+            <SelectItem value="5">5 {tc("columns")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -12350,7 +12353,7 @@ export function PropertiesPanel() {
   if (!selectedBlock) {
     return (
       <div className="w-80 pt-8 pb-8">
-        <div className="bg-slate-50 rounded-sm shadow-sm p-4 pt-6">
+        <div className="bg-slate-50 rounded-sm p-4 pt-6">
           <CoverImagesPanel />
         </div>
       </div>
@@ -12425,6 +12428,8 @@ export function PropertiesPanel() {
         return <SyllableCardsProps block={selectedBlock as SyllableCardsBlock} />;
       case "board-game":
         return <BoardGameProps block={selectedBlock as BoardGameBlock} />;
+      case "bingo-cards":
+        return <BingoCardsPropEditor block={selectedBlock as import("@/types/worksheet").BingoCardsBlock} />;
       case "true-false-matrix":
         return <TrueFalseMatrixProps block={selectedBlock} />;
       case "mcq-matrix":
@@ -12508,7 +12513,7 @@ export function PropertiesPanel() {
 
   return (
     <div className="w-80 flex flex-col h-full pt-8 pb-8">
-      <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden min-h-0">
+      <div className="flex flex-col h-full bg-slate-50 rounded-sm overflow-hidden min-h-0">
       <ScrollArea className="flex-1 overflow-hidden scrollbar-hide">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
           <div className="text-sm font-semibold text-slate-800 uppercase">{selectedBlockName}</div>

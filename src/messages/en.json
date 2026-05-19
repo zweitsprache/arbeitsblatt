@@ -440,6 +440,8 @@
     "writeAnswerHere": "Write answer here…"
   },
   "blocks": {
+    "bingoCards": "Bingo Cards",
+    "bingoCardsDesc": "Bingo cards with customizable grid and modes",
     "accordion": "Accordion",
     "accordionDesc": "Collapsible sections with nested blocks",
     "aiPrompt": "AI Prompt",

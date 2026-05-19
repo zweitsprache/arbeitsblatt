@@ -240,7 +240,6 @@ function EditorInner({
   const activeLibraryDef = activeLibraryType
     ? BLOCK_LIBRARY.find((b) => b.type === activeLibraryType)
     : null;
-
   return (
     <DndContext
       id={dndId}

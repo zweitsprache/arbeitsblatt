@@ -29,6 +29,7 @@ import {
   DominoBlock,
   CardPairsBlock,
   FlashcardsBlock,
+  BingoCardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
   TrueFalseMatrixBlock,
@@ -96,6 +97,7 @@ import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
 import { SyllablesDisplay } from "@/components/worksheet/syllables-display";
+import { BingoCardsRenderer } from "@/components/editor/BingoCardsRenderer";
 import s from "./viewer-blocks.module.css";
 
 type QuartettCardVariant = {
@@ -2588,7 +2590,7 @@ function ImageTextTableView({ block, accentColor, mode, instructionIndex, showSo
                   />
                 </div>
               )}
-              <div className="p-2 text-center">
+              <div className="p-1 text-center">
                 {item.text && <span>{item.text}</span>}
               </div>
             </div>
@@ -10638,6 +10640,8 @@ export function ViewerBlockRenderer({
       return <CardPairsView block={block as CardPairsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "flashcards":
       return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+    case "bingo-cards":
+      return <BingoCardsRenderer block={block as BingoCardsBlock} mode={mode} />;
     case "syllable-cards":
       return <SyllableCardsView block={block as SyllableCardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "text-snippet":

@@ -86,7 +86,7 @@ export function WorksheetCanvas({
             padding: isPresentationMode
               ? "40px 60px"
               : `${state.settings.margins.top}px ${state.settings.margins.right}px ${state.settings.margins.bottom}px ${state.settings.margins.left}px`,
-            fontFamily: "'Asap Condensed', sans-serif",
+            fontFamily: "'Encode Sans Semi Condensed', sans-serif",
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {

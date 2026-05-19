@@ -190,7 +190,7 @@ function SectionTitle({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-3 mb-1 mt-5 flex items-center gap-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+    <div className="mx-3 mb-2 mt-5 flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
       <Icon className="h-3.5 w-3.5" />
       {children}
     </div>
@@ -219,7 +219,7 @@ function getNavItemClassName({
     "group relative flex items-center text-sm font-medium transition-colors",
     collapsed
       ? "h-10 w-10 justify-center rounded-lg"
-      : "min-h-10 w-full justify-start gap-3 rounded-xl px-3 py-2.5",
+      : "min-h-8 w-full justify-start gap-3 rounded-xl px-3 py-1.5",
     disabled && "cursor-not-allowed",
     collapsed && !disabled && !isActive && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
     collapsed && isActive && "bg-slate-900 text-white shadow-sm",
@@ -345,11 +345,11 @@ export function AppSidebar({
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "shrink-0 pb-8 pl-4 pt-3 transition-all duration-200",
-          collapsed ? "w-[5.25rem] pr-3" : "w-[20rem] pr-4",
+          "h-full shrink-0 transition-all duration-200",
+          collapsed ? "w-[5.25rem]" : "w-[20rem]",
         )}
       >
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
 
           <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
             <div className={cn(collapsed ? "py-3 space-y-1" : "py-4 space-y-2")}> 

@@ -9,8 +9,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-asap-condensed);
-  --font-mono: var(--font-asap-condensed);
+  --font-sans: var(--font-encode-sans-semi-condensed);
+  --font-mono: var(--font-encode-sans-semi-condensed);
 
   /* ── Fluid type scale for course viewer (320px → 1440px) ── */
   --text-cv-micro: clamp(0.6875rem, 0.6607rem + 0.089vw, 0.75rem);      /* 11px → 12px */
@@ -867,12 +867,14 @@
 .print-worksheet-root.print-skin-final :is(
   .worksheet-block-domino,
   .worksheet-block-flashcards,
+  .worksheet-block-bingo-cards,
   .worksheet-block-quartett,
   .worksheet-block-taboo,
   .worksheet-block-syllable-cards
 ) + :is(
   .worksheet-block-domino,
   .worksheet-block-flashcards,
+  .worksheet-block-bingo-cards,
   .worksheet-block-quartett,
   .worksheet-block-taboo,
   .worksheet-block-syllable-cards

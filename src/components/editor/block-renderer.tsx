@@ -32,6 +32,7 @@ import {
   DominoBlock,
   CardPairsBlock,
   FlashcardsBlock,
+  BingoCardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
   MCQMatrixBlock,
@@ -110,6 +111,7 @@ import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
+import { BingoCardsRenderer } from "./BingoCardsRenderer";
 import dynamic from "next/dynamic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -1708,7 +1710,7 @@ function TextCardsRenderer({ block }: { block: TextCardsBlock }) {
                   placeholder={t("cardText")}
                 />
               </div>
-              <div className={block.showWritingLines ? "px-2 pb-2" : "p-2 text-center text-sm"}>
+              <div className={block.showWritingLines ? "px-2 pb-2" : "px-2 py-1 text-center text-sm"}>
                 {block.showWritingLines ? (
                   <div className="space-y-0">
                     <input
@@ -8480,6 +8482,8 @@ export function BlockRenderer({
       return <SyllableCardsRenderer block={block as SyllableCardsBlock} />;
     case "board-game":
       return <BoardGameRenderer block={block as BoardGameBlock} />;
+    case "bingo-cards":
+      return <BingoCardsRenderer block={block as BingoCardsBlock} mode={mode} />;
     case "linked-blocks":
       return <LinkedBlocksRenderer block={block as LinkedBlocksBlock} />;
     case "text-snippet":

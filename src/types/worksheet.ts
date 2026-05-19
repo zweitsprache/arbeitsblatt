@@ -82,9 +82,42 @@ export type BlockType =
   | "flashcards"
   | "board-game"
   | "grid"
-  | "segmentation";
+  | "segmentation"
+  | "bingo-cards";
 
 export type SegmentationCasing = "default" | "uppercase" | "lowercase";
+
+// ─── Bingo Cards block ─────────────────────────────────────
+export type BingoCardsGridSize = 3 | 4 | 5;
+export type BingoCardsMode = "same" | "qa";
+export type BingoCardsContentType = "text" | "image" | "text-image";
+
+export interface BingoCardsItem {
+  id: string;
+  text?: string;
+  imageSrc?: string;
+  answer?: string; // for QA mode
+}
+
+export interface BingoCardsBlock extends BlockBase {
+  type: "bingo-cards";
+  gridSize: BingoCardsGridSize;
+  mode: BingoCardsMode;
+  contentType: BingoCardsContentType;
+  items: BingoCardsItem[];
+  randomize: boolean;
+  csvImport?: string; // raw CSV text, for import UI only
+  cardWidthMm?: number; // default 148.5
+  cardHeightMm?: number; // default 105
+  showCuttingLine?: boolean; // default true
+}
+
+// ─── Bingo Cards item count config ─────────────────────────
+export const BINGO_CARDS_ITEM_LIMITS: Record<BingoCardsGridSize, { min: number; max: number }> = {
+  3: { min: 20, max: 25 },
+  4: { min: 30, max: 35 },
+  5: { min: 40, max: 50 },
+};
 
 export interface SegmentationBlock extends BlockBase {
   type: "segmentation";
@@ -217,7 +250,7 @@ export interface ImageTextTableBlock extends BlockBase {
   type: "image-text-table";
   instruction?: string;
   items: ImageCardItem[];
-  columns: 2 | 3 | 4;
+  columns: 2 | 3 | 4 | 5;
   imageAspectRatio: "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
   imageScale: number; // 10-100
   showImageNumberBadge: boolean;
@@ -1181,7 +1214,8 @@ export type WorksheetBlock =
   | AiToolBlock
   | TableBlock
   | GridBlock
-  | SegmentationBlock;
+  | SegmentationBlock
+  | BingoCardsBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 
@@ -3085,3 +3119,26 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   },
 },
 ];
+// ─── Bingo Cards block definition ──────────────────────────
+BLOCK_LIBRARY.push({
+  type: "bingo-cards",
+  label: "Bingo Cards",
+  description: "Bingo cards with customizable grid and modes",
+  labelKey: "bingoCards",
+  descriptionKey: "bingoCardsDesc",
+  icon: "Grid3X3",
+  category: "content",
+  translations: { de: { label: "Bingo-Karten", description: "Bingo-Karten mit anpassbarem Raster und Modi" } },
+  defaultData: {
+    type: "bingo-cards",
+    gridSize: 5,
+    mode: "same",
+    contentType: "text",
+    items: [],
+    randomize: true,
+    cardWidthMm: 148.5,
+    cardHeightMm: 105,
+    showCuttingLine: true,
+    visibility: "both",
+  },
+});

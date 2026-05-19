@@ -244,7 +244,7 @@ Allowed `imageStyle` values:
 
 Rules:
 
-- `columns` must be `2`, `3`, or `4`.
+- `columns` must be `2`, `3`, `4`, or `5`.
 - `imageAspectRatio` must be `16:9`, `4:3`, `1:1`, `3:4`, or `9:16`.
 
 ### `image-text-table`

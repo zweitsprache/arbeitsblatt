@@ -174,146 +174,148 @@ export function BlockSidebar({
 
   return (
     <div className="w-80 shrink-0 flex flex-col h-full min-h-0 pt-8 pb-8">
-      <div className="flex flex-col h-full bg-slate-50 rounded-sm shadow-sm overflow-hidden">
-      <div className="p-3">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm border-slate-700"
-          />
+      <div className="flex flex-col h-full bg-slate-50 rounded-sm overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="p-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder={t("searchPlaceholder")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-8 text-sm border-slate-700"
+              />
+            </div>
+          </div>
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden scrollbar-hide [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="px-3 pb-3 space-y-3">
+              {/* Content blocks */}
+              {categories.content.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("contentCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.content.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Image blocks */}
+              {categories.images.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("imagesCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.images.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Vocabulary blocks */}
+              {categories.vocabulary.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("vocabularyCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.vocabulary.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Mockup blocks */}
+              {categories.mockup.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("mockupCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.mockup.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Numbering blocks */}
+              {categories.numbering.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("numberingCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.numbering.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Memory aids blocks */}
+              {categories.memoryAids.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("memoryAidsCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.memoryAids.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Multimedia blocks */}
+              {categories.multimedia.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("multimediaCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.multimedia.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Layout blocks */}
+              {categories.layout.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("layoutCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.layout.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive blocks */}
+              {categories.interactive.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {t("interactiveCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.interactive.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Tools blocks */}
+              {categories.aiTools.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-md mb-2">
+                    {t("aiToolsCategory")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.aiTools.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* No results */}
+              {categories.content.length === 0 && categories.images.length === 0 && categories.vocabulary.length === 0 && categories.mockup.length === 0 && categories.numbering.length === 0 && categories.memoryAids.length === 0 && categories.multimedia.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">{t("noBlocksFound")}</p>
+              )}
+            </div>
+          </ScrollArea>
         </div>
-      </div>
-      <ScrollArea className="flex-1 min-h-0 overflow-hidden scrollbar-hide [&_[data-slot=scroll-area-viewport]>div]:!block">
-        <div className="px-3 pb-3 space-y-3">
-          {/* Content blocks */}
-          {categories.content.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("contentCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.content.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Image blocks */}
-          {categories.images.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("imagesCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.images.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Vocabulary blocks */}
-          {categories.vocabulary.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("vocabularyCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.vocabulary.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Mockup blocks */}
-          {categories.mockup.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("mockupCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.mockup.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Numbering blocks */}
-          {categories.numbering.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("numberingCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.numbering.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Memory aids blocks */}
-          {categories.memoryAids.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("memoryAidsCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.memoryAids.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Multimedia blocks */}
-          {categories.multimedia.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("multimediaCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.multimedia.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Layout blocks */}
-          {categories.layout.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("layoutCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.layout.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* Interactive blocks */}
-          {categories.interactive.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                {t("interactiveCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.interactive.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* AI Tools blocks */}
-          {categories.aiTools.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-md mb-2">
-                {t("aiToolsCategory")}
-              </div>
-              <div className="space-y-1.5">
-                {categories.aiTools.map(renderBlock)}
-              </div>
-            </div>
-          )}
-
-          {/* No results */}
-          {categories.content.length === 0 && categories.images.length === 0 && categories.vocabulary.length === 0 && categories.mockup.length === 0 && categories.numbering.length === 0 && categories.memoryAids.length === 0 && categories.multimedia.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">{t("noBlocksFound")}</p>
-          )}
-        </div>
-      </ScrollArea>
       </div>
     </div>
   );
