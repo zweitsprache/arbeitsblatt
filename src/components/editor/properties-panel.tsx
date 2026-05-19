@@ -10914,7 +10914,7 @@ function SegmentationProps({ block }: { block: import("@/types/worksheet").Segme
           onValueChange={(val) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { casing: val } },
+              payload: { id: block.id, updates: { casing: val as import("@/types/worksheet").SegmentationBlock["casing"] } },
             })
           }
         >
