@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
+import { useUpload } from "@/lib/use-upload";
 import { useEditor } from "@/store/editor-store";
 import { ImagePlus, Plus, Trash2 } from "lucide-react";
 
@@ -147,6 +148,7 @@ function getCsvPlaceholder(mode: BingoCardsMode, contentType: BingoCardsContentT
 
 export function BingoCardsPropEditor({ block }: { block: BingoCardsBlock }) {
   const { dispatch } = useEditor();
+  const { upload } = useUpload();
   const [selectedItemIndex, setSelectedItemIndex] = React.useState<number | null>(block.items[0] ? 0 : null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
   const [csvError, setCsvError] = React.useState<string | null>(null);
@@ -196,6 +198,17 @@ export function BingoCardsPropEditor({ block }: { block: BingoCardsBlock }) {
   function clearItems() {
     updateItems([]);
     setSelectedItemIndex(null);
+  }
+
+  async function handleFileSelected(file: File) {
+    if (selectedItemIndex === null || !file.type.startsWith("image/")) return;
+
+    try {
+      const uploadResult = await upload(file);
+      updateItem(selectedItemIndex, { imageSrc: uploadResult.url });
+    } catch (error) {
+      console.error("Bingo image upload failed:", error);
+    }
   }
 
   function handleParsedItems(parsedItems: BingoCardsItem[]) {
@@ -454,6 +467,7 @@ export function BingoCardsPropEditor({ block }: { block: BingoCardsBlock }) {
               if (selectedItemIndex === null) return;
               updateItem(selectedItemIndex, { imageSrc: url });
             }}
+            onSelectFile={handleFileSelected}
           />
         </div>
       ) : null}
