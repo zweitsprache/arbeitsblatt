@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+// ─── Segmentation Block ─────────────────────────────────────────────
+import rough from "roughjs/bundled/rough.esm.js";
 import { useLocale, useTranslations } from "next-intl";
 import {
   WorksheetBlock,
@@ -80,6 +82,7 @@ import {
   ScheduleItem,
   WebsiteBlock,
   TableBlock,
+  SegmentationBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
@@ -93,7 +96,7 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
-import { RoughExampleCircle, RoughExampleStrike } from "@/components/ui/rough-example-circle";
+import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike } from "@/components/ui/rough-example-circle";
 import { generateWordSearchGrid } from "@/lib/word-search";
 import { generateCrosswordLayout } from "@/lib/crossword";
 import { RichTextEditor } from "./rich-text-editor";
@@ -1837,6 +1840,84 @@ function WritingRowsRenderer({ block }: { block: WritingRowsBlock }) {
   );
 }
 
+function applySegmentationCasing(value: string, casing: SegmentationBlock["casing"]) {
+  if (casing === "uppercase") return value.toUpperCase();
+  if (casing === "lowercase") return value.toLowerCase();
+  return value;
+}
+
+function getSegmentationWords(value: string, casing: SegmentationBlock["casing"]) {
+  return applySegmentationCasing(value || "", casing)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function SegmentationRenderer({ block, interactive }: { block: SegmentationBlock; interactive: boolean }) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const activeIdx = state.activeItemIndex;
+  const exampleItemIndex = block.showFirstAsExample === false
+    ? -1
+    : block.items.findIndex((item) => getSegmentationWords(item.text, block.casing).length > 1);
+  const instructionText = (block.instruction || "").trim() || "Split the text with vertical lines.";
+
+  const handleRowClick = React.useCallback(
+    (index: number) => {
+      if (!interactive) {
+        dispatch({ type: "SET_ACTIVE_ITEM", payload: index });
+      }
+    },
+    [dispatch, interactive],
+  );
+
+  return (
+    <div className="space-y-2">
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
+      {block.items.map((item, index) => {
+        const words = getSegmentationWords(item.text, block.casing);
+        const showExample = index === exampleItemIndex && words.length > 1;
+
+        return (
+          <div
+            key={item.id}
+            className={`flex items-center gap-3 border-b last:border-b-0 py-2 cursor-pointer rounded-sm transition-colors ${
+              !interactive && activeIdx === index
+                ? "bg-blue-50 ring-1 ring-blue-200"
+                : "hover:bg-muted/30"
+            }`}
+            onClick={() => handleRowClick(index)}
+          >
+            <ItemNumberBadge index={index + 1} />
+            <span className="flex-1 whitespace-nowrap" style={{ letterSpacing: "0.18em" }}>
+              {words.map((word, wordIndex) => (
+                <span key={`${item.id}-${wordIndex}`} className="relative">
+                  {word}
+                  {wordIndex < words.length - 1 ? (
+                    showExample && wordIndex === 0 ? <RoughExampleDivider stroke="#0097dc" /> : null
+                  ) : null}
+                </span>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Multiple Choice ────────────────────────────────────────
 function MultipleChoiceRenderer({
   block,
@@ -2456,7 +2537,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-base text-muted-foreground">{block.instruction}</p>
+      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
       {/* Word Bank */}
       {block.showWordBank && wordBankItems.length > 0 && (
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
@@ -6577,7 +6658,7 @@ function DialogueRenderer({
             >
               <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || '\u00A0'}</span>
               <span
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                className="flex flex-1 min-w-0 flex-wrap items-center gap-y-1"
                 style={{
                   fontFamily: "var(--font-handwriting)",
                   fontWeight: 400,
@@ -8323,6 +8404,8 @@ export function BlockRenderer({
       return <WritingLinesRenderer block={block} />;
     case "writing-rows":
       return <WritingRowsRenderer block={block} />;
+    case "segmentation":
+      return <SegmentationRenderer block={block} interactive={interactive} />;
     case "multiple-choice":
       return <MultipleChoiceRenderer block={block} interactive={interactive} />;
     case "fill-in-blank":

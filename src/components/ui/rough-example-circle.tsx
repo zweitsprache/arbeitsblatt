@@ -23,6 +23,15 @@ const FALLBACK_STRIKE_PATHS = [
   },
 ];
 
+const FALLBACK_DIVIDER_PATHS = [
+  {
+    d: "M14 4 C12 11, 16 20, 14 28 C13 36, 15 46, 14 54",
+    fill: "none",
+    stroke: "#0097dc",
+    strokeWidth: 2.1,
+  },
+];
+
 const strikeDrawable = generator.line(10, 20, 150, 15, {
   seed: 23,
   roughness: 2.1,
@@ -31,6 +40,15 @@ const strikeDrawable = generator.line(10, 20, 150, 15, {
   strokeWidth: 2.1,
 });
 const roughStrikePaths = generator.toPaths(strikeDrawable).filter((path) => path.d && path.stroke !== "none");
+
+const dividerDrawable = generator.line(14, 4, 14, 54, {
+  seed: 41,
+  roughness: 2,
+  bowing: 3,
+  stroke: "#0097dc",
+  strokeWidth: 2.1,
+});
+const roughDividerPaths = generator.toPaths(dividerDrawable).filter((path) => path.d && path.stroke !== "none");
 
 function hashSeed(value: string): number {
   let hash = 0;
@@ -152,6 +170,51 @@ export function RoughExampleStrike({
             strokeLinecap="round"
           />
         ))}
+      </svg>
+    </span>
+  );
+}
+
+export function RoughExampleDivider({
+  className,
+  style,
+  stroke = "#0097dc",
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+  stroke?: string;
+}) {
+  const dividerPath = React.useMemo(
+    () => ({
+      d: "M14 0 C13 9, 15 19, 14 29 C13 39, 15 49, 14 58",
+      points: [
+        [14, 0],
+        [13, 9],
+        [15, 19],
+        [14, 29],
+        [13, 39],
+        [15, 49],
+        [14, 58],
+      ] as [number, number][],
+      stroke,
+      strokeWidth: 6.4,
+    }),
+    [stroke],
+  );
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`pointer-events-none absolute left-full top-1/2 overflow-visible leading-none ${className || ""}`.trim()}
+      style={style}
+    >
+      <svg
+        viewBox="0 0 28 64"
+        preserveAspectRatio="none"
+        className="absolute left-0 top-1/2 overflow-visible"
+        style={{ width: "0.42rem", height: "1.5em", transform: "translate(calc(-50% - 0.08em), calc(-50% + 0.08em))" }}
+      >
+        <RoughSvgPaths paths={[dividerPath]} />
       </svg>
     </span>
   );

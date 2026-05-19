@@ -74,6 +74,7 @@ import {
   ScheduleBlock,
   WebsiteBlock,
   TableBlock,
+  SegmentationBlock,
   BRAND_ICON_LOGOS,
   BRAND_FONTS,
   Brand,
@@ -89,7 +90,7 @@ import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, 
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { getCardPairDisplayText, getCardPairItems, getCardPairs, getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
-import { RoughExampleCircle, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
+import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
 import { findWordSearchPlacements } from "@/lib/word-search";
 import {
   DialogueSpeakerIconGlyph,
@@ -127,6 +128,76 @@ const CUT_ICON_STYLE_BASE: React.CSSProperties = {
   zIndex: 4,
   pointerEvents: "none",
 };
+
+function applySegmentationCasing(value: string, casing: SegmentationBlock["casing"]) {
+  if (casing === "uppercase") return value.toUpperCase();
+  if (casing === "lowercase") return value.toLowerCase();
+  return value;
+}
+
+function getSegmentationWords(value: string, casing: SegmentationBlock["casing"]) {
+  return applySegmentationCasing(value || "", casing)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function SegmentationView({
+  block,
+  showSolutions = false,
+  mode = "online",
+  accentColor,
+  instructionIndex,
+}: {
+  block: SegmentationBlock;
+  showSolutions?: boolean;
+  mode?: ViewMode;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const exampleItemIndex = block.showFirstAsExample === false
+    ? -1
+    : block.items.findIndex((item) => getSegmentationWords(item.text, block.casing).length > 1);
+
+  return (
+    <div>
+      {block.instruction && (
+        <>
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          {block.items.length > 0 && <SectionGap size="small" />}
+        </>
+      )}
+      {block.items.map((item, index) => {
+        const words = getSegmentationWords(item.text, block.casing);
+        const showExample = index === exampleItemIndex && words.length > 1;
+
+        return (
+          <div
+            key={item.id}
+            className="flex items-center border-b"
+            style={{ gap: 12, paddingTop: 6, paddingBottom: 6, height: 32, boxSizing: "border-box", overflow: "hidden" }}
+          >
+            <ItemNumberBadge index={index + 1} className="shrink-0" />
+            <span className="flex-1 whitespace-nowrap" style={{ letterSpacing: "0.18em" }}>
+              {words.map((word, wordIndex) => (
+                <span key={`${item.id}-${wordIndex}`} className="relative">
+                  {word}
+                  {wordIndex < words.length - 1 ? (
+                    showExample && wordIndex === 0 ? (
+                      <RoughExampleDivider stroke="#0097dc" />
+                    ) : showSolutions ? (
+                      <RoughExampleDivider stroke="#15803d" />
+                    ) : null
+                  ) : null}
+                </span>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function buildQuartettCardVariants(items: QuartettBlock["items"]): QuartettCardVariant[] {
   return items.flatMap((item) =>
@@ -10615,6 +10686,8 @@ export function ViewerBlockRenderer({
       return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":
       return <WebsiteView block={block as WebsiteBlock} originalBlock={originalBlock as WebsiteBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
+    case "segmentation":
+      return <SegmentationView block={block as SegmentationBlock} showSolutions={showSolutions} mode={mode} accentColor={accentColor} instructionIndex={instructionIndex} />;
     default:
       return null;
   }

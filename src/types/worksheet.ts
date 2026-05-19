@@ -81,7 +81,18 @@ export type BlockType =
   | "domino"
   | "flashcards"
   | "board-game"
-  | "grid";
+  | "grid"
+  | "segmentation";
+
+export type SegmentationCasing = "default" | "uppercase" | "lowercase";
+
+export interface SegmentationBlock extends BlockBase {
+  type: "segmentation";
+  instruction?: string;
+  items: { id: string; text: string }[];
+  casing: SegmentationCasing;
+  showFirstAsExample?: boolean; // always true for now
+}
 
 export type ExclusiveWorksheetBlockType = "flashcards" | "card-pairs" | "domino" | "quartett" | "taboo" | "syllable-cards";
 
@@ -122,6 +133,7 @@ export function canAddBlockTypeToWorksheet(
 }
 
 // ─── Base block ──────────────────────────────────────────────
+
 export interface BlockBase {
   id: string;
   type: BlockType;
@@ -1168,7 +1180,8 @@ export type WorksheetBlock =
   | AiPromptBlock
   | AiToolBlock
   | TableBlock
-  | GridBlock;
+  | GridBlock
+  | SegmentationBlock;
 
 // ─── Brand types ────────────────────────────────────────────
 
@@ -1660,6 +1673,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "heading",
       content: "Heading",
       level: 1,
+      visibility: "both",
+    },
+  },
+  {
+    type: "segmentation",
+    label: "Segmentation",
+    description: "Split text with vertical lines",
+    labelKey: "segmentation",
+    descriptionKey: "segmentationDesc",
+    icon: "LayoutList",
+    category: "content",
+    translations: { de: { label: "Segmentierung", description: "Text mit Trennlinien aufteilen" } },
+    defaultData: {
+      type: "segmentation",
+      instruction: "Split the text with vertical lines.",
+      items: [
+        { id: "1", text: "Ich wohne in Zürich." },
+        { id: "2", text: "Du kommst aus Bern." }
+      ],
+      casing: "default",
+      showFirstAsExample: true,
       visibility: "both",
     },
   },

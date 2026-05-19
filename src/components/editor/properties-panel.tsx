@@ -10856,6 +10856,122 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
   );
 }
 
+// ─── Segmentation Props ─────────────────────────────────────
+function SegmentationProps({ block }: { block: import("@/types/worksheet").SegmentationBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const updateItem = (index: number, text: string) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], text };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [...block.items, { id: crypto.randomUUID(), text: "" }],
+        },
+      },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: block.items.filter((_, itemIndex) => itemIndex !== index) },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-sm">Instruction</Label>
+        <Input
+          value={block.instruction ?? ""}
+          onChange={(event) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: event.target.value } },
+            })
+          }
+          className="mt-1"
+        />
+      </div>
+      <div>
+        <Label>Casing</Label>
+        <Select
+          value={block.casing}
+          onValueChange={(val) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { casing: val } },
+            })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">Default</SelectItem>
+            <SelectItem value="uppercase">Uppercase</SelectItem>
+            <SelectItem value="lowercase">Lowercase</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>{t("items")}</Label>
+        <div className="mt-2 space-y-2">
+          {block.items.map((item, index) => (
+            <div key={item.id} className="flex items-center gap-2">
+              <Input
+                value={item.text}
+                onChange={(event) => updateItem(index, event.target.value)}
+                className="flex-1"
+                placeholder={`Item ${index + 1}`}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeItem(index)}
+                disabled={block.items.length <= 1}
+                className="shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" className="w-full" onClick={addItem}>
+            <Plus className="mr-2 h-4 w-4" /> {t("addItem")}
+          </Button>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={block.showFirstAsExample ?? true}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Cover Images Panel ─────────────────────────────────────
 
 function CoverImagesPanel() {
@@ -12255,6 +12371,8 @@ export function PropertiesPanel() {
         return <HeadingProps block={selectedBlock} />;
       case "numbered-heading":
         return <HeadingProps block={selectedBlock} />;
+      case "segmentation":
+        return <SegmentationProps block={selectedBlock as import("@/types/worksheet").SegmentationBlock} />;
       case "image":
         return <ImageProps block={selectedBlock} />;
       case "image-cards":
