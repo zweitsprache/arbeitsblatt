@@ -84,6 +84,7 @@ import {
   WebsiteBlock,
   TableBlock,
   SegmentationBlock,
+  FreeFormBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
 } from "@/types/worksheet";
@@ -102,11 +103,10 @@ import { generateWordSearchGrid } from "@/lib/word-search";
 import { generateCrosswordLayout } from "@/lib/crossword";
 import { RichTextEditor } from "./rich-text-editor";
 import { TableEditor } from "./table-editor";
-import { Input } from "@/components/ui/input";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square, FileQuestion } from "lucide-react";
+import { Plus, Minus, X, Check, GripVertical, Trash2, Copy, Eye, EyeOff, Printer, Monitor, Sparkles, ArrowUpDown, Upload, ChevronUp, ChevronDown, ChevronsDown, ChevronsUp, Link2, ExternalLink, Mail, Paperclip, FormInput, User, Phone, ListChecks, ListOrdered, ArrowRight, ArrowRightToLine, BadgeAlert, Siren, Goal, Flag, Loader2, Bot, Square, FileQuestion, ArrowUp, ArrowDown } from "lucide-react";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
@@ -116,6 +116,8 @@ import dynamic from "next/dynamic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { BlockVisibility } from "@/types/worksheet";
+import { Button } from "@/components/ui/button";
+import { FreeFormEditorDialog, FreeFormPreview } from "./free-form-editor-dialog";
 import { SyllablesDisplay } from "@/components/worksheet/syllables-display";
 import {
   DialogueSpeakerIconGlyph,
@@ -5640,12 +5642,25 @@ function ColumnChildBlock({
   parentBlockId: string;
   colIndex: number;
 }) {
-  const { state, dispatch, duplicateBlock } = useEditor();
+  const { state, dispatch, duplicateBlock, moveBlockInContainerByStep } = useEditor();
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
   const isSelected = state.selectedBlockId === block.id;
   const isVisibleInMode = block.visibility === "both" || block.visibility === mode;
   const VisIcon = colChildVisibilityIcons[block.visibility];
+  const parentBlock = state.blocks.find((candidate) => candidate.id === parentBlockId);
+  const siblingBlocks = parentBlock
+    ? parentBlock.type === "columns"
+      ? (parentBlock.children[colIndex] ?? [])
+      : parentBlock.type === "accordion"
+        ? (parentBlock.items[colIndex]?.children ?? [])
+        : parentBlock.type === "grid"
+          ? (parentBlock.children[colIndex] ?? [])
+          : []
+    : [];
+  const blockIndex = siblingBlocks.findIndex((candidate) => candidate.id === block.id);
+  const canMoveUp = blockIndex > 0;
+  const canMoveDown = blockIndex >= 0 && blockIndex < siblingBlocks.length - 1;
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `col-child-${block.id}`,
@@ -5693,6 +5708,42 @@ function ColumnChildBlock({
         >
           <GripVertical className="h-3 w-3 text-muted-foreground" />
         </button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="p-0.5 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+              disabled={!canMoveUp}
+              onClick={(e) => {
+                e.stopPropagation();
+                moveBlockInContainerByStep(block.id, "up");
+              }}
+            >
+              <ArrowUp className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">{t("moveBlockUp")}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="p-0.5 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+              disabled={!canMoveDown}
+              onClick={(e) => {
+                e.stopPropagation();
+                moveBlockInContainerByStep(block.id, "down");
+              }}
+            >
+              <ArrowDown className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">{t("moveBlockDown")}</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Visibility toggle */}
         <Tooltip>
@@ -7180,7 +7231,7 @@ function QuartettRenderer({ block }: { block: QuartettBlock }) {
             style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
           >
             <div
-              className="pr-10 text-xs font-semibold uppercase tracking-wider text-primary"
+              className="pr-10 text-xs font-semibold tracking-wider text-primary"
               style={{ minHeight: reservedTitleHeight }}
             >
               {showGroupTitle ? card.title : ""}
@@ -8350,6 +8401,55 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
   );
 }
 
+function FreeFormRenderer({ block }: { block: FreeFormBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("blockRenderer");
+  const [open, setOpen] = React.useState(false);
+
+  const updateBlock = React.useCallback((updates: Partial<FreeFormBlock>) => {
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+  }, [block.id, dispatch]);
+
+  return (
+    <>
+      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            {block.instruction ? (
+              <p className="text-sm text-slate-600">{block.instruction}</p>
+            ) : (
+              <p className="text-sm text-slate-500">{t("freeFormEmpty")}</p>
+            )}
+          </div>
+          <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+            {t("freeFormEdit")}
+          </Button>
+        </div>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setOpen(true);
+            }
+          }}
+          className="cursor-pointer"
+        >
+          <FreeFormPreview scene={block.scene} title={block.title} />
+        </div>
+      </div>
+      <FreeFormEditorDialog
+        open={open}
+        onOpenChange={setOpen}
+        block={block}
+        onChange={updateBlock}
+      />
+    </>
+  );
+}
+
 // ─── Main Block Renderer ────────────────────────────────────
 export function BlockRenderer({
   block: rawBlock,
@@ -8408,6 +8508,8 @@ export function BlockRenderer({
       return <WritingRowsRenderer block={block} />;
     case "segmentation":
       return <SegmentationRenderer block={block} interactive={interactive} />;
+    case "free-form":
+      return <FreeFormRenderer block={block as FreeFormBlock} />;
     case "multiple-choice":
       return <MultipleChoiceRenderer block={block} interactive={interactive} />;
     case "fill-in-blank":

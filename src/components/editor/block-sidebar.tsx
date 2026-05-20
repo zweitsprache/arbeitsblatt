@@ -139,6 +139,14 @@ export function BlockSidebar({
   const tb = useTranslations("blocks");
   const [search, setSearch] = useState("");
 
+  const ts = (key: string, fallback: string) => {
+    try {
+      return t(key);
+    } catch {
+      return fallback;
+    }
+  };
+
   const categories = useMemo(() => {
     const filter = (b: BlockDefinition) =>
       !search ||
@@ -146,9 +154,13 @@ export function BlockSidebar({
       tb(b.descriptionKey).toLowerCase().includes(search.toLowerCase());
 
     return {
+      headings: BLOCK_LIBRARY.filter((b) => b.category === "headings" && filter(b)),
       content: BLOCK_LIBRARY.filter((b) => b.category === "content" && filter(b)),
       images: BLOCK_LIBRARY.filter((b) => b.category === "images" && filter(b)),
       vocabulary: BLOCK_LIBRARY.filter((b) => b.category === "vocabulary" && filter(b)),
+      games: BLOCK_LIBRARY.filter((b) => b.category === "games" && filter(b)),
+      spelling: BLOCK_LIBRARY.filter((b) => b.category === "spelling" && filter(b)),
+      cards: BLOCK_LIBRARY.filter((b) => b.category === "cards" && filter(b)),
       mockup: BLOCK_LIBRARY.filter((b) => b.category === "mockup" && filter(b)),
       numbering: BLOCK_LIBRARY.filter((b) => b.category === "numbering" && filter(b)),
       memoryAids: BLOCK_LIBRARY.filter((b) => b.category === "memory-aids" && filter(b)),
@@ -180,7 +192,7 @@ export function BlockSidebar({
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder={t("searchPlaceholder")}
+                placeholder={ts("searchPlaceholder", "Search block...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 h-8 text-sm border-slate-700"
@@ -189,11 +201,23 @@ export function BlockSidebar({
           </div>
           <ScrollArea className="flex-1 min-h-0 overflow-hidden scrollbar-hide [&_[data-slot=scroll-area-viewport]>div]:!block">
             <div className="px-3 pb-3 space-y-3">
+              {/* Headings blocks */}
+              {categories.headings.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {ts("headingsCategory", "Headings")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.headings.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
               {/* Content blocks */}
               {categories.content.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("contentCategory")}
+                    {ts("contentCategory", "Text")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.content.map(renderBlock)}
@@ -205,7 +229,7 @@ export function BlockSidebar({
               {categories.images.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("imagesCategory")}
+                    {ts("imagesCategory", "Images and Graphics")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.images.map(renderBlock)}
@@ -217,10 +241,46 @@ export function BlockSidebar({
               {categories.vocabulary.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("vocabularyCategory")}
+                    {ts("vocabularyCategory", "Vocabulary")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.vocabulary.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Games blocks */}
+              {categories.games.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {ts("gamesCategory", "Games")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.games.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Spelling blocks */}
+              {categories.spelling.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {ts("spellingCategory", "Spelling")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.spelling.map(renderBlock)}
+                  </div>
+                </div>
+              )}
+
+              {/* Cards blocks */}
+              {categories.cards.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                    {ts("cardsCategory", "Cards")}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categories.cards.map(renderBlock)}
                   </div>
                 </div>
               )}
@@ -229,7 +289,7 @@ export function BlockSidebar({
               {categories.mockup.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("mockupCategory")}
+                    {ts("mockupCategory", "Mockups")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.mockup.map(renderBlock)}
@@ -241,7 +301,7 @@ export function BlockSidebar({
               {categories.numbering.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("numberingCategory")}
+                    {ts("numberingCategory", "Numbering")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.numbering.map(renderBlock)}
@@ -253,7 +313,7 @@ export function BlockSidebar({
               {categories.memoryAids.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("memoryAidsCategory")}
+                    {ts("memoryAidsCategory", "Memory Aids")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.memoryAids.map(renderBlock)}
@@ -265,7 +325,7 @@ export function BlockSidebar({
               {categories.multimedia.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("multimediaCategory")}
+                    {ts("multimediaCategory", "Multimedia")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.multimedia.map(renderBlock)}
@@ -277,7 +337,7 @@ export function BlockSidebar({
               {categories.layout.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("layoutCategory")}
+                    {ts("layoutCategory", "Layout")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.layout.map(renderBlock)}
@@ -289,7 +349,7 @@ export function BlockSidebar({
               {categories.interactive.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
-                    {t("interactiveCategory")}
+                    {ts("interactiveCategory", "Interactive")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.interactive.map(renderBlock)}
@@ -301,7 +361,7 @@ export function BlockSidebar({
               {categories.aiTools.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-md mb-2">
-                    {t("aiToolsCategory")}
+                    {ts("aiToolsCategory", "AI Tools")}
                   </div>
                   <div className="space-y-1.5">
                     {categories.aiTools.map(renderBlock)}
@@ -310,8 +370,8 @@ export function BlockSidebar({
               )}
 
               {/* No results */}
-              {categories.content.length === 0 && categories.images.length === 0 && categories.vocabulary.length === 0 && categories.mockup.length === 0 && categories.numbering.length === 0 && categories.memoryAids.length === 0 && categories.multimedia.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">{t("noBlocksFound")}</p>
+              {categories.headings.length === 0 && categories.content.length === 0 && categories.images.length === 0 && categories.vocabulary.length === 0 && categories.games.length === 0 && categories.spelling.length === 0 && categories.cards.length === 0 && categories.mockup.length === 0 && categories.numbering.length === 0 && categories.memoryAids.length === 0 && categories.multimedia.length === 0 && categories.layout.length === 0 && categories.interactive.length === 0 && categories.aiTools.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">{ts("noBlocksFound", "No blocks found")}</p>
               )}
             </div>
           </ScrollArea>

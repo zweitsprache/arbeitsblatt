@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,14 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -99,6 +107,7 @@ import {
   WebsiteBlock,
   TableBlock,
   TableStyle,
+  FreeFormBlock,
   BlockDisplayOn,
   BlockVisibility,
   TextBlockStyle,
@@ -108,7 +117,7 @@ import {
 import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
 import { formatCrosswordItemsText, parseCrosswordItemsText } from "@/lib/crossword";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -255,19 +264,41 @@ function ChInput({
 function TextSnippetProps({ block }: { block: TextSnippetBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const update = (updates: Partial<TextSnippetBlock>) => {
     dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
   };
 
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("bilingual")}</Label>
-        <Switch
-          checked={block.bilingual ?? false}
-          onCheckedChange={(checked) => update({ bilingual: checked })}
-        />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("bilingual"),
+            block.bilingual ?? false,
+            (checked) => update({ bilingual: checked }),
+            { withTopDivider: true, withBottomBorder: false }
+          )}
+        </div>
       </div>
     </div>
   );
@@ -278,9 +309,25 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const isNumberedHeading = block.type === "numbered-heading";
+
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div className="flex h-8 items-center justify-between border-b border-border">
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   return (
     <div className="space-y-3">
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
         <ChInput
           blockId={block.id}
@@ -294,7 +341,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
           }
         />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("level")}</Label>
         <Select
           value={String(block.level)}
@@ -305,7 +352,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
             })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger size="sm" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -317,7 +364,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
         </Select>
       </div>
       {isNumberedHeading && (
-        <div>
+        <div className="space-y-2">
           <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
           <Input
             type="number"
@@ -335,30 +382,26 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
           />
         </div>
       )}
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("bilingual")}</Label>
-        <Switch
-          checked={block.bilingual ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { bilingual: checked } },
-            })
-          }
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("skipTranslation")}</Label>
-        <Switch
-          checked={block.skipTranslation ?? false}
-          onCheckedChange={(checked) =>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("bilingual"),
+            block.bilingual ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { bilingual: checked } },
+              }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(t("skipTranslation"), block.skipTranslation ?? false, (checked) =>
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { skipTranslation: checked } },
             })
-          }
-        />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -675,8 +718,8 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("columns")}</Label>
         <Select
           value={String(block.columns)}
           onValueChange={(v) =>
@@ -1057,9 +1100,33 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const textAlignmentLabels: Record<"left" | "center" | "right", string> = {
+    left: locale === "de" ? "Links" : "Left",
+    center: locale === "de" ? "Zentriert" : "Center",
+    right: locale === "de" ? "Rechts" : "Right",
+  };
+
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
 
   const handleCsvImport = () => {
     setCsvError(null);
@@ -1143,8 +1210,8 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("columns")}</Label>
         <Select
           value={String(block.columns)}
           onValueChange={(v) =>
@@ -1154,7 +1221,7 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
             })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger size="sm" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1164,54 +1231,55 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           </SelectContent>
         </Select>
       </div>
-      <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("cards")}</Label>
         {block.items.map((item, i) => (
-          <div key={item.id} className="space-y-1">
+          <div key={item.id} className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
+              <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
               <Input
                 value={item.text}
                 onChange={(e) => updateItem(i, { text: e.target.value })}
                 placeholder={t("cardText")}
                 className="flex-1 h-8 text-xs"
               />
-              <div className="flex flex-col">
-              <button
-                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                onClick={() => moveItem(i, -1)}
-                disabled={i === 0}
-              >
-                <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
-              </button>
-              <button
-                className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                onClick={() => moveItem(i, 1)}
-                disabled={i === block.items.length - 1}
-              >
-                <ArrowUpDown className="h-2.5 w-2.5" />
-              </button>
-            </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => removeItem(i)}
-                disabled={block.items.length <= 1}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+              <div className="flex w-[56px] shrink-0 items-center justify-end gap-1">
+                <div className="flex flex-col">
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, -1)}
+                    disabled={i === 0}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                  </button>
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, 1)}
+                    disabled={i === block.items.length - 1}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => removeItem(i)}
+                  disabled={block.items.length <= 1}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-4 shrink-0" />
+              <span className="w-6 shrink-0" />
               <Input
                 value={item.caption}
                 onChange={(e) => updateItem(i, { caption: e.target.value })}
                 placeholder={t("caption")}
-                className="flex-1 h-7 text-xs text-muted-foreground"
+                className="flex-1 h-8 text-xs text-muted-foreground"
               />
-              <span className="w-[38px] shrink-0" />
+              <span className="w-[56px] shrink-0" />
             </div>
           </div>
         ))}
@@ -1219,15 +1287,11 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addCard")}
         </Button>
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
-          {t("csvImportHelp")}
-        </p>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
-          placeholder={t("csvImportPlaceholder")}
+          className="w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder=""
           value={csvText}
           onChange={(e) => {
             setCsvText(e.target.value);
@@ -1237,12 +1301,12 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
         {csvError && (
           <p className="text-xs text-destructive mt-1">{csvError}</p>
         )}
-        <div className="flex gap-1 mt-1">
+        <div className="space-y-2 mt-1">
           <Select
             value={csvMode}
             onValueChange={(v) => setCsvMode(v as "replace" | "append")}
           >
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger size="sm" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1253,7 +1317,7 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="w-full"
             onClick={handleCsvImport}
             disabled={!csvText.trim()}
           >
@@ -1262,16 +1326,15 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           </Button>
         </div>
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
-        <div className="flex gap-1">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
+        <div className="grid grid-cols-3 gap-1">
           {(["xs", "sm", "base", "lg", "xl", "2xl"] as const).map((size) => (
             <Button
               key={size}
               variant={(block.textSize ?? "base") === size ? "default" : "outline"}
               size="sm"
-              className="flex-1 text-xs px-1"
+              className="h-8 min-w-0 px-1 text-sm text-center"
               onClick={() =>
                 dispatch({
                   type: "UPDATE_BLOCK",
@@ -1284,15 +1347,15 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
           ))}
         </div>
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textAlignment")}</Label>
-        <div className="flex gap-1">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textAlignment")}</Label>
+        <div className="grid grid-cols-3 gap-1">
           {(["left", "center", "right"] as const).map((align) => (
             <Button
               key={align}
               variant={(block.textAlign ?? "center") === align ? "default" : "outline"}
               size="sm"
-              className="flex-1 text-xs px-1"
+              className="h-8 min-w-0 px-1 text-[11px] text-center"
               onClick={() =>
                 dispatch({
                   type: "UPDATE_BLOCK",
@@ -1300,95 +1363,96 @@ function TextCardsProps({ block }: { block: TextCardsBlock }) {
                 })
               }
             >
-              {t(align)}
+              {textAlignmentLabels[align]}
             </Button>
           ))}
         </div>
       </div>
-      <div className="flex gap-1">
-        <Button
-          variant={block.textBold ? "default" : "outline"}
-          size="sm"
-          className="flex-1"
-          onClick={() =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { textBold: !block.textBold } },
-            })
-          }
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={block.textItalic ? "default" : "outline"}
-          size="sm"
-          className="flex-1"
-          onClick={() =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { textItalic: !block.textItalic } },
-            })
-          }
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-      </div>
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showBorder")}</Label>
-        <Switch
-          checked={block.showBorder ?? true}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showBorder: checked } },
-            })
-          }
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showWritingLines")}</Label>
-        <Switch
-          checked={block.showWritingLines ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showWritingLines: checked } },
-            })
-          }
-        />
-      </div>
-      {block.showWritingLines && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm">{t("writingLinesCount")}</Label>
-            <span className="text-xs text-muted-foreground">{block.writingLinesCount ?? 1}</span>
-          </div>
-          <Slider
-            value={[block.writingLinesCount ?? 1]}
-            min={1}
-            max={5}
-            step={1}
-            onValueChange={([value]) =>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("fontStyle")}</Label>
+        <div className="flex gap-1">
+          <Button
+            variant={block.textBold ? "default" : "outline"}
+            size="sm"
+            className="h-8 min-w-0 flex-1"
+            onClick={() =>
               dispatch({
                 type: "UPDATE_BLOCK",
-                payload: { id: block.id, updates: { writingLinesCount: value } },
+                payload: { id: block.id, updates: { textBold: !block.textBold } },
               })
             }
-          />
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={block.textItalic ? "default" : "outline"}
+            size="sm"
+            className="h-8 min-w-0 flex-1"
+            onClick={() =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { textItalic: !block.textItalic } },
+              })
+            }
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
         </div>
-      )}
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showWordBank")}</Label>
-        <Switch
-          checked={block.showWordBank ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showWordBank: checked } },
-            })
-          }
-        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("showBorder"),
+            block.showBorder ?? true,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showBorder: checked } },
+              }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(
+            t("showWritingLines"),
+            block.showWritingLines ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWritingLines: checked } },
+              }),
+            { withBottomBorder: !block.showWritingLines }
+          )}
+          {block.showWritingLines && (
+            <div className="space-y-2 border-b border-border py-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">{t("writingLinesCount")}</Label>
+                <span className="text-xs text-muted-foreground">{block.writingLinesCount ?? 1}</span>
+              </div>
+              <Slider
+                value={[block.writingLinesCount ?? 1]}
+                min={1}
+                max={5}
+                step={1}
+                onValueChange={([value]) =>
+                  dispatch({
+                    type: "UPDATE_BLOCK",
+                    payload: { id: block.id, updates: { writingLinesCount: value } },
+                  })
+                }
+              />
+            </div>
+          )}
+          {renderSwitchRow(
+            t("showWordBank"),
+            block.showWordBank ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWordBank: checked } },
+              }),
+            { withBottomBorder: false }
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2572,8 +2636,8 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -2586,16 +2650,15 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
           }
         />
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryLeftColWidth")}</Label>
-        <div className="flex gap-1">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("glossaryLeftColWidth")}</Label>
+        <div className="grid grid-cols-4 gap-1">
           {([25, 33, 50, 66] as const).map((w) => (
             <Button
               key={w}
               variant={(block.leftColWidth ?? 25) === w ? "default" : "outline"}
               size="sm"
-              className="flex-1 text-xs"
+              className="h-8 min-w-0 px-1 text-sm"
               onClick={() =>
                 dispatch({
                   type: "UPDATE_BLOCK",
@@ -2608,66 +2671,64 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
           ))}
         </div>
       </div>
-      <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("glossaryTerms")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("glossaryTerms")}</Label>
         {block.pairs.map((pair, i) => (
-          <div key={pair.id} className="flex items-center gap-1">
-            <div className="flex-1">
+          <div key={pair.id} className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
               <ChInput
                 blockId={block.id}
                 fieldPath={`pairs.${i}.term`}
                 baseValue={pair.term}
                 onBaseChange={(v) => updatePair(i, { term: v })}
-                className="h-8 text-xs"
+                className="h-8 flex-1 text-xs"
                 placeholder={t("glossaryTerm")}
               />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => removePair(i)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
             </div>
-            <span className="text-xs text-muted-foreground">→</span>
-            <div className="flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0" />
               <ChInput
                 blockId={block.id}
                 fieldPath={`pairs.${i}.definition`}
                 baseValue={pair.definition}
                 onBaseChange={(v) => updatePair(i, { definition: v })}
-                className="h-8 text-xs"
+                className="h-8 flex-1 text-xs"
                 placeholder={t("glossaryDefinition")}
               />
+              <span className="w-7 shrink-0" />
             </div>
-            <span className="text-xs text-muted-foreground">→</span>
-            <div className="flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0" />
               <ChInput
                 blockId={block.id}
                 fieldPath={`pairs.${i}.example`}
                 baseValue={pair.example ?? ""}
                 onBaseChange={(v) => updatePair(i, { example: v })}
-                className="h-8 text-xs"
+                className="h-8 flex-1 text-xs"
                 placeholder={t("glossaryExample")}
               />
+              <span className="w-7 shrink-0" />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => removePair(i)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addPair} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addPair")}
         </Button>
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
-          {t("csvImportHelp")}
-        </p>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
-          placeholder={t("csvImportPlaceholder")}
+          className="w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder=""
           value={csvText}
           onChange={(e) => {
             setCsvText(e.target.value);
@@ -2677,12 +2738,12 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
         {csvError && (
           <p className="text-xs text-destructive mt-1">{csvError}</p>
         )}
-        <div className="flex gap-1 mt-1">
+        <div className="space-y-2 mt-1">
           <Select
             value={csvMode}
             onValueChange={(v) => setCsvMode(v as "replace" | "append")}
           >
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger size="sm" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -2693,7 +2754,7 @@ function GlossaryProps({ block }: { block: GlossaryBlock }) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="w-full"
             onClick={handleCsvImport}
             disabled={!csvText.trim()}
           >
@@ -3107,12 +3168,14 @@ function GridProps({ block }: { block: GridBlock }) {
 function BoardGameProps({ block }: { block: BoardGameBlock }) {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const { upload } = useUpload();
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const [cropOpen, setCropOpen] = React.useState(false);
   const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = React.useState(false);
 
   const totalCells = Math.max(1, block.rows * block.cols);
   const cells = Array.from({ length: totalCells }, (_, index) => {
@@ -3176,94 +3239,98 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
-        <Input value={String(block.rows)} readOnly />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfRows")}</Label>
+        <Input value={String(block.rows)} readOnly className="h-8" />
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
-        <Input value={String(block.cols)} readOnly />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfColumns")}</Label>
+        <Input value={String(block.cols)} readOnly className="h-8" />
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           Selected Cell
         </Label>
         <Input
           readOnly
           value={selectedCellIndex === null ? "Click a cell in the board" : `Cell ${selectedCellIndex + 1}`}
+          className="h-8"
         />
       </div>
       {selectedCellIndex !== null && selectedCell ? (
-        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
-          {selectedCell.imageUrl ? (
-            <div className="space-y-2">
-              <div className="relative group/img rounded overflow-hidden border">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("image")}</Label>
+            {selectedCell.imageUrl ? (
+              <div className="space-y-2">
+                <div className="relative group/img rounded-[4px] overflow-hidden border border-border bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={selectedCell.imageUrl} alt={selectedDisplayText || "Board game cell"} className="w-full" />
-                <button
-                  type="button"
-                  onClick={() => updateCell(selectedCellIndex, { imageUrl: "" })}
-                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                  <img src={selectedCell.imageUrl} alt={selectedDisplayText || "Board game cell"} className="w-full" />
+                  <button
+                    type="button"
+                    onClick={() => updateCell(selectedCellIndex, { imageUrl: "" })}
+                    className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setBrowserOpen(true)}>
+                  {t("replaceImage")}
+                </Button>
               </div>
-              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
-                {t("replaceImage")}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label
-                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
-                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
-                }`}
-                onDrop={handleDrop}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelected(file);
+            ) : (
+              <div className="space-y-2">
+                <label
+                  className={`flex flex-col items-center justify-center rounded-[4px] border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+                    isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                  }`}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
                   }}
-                />
-                {isUploading ? (
-                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
-                ) : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
-                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
-                  </>
-                )}
-              </label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs"
-                onClick={() => setBrowserOpen(true)}
-              >
-                <ImagePlus className="h-3.5 w-3.5 mr-1" />
-                {t("mediaBrowser")}
-              </Button>
-            </div>
-          )}
+                  onDragLeave={() => setIsDragOver(false)}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelected(file);
+                    }}
+                  />
+                  {isUploading ? (
+                    <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                  ) : (
+                    <>
+                      <Upload className="mb-1 h-6 w-6 text-muted-foreground/50" />
+                      <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                    </>
+                  )}
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setBrowserOpen(true)}
+                >
+                  <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                  {t("mediaBrowser")}
+                </Button>
+              </div>
+            )}
+          </div>
 
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               Text
             </Label>
             <textarea
               value={selectedDisplayText}
               readOnly={isSpecialCell}
               onChange={(e) => updateCell(selectedCellIndex, { text: e.target.value })}
-              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              className="w-full min-h-[90px] rounded-[4px] !border border-input bg-white p-2 text-sm resize-y"
               placeholder="Cell text"
             />
             {isSpecialCell ? (
@@ -3298,9 +3365,40 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
           />
         </div>
       ) : null}
-      <Button type="button" variant="outline" onClick={clearCells}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => setClearConfirmOpen(true)}
+      >
         Clear board
       </Button>
+
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear board?</DialogTitle>
+            <DialogDescription>
+              This removes all text and images from every board cell.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearCells();
+                setClearConfirmOpen(false);
+              }}
+            >
+              Clear board
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -3308,6 +3406,7 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
 function DominoProps({ block }: { block: DominoBlock }) {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const { upload } = useUpload();
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
@@ -3317,6 +3416,7 @@ function DominoProps({ block }: { block: DominoBlock }) {
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [clearConfirmOpen, setClearConfirmOpen] = React.useState(false);
   const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
 
   const items = block.items.length > 0
@@ -3464,8 +3564,8 @@ function DominoProps({ block }: { block: DominoBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("title")}
         </Label>
         <Input
@@ -3477,10 +3577,11 @@ function DominoProps({ block }: { block: DominoBlock }) {
             })
           }
           placeholder={t("title")}
+          className="h-8"
         />
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("footer")}
         </Label>
         <Input
@@ -3492,34 +3593,40 @@ function DominoProps({ block }: { block: DominoBlock }) {
             })
           }
           placeholder={t("footer")}
+          className="h-8"
         />
       </div>
-      <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
-        <Label className="text-sm">{t("shufflePairs")}</Label>
-        <Switch
-          checked={block.shufflePairs ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { shufflePairs: checked } },
-            })
-          }
-        />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div className="border-y border-slate-200 bg-white">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+            <Label className="text-sm text-foreground">{t("shufflePairs")}</Label>
+            <Switch
+              checked={block.shufflePairs ?? false}
+              onCheckedChange={(checked) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { shufflePairs: checked } },
+                })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between px-3 py-2">
+            <Label className="text-sm text-foreground">{t("showSpeakerIcons")}</Label>
+            <Switch
+              checked={block.showSpeakerIcons ?? false}
+              onCheckedChange={(checked) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { showSpeakerIcons: checked } },
+                })
+              }
+            />
+          </div>
+        </div>
       </div>
-      <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
-        <Label className="text-sm">{t("showSpeakerIcons")}</Label>
-        <Switch
-          checked={block.showSpeakerIcons ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showSpeakerIcons: checked } },
-            })
-          }
-        />
-      </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
         <div className="flex gap-1">
           {(["s", "m", "l", "xl"] as const).map((size) => (
             <Button
@@ -3539,86 +3646,90 @@ function DominoProps({ block }: { block: DominoBlock }) {
           ))}
         </div>
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           Selected Item
         </Label>
         <Input
           readOnly
           value={selectedItemIndex === null ? "Click an item in the domino" : `Item ${selectedItemIndex + 1}`}
+          className="h-8"
         />
       </div>
       {selectedItemIndex !== null && selectedItem ? (
-        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
-          {selectedItem.imageUrl ? (
-            <div className="space-y-2">
-              <div className="relative group/img rounded overflow-hidden border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={selectedItem.imageUrl} alt={selectedDisplayText || "Domino item"} className="w-full" />
-                <button
-                  type="button"
-                  onClick={() => updateItem(selectedItemIndex, { imageUrl: "" })}
-                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("image")}</Label>
+            {selectedItem.imageUrl ? (
+              <div className="space-y-2">
+                <div className="relative group/img rounded-[4px] overflow-hidden border border-border bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedItem.imageUrl} alt={selectedDisplayText || "Domino item"} className="w-full" />
+                  <button
+                    type="button"
+                    onClick={() => updateItem(selectedItemIndex, { imageUrl: "" })}
+                    className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setBrowserOpen(true)}>
+                  {t("replaceImage")}
+                </Button>
               </div>
-              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
-                {t("replaceImage")}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label
-                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
-                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
-                }`}
-                onDrop={handleDrop}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelected(file);
+            ) : (
+              <div className="space-y-2">
+                <label
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-[4px] border-2 border-dashed p-6 text-center transition-colors ${
+                    isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                  }`}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
                   }}
-                />
-                {isUploading ? (
-                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
-                ) : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
-                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
-                  </>
-                )}
-              </label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs"
-                onClick={() => setBrowserOpen(true)}
-              >
-                <ImagePlus className="h-3.5 w-3.5 mr-1" />
-                {t("mediaBrowser")}
-              </Button>
-            </div>
-          )}
+                  onDragLeave={() => setIsDragOver(false)}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelected(file);
+                    }}
+                  />
+                  {isUploading ? (
+                    <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                  ) : (
+                    <>
+                      <Upload className="mb-1 h-6 w-6 text-muted-foreground/50" />
+                      <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                    </>
+                  )}
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setBrowserOpen(true)}
+                >
+                  <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                  {t("mediaBrowser")}
+                </Button>
+              </div>
+            )}
+          </div>
 
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               Text
             </Label>
             <textarea
               value={selectedDisplayText}
               readOnly={isSpecialItem}
               onChange={(e) => updateItem(selectedItemIndex, { text: e.target.value })}
-              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              className="w-full min-h-[90px] rounded-[4px] !border border-input bg-white p-2 text-sm resize-y"
               placeholder="Item text"
             />
             {isSpecialItem ? (
@@ -3628,15 +3739,15 @@ function DominoProps({ block }: { block: DominoBlock }) {
             ) : null}
           </div>
 
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               {t("speakerIcon")}
             </Label>
             <Select
               value={selectedItem.speakerIcon ?? "none"}
               onValueChange={(value) => updateItem(selectedItemIndex, { speakerIcon: value === "none" ? null : value as DialogueSpeakerIcon })}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-8">
                 <SelectValue>
                   {selectedItem.speakerIcon ? (
                     <span className="flex items-center gap-2">
@@ -3687,14 +3798,10 @@ function DominoProps({ block }: { block: DominoBlock }) {
           />
         </div>
       ) : null}
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          {t("dominoCsvImportHelp")}
-        </p>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <textarea
-          className="w-full min-h-[110px] rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+          className="w-full min-h-[110px] rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
           placeholder={t("dominoCsvPlaceholder")}
           value={csvText}
           onChange={(e) => {
@@ -3705,12 +3812,12 @@ function DominoProps({ block }: { block: DominoBlock }) {
         {csvError && (
           <p className="text-xs text-destructive mt-1">{csvError}</p>
         )}
-        <div className="mt-2 flex items-center gap-2">
+        <div className="space-y-2">
           <Select
             value={csvMode}
             onValueChange={(v) => setCsvMode(v as "replace" | "append")}
           >
-            <SelectTrigger className="h-8 w-[170px]">
+            <SelectTrigger className="h-8 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -3718,14 +3825,39 @@ function DominoProps({ block }: { block: DominoBlock }) {
               <SelectItem value="append">{t("csvAppend")}</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" className="h-8" onClick={handleCsvImport} disabled={!csvText.trim()}>
+          <Button variant="outline" size="sm" className="w-full" onClick={handleCsvImport} disabled={!csvText.trim()}>
             {t("csvImportButton")}
           </Button>
         </div>
       </div>
-      <Button type="button" variant="outline" onClick={clearItems}>
+      <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setClearConfirmOpen(true)}>
         Clear domino
       </Button>
+
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear domino?</DialogTitle>
+            <DialogDescription>
+              This removes all text and images from every domino item except the fixed START and ZIEL labels.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearItems();
+                setClearConfirmOpen(false);
+              }}
+            >
+              Clear domino
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -4918,60 +5050,74 @@ function TextProps({ block }: { block: TextBlock }) {
     }
   };
 
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div className="flex h-8 items-center justify-between border-b border-border">
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   return (
     <div className="space-y-3">
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
-        <p className="text-xs text-muted-foreground">
-          {t("editOnCanvas")}
-        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
+          onClick={() => setShowAiModal(true)}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          {t("aiGenerateText")}
+        </Button>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full gap-2 text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
-        onClick={() => setShowAiModal(true)}
-      >
-        <Sparkles className="h-3.5 w-3.5" />
-        {t("aiGenerateText")}
-      </Button>
-      <Separator />
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textStyle")}</Label>
-        <select
+        <Select
           value={block.textStyle || "standard"}
-          onChange={(e) =>
+          onValueChange={(value) =>
             dispatch({
               type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { textStyle: e.target.value as TextBlockStyle } },
+              payload: { id: block.id, updates: { textStyle: value as TextBlockStyle } },
             })
           }
-          className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
-          <option value="standard">{t("textStyleStandard")}</option>
-          <option value="example">{t("textStyleExample")}</option>
-          <option value="example-standard">{t("textStyleExampleStandard")}</option>
-          <option value="example-improved">{t("textStyleExampleImproved")}</option>
-          <option value="example-primary">{t("textStyleExamplePrimary")}</option>
-          <option value="example-secondary">{t("textStyleExampleSecondary")}</option>
-          <option value="frame">{t("textStyleFrame")}</option>
-          <option value="frame-primary">{t("textStyleFramePrimary")}</option>
-          <option value="frame-secondary">{t("textStyleFrameSecondary")}</option>
-          <option value="fragen">{t("textStyleFragen")}</option>
-          <option value="hinweis">{t("textStyleHinweis")}</option>
-          <option value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</option>
-          <option value="hinweis-alarm">{t("textStyleHinweisAlarm")}</option>
-          <option value="lernziel">{t("textStyleLernziel")}</option>
-          <option value="kompetenzziele">{t("textStyleKompetenzziele")}</option>
-          <option value="handlungsziele">{t("textStyleHandlungsziele")}</option>
-          <option value="redemittel">{t("textStyleRedemittel")}</option>
-          <option value="metadaten">{t("textStyleMetadaten")}</option>
-          <option value="rows">{t("textStyleRows")}</option>
-        </select>
+          <SelectTrigger size="sm" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">{t("textStyleStandard")}</SelectItem>
+            <SelectItem value="example">{t("textStyleExample")}</SelectItem>
+            <SelectItem value="example-standard">{t("textStyleExampleStandard")}</SelectItem>
+            <SelectItem value="example-improved">{t("textStyleExampleImproved")}</SelectItem>
+            <SelectItem value="example-primary">{t("textStyleExamplePrimary")}</SelectItem>
+            <SelectItem value="example-secondary">{t("textStyleExampleSecondary")}</SelectItem>
+            <SelectItem value="frame">{t("textStyleFrame")}</SelectItem>
+            <SelectItem value="frame-primary">{t("textStyleFramePrimary")}</SelectItem>
+            <SelectItem value="frame-secondary">{t("textStyleFrameSecondary")}</SelectItem>
+            <SelectItem value="fragen">{t("textStyleFragen")}</SelectItem>
+            <SelectItem value="hinweis">{t("textStyleHinweis")}</SelectItem>
+            <SelectItem value="hinweis-wichtig">{t("textStyleHinweisWichtig")}</SelectItem>
+            <SelectItem value="hinweis-alarm">{t("textStyleHinweisAlarm")}</SelectItem>
+            <SelectItem value="lernziel">{t("textStyleLernziel")}</SelectItem>
+            <SelectItem value="kompetenzziele">{t("textStyleKompetenzziele")}</SelectItem>
+            <SelectItem value="handlungsziele">{t("textStyleHandlungsziele")}</SelectItem>
+            <SelectItem value="redemittel">{t("textStyleRedemittel")}</SelectItem>
+            <SelectItem value="metadaten">{t("textStyleMetadaten")}</SelectItem>
+            <SelectItem value="rows">{t("textStyleRows")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {(block.textStyle === "example" || block.textStyle === "example-standard" || block.textStyle === "example-improved") && (
         <>
-          <Separator />
           <div>
             <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
             <textarea
@@ -4989,65 +5135,45 @@ function TextProps({ block }: { block: TextBlock }) {
           </div>
         </>
       )}
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("bilingual")}</Label>
-        <Switch
-          checked={block.bilingual ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { bilingual: checked } },
-            })
-          }
-        />
-      </div>
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("skipTranslation")}</Label>
-        <Switch
-          checked={block.skipTranslation ?? false}
-          onCheckedChange={(checked) =>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("bilingual"),
+            block.bilingual ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { bilingual: checked } },
+              }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(t("skipTranslation"), block.skipTranslation ?? false, (checked) =>
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { skipTranslation: checked } },
             })
-          }
-        />
-      </div>
-      {block.bilingual && (
-        <>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">{t("bilingualDivider")}</Label>
-            <Switch
-              checked={block.bilingualDivider ?? false}
-              onCheckedChange={(checked) =>
+          )}
+          {block.bilingual && (
+            <>
+              {renderSwitchRow(t("bilingualDivider"), block.bilingualDivider ?? false, (checked) =>
                 dispatch({
                   type: "UPDATE_BLOCK",
                   payload: { id: block.id, updates: { bilingualDivider: checked } },
                 })
-              }
-            />
-          </div>
-        </>
-      )}
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("tightTop")}</Label>
-        <Switch
-          checked={block.tightTop ?? false}
-          onCheckedChange={(checked) =>
+              )}
+            </>
+          )}
+          {renderSwitchRow(t("tightTop"), block.tightTop ?? false, (checked) =>
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { tightTop: checked } },
             })
-          }
-        />
+          )}
+        </div>
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textImage")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("image")}</Label>
         {block.imageSrc ? (
           <div className="space-y-3">
             <div className="relative group/img rounded overflow-hidden border">
@@ -6791,7 +6917,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
         );
         return (
           <div key={cat.id} className="space-y-2">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <div className="flex-1">
                 <ChInput
                   blockId={block.id}
@@ -7170,8 +7296,8 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <Input
           value={block.instruction ?? ""}
           onChange={(event) =>
@@ -7183,20 +7309,18 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
           className="h-8 text-xs"
         />
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("items")}</Label>
-        <p className="mb-2 text-xs text-muted-foreground">{t("crosswordItemsHelp")}</p>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("items")}</Label>
         <textarea
           value={itemsText}
           onChange={(event) => setItemsText(event.target.value)}
           onBlur={(event) => commitItems(event.target.value)}
-          className="min-h-40 w-full rounded-md border-0 bg-white px-3 py-2 text-xs shadow-none outline-none"
+          className="min-h-40 w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs shadow-none outline-none"
           placeholder={t("crosswordItemsPlaceholder")}
         />
       </div>
       {block.generationError ? (
-        <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-[4px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {t("generationFailed")}
         </div>
       ) : null}
@@ -7214,7 +7338,7 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
           })
         }
       >
-        <ArrowUpDown className="mr-2 h-3.5 w-3.5" /> {t("regenerateGrid")}
+        <RefreshCw className="mr-2 h-3.5 w-3.5" /> {t("regenerateGrid")}
       </Button>
     </div>
   );
@@ -9710,411 +9834,7 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
 }
 
 function QuartettProps({ block }: { block: QuartettBlock }) {
-  const { state, dispatch } = useEditor();
-  const t = useTranslations("properties");
-  const [csvText, setCsvText] = React.useState("");
-  const [csvError, setCsvError] = React.useState<string | null>(null);
-  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
-  const [isExportingCards, setIsExportingCards] = React.useState(false);
-  const update = (updates: Partial<QuartettBlock>) =>
-    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
-
-  const createEmptyQuartettItem = (title = "") => ({
-    id: crypto.randomUUID(),
-    title,
-    subitems: Array.from({ length: 4 }, () => ({
-      id: crypto.randomUUID(),
-      content: "",
-    })),
-  });
-
-  const parseCsvLine = (line: string): string[] => {
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index];
-      const nextChar = line[index + 1];
-
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          current += '"';
-          index += 1;
-        } else {
-          inQuotes = !inQuotes;
-        }
-        continue;
-      }
-
-      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
-        values.push(current.trim());
-        current = "";
-        continue;
-      }
-
-      current += char;
-    }
-
-    values.push(current.trim());
-    return values;
-  };
-
-  const shuffle = <T,>(items: T[]): T[] => {
-    const next = [...items];
-    for (let index = next.length - 1; index > 0; index -= 1) {
-      const swapIndex = Math.floor(Math.random() * (index + 1));
-      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-    }
-    return next;
-  };
-
-  const buildItemsFromSingleColumn = (values: string[]) => {
-    const randomized = shuffle(values.filter(Boolean));
-    const items: QuartettBlock["items"] = [];
-
-    for (let index = 0; index < randomized.length; index += 4) {
-      const chunk = randomized.slice(index, index + 4);
-      const item = createEmptyQuartettItem();
-      item.subitems = item.subitems.map((subitem, subitemIndex) => ({
-        ...subitem,
-        content: chunk[subitemIndex] ?? "",
-      }));
-      items.push(item);
-    }
-
-    return items;
-  };
-
-  const buildItemsFromTwoColumns = (rows: Array<{ title: string; content: string }>) => {
-    const grouped = new Map<string, string[]>();
-    const order: string[] = [];
-
-    for (const row of rows) {
-      const title = row.title.trim();
-      const content = row.content.trim();
-      if (!content) continue;
-      if (!grouped.has(title)) {
-        grouped.set(title, []);
-        order.push(title);
-      }
-      grouped.get(title)!.push(content);
-    }
-
-    const items: QuartettBlock["items"] = [];
-    for (const title of order) {
-      const contents = grouped.get(title) ?? [];
-      for (let index = 0; index < contents.length; index += 4) {
-        const chunk = contents.slice(index, index + 4);
-        const item = createEmptyQuartettItem(title);
-        item.subitems = item.subitems.map((subitem, subitemIndex) => ({
-          ...subitem,
-          content: chunk[subitemIndex] ?? "",
-        }));
-        items.push(item);
-      }
-    }
-
-    return items;
-  };
-
-  const handleCsvImport = () => {
-    setCsvError(null);
-    const text = csvText.trim();
-    if (!text) return;
-
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (lines.length === 0) {
-      setCsvError(t("csvNoData"));
-      return;
-    }
-
-    const parsedRows = lines.map(parseCsvLine);
-    const maxColumns = Math.max(...parsedRows.map((row) => row.length));
-
-    let importedItems: QuartettBlock["items"] = [];
-
-    if (maxColumns <= 1) {
-      importedItems = buildItemsFromSingleColumn(parsedRows.map((row) => row[0] ?? ""));
-    } else if (maxColumns === 2) {
-      importedItems = buildItemsFromTwoColumns(
-        parsedRows.map((row) => ({
-          title: row[0] ?? "",
-          content: row[1] ?? "",
-        }))
-      );
-    } else {
-      setCsvError(t("quartettCsvTooManyColumns"));
-      return;
-    }
-
-    if (importedItems.length === 0) {
-      setCsvError(t("csvNoData"));
-      return;
-    }
-
-    update({
-      items: csvMode === "append"
-        ? [...block.items, ...importedItems]
-        : importedItems,
-    });
-    setCsvText("");
-  };
-
-  const updateItem = (itemIndex: number, updates: Partial<QuartettBlock["items"][number]>) => {
-    const items = [...block.items];
-    items[itemIndex] = { ...items[itemIndex], ...updates };
-    update({ items });
-  };
-
-  const updateSubitem = (itemIndex: number, subitemIndex: number, content: string) => {
-    const items = [...block.items];
-    const subitems = [...items[itemIndex].subitems];
-    subitems[subitemIndex] = { ...subitems[subitemIndex], content };
-    items[itemIndex] = { ...items[itemIndex], subitems };
-    update({ items });
-  };
-
-  const moveSubitem = (itemIndex: number, subitemIndex: number, direction: -1 | 1) => {
-    const targetIndex = subitemIndex + direction;
-    if (targetIndex < 0 || targetIndex >= block.items[itemIndex].subitems.length) return;
-    const items = [...block.items];
-    const subitems = [...items[itemIndex].subitems];
-    [subitems[subitemIndex], subitems[targetIndex]] = [subitems[targetIndex], subitems[subitemIndex]];
-    items[itemIndex] = { ...items[itemIndex], subitems };
-    update({ items });
-  };
-
-  const addItem = () => {
-    update({
-      items: [
-        ...block.items,
-        createEmptyQuartettItem(),
-      ],
-    });
-  };
-
-  const removeItem = (itemIndex: number) => {
-    if (block.items.length <= 1) return;
-    update({ items: block.items.filter((_, index) => index !== itemIndex) });
-  };
-
-  const handleExportCards = async () => {
-    if (isExportingCards) return;
-
-    setIsExportingCards(true);
-    try {
-      const activeLocale = window.location.pathname.split("/")[1] || "de";
-      const response = await authFetch("/api/quartett/export-cards", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          block,
-          settings: state.settings,
-          brandProfile: state.brandProfile,
-          worksheetTitle: state.title,
-          worksheetId: state.worksheetId,
-          locale: activeLocale,
-        }),
-      });
-
-      if (!response.ok) {
-        let message = t("quartettExportCardsFailed");
-        try {
-          const payload = (await response.json()) as { error?: string };
-          if (payload.error) message = payload.error;
-        } catch {
-          // Ignore JSON parsing failures and keep fallback message.
-        }
-        throw new Error(message);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${(block.title || state.title || "quartett-cards")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "quartett-cards"}.zip`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("[QuartettProps] Export cards failed:", error);
-      alert(error instanceof Error ? error.message : t("quartettExportCardsFailed"));
-    } finally {
-      setIsExportingCards(false);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
-          {t("quartettTitle")}
-        </Label>
-        <Input
-          value={block.title ?? ""}
-          onChange={(e) => update({ title: e.target.value })}
-          placeholder={t("quartettTitlePlaceholder")}
-        />
-      </div>
-
-      <div className="rounded-md border border-border p-3 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm">{t("quartettShowGroupTitle")}</Label>
-          <Switch
-            checked={block.showGroupTitle !== false}
-            onCheckedChange={(checked) => update({ showGroupTitle: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm">{t("quartettShowFooter")}</Label>
-          <Switch
-            checked={block.showFooter !== false}
-            onCheckedChange={(checked) => update({ showFooter: checked })}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={() => void handleExportCards()}
-          disabled={isExportingCards}
-        >
-          {isExportingCards ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          {isExportingCards ? t("quartettExportCardsLoading") : t("quartettExportCards")}
-        </Button>
-      </div>
-
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
-          {t("quartettCsvImportHelp")}
-        </p>
-        <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px] resize-y"
-          placeholder={t("quartettCsvPlaceholder")}
-          value={csvText}
-          onChange={(e) => {
-            setCsvText(e.target.value);
-            setCsvError(null);
-          }}
-        />
-        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
-        <div className="flex gap-1 mt-1">
-          <Select
-            value={csvMode}
-            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
-          >
-            <SelectTrigger className="w-[120px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
-              <SelectItem value="append">{t("csvAppend")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={handleCsvImport}
-            disabled={!csvText.trim()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {t("csvImportButton")}
-          </Button>
-        </div>
-      </div>
-
-      {block.items.map((item, itemIndex) => (
-        <div key={item.id} className="rounded-md border border-border p-3 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              {`#${itemIndex + 1}`}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => removeItem(itemIndex)}
-              disabled={block.items.length <= 1}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
-              {t("quartettItemTitle")}
-            </Label>
-            <Input
-              value={item.title ?? ""}
-              onChange={(e) => updateItem(itemIndex, { title: e.target.value })}
-              placeholder={t("quartettItemTitlePlaceholder")}
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
-              {t("quartettSubitems")}
-            </Label>
-            <div className="space-y-2">
-              {item.subitems.map((subitem, subitemIndex) => (
-                <div key={subitem.id} className="flex items-center gap-2">
-                  <span className="w-5 shrink-0 text-xs font-medium text-muted-foreground text-center">
-                    {subitemIndex + 1}
-                  </span>
-                  <Input
-                    value={subitem.content}
-                    onChange={(e) => updateSubitem(itemIndex, subitemIndex, e.target.value)}
-                    placeholder={t("quartettSubitemPlaceholder", { index: subitemIndex + 1 })}
-                  />
-                  <div className="flex flex-col shrink-0">
-                    <button
-                      type="button"
-                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                      onClick={() => moveSubitem(itemIndex, subitemIndex, -1)}
-                      disabled={subitemIndex === 0}
-                    >
-                      <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button
-                      type="button"
-                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                      onClick={() => moveSubitem(itemIndex, subitemIndex, 1)}
-                      disabled={subitemIndex === item.subitems.length - 1}
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ))}
-
-      <Button type="button" variant="outline" className="w-full" onClick={addItem}>
-        <Plus className="h-4 w-4 mr-2" />
-        {t("addItem")}
-      </Button>
-    </div>
-  );
+  return <CardListProps block={block} kind="quartett" />;
 }
 
 type CardListBlock = QuartettBlock | TabooBlock;
@@ -10486,59 +10206,63 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {labels.title}
         </Label>
         <Input
           value={block.title ?? ""}
           onChange={(e) => update({ title: e.target.value })}
           placeholder={labels.titlePlaceholder}
+          className="h-8"
         />
       </div>
 
-      <div className="rounded-md border border-border p-3 space-y-3">
-        {kind === "quartett" ? (
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <Label className="text-sm">{labels.showGroupTitle}</Label>
+      {kind === "quartett" ? (
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+          <div className="border-y border-slate-200 bg-white">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+              <Label className="text-sm text-foreground">{labels.showGroupTitle}</Label>
               <Switch
                 checked={(block as QuartettBlock).showGroupTitle !== false}
                 onCheckedChange={(checked) => update({ showGroupTitle: checked } as Partial<CardListBlock>)}
               />
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <Label className="text-sm">{labels.showFooter}</Label>
+            <div className="flex items-center justify-between px-3 py-2">
+              <Label className="text-sm text-foreground">{labels.showFooter}</Label>
               <Switch
                 checked={(block as QuartettBlock).showFooter !== false}
                 onCheckedChange={(checked) => update({ showFooter: checked } as Partial<CardListBlock>)}
               />
             </div>
-          </>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={() => void handleExportCards()}
-          disabled={isExportingCards}
-        >
-          {isExportingCards ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          {isExportingCards ? labels.exportCardsLoading : labels.exportCards}
-        </Button>
-      </div>
+          </div>
+        </div>
+      ) : null}
 
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => void handleExportCards()}
+        disabled={isExportingCards}
+      >
+        {isExportingCards ? (
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : (
+          <Download className="h-4 w-4 mr-2" />
+        )}
+        {isExportingCards ? labels.exportCardsLoading : labels.exportCards}
+      </Button>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground">
           {labels.csvImportHelp}
         </p>
         <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px] resize-y"
+          className="w-full min-h-[100px] resize-y rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           placeholder={labels.csvPlaceholder}
           value={csvText}
           onChange={(e) => {
@@ -10546,13 +10270,13 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
             setCsvError(null);
           }}
         />
-        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
-        <div className="flex gap-1 mt-1">
+        {csvError ? <p className="text-xs text-destructive">{csvError}</p> : null}
+        <div className="space-y-2">
           <Select
             value={csvMode}
             onValueChange={(value) => setCsvMode(value as "replace" | "append")}
           >
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="h-8 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -10563,7 +10287,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="w-full"
             onClick={handleCsvImport}
             disabled={!csvText.trim()}
           >
@@ -10574,16 +10298,44 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
       </div>
 
       {block.items.map((item, itemIndex) => (
-        <div key={item.id} className="rounded-md border border-border p-3 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              {`#${itemIndex + 1}`}
+        <div key={item.id} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="w-8 shrink-0 text-xs font-semibold text-slate-700 uppercase tracking-wider text-center">
+              {String(itemIndex + 1).padStart(2, "0")}
             </span>
+            <div className="flex-1 space-y-2">
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+                {labels.itemTitle}
+              </Label>
+              <Input
+                value={item.title ?? ""}
+                onChange={(e) => updateItem(itemIndex, { title: e.target.value })}
+                placeholder={labels.itemTitlePlaceholder}
+                className="h-8"
+              />
+              {kind === "taboo" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => void handleGenerateStopWords(itemIndex)}
+                  disabled={generatingStopWordsForItem !== null || !item.title?.trim()}
+                >
+                  {generatingStopWordsForItem === itemIndex ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  {generatingStopWordsForItem === itemIndex ? labels.generateStopWordsLoading : labels.generateStopWords}
+                </Button>
+              ) : null}
+            </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8 shrink-0 self-start"
               onClick={() => removeItem(itemIndex)}
               disabled={block.items.length <= 1}
             >
@@ -10591,52 +10343,26 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
             </Button>
           </div>
 
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
-              {labels.itemTitle}
-            </Label>
-            <Input
-              value={item.title ?? ""}
-              onChange={(e) => updateItem(itemIndex, { title: e.target.value })}
-              placeholder={labels.itemTitlePlaceholder}
-            />
-            {kind === "taboo" ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mt-2"
-                onClick={() => void handleGenerateStopWords(itemIndex)}
-                disabled={generatingStopWordsForItem !== null || !item.title?.trim()}
-              >
-                {generatingStopWordsForItem === itemIndex ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
-                )}
-                {generatingStopWordsForItem === itemIndex ? labels.generateStopWordsLoading : labels.generateStopWords}
-              </Button>
-            ) : null}
-          </div>
-
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               {labels.subitems}
             </Label>
             <div className="space-y-2">
               {item.subitems.map((subitem, subitemIndex) => (
                 <div key={subitem.id} className="flex items-center gap-2">
-                  <span className="w-5 shrink-0 text-xs font-medium text-muted-foreground text-center">
-                    {subitemIndex + 1}
+                  <span className="w-8 shrink-0 text-xs font-medium text-muted-foreground text-center">
+                    {String(subitemIndex + 1).padStart(2, "0")}
                   </span>
                   <Input
                     value={subitem.content}
                     onChange={(e) => updateSubitem(itemIndex, subitemIndex, e.target.value)}
                     placeholder={labels.subitemPlaceholder(subitemIndex + 1)}
+                    className="h-8"
                   />
-                  <div className="flex flex-col shrink-0">
+                  <div className="flex shrink-0 flex-col">
                     <button
                       type="button"
-                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      className="flex h-4 w-6 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
                       onClick={() => moveSubitem(itemIndex, subitemIndex, -1)}
                       disabled={subitemIndex === 0}
                     >
@@ -10644,7 +10370,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
                     </button>
                     <button
                       type="button"
-                      className="h-4 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      className="flex h-4 w-6 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
                       onClick={() => moveSubitem(itemIndex, subitemIndex, 1)}
                       disabled={subitemIndex === item.subitems.length - 1}
                     >
@@ -10658,7 +10384,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
         </div>
       ))}
 
-      <Button type="button" variant="outline" className="w-full" onClick={addItem}>
+      <Button type="button" variant="outline" size="sm" className="w-full" onClick={addItem}>
         <Plus className="h-4 w-4 mr-2" />
         {t("addItem")}
       </Button>
@@ -10975,11 +10701,47 @@ function SegmentationProps({ block }: { block: import("@/types/worksheet").Segme
   );
 }
 
+function FreeFormProps({ block }: { block: FreeFormBlock }) {
+  const { dispatch } = useEditor();
+  const tc = useTranslations("common");
+  const tr = useTranslations("blockRenderer");
+
+  const update = (updates: Partial<FreeFormBlock>) => {
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+          {tc("content")}
+        </Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="title"
+          baseValue={block.title}
+          onBaseChange={(value) => update({ title: value })}
+          placeholder={tr("freeFormSceneTitle")}
+        />
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(value) => update({ instruction: value })}
+          multiline
+          placeholder={tr("freeFormEmpty")}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Cover Images Panel ─────────────────────────────────────
 
 function CoverImagesPanel() {
   const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
   const tt = useTranslations("toolbar");
   const { upload } = useUpload();
   const [uploadingSlot, setUploadingSlot] = React.useState<number | null>(null);
@@ -11060,8 +10822,8 @@ function CoverImagesPanel() {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-sm font-medium">{tt("pdfOrientation")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tt("pdfOrientation")}</Label>
         <Select
           value={state.settings.orientation || "portrait"}
           onValueChange={(value) =>
@@ -11071,7 +10833,7 @@ function CoverImagesPanel() {
             })
           }
         >
-          <SelectTrigger className="mt-1">
+          <SelectTrigger size="sm" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -11081,49 +10843,57 @@ function CoverImagesPanel() {
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label className="text-sm font-medium">{t("coverSubtitle")}</Label>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("coverSubtitle")}</Label>
         <Input
           value={state.settings.coverSubtitle ?? "Arbeitsblatt"}
           onChange={(e) =>
             dispatch({ type: "UPDATE_SETTINGS", payload: { coverSubtitle: e.target.value } })
           }
           placeholder="Arbeitsblatt"
-          className="mt-1"
+          className="h-8"
         />
       </div>
-      <Label className="text-sm font-medium">{t("coverImages")}</Label>
-      <div className="grid grid-cols-4 gap-2">
-        {slots.map((url, i) => (
-          <div key={i}>
-            {url ? (
-              <div className="relative aspect-square rounded bg-muted overflow-hidden group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`${t("coverImage")} ${i + 1}`} className="w-full h-full object-cover" />
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("coverImages")}</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {slots.map((url, i) => (
+            <div key={i} className="space-y-1">
+              <span className="block text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {url ? (
+                <div className="relative aspect-square overflow-hidden rounded-[4px] border border-border bg-muted group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`${t("coverImage")} ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(i)}
+                    className="absolute top-0.5 right-0.5 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={() => handleRemove(i)}
-                  className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  type="button"
+                  onClick={() => openBrowser(i)}
+                  onDrop={(e) => handleDrop(i, e)}
+                  onDragOver={(e) => e.preventDefault()}
+                  className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-[4px] border-2 border-dashed border-muted-foreground/30 transition-colors hover:border-muted-foreground/50"
                 >
-                  <X className="h-3 w-3" />
+                  {uploadingSlot === i ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => openBrowser(i)}
-                onDrop={(e) => handleDrop(i, e)}
-                onDragOver={(e) => e.preventDefault()}
-                className="aspect-square rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors w-full"
-              >
-                {uploadingSlot === i ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                ) : (
-                  <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <MediaBrowserDialog
@@ -11146,24 +10916,30 @@ function CoverImagesPanel() {
         onCropComplete={handleCropComplete}
         aspect={1}
       />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("coverImageBorder")}</Label>
-        <Switch
-          checked={state.settings.coverImageBorder ?? false}
-          onCheckedChange={(v) =>
-            dispatch({ type: "UPDATE_SETTINGS", payload: { coverImageBorder: v } })
-          }
-        />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div className="border-y border-slate-200 bg-white">
+          <div className="flex items-center justify-between py-2">
+            <Label className="text-sm text-foreground">{t("coverImageBorder")}</Label>
+            <Switch
+              checked={state.settings.coverImageBorder ?? false}
+              onCheckedChange={(v) =>
+                dispatch({ type: "UPDATE_SETTINGS", payload: { coverImageBorder: v } })
+              }
+            />
+          </div>
+        </div>
       </div>
-      <div>
-        <Label className="text-sm font-medium">{t("coverInfoText")}</Label>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("coverInfoText")}</Label>
         <Input
           value={state.settings.coverInfoText ?? ""}
           onChange={(e) =>
             dispatch({ type: "UPDATE_SETTINGS", payload: { coverInfoText: e.target.value } })
           }
           placeholder={t("coverInfoTextPlaceholder")}
-          className="mt-1"
+          className="h-8"
         />
       </div>
     </div>
@@ -11593,6 +11369,7 @@ function AudioProps({ block }: { block: AudioBlock }) {
 function ScheduleProps({ block }: { block: ScheduleBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
+  const tc = useTranslations("common");
 
   const update = (updates: Partial<ScheduleBlock>) => {
     dispatch({
@@ -11649,41 +11426,29 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
     });
   };
 
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   return (
     <div className="space-y-3 overflow-hidden">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("bilingual")}</Label>
-        <Switch
-          checked={block.bilingual ?? false}
-          onCheckedChange={(checked) => update({ bilingual: checked })}
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showDate")}</Label>
-        <Switch
-          checked={block.showDate ?? false}
-          onCheckedChange={(checked) => update({ showDate: checked })}
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showRoom")}</Label>
-        <Switch
-          checked={block.showRoom ?? false}
-          onCheckedChange={(checked) => update({ showRoom: checked })}
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showHeader")}</Label>
-        <Switch
-          checked={block.showHeader ?? false}
-          onCheckedChange={(checked) => update({ showHeader: checked })}
-        />
-      </div>
-      <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("scheduleItems")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("scheduleItems")}</Label>
         {block.items.map((item, i) => (
-          <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
+          <div key={item.id} className="space-y-2">
             {(block.showDate ?? false) && (
               <Input
                 type="date"
@@ -11692,79 +11457,121 @@ function ScheduleProps({ block }: { block: ScheduleBlock }) {
                 className="h-8 text-xs"
               />
             )}
-            <div className="flex items-center gap-1">
-              <Input
-                type="time"
-                value={item.start}
-                onChange={(e) => updateItem(i, { start: e.target.value })}
-                className="h-8 text-xs w-[90px]"
-              />
-              <span className="text-xs text-muted-foreground">–</span>
-              <Input
-                type="time"
-                value={item.end}
-                onChange={(e) => updateItem(i, { end: e.target.value })}
-                className="h-8 text-xs w-[90px]"
-              />
-              <div className="flex-1" />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => moveItem(i, "up")}
-                disabled={i === 0}
-              >
-                <ChevronUp className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => moveItem(i, "down")}
-                disabled={i === block.items.length - 1}
-              >
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => removeItem(i)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+              <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1">
+                <Input
+                  type="time"
+                  value={item.start}
+                  onChange={(e) => updateItem(i, { start: e.target.value })}
+                  placeholder="00:00"
+                  className="h-8 min-w-0 text-xs"
+                />
+                <span className="flex h-8 items-center justify-center text-xs text-muted-foreground">-</span>
+                <Input
+                  type="time"
+                  value={item.end}
+                  onChange={(e) => updateItem(i, { end: e.target.value })}
+                  placeholder="00:00"
+                  className="h-8 min-w-0 text-xs"
+                />
+              </div>
+              <div className="flex w-[40px] shrink-0 items-center justify-end gap-1">
+                <div className="flex flex-col">
+                  <button
+                    className="h-3 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "up")}
+                    disabled={i === 0}
+                    type="button"
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                  </button>
+                  <button
+                    className="h-3 p-0 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "down")}
+                    disabled={i === block.items.length - 1}
+                    type="button"
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => removeItem(i)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             {(block.showRoom ?? false) && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-6 shrink-0" />
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`items.${i}.room`}
+                  baseValue={item.room ?? ""}
+                  onBaseChange={(v) => updateItem(i, { room: v })}
+                  className="h-8 flex-1 text-xs"
+                  placeholder={t("scheduleRoom")}
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0" />
               <ChInput
                 blockId={block.id}
-                fieldPath={`items.${i}.room`}
-                baseValue={item.room ?? ""}
-                onBaseChange={(v) => updateItem(i, { room: v })}
-                className="h-8 text-xs"
-                placeholder={t("scheduleRoom")}
+                fieldPath={`items.${i}.title`}
+                baseValue={item.title}
+                onBaseChange={(v) => updateItem(i, { title: v })}
+                className="h-8 flex-1 text-xs"
+                placeholder={t("scheduleTitlePlaceholder")}
               />
-            )}
-            <ChInput
-              blockId={block.id}
-              fieldPath={`items.${i}.title`}
-              baseValue={item.title}
-              onBaseChange={(v) => updateItem(i, { title: v })}
-              className="h-8 text-xs"
-              placeholder={t("scheduleTitle")}
-            />
-            <ChInput
-              blockId={block.id}
-              fieldPath={`items.${i}.description`}
-              baseValue={item.description}
-              onBaseChange={(v) => updateItem(i, { description: v })}
-              className="h-8 text-xs"
-              placeholder={t("scheduleDescription")}
-            />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0" />
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${i}.description`}
+                baseValue={item.description}
+                onBaseChange={(v) => updateItem(i, { description: v })}
+                className="h-8 flex-1 text-xs"
+                placeholder={t("scheduleDescription")}
+              />
+            </div>
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
         </Button>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("bilingual"),
+            block.bilingual ?? false,
+            (checked) => update({ bilingual: checked }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(
+            t("showDate"),
+            block.showDate ?? false,
+            (checked) => update({ showDate: checked })
+          )}
+          {renderSwitchRow(
+            t("showRoom"),
+            block.showRoom ?? false,
+            (checked) => update({ showRoom: checked })
+          )}
+          {renderSwitchRow(
+            t("showHeader"),
+            block.showHeader ?? false,
+            (checked) => update({ showHeader: checked }),
+            { withBottomBorder: false }
+          )}
+        </div>
       </div>
     </div>
   );
@@ -12353,7 +12160,7 @@ export function PropertiesPanel() {
   if (!selectedBlock) {
     return (
       <div className="w-80 pt-8 pb-8">
-        <div className="bg-slate-50 rounded-sm p-4 pt-6">
+        <div className="space-y-3 rounded-[4px] border border-border bg-white p-4">
           <CoverImagesPanel />
         </div>
       </div>
@@ -12376,6 +12183,8 @@ export function PropertiesPanel() {
         return <HeadingProps block={selectedBlock} />;
       case "segmentation":
         return <SegmentationProps block={selectedBlock as import("@/types/worksheet").SegmentationBlock} />;
+      case "free-form":
+        return <FreeFormProps block={selectedBlock as FreeFormBlock} />;
       case "image":
         return <ImageProps block={selectedBlock} />;
       case "image-cards":
@@ -12513,14 +12322,14 @@ export function PropertiesPanel() {
 
   return (
     <div className="w-80 flex flex-col h-full pt-8 pb-8">
-      <div className="flex flex-col h-full bg-slate-50 rounded-sm overflow-hidden min-h-0">
+      <div className="flex flex-col h-full bg-white border border-foreground rounded-sm overflow-hidden min-h-0">
       <ScrollArea className="flex-1 overflow-hidden scrollbar-hide">
-        <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:border-0 [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:border-0 [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0">
+        <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0 [&_label.block.mb-2]:rounded-[4px]">
           <div className="text-sm font-semibold text-slate-800 uppercase">{selectedBlockName}</div>
 
           {/* Visibility */}
           <div>
-            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{tc("visibility")}</div>
+            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">{tc("visibility")}</div>
             <div className="flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -12532,7 +12341,7 @@ export function PropertiesPanel() {
                         course: !displayOn.course,
                       })
                     }
-                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
+                    className={`flex items-center justify-center h-8 flex-1 rounded-[4px] border transition-colors
                       ${displayOn.course
                         ? "bg-white text-slate-700 border-slate-300"
                         : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
@@ -12552,7 +12361,7 @@ export function PropertiesPanel() {
                         worksheetPrint: !displayOn.worksheetPrint,
                       })
                     }
-                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
+                    className={`flex items-center justify-center h-8 flex-1 rounded-[4px] border transition-colors
                       ${displayOn.worksheetPrint
                         ? "bg-white text-slate-700 border-slate-300"
                         : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}
@@ -12572,7 +12381,7 @@ export function PropertiesPanel() {
                         worksheetOnline: !displayOn.worksheetOnline,
                       })
                     }
-                    className={`flex items-center justify-center h-9 flex-1 rounded-md border transition-colors
+                    className={`flex items-center justify-center h-8 flex-1 rounded-[4px] border transition-colors
                       ${displayOn.worksheetOnline
                         ? "bg-white text-slate-700 border-slate-300"
                         : "bg-white text-slate-300 border-slate-200 hover:text-slate-400"}`}

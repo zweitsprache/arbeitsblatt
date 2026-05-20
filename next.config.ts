@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer }) => {
     config.resolve = {
       ...config.resolve,
+      alias: {
+        ...config.resolve?.alias,
+        canvas: false,
+      },
       fallback: {
         ...config.resolve?.fallback,
         "@remotion/compositor": false,
@@ -31,6 +35,7 @@ const nextConfig: NextConfig = {
         "@remotion/compositor-win32-x64": false,
         "@remotion/compositor-windows-x64": false,
         "@remotion/compositor-win32-x64-msvc": false,
+        canvas: false,
         esbuild: false,
       },
     };

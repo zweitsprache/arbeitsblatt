@@ -65,6 +65,7 @@ type EditorAction =
   | { type: "UPDATE_BLOCK"; payload: { id: string; updates: Partial<WorksheetBlock> } }
   | { type: "REMOVE_BLOCK"; payload: string }
   | { type: "MOVE_BLOCK"; payload: { activeId: string; overId: string; position?: "above" | "below" } }
+  | { type: "MOVE_BLOCK_BY_STEP"; payload: { id: string; direction: "up" | "down" } }
   | { type: "REORDER_BLOCKS"; payload: WorksheetBlock[] }
   | { type: "SELECT_BLOCK"; payload: string | null }
   | { type: "SET_ACTIVE_ITEM"; payload: number | null }
@@ -83,6 +84,7 @@ type EditorAction =
   | { type: "MOVE_BLOCK_TO_COLUMN"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
   | { type: "MOVE_BLOCK_FROM_COLUMN_TO_TOP"; payload: { blockId: string; insertAfterBlockId?: string } }
   | { type: "MOVE_BLOCK_BETWEEN_COLUMNS"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
+  | { type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP"; payload: { id: string; direction: "up" | "down" } }
   | { type: "SET_BRAND_PROFILE"; payload: BrandProfile }
   | { type: "SET_AVAILABLE_BRANDS"; payload: BrandProfile[] };
 
@@ -324,6 +326,20 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, blocks: newBlocks, isDirty: true };
     }
 
+    case "MOVE_BLOCK_BY_STEP": {
+      const { id, direction } = action.payload;
+      const currentIndex = state.blocks.findIndex((b) => b.id === id);
+      if (currentIndex === -1) return state;
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= state.blocks.length) return state;
+
+      const newBlocks = [...state.blocks];
+      const [moved] = newBlocks.splice(currentIndex, 1);
+      newBlocks.splice(targetIndex, 0, moved);
+
+      return { ...state, blocks: newBlocks, isDirty: true };
+    }
+
     case "REORDER_BLOCKS":
       return { ...state, blocks: action.payload, isDirty: true };
 
@@ -544,6 +560,31 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       };
     }
 
+    case "MOVE_BLOCK_IN_CONTAINER_BY_STEP": {
+      const { id, direction } = action.payload;
+      const found = deepFindBlock(state.blocks, id);
+      if (!found || found.parentBlockId === undefined || found.colIndex === undefined || found.indexInCol === undefined) {
+        return state;
+      }
+
+      const targetIndex = direction === "up" ? found.indexInCol - 1 : found.indexInCol + 1;
+
+      return {
+        ...state,
+        blocks: state.blocks.map((b) => {
+          if (b.id !== found.parentBlockId || !CONTAINER_TYPES.has(b.type)) return b;
+          const slot = getContainerSlot(b, found.colIndex!);
+          if (!slot || targetIndex < 0 || targetIndex >= slot.length) return b;
+
+          const newSlot = [...slot];
+          const [moved] = newSlot.splice(found.indexInCol!, 1);
+          newSlot.splice(targetIndex, 0, moved);
+          return setContainerSlot(b, found.colIndex!, newSlot);
+        }),
+        isDirty: true,
+      };
+    }
+
     case "SET_BRAND_PROFILE":
       return { ...state, brandProfile: action.payload };
 
@@ -562,6 +603,8 @@ interface EditorContextValue {
   addBlock: (type: BlockType, index?: number) => void;
   canAddBlockType: (type: BlockType) => boolean;
   duplicateBlock: (id: string) => void;
+  moveBlockByStep: (id: string, direction: "up" | "down") => void;
+  moveBlockInContainerByStep: (id: string, direction: "up" | "down") => void;
   save: () => Promise<void>;
 }
 
@@ -655,6 +698,14 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
     [state.blocks]
   );
 
+  const moveBlockByStep = useCallback((id: string, direction: "up" | "down") => {
+    dispatch({ type: "MOVE_BLOCK_BY_STEP", payload: { id, direction } });
+  }, []);
+
+  const moveBlockInContainerByStep = useCallback((id: string, direction: "up" | "down") => {
+    dispatch({ type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP", payload: { id, direction } });
+  }, []);
+
   const save = useCallback(async () => {
     dispatch({ type: "SET_SAVING", payload: true });
     try {
@@ -696,7 +747,7 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
   }, [apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
 
   return (
-    <EditorContext.Provider value={{ state, dispatch, addBlock, canAddBlockType, duplicateBlock, save }}>
+    <EditorContext.Provider value={{ state, dispatch, addBlock, canAddBlockType, duplicateBlock, moveBlockByStep, moveBlockInContainerByStep, save }}>
       {children}
     </EditorContext.Provider>
   );

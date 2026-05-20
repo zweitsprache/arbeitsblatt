@@ -15,6 +15,8 @@ import {
   EyeOff,
   Monitor,
   Printer,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,8 +43,11 @@ export function SortableBlock({
 }) {
   const tc = useTranslations("common");
   const tb = useTranslations("blockRenderer");
-  const { state, dispatch, duplicateBlock } = useEditor();
+  const { state, dispatch, duplicateBlock, moveBlockByStep } = useEditor();
   const isSelected = state.selectedBlockId === block.id;
+  const blockIndex = state.blocks.findIndex((candidate) => candidate.id === block.id);
+  const canMoveUp = blockIndex > 0;
+  const canMoveDown = blockIndex >= 0 && blockIndex < state.blocks.length - 1;
 
   const {
     attributes,
@@ -103,6 +108,42 @@ export function SortableBlock({
         >
           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+              disabled={!canMoveUp}
+              onClick={(e) => {
+                e.stopPropagation();
+                moveBlockByStep(block.id, "up");
+              }}
+            >
+              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">{tb("moveBlockUp")}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+              disabled={!canMoveDown}
+              onClick={(e) => {
+                e.stopPropagation();
+                moveBlockByStep(block.id, "down");
+              }}
+            >
+              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">{tb("moveBlockDown")}</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Visibility toggle */}
         <Tooltip>

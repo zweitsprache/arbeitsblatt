@@ -83,6 +83,7 @@ export type BlockType =
   | "board-game"
   | "grid"
   | "segmentation"
+  | "free-form"
   | "bingo-cards";
 
 export type SegmentationCasing = "default" | "uppercase" | "lowercase";
@@ -125,6 +126,61 @@ export interface SegmentationBlock extends BlockBase {
   items: { id: string; text: string }[];
   casing: SegmentationCasing;
   showFirstAsExample?: boolean; // always true for now
+}
+
+export type FreeFormElementType = "rect" | "circle" | "text";
+
+export interface FreeFormBaseElement {
+  id: string;
+  type: FreeFormElementType;
+  x: number;
+  y: number;
+  rotation?: number;
+  visible?: boolean;
+}
+
+export interface FreeFormRectElement extends FreeFormBaseElement {
+  type: "rect";
+  width: number;
+  height: number;
+  fill: string;
+  stroke?: string;
+  strokeWidth?: number;
+  cornerRadius?: number;
+}
+
+export interface FreeFormCircleElement extends FreeFormBaseElement {
+  type: "circle";
+  radius: number;
+  fill: string;
+  stroke?: string;
+  strokeWidth?: number;
+}
+
+export interface FreeFormTextElement extends FreeFormBaseElement {
+  type: "text";
+  text: string;
+  fill: string;
+  fontSize: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  width?: number;
+}
+
+export type FreeFormElement = FreeFormRectElement | FreeFormCircleElement | FreeFormTextElement;
+
+export interface FreeFormScene {
+  width: number;
+  height: number;
+  backgroundColor: string;
+  elements: FreeFormElement[];
+}
+
+export interface FreeFormBlock extends BlockBase {
+  type: "free-form";
+  title: string;
+  instruction?: string;
+  scene: FreeFormScene;
 }
 
 export type ExclusiveWorksheetBlockType = "flashcards" | "card-pairs" | "domino" | "quartett" | "taboo" | "syllable-cards";
@@ -1215,6 +1271,7 @@ export type WorksheetBlock =
   | TableBlock
   | GridBlock
   | SegmentationBlock
+  | FreeFormBlock
   | BingoCardsBlock;
 
 // ─── Brand types ────────────────────────────────────────────
@@ -1685,7 +1742,7 @@ export interface BlockDefinition {
   labelKey: string; // i18n key in "blocks" namespace
   descriptionKey: string; // i18n key in "blocks" namespace
   icon: string; // lucide icon name
-  category: "layout" | "content" | "images" | "vocabulary" | "mockup" | "numbering" | "memory-aids" | "multimedia" | "interactive" | "ai-tools";
+  category: "layout" | "content" | "images" | "vocabulary" | "mockup" | "numbering" | "memory-aids" | "multimedia" | "interactive" | "games" | "spelling" | "headings" | "cards" | "ai-tools";
   /** Per-locale fallback translations (label + description). English uses label/description fields. */
   translations?: Record<string, { label: string; description: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1701,7 +1758,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "heading",
     descriptionKey: "headingDesc",
     icon: "Heading",
-    category: "content",
+    category: "headings",
     translations: { de: { label: "Überschrift", description: "Titel und Überschriften hinzufügen" } },
     defaultData: {
       type: "heading",
@@ -1717,7 +1774,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "segmentation",
     descriptionKey: "segmentationDesc",
     icon: "LayoutList",
-    category: "content",
+    category: "spelling",
     translations: { de: { label: "Segmentierung", description: "Text mit Trennlinien aufteilen" } },
     defaultData: {
       type: "segmentation",
@@ -1732,13 +1789,68 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "free-form",
+    label: "Free Form",
+    description: "Canvas block with modal editor and preview",
+    labelKey: "freeForm",
+    descriptionKey: "freeFormDesc",
+    icon: "PenLine",
+    category: "images",
+    translations: { de: { label: "Freiform", description: "Canvas-Block mit Modal-Editor und Vorschau" } },
+    defaultData: {
+      type: "free-form",
+      title: "Free Form",
+      instruction: "Open the editor to arrange shapes and text.",
+      scene: {
+        width: 1200,
+        height: 800,
+        backgroundColor: "#fffdf6",
+        elements: [
+          {
+            id: "ff-rect-1",
+            type: "rect",
+            x: 80,
+            y: 80,
+            width: 320,
+            height: 180,
+            fill: "#dbeafe",
+            stroke: "#2563eb",
+            strokeWidth: 2,
+            cornerRadius: 20,
+          },
+          {
+            id: "ff-text-1",
+            type: "text",
+            x: 120,
+            y: 130,
+            text: "Double-click the preview to open the editor.",
+            fill: "#1e293b",
+            fontSize: 36,
+            width: 520,
+          },
+          {
+            id: "ff-circle-1",
+            type: "circle",
+            x: 960,
+            y: 220,
+            radius: 90,
+            fill: "#fde68a",
+            stroke: "#d97706",
+            strokeWidth: 2,
+          }
+        ],
+      },
+      visibility: "both",
+    },
+  },
+  {
     type: "numbered-heading",
     label: "Numbered Heading",
     description: "Heading with automatic numbering",
     labelKey: "numberedHeading",
     descriptionKey: "numberedHeadingDesc",
     icon: "Heading",
-    category: "content",
+    category: "headings",
     translations: { de: { label: "Nummerierte Überschrift", description: "Überschrift mit automatischer Nummerierung" } },
     defaultData: {
       type: "numbered-heading",
@@ -1965,7 +2077,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "boardGame",
     descriptionKey: "boardGameDesc",
     icon: "Grid3X3",
-    category: "layout",
+    category: "games",
     translations: { de: { label: "Board Game", description: "8x5-Spielfeld mit Text- und Bildzellen" } },
     defaultData: {
       type: "board-game",
@@ -1986,7 +2098,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "domino",
     descriptionKey: "dominoDesc",
     icon: "Columns2",
-    category: "layout",
+    category: "games",
     translations: { de: { label: "Domino", description: "Domino-Paare mit Text- und Bildfeldern" } },
     defaultData: {
       type: "domino",
@@ -2010,7 +2122,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "cardPairs",
     descriptionKey: "cardPairsDesc",
     icon: "Square",
-    category: "layout",
+    category: "cards",
     translations: { de: { label: "Kartenpaare", description: "Doppelseitige quadratische Kartenpaare" } },
     defaultData: {
       type: "card-pairs",
@@ -2034,7 +2146,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "flashcards",
     descriptionKey: "flashcardsDesc",
     icon: "RectangleHorizontal",
-    category: "layout",
+    category: "cards",
     translations: { de: { label: "Flashcards", description: "Lernkarten mit Vorder- und Rückseite" } },
     defaultData: {
       type: "flashcards",
@@ -2057,7 +2169,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "syllableCards",
     descriptionKey: "syllableCardsDesc",
     icon: "ClipboardCopy",
-    category: "layout",
+    category: "cards",
     translations: { de: { label: "Silbenkarten", description: "Einseitige Karten mit Silbenbögen" } },
     defaultData: {
       type: "syllable-cards",
@@ -2372,7 +2484,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "crossword",
     descriptionKey: "crosswordDesc",
     icon: "Grid3X3",
-    category: "interactive",
+    category: "games",
     translations: { de: { label: "Kreuzworträtsel", description: "Automatisch erzeugtes Kreuzworträtsel aus Antwort-Hinweis-Paaren" } },
     defaultData: {
       type: "crossword",
@@ -2449,7 +2561,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "correctSpelling",
     descriptionKey: "correctSpellingDesc",
     icon: "SpellCheck",
-    category: "interactive",
+    category: "spelling",
     translations: { de: { label: "Rechtschreibung erkennen", description: "Das korrekt geschriebene Wort in jeder Zeile finden" } },
     defaultData: {
       type: "correct-spelling",
@@ -2473,7 +2585,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     labelKey: "missingLetters",
     descriptionKey: "missingLettersDesc",
     icon: "SpellCheck",
-    category: "interactive",
+    category: "spelling",
     translations: { de: { label: "Fehlende Buchstaben", description: "Wörter mit jeweils einem fehlenden Buchstaben anzeigen" } },
     defaultData: {
       type: "missing-letters",
@@ -2893,13 +3005,13 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
 },
 {
   type: "quartett",
-  label: "QUARTETT",
+  label: "Quartett",
   description: "Items with four reorderable subitems",
   labelKey: "quartett",
   descriptionKey: "quartettDesc",
   icon: "Grid3X3",
-  category: "memory-aids",
-  translations: { de: { label: "QUARTETT", description: "Elemente mit vier umsortierbaren Unterpunkten" } },
+  category: "games",
+  translations: { de: { label: "Quartett", description: "Elemente mit vier umsortierbaren Unterpunkten" } },
   defaultData: {
     type: "quartett",
     title: "",
@@ -2925,7 +3037,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   labelKey: "taboo",
   descriptionKey: "tabooDesc",
   icon: "TriangleAlert",
-  category: "memory-aids",
+  category: "games",
   translations: { de: { label: "Taboo", description: "Wortkarten mit vier Stoppwörtern" } },
   defaultData: {
     type: "taboo",
@@ -3071,9 +3183,9 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     showRoom: false,
     showHeader: false,
     items: [
-      { id: "s1", date: "", start: "08:00", end: "09:30", room: "", title: "Titel 1", description: "" },
-      { id: "s2", date: "", start: "09:45", end: "11:15", room: "", title: "Titel 2", description: "" },
-      { id: "s3", date: "", start: "11:30", end: "13:00", room: "", title: "Titel 3", description: "" },
+      { id: "s1", date: "", start: "", end: "", room: "", title: "", description: "" },
+      { id: "s2", date: "", start: "", end: "", room: "", title: "", description: "" },
+      { id: "s3", date: "", start: "", end: "", room: "", title: "", description: "" },
     ],
     visibility: "both",
   },
@@ -3127,7 +3239,7 @@ BLOCK_LIBRARY.push({
   labelKey: "bingoCards",
   descriptionKey: "bingoCardsDesc",
   icon: "Grid3X3",
-  category: "content",
+  category: "games",
   translations: { de: { label: "Bingo-Karten", description: "Bingo-Karten mit anpassbarem Raster und Modi" } },
   defaultData: {
     type: "bingo-cards",
