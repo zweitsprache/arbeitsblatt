@@ -186,13 +186,18 @@ export function normalizeRoleAccessSettings(role: AppRole, raw: unknown): RoleAc
   };
 }
 
+export const FULL_WORKSHEET_EDITOR_ACCESS: EffectiveWorksheetEditorAccess = {
+  allowedBlockTypes: [...ALL_BLOCK_TYPES],
+  features: { ...DEFAULT_EDITOR_FEATURES },
+};
+
 const FULL_ADMIN_ACCESS: EffectiveUserAccess = {
   isAdmin: true,
   role: "admin",
   sidebarSections: [...DASHBOARD_SECTION_KEYS],
   worksheetEditor: {
-    allowedBlockTypes: [...ALL_BLOCK_TYPES],
-    features: { ...DEFAULT_EDITOR_FEATURES },
+    allowedBlockTypes: [...FULL_WORKSHEET_EDITOR_ACCESS.allowedBlockTypes],
+    features: { ...FULL_WORKSHEET_EDITOR_ACCESS.features },
   },
 };
 

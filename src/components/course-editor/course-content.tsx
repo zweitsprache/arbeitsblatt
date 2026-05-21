@@ -49,6 +49,7 @@ import {
   BLOCK_LIBRARY,
   DEFAULT_SETTINGS,
 } from "@/types/worksheet";
+import { FULL_WORKSHEET_EDITOR_ACCESS } from "@/types/user-access";
 
 // ─── Worksheet Picker Dialog ─────────────────────────────────
 
@@ -1323,7 +1324,7 @@ export function CourseContent() {
   if (!state.selectedTopicId) {
     return (
       <TooltipProvider>
-        <EditorProvider>
+        <EditorProvider access={FULL_WORKSHEET_EDITOR_ACCESS}>
           <ModuleEditorInner />
         </EditorProvider>
       </TooltipProvider>
@@ -1334,7 +1335,7 @@ export function CourseContent() {
   if (!state.selectedLessonId || !selectedLesson) {
     return (
       <TooltipProvider>
-        <EditorProvider>
+        <EditorProvider access={FULL_WORKSHEET_EDITOR_ACCESS}>
           <TopicEditorInner />
         </EditorProvider>
       </TooltipProvider>
@@ -1344,7 +1345,7 @@ export function CourseContent() {
   // Lesson selected → full worksheet block editor
   return (
     <TooltipProvider>
-      <EditorProvider>
+      <EditorProvider access={FULL_WORKSHEET_EDITOR_ACCESS}>
         <LessonEditorInner />
       </EditorProvider>
     </TooltipProvider>

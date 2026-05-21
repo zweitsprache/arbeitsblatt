@@ -25,6 +25,7 @@ import { PresentationToolbar } from "./presentation-toolbar";
 import { PresentationDocument } from "@/types/presentation";
 import { DEFAULT_SETTINGS, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/types/worksheet";
 import { BlockRenderer } from "@/components/editor/block-renderer";
+import { FULL_WORKSHEET_EDITOR_ACCESS } from "@/types/user-access";
 import { v4 as uuidv4 } from "uuid";
 
 function EditorInner({
@@ -251,7 +252,11 @@ export function PresentationEditor({
 }) {
   return (
     <TooltipProvider>
-      <EditorProvider apiEndpoint="/api/presentations" editorBasePath="/editor/presentation">
+      <EditorProvider
+        access={FULL_WORKSHEET_EDITOR_ACCESS}
+        apiEndpoint="/api/presentations"
+        editorBasePath="/editor/presentation"
+      >
         <EditorInner initialData={initialData} />
       </EditorProvider>
     </TooltipProvider>
