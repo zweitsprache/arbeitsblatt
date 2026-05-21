@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { AppHeader } from "./app-header";
 import { AppFooter } from "./app-footer";
 import { AppSidebar } from "./app-sidebar";
+import { UserAccessProvider } from "@/lib/user-access-client";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "dashboard-sidebar-collapsed";
 
@@ -61,18 +62,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <AppHeader />
-      <div className="flex flex-1 overflow-hidden">
-        <AppSidebar
-          collapsed={sidebarCollapsed}
-          onCollapsedChange={setSidebarCollapsed}
-        />
-        <main className="flex-1 min-h-0 overflow-hidden bg-background flex flex-col">
-          {children}
-        </main>
+    <UserAccessProvider>
+      <div className="flex flex-col h-screen overflow-hidden">
+        <AppHeader />
+        <div className="flex flex-1 overflow-hidden">
+          <AppSidebar
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
+          />
+          <main className="flex-1 min-h-0 overflow-hidden bg-background flex flex-col">
+            {children}
+          </main>
+        </div>
+        <AppFooter />
       </div>
-      <AppFooter />
-    </div>
+    </UserAccessProvider>
   );
 }

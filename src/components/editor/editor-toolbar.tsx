@@ -66,7 +66,7 @@ export function EditorToolbar({
 }: {
   editorVersion?: "v1" | "v2";
 }) {
-  const { state, dispatch, save } = useEditor();
+  const { state, access, dispatch, save } = useEditor();
   const t = useTranslations("toolbar");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -107,6 +107,12 @@ export function EditorToolbar({
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
   const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards");
   const effectivePdfFormat = cardBlocksForceCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
+  const canEditTitle = access.features.editTitle;
+  const canEditWorksheetSettings = access.features.editWorksheetSettings;
+  const canPreviewWorksheet = access.features.previewWorksheet;
+  const canExportWorksheet = access.features.exportWorksheet;
+  const canSaveWorksheet = access.features.saveWorksheet;
+  const canPublishWorksheet = access.features.publishWorksheet;
 
   const handleOpenPrintPreviewInNewTab = async (showSolutions = false) => {
     if (!state.slug) {
@@ -335,6 +341,7 @@ export function EditorToolbar({
           <Input
             value={displayTitle}
             onChange={(e) => handleTitleChange(e.target.value)}
+            disabled={!canEditTitle}
             className={`h-8 font-medium flex-1 ${
               isDeOverrideMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
             }`}
@@ -344,6 +351,7 @@ export function EditorToolbar({
             <button
               type="button"
               onClick={() => dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } })}
+              disabled={!canEditTitle}
               className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-amber-500 hover:text-red-500 shrink-0"
               title={t("clearChTitle")}
             >
@@ -387,6 +395,7 @@ export function EditorToolbar({
                 ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
                 : state.settings.brand || "edoomio"
             }
+            disabled={!canEditWorksheetSettings}
             onValueChange={(value: string) => {
               const [slug, subId] = value.split("::");
               dispatch({
@@ -441,6 +450,7 @@ export function EditorToolbar({
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0"
+                disabled={!canEditWorksheetSettings}
                 onClick={() => setShowBrandSettings(true)}
               >
                 <Settings className="h-4 w-4" />
@@ -508,6 +518,7 @@ export function EditorToolbar({
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1.5"
+                disabled={!canPreviewWorksheet}
                 onClick={() => setShowPrintPreview(true)}
               >
                 <Printer className="h-3.5 w-3.5" />
@@ -522,8 +533,8 @@ export function EditorToolbar({
                 variant="outline"
                 size="sm"
                 className="h-8 px-2"
+                disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(false)}
-                disabled={!state.slug}
                 aria-label={t("openInNewTab")}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -537,8 +548,8 @@ export function EditorToolbar({
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1 px-2"
+                disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(true)}
-                disabled={!state.slug}
                 aria-label={`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -556,6 +567,7 @@ export function EditorToolbar({
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
+              disabled={!canPreviewWorksheet}
               onClick={() => setShowOnlinePreview(true)}
             >
               <Eye className="h-3.5 w-3.5" />
@@ -567,7 +579,7 @@ export function EditorToolbar({
 
 
         {/* Actions */}
-        <WorksheetTranslationDialog />
+        {canEditWorksheetSettings && <WorksheetTranslationDialog />}
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -576,7 +588,7 @@ export function EditorToolbar({
               size="sm"
               className="h-8 gap-1.5"
               onClick={save}
-              disabled={state.isSaving}
+              disabled={state.isSaving || !canSaveWorksheet}
             >
               <Save className="h-3.5 w-3.5" />
               {state.isSaving ? tc("saving") : tc("save")}
@@ -592,7 +604,7 @@ export function EditorToolbar({
               size="sm"
               className="h-8 gap-1.5"
               onClick={handlePublish}
-              disabled={state.isSaving}
+              disabled={state.isSaving || !canPublishWorksheet}
             >
               <Globe className="h-3.5 w-3.5" />
               {state.published ? tc("published") : tc("publish")}
@@ -632,8 +644,8 @@ export function EditorToolbar({
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
+              disabled={!canExportWorksheet || isGeneratingCover || !state.worksheetId}
               onClick={() => setPdfLocaleDialog({ open: true, mode: "cover" })}
-              disabled={isGeneratingCover || !state.worksheetId}
             >
               {isGeneratingCover ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -652,8 +664,8 @@ export function EditorToolbar({
               variant="outline"
               size="sm"
               className="h-8"
+              disabled={!canExportWorksheet || isGeneratingPreview || isGeneratingPdf}
               onClick={() => setPdfLocaleDialog({ open: true, preview: true, mode: "pdf" })}
-              disabled={isGeneratingPreview || isGeneratingPdf}
             >
               {isGeneratingPreview ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -671,8 +683,8 @@ export function EditorToolbar({
               variant="outline"
               size="sm"
               className="h-8"
+              disabled={!canExportWorksheet || isGeneratingPdf || isGeneratingPreview}
               onClick={() => setPdfLocaleDialog({ open: true, preview: false, mode: "pdf" })}
-              disabled={isGeneratingPdf || isGeneratingPreview}
             >
               {isGeneratingPdf ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -25,6 +25,7 @@ import { EditorToolbar } from "./editor-toolbar";
 import { WorksheetDocument, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/types/worksheet";
 import { BlockRenderer } from "./block-renderer";
 import { v4 as uuidv4 } from "uuid";
+import { useUserAccess } from "@/lib/user-access-client";
 
 function EditorInner({
   initialData,
@@ -282,9 +283,19 @@ export function WorksheetEditor({
   initialData?: WorksheetDocument | null;
   editorVersion?: "v1" | "v2";
 }) {
+  const { payload, isLoading } = useUserAccess();
+
+  if (isLoading || !payload) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Loading editor access...
+      </div>
+    );
+  }
+
   return (
     <TooltipProvider>
-      <EditorProvider>
+      <EditorProvider access={payload.effectiveAccess.worksheetEditor}>
         <EditorInner initialData={initialData} editorVersion={editorVersion} />
       </EditorProvider>
     </TooltipProvider>

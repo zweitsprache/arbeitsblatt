@@ -43,11 +43,15 @@ export function SortableBlock({
 }) {
   const tc = useTranslations("common");
   const tb = useTranslations("blockRenderer");
-  const { state, dispatch, duplicateBlock, moveBlockByStep } = useEditor();
+  const { state, access, dispatch, duplicateBlock, moveBlockByStep } = useEditor();
   const isSelected = state.selectedBlockId === block.id;
   const blockIndex = state.blocks.findIndex((candidate) => candidate.id === block.id);
   const canMoveUp = blockIndex > 0;
   const canMoveDown = blockIndex >= 0 && blockIndex < state.blocks.length - 1;
+  const canReorder = access.features.reorderBlocks;
+  const canManageVisibility = access.features.manageBlockVisibility;
+  const canDuplicate = access.features.duplicateBlocks;
+  const canDelete = access.features.deleteBlocks;
 
   const {
     attributes,
@@ -103,6 +107,7 @@ export function SortableBlock({
         {/* Drag handle */}
         <button
           className="p-1 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+          disabled={!canReorder}
           {...attributes}
           {...listeners}
         >
@@ -113,7 +118,7 @@ export function SortableBlock({
           <TooltipTrigger asChild>
             <button
               className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveUp}
+              disabled={!canMoveUp || !canReorder}
               onClick={(e) => {
                 e.stopPropagation();
                 moveBlockByStep(block.id, "up");
@@ -131,7 +136,7 @@ export function SortableBlock({
           <TooltipTrigger asChild>
             <button
               className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveDown}
+              disabled={!canMoveDown || !canReorder}
               onClick={(e) => {
                 e.stopPropagation();
                 moveBlockByStep(block.id, "down");
@@ -150,6 +155,7 @@ export function SortableBlock({
           <TooltipTrigger asChild>
             <button
               className="p-1 hover:bg-muted rounded"
+              disabled={!canManageVisibility}
               onClick={(e) => {
                 e.stopPropagation();
                 cycleVisibility();
@@ -166,6 +172,7 @@ export function SortableBlock({
         {/* Duplicate */}
         <button
           className="p-1 hover:bg-muted rounded"
+          disabled={!canDuplicate}
           onClick={(e) => {
             e.stopPropagation();
             duplicateBlock(block.id);
@@ -177,6 +184,7 @@ export function SortableBlock({
         {/* Delete */}
         <button
           className="p-1 hover:bg-destructive/10 rounded"
+          disabled={!canDelete}
           onClick={(e) => {
             e.stopPropagation();
             dispatch({ type: "REMOVE_BLOCK", payload: block.id });

@@ -5780,7 +5780,7 @@ function ColumnChildBlock({
   parentBlockId: string;
   colIndex: number;
 }) {
-  const { state, dispatch, duplicateBlock, moveBlockInContainerByStep } = useEditor();
+  const { state, access, dispatch, duplicateBlock, moveBlockInContainerByStep } = useEditor();
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
   const isSelected = state.selectedBlockId === block.id;
@@ -5799,6 +5799,10 @@ function ColumnChildBlock({
   const blockIndex = siblingBlocks.findIndex((candidate) => candidate.id === block.id);
   const canMoveUp = blockIndex > 0;
   const canMoveDown = blockIndex >= 0 && blockIndex < siblingBlocks.length - 1;
+  const canReorder = access.features.reorderBlocks;
+  const canManageVisibility = access.features.manageBlockVisibility;
+  const canDuplicate = access.features.duplicateBlocks;
+  const canDelete = access.features.deleteBlocks;
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `col-child-${block.id}`,
@@ -5841,6 +5845,7 @@ function ColumnChildBlock({
         {/* Drag handle */}
         <button
           className="p-0.5 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+          disabled={!canReorder}
           {...attributes}
           {...listeners}
         >
@@ -5851,7 +5856,7 @@ function ColumnChildBlock({
           <TooltipTrigger asChild>
             <button
               className="p-0.5 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveUp}
+              disabled={!canMoveUp || !canReorder}
               onClick={(e) => {
                 e.stopPropagation();
                 moveBlockInContainerByStep(block.id, "up");
@@ -5869,7 +5874,7 @@ function ColumnChildBlock({
           <TooltipTrigger asChild>
             <button
               className="p-0.5 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveDown}
+              disabled={!canMoveDown || !canReorder}
               onClick={(e) => {
                 e.stopPropagation();
                 moveBlockInContainerByStep(block.id, "down");
@@ -5888,6 +5893,7 @@ function ColumnChildBlock({
           <TooltipTrigger asChild>
             <button
               className="p-0.5 hover:bg-muted rounded"
+              disabled={!canManageVisibility}
               onClick={(e) => {
                 e.stopPropagation();
                 cycleVisibility();
@@ -5904,6 +5910,7 @@ function ColumnChildBlock({
         {/* Duplicate */}
         <button
           className="p-0.5 hover:bg-muted rounded"
+          disabled={!canDuplicate}
           onClick={(e) => {
             e.stopPropagation();
             duplicateBlock(block.id);
@@ -5915,6 +5922,7 @@ function ColumnChildBlock({
         {/* Delete */}
         <button
           className="p-0.5 hover:bg-destructive/10 rounded"
+          disabled={!canDelete}
           onClick={(e) => {
             e.stopPropagation();
             dispatch({ type: "REMOVE_BLOCK", payload: block.id });

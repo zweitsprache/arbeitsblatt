@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { BLOCK_LIBRARY, BlockDefinition, BlockType } from "@/types/worksheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { useEditor } from "@/store/editor-store";
 import {
   Heading,
   Type,
@@ -137,6 +138,7 @@ export function BlockSidebar({
 }) {
   const t = useTranslations("blockSidebar");
   const tb = useTranslations("blocks");
+  const { access } = useEditor();
   const [search, setSearch] = useState("");
 
   const ts = (key: string, fallback: string) => {
@@ -149,6 +151,7 @@ export function BlockSidebar({
 
   const categories = useMemo(() => {
     const filter = (b: BlockDefinition) =>
+      access.allowedBlockTypes.includes(b.type) &&
       !search ||
       tb(b.labelKey).toLowerCase().includes(search.toLowerCase()) ||
       tb(b.descriptionKey).toLowerCase().includes(search.toLowerCase());
@@ -169,7 +172,7 @@ export function BlockSidebar({
       interactive: BLOCK_LIBRARY.filter((b) => b.category === "interactive" && filter(b)),
       aiTools: BLOCK_LIBRARY.filter((b) => b.category === "ai-tools" && filter(b)),
     };
-  }, [search, tb]);
+  }, [access.allowedBlockTypes, search, tb]);
 
   const renderBlock = (def: BlockDefinition) => {
     const disabled = !canAddBlock(def.type);

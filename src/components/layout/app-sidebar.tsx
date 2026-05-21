@@ -32,127 +32,143 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import React from "react";
-import { useIsAdmin } from "@/lib/auth/use-is-admin";
+import { useUserAccess } from "@/lib/user-access-client";
 import { cn } from "@/lib/utils";
 import { Building2, FolderKanban, Palette } from "lucide-react";
+import type { DashboardSectionKey } from "@/types/user-access";
 
 interface NavItem {
   href: string;
   labelKey: string;
+  sectionKey: DashboardSectionKey;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
 interface NavSection {
+  sectionKey: DashboardSectionKey;
   titleKey: string;
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
 }
 
 const topItems: NavItem[] = [
-  { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/library", labelKey: "library", icon: Store },
+  { href: "/", labelKey: "dashboard", sectionKey: "dashboard", icon: LayoutDashboard },
+  { href: "/library", labelKey: "library", sectionKey: "library", icon: Store },
 ];
 
 const sections: NavSection[] = [
   {
+    sectionKey: "worksheet",
     titleKey: "worksheet",
     icon: FileText,
     items: [
-      { href: "/editor", labelKey: "newWorksheet", icon: Plus },
-      { href: "/", labelKey: "worksheetLibrary", icon: Library },
+      { href: "/editor", labelKey: "newWorksheet", sectionKey: "worksheet", icon: Plus },
+      { href: "/", labelKey: "worksheetLibrary", sectionKey: "worksheet", icon: Library },
     ],
   },
   {
+    sectionKey: "flashcards",
     titleKey: "flashcards",
     icon: Layers,
     items: [
-      { href: "/editor/flashcards", labelKey: "newFlashcards", icon: Plus },
-      { href: "/flashcards", labelKey: "flashcardLibrary", icon: Library },
-      { href: "/collections", labelKey: "collectionLibrary", icon: FolderKanban },
+      { href: "/editor/flashcards", labelKey: "newFlashcards", sectionKey: "flashcards", icon: Plus },
+      { href: "/flashcards", labelKey: "flashcardLibrary", sectionKey: "flashcards", icon: Library },
+      { href: "/collections", labelKey: "collectionLibrary", sectionKey: "flashcards", icon: FolderKanban },
     ],
   },
   {
+    sectionKey: "cards",
     titleKey: "cards",
     icon: LayoutGrid,
     items: [
-      { href: "/editor/cards", labelKey: "newCards", icon: Plus },
-      { href: "/cards", labelKey: "cardLibrary", icon: Library },
+      { href: "/editor/cards", labelKey: "newCards", sectionKey: "cards", icon: Plus },
+      { href: "/cards", labelKey: "cardLibrary", sectionKey: "cards", icon: Library },
     ],
   },
   {
+    sectionKey: "games",
     titleKey: "games",
     icon: Gamepad2,
     items: [
-      { href: "/editor/kartenpaare", labelKey: "newKartenpaare", icon: Plus },
-      { href: "/kartenpaare", labelKey: "kartenpaarLibrary", icon: Puzzle },
-      { href: "/brettspiel", labelKey: "brettspiel", icon: Dices, disabled: true },
+      { href: "/editor/kartenpaare", labelKey: "newKartenpaare", sectionKey: "games", icon: Plus },
+      { href: "/kartenpaare", labelKey: "kartenpaarLibrary", sectionKey: "games", icon: Puzzle },
+      { href: "/brettspiel", labelKey: "brettspiel", sectionKey: "games", icon: Dices, disabled: true },
     ],
   },
   {
+    sectionKey: "ebooks",
     titleKey: "ebooks",
     icon: BookOpen,
     items: [
-      { href: "/ebooks/new", labelKey: "newEbook", icon: Plus },
-      { href: "/ebooks", labelKey: "ebooks", icon: Library },
+      { href: "/ebooks/new", labelKey: "newEbook", sectionKey: "ebooks", icon: Plus },
+      { href: "/ebooks", labelKey: "ebooks", sectionKey: "ebooks", icon: Library },
     ],
   },
   {
+    sectionKey: "courses",
     titleKey: "courses",
     icon: GraduationCap,
     items: [
-      { href: "/courses/new", labelKey: "newCourse", icon: Plus },
-      { href: "/courses", labelKey: "courseLibrary", icon: Library },
+      { href: "/courses/new", labelKey: "newCourse", sectionKey: "courses", icon: Plus },
+      { href: "/courses", labelKey: "courseLibrary", sectionKey: "courses", icon: Library },
     ],
   },
   {
+    sectionKey: "grammarTables",
     titleKey: "grammarTables",
     icon: TableProperties,
     items: [
-      { href: "/editor/grammar-tables", labelKey: "newGrammarTable", icon: Plus },
-      { href: "/grammar-tables", labelKey: "grammarTableLibrary", icon: Library },
+      { href: "/editor/grammar-tables", labelKey: "newGrammarTable", sectionKey: "grammarTables", icon: Plus },
+      { href: "/grammar-tables", labelKey: "grammarTableLibrary", sectionKey: "grammarTables", icon: Library },
     ],
   },
   {
+    sectionKey: "presentations",
     titleKey: "presentations",
     icon: Monitor,
     items: [
-      { href: "/presentations/new", labelKey: "newPresentation", icon: Plus },
-      { href: "/presentations", labelKey: "presentationLibrary", icon: Library },
+      { href: "/presentations/new", labelKey: "newPresentation", sectionKey: "presentations", icon: Plus },
+      { href: "/presentations", labelKey: "presentationLibrary", sectionKey: "presentations", icon: Library },
     ],
   },
   {
+    sectionKey: "covers",
     titleKey: "covers",
     icon: Image,
     items: [
-      { href: "/editor/covers", labelKey: "newCover", icon: Plus },
-      { href: "/covers", labelKey: "coverLibrary", icon: Library },
+      { href: "/editor/covers", labelKey: "newCover", sectionKey: "covers", icon: Plus },
+      { href: "/covers", labelKey: "coverLibrary", sectionKey: "covers", icon: Library },
     ],
   },
   {
+    sectionKey: "aiTools",
     titleKey: "aiTools",
     icon: Bot,
     items: [
-      { href: "/ai-tools", labelKey: "aiToolLibrary", icon: Library },
+      { href: "/ai-tools", labelKey: "aiToolLibrary", sectionKey: "aiTools", icon: Library },
     ],
   },
   {
+    sectionKey: "account",
     titleKey: "account",
     icon: User,
     items: [
-      { href: "/account/settings", labelKey: "accountSettings", icon: User },
-      { href: "/account/security", labelKey: "security", icon: Shield },
+      { href: "/account/settings", labelKey: "accountSettings", sectionKey: "account", icon: User },
+      { href: "/account/security", labelKey: "security", sectionKey: "account", icon: Shield },
     ],
   },
 ];
 
 const adminSection: NavSection = {
+  sectionKey: "admin",
   titleKey: "admin",
   icon: Shield,
   items: [
-    { href: "/admin/clients", labelKey: "adminClients", icon: Building2 },
-    { href: "/admin/projects", labelKey: "adminProjects", icon: FolderKanban },
-    { href: "/admin/brands", labelKey: "adminBrands", icon: Palette },
+    { href: "/admin/clients", labelKey: "adminClients", sectionKey: "admin", icon: Building2 },
+    { href: "/admin/projects", labelKey: "adminProjects", sectionKey: "admin", icon: FolderKanban },
+    { href: "/admin/brands", labelKey: "adminBrands", sectionKey: "admin", icon: Palette },
+    { href: "/admin/user-access", labelKey: "adminUserAccess", sectionKey: "admin", icon: Shield },
   ],
 };
 
@@ -335,11 +351,15 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
-  const isAdminUser = useIsAdmin();
+  const { payload } = useUserAccess();
+  const allowedSections = new Set(payload?.effectiveAccess.sidebarSections ?? ["worksheet", "account"]);
+  const isAdminUser = payload?.effectiveAccess.isAdmin === true;
 
   const allSections = isAdminUser
     ? [...sections.slice(0, -1), adminSection, sections[sections.length - 1]]
     : sections;
+  const visibleTopItems = topItems.filter((item) => allowedSections.has(item.sectionKey));
+  const visibleSections = allSections.filter((section) => allowedSections.has(section.sectionKey));
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -354,7 +374,7 @@ export function AppSidebar({
           <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
             <div className={cn(collapsed ? "py-3 space-y-1" : "py-4 space-y-2")}> 
               <nav className={cn("space-y-1", collapsed ? "px-2" : "px-3")}>
-                {topItems.map((item) => (
+                {visibleTopItems.map((item) => (
                   <SidebarNavItem
                     key={item.href}
                     item={item}
@@ -365,7 +385,7 @@ export function AppSidebar({
                 ))}
               </nav>
 
-              {allSections.map((section) => (
+              {visibleSections.map((section) => (
                 <SidebarSection
                   key={section.titleKey}
                   title={t(section.titleKey)}

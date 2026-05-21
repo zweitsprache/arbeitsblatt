@@ -19,6 +19,11 @@ import {
   getStaticBrandProfile,
   canAddBlockTypeToWorksheet,
 } from "@/types/worksheet";
+import {
+  EffectiveWorksheetEditorAccess,
+  canUseEditorFeature,
+  isBlockTypeAllowed,
+} from "@/types/user-access";
 
 export type LocaleMode = "DE" | "CH";
 
@@ -599,6 +604,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 // ─── Context ─────────────────────────────────────────────────
 interface EditorContextValue {
   state: EditorState;
+  access: EffectiveWorksheetEditorAccess;
   dispatch: React.Dispatch<EditorAction>;
   addBlock: (type: BlockType, index?: number) => void;
   canAddBlockType: (type: BlockType) => boolean;
@@ -610,8 +616,45 @@ interface EditorContextValue {
 
 const EditorContext = createContext<EditorContextValue | null>(null);
 
-export function EditorProvider({ children, apiEndpoint = "/api/worksheets", editorBasePath = "/editor" }: { children: React.ReactNode; apiEndpoint?: string; editorBasePath?: string }) {
-  const [state, dispatch] = useReducer(editorReducer, initialState);
+function canDispatchEditorAction(action: EditorAction, access: EffectiveWorksheetEditorAccess) {
+  switch (action.type) {
+    case "SET_TITLE":
+      return canUseEditorFeature(access, "editTitle");
+    case "REMOVE_BLOCK":
+      return canUseEditorFeature(access, "deleteBlocks");
+    case "MOVE_BLOCK":
+    case "MOVE_BLOCK_BY_STEP":
+    case "MOVE_BLOCK_TO_COLUMN":
+    case "MOVE_BLOCK_FROM_COLUMN_TO_TOP":
+    case "MOVE_BLOCK_BETWEEN_COLUMNS":
+    case "MOVE_BLOCK_IN_CONTAINER_BY_STEP":
+      return canUseEditorFeature(access, "reorderBlocks");
+    case "UPDATE_SETTINGS":
+      return canUseEditorFeature(access, "editWorksheetSettings");
+    case "SET_BLOCK_VISIBILITY":
+    case "SET_BLOCK_DISPLAY_ON":
+      return canUseEditorFeature(access, "manageBlockVisibility");
+    case "SET_PUBLISHED":
+      return canUseEditorFeature(access, "publishWorksheet");
+    case "DUPLICATE_IN_COLUMN":
+      return canUseEditorFeature(access, "addBlocks");
+    default:
+      return true;
+  }
+}
+
+export function EditorProvider({
+  children,
+  apiEndpoint = "/api/worksheets",
+  editorBasePath = "/editor",
+  access,
+}: {
+  children: React.ReactNode;
+  apiEndpoint?: string;
+  editorBasePath?: string;
+  access: EffectiveWorksheetEditorAccess;
+}) {
+  const [state, rawDispatch] = useReducer(editorReducer, initialState);
   const prevBrandSlug = useRef(state.settings.brand);
 
   // Fetch all available brands on mount
@@ -619,7 +662,7 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
     authFetch("/api/brands")
       .then((res) => (res.ok ? res.json() : []))
       .then((brands: BrandProfile[]) => {
-        dispatch({ type: "SET_AVAILABLE_BRANDS", payload: brands });
+        rawDispatch({ type: "SET_AVAILABLE_BRANDS", payload: brands });
       })
       .catch(() => {});
   }, []);
@@ -635,26 +678,41 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
     authFetch(`/api/brands/by-slug/${encodeURIComponent(slug)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((profile: BrandProfile | null) => {
-        dispatch({
+        rawDispatch({
           type: "SET_BRAND_PROFILE",
           payload: profile ?? getStaticBrandProfile(slug),
         });
       })
       .catch(() => {
-        dispatch({
+        rawDispatch({
           type: "SET_BRAND_PROFILE",
           payload: getStaticBrandProfile(slug),
         });
       });
   }, [state.settings.brand, state.brandProfile.slug]);
 
+  const dispatch = useCallback<React.Dispatch<EditorAction>>(
+    (action) => {
+      if (!canDispatchEditorAction(action, access)) {
+        return;
+      }
+      rawDispatch(action);
+    },
+    [access],
+  );
+
   const canAddBlockType = useCallback(
-    (type: BlockType) => canAddBlockTypeToWorksheet(state.blocks, type),
-    [state.blocks]
+    (type: BlockType) =>
+      canUseEditorFeature(access, "addBlocks") &&
+      isBlockTypeAllowed(access, type) &&
+      canAddBlockTypeToWorksheet(state.blocks, type),
+    [access, state.blocks]
   );
 
   const addBlock = useCallback(
     (type: BlockType, index?: number) => {
+      if (!canUseEditorFeature(access, "addBlocks")) return;
+      if (!isBlockTypeAllowed(access, type)) return;
       if (!canAddBlockTypeToWorksheet(state.blocks, type)) return;
       const def = BLOCK_LIBRARY.find((b) => b.type === type);
       if (!def) return;
@@ -665,26 +723,27 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
       if (type === "numbered-items") {
         (block as import("@/types/worksheet").NumberedItemsBlock).bgColor = state.brandProfile.primaryColor;
       }
-      dispatch({ type: "ADD_BLOCK", payload: { block, index } });
+      rawDispatch({ type: "ADD_BLOCK", payload: { block, index } });
     },
-    [state.blocks, state.brandProfile.primaryColor]
+    [access, state.blocks, state.brandProfile.primaryColor]
   );
 
   const duplicateBlock = useCallback(
     (id: string) => {
+      if (!canUseEditorFeature(access, "duplicateBlocks")) return;
       // Check top-level first
       const topIdx = state.blocks.findIndex((b) => b.id === id);
       if (topIdx !== -1) {
         const block = state.blocks[topIdx];
         const newBlock = deepCloneBlocksWithNewIds([block])[0];
-        dispatch({ type: "ADD_BLOCK", payload: { block: newBlock, index: topIdx + 1 } });
+        rawDispatch({ type: "ADD_BLOCK", payload: { block: newBlock, index: topIdx + 1 } });
         return;
       }
       // Check inside columns
       const found = deepFindBlock(state.blocks, id);
       if (found && found.parentBlockId !== undefined && found.colIndex !== undefined && found.indexInCol !== undefined) {
         const newBlock = deepCloneBlocksWithNewIds([found.block])[0];
-        dispatch({
+        rawDispatch({
           type: "DUPLICATE_IN_COLUMN",
           payload: {
             parentBlockId: found.parentBlockId,
@@ -695,19 +754,22 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
         });
       }
     },
-    [state.blocks]
+    [access, state.blocks]
   );
 
   const moveBlockByStep = useCallback((id: string, direction: "up" | "down") => {
-    dispatch({ type: "MOVE_BLOCK_BY_STEP", payload: { id, direction } });
-  }, []);
+    if (!canUseEditorFeature(access, "reorderBlocks")) return;
+    rawDispatch({ type: "MOVE_BLOCK_BY_STEP", payload: { id, direction } });
+  }, [access]);
 
   const moveBlockInContainerByStep = useCallback((id: string, direction: "up" | "down") => {
-    dispatch({ type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP", payload: { id, direction } });
-  }, []);
+    if (!canUseEditorFeature(access, "reorderBlocks")) return;
+    rawDispatch({ type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP", payload: { id, direction } });
+  }, [access]);
 
   const save = useCallback(async () => {
-    dispatch({ type: "SET_SAVING", payload: true });
+    if (!canUseEditorFeature(access, "saveWorksheet")) return;
+    rawDispatch({ type: "SET_SAVING", payload: true });
     try {
       const method = state.worksheetId ? "PUT" : "POST";
       const url = state.worksheetId
@@ -725,7 +787,7 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
       });
       const data = await res.json();
       if (!state.worksheetId && data.id) {
-        dispatch({
+        rawDispatch({
           type: "LOAD_WORKSHEET",
           payload: {
             id: data.id,
@@ -739,15 +801,15 @@ export function EditorProvider({ children, apiEndpoint = "/api/worksheets", edit
         // Update URL without reload
         window.history.replaceState(null, "", `${editorBasePath}/${data.id}`);
       }
-      dispatch({ type: "MARK_SAVED" });
+      rawDispatch({ type: "MARK_SAVED" });
     } catch (err) {
       console.error("Save failed:", err);
-      dispatch({ type: "SET_SAVING", payload: false });
+      rawDispatch({ type: "SET_SAVING", payload: false });
     }
-  }, [apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
+  }, [access, apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
 
   return (
-    <EditorContext.Provider value={{ state, dispatch, addBlock, canAddBlockType, duplicateBlock, moveBlockByStep, moveBlockInContainerByStep, save }}>
+    <EditorContext.Provider value={{ state, access, dispatch, addBlock, canAddBlockType, duplicateBlock, moveBlockByStep, moveBlockInContainerByStep, save }}>
       {children}
     </EditorContext.Provider>
   );

@@ -23,20 +23,20 @@ model Folder {
 
 model Worksheet {
   id           String    @id @default(cuid())
-  type         String    @default("worksheet") // "worksheet" | "flashcards" | future types
   title        String    @default("Untitled Worksheet")
   description  String?
   slug         String    @unique
   blocks       Json      @default("[]")
   settings     Json      @default("{}")
   published    Boolean   @default(false)
-  thumbnail    String? // base64 data URL of first-page preview
-  translations Json      @default("{}") // { en: { "block.id.content": "..." }, _source: { ... } }
-  translatedAt DateTime? // last translation timestamp
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   folderId     String?
   userId       String?
+  type         String    @default("worksheet")
+  thumbnail    String?
+  translatedAt DateTime?
+  translations Json      @default("{}")
   folder       Folder?   @relation(fields: [folderId], references: [id])
 
   @@index([slug])
@@ -49,15 +49,15 @@ model EBook {
   id            String   @id @default(cuid())
   title         String   @default("Untitled E-Book")
   slug          String   @unique
-  chapters      Json     @default("[]") // Array of EBookChapter objects
-  coverSettings Json     @default("{}") // EBookCoverSettings
-  settings      Json     @default("{}") // EBookSettings
+  chapters      Json     @default("[]")
+  coverSettings Json     @default("{}")
+  settings      Json     @default("{}")
   published     Boolean  @default(false)
-  thumbnail     String? // base64 data URL of first-page preview
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   folderId      String?
   userId        String?
+  thumbnail     String?
 
   @@index([slug])
   @@index([folderId])
@@ -68,18 +68,18 @@ model Course {
   id                String    @id @default(cuid())
   title             String    @default("Untitled Course")
   slug              String    @unique
-  structure         Json      @default("[]") // Array of CourseModule objects (Module → Topic → Lesson)
-  coverSettings     Json      @default("{}") // CourseCoverSettings
-  settings          Json      @default("{}") // CourseSettings
+  structure         Json      @default("[]")
+  coverSettings     Json      @default("{}")
+  settings          Json      @default("{}")
   published         Boolean   @default(false)
-  thumbnail         String? // base64 data URL of first-page preview
-  translations      Json      @default("{}") // { en: { structure, coverSettings, settings }, uk: { ... } }
-  i18nexusNamespace String? // i18nexus namespace title for this course
-  translatedAt      DateTime? // last sync timestamp
+  thumbnail         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   folderId          String?
   userId            String?
+  i18nexusNamespace String?
+  translatedAt      DateTime?
+  translations      Json      @default("{}")
 
   @@index([slug])
   @@index([folderId])
@@ -90,8 +90,8 @@ model Presentation {
   id        String   @id @default(cuid())
   title     String   @default("Untitled Presentation")
   slug      String   @unique
-  blocks    Json     @default("[]") // WorksheetBlock[] with page-break as slide dividers
-  settings  Json     @default("{}") // PresentationSettings
+  blocks    Json     @default("[]")
+  settings  Json     @default("{}")
   published Boolean  @default(false)
   thumbnail String?
   createdAt DateTime @default(now())
@@ -102,30 +102,6 @@ model Presentation {
   @@index([slug])
   @@index([folderId])
   @@index([userId])
-}
-
-enum AiToolRunStatus {
-  ACTIVE
-  COMPLETED
-  ERROR
-  ARCHIVED
-}
-
-enum AiToolMessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
-
-enum AiToolMessageKind {
-  USER_TEXT
-  ASSISTANT_TEXT
-  QUESTION_CARD
-  ANSWER_CARD
-  REVIEW_CARD
-  RESULT_CARD
-  ERROR_CARD
-  SYSTEM_STATUS
 }
 
 model AiToolRun {
@@ -171,127 +147,121 @@ model AiToolMessage {
 
 model VerbCache {
   id         String   @id @default(cuid())
-  infinitive String   @unique // normalised: trimmed, lowercased (e.g. "sich vorstellen")
-  data       Json // full VerbConjugationTable including highlights
+  infinitive String   @unique
+  data       Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([infinitive])
 }
 
-// ── Brand profiles ───────────────────────────────────────────────────
+model AppUserAccess {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  email     String?
+  name      String?
+  role      String   @default("bronze")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+model RoleAccess {
+  role      String   @id
+  settings  Json     @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt
+}
 
 model BrandProfile {
-  id   String @id @default(cuid())
-  name String // display name (e.g. "edoomio")
-  slug String @unique // machine key, replaces old Brand union
-
-  // Typography
-  bodyFont                 String @default("Asap Condensed, sans-serif")
-  headlineFont             String @default("Asap Condensed, sans-serif")
-  headlineWeight           Int    @default(700)
-  subHeadlineFont          String @default("Asap Condensed, sans-serif")
-  subHeadlineWeight        Int    @default(700)
-  headerFooterFont         String @default("Asap Condensed, sans-serif")
-  exampleTextFont          String @default("")
-  googleFontsUrl           String @default("")
-  translationFontOverrides Json   @default("{}")
-
-  // Font sizes & weights per heading level and text base (CSS values, e.g. "28px", "1.75rem")
-  h1Size       String? // e.g. "28px" or "1.75rem"
-  h1Weight     Int? // e.g. 700
-  h2Size       String? // e.g. "24px"
-  h2Weight     Int? // e.g. 700
-  h3Size       String? // e.g. "21px"
-  h3Weight     Int? // e.g. 800
-  h1NumberFormat String? // numbers | numbers-leading-zero | letters-uppercase | letters-lowercase
-  h2NumberFormat String?
-  h3NumberFormat String?
-  h4NumberFormat String?
-  itemNumberFormat String? @default("default") // default | numbers-with-period
-  h1HeadingColor String? // default | primary | accent
-  h2HeadingColor String?
-  h3HeadingColor String?
-  h4HeadingColor String?
-  h1HeadingNumberColor String? // default | primary | accent
-  h2HeadingNumberColor String?
-  h3HeadingNumberColor String?
-  h4HeadingNumberColor String?
-  textBaseSize String? // e.g. "21px" or "1.3125rem"
-
-  // Colors
-  primaryColor String  @default("#1a1a1a")
-  accentColor  String?
-  interactiveColor String @default("#0ea5e9")
-  instructionBadgeStyle String? @default("default")
-  instructionBadgeColor String?
-
-  // Assets
-  logo     String  @default("") // URL or base64 data URL
-  iconLogo String? // small icon version
-  favicon  String? // URL or base64 data URL
-
-  // Layout defaults
-  organization String @default("")
-  teacher      String @default("")
-  headerRight  String @default("")
-  footerLeft   String @default("")
-  footerCenter String @default("")
-  footerRight  String @default("")
-
-  // PDF settings
-  pdfFontSize         Float? // font size override for PDF output
-  pdfTranslationScale Float? // scale factor for translated text (0-1)
-
-  // Game settings (JSON, e.g. { kartenpaare: { itemABackImage, itemBBackImage } })
-  gameSettings Json @default("{}")
-
-  // Meta
-  pageTitle String? // custom browser tab title
-
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  clients     Client[]
-  subProfiles BrandSubProfile[]
+  id                       String            @id @default(cuid())
+  name                     String
+  slug                     String            @unique
+  bodyFont                 String            @default("Asap Condensed, sans-serif")
+  headlineFont             String            @default("Asap Condensed, sans-serif")
+  headlineWeight           Int               @default(700)
+  subHeadlineFont          String            @default("Asap Condensed, sans-serif")
+  subHeadlineWeight        Int               @default(700)
+  headerFooterFont         String            @default("Asap Condensed, sans-serif")
+  googleFontsUrl           String            @default("")
+  primaryColor             String            @default("#1a1a1a")
+  accentColor              String?
+  logo                     String            @default("")
+  iconLogo                 String?
+  favicon                  String?
+  organization             String            @default("")
+  teacher                  String            @default("")
+  headerRight              String            @default("")
+  footerLeft               String            @default("")
+  footerCenter             String            @default("")
+  footerRight              String            @default("")
+  pdfFontSize              Float?
+  pdfTranslationScale      Float?
+  pageTitle                String?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  h1Size                   String?
+  h1Weight                 Int?
+  h2Size                   String?
+  h2Weight                 Int?
+  h3Size                   String?
+  h3Weight                 Int?
+  textBaseSize             String?
+  translationFontOverrides Json              @default("{}")
+  gameSettings             Json              @default("{}")
+  interactiveColor         String            @default("#0ea5e9")
+  h1NumberFormat           String?
+  h2NumberFormat           String?
+  h3NumberFormat           String?
+  h4NumberFormat           String?
+  h1HeadingColor           String?
+  h2HeadingColor           String?
+  h3HeadingColor           String?
+  h4HeadingColor           String?
+  h1HeadingNumberColor     String?
+  h2HeadingNumberColor     String?
+  h3HeadingNumberColor     String?
+  h4HeadingNumberColor     String?
+  instructionBadgeStyle    String?           @default("default")
+  instructionBadgeColor    String?
+  exampleTextFont          String            @default("")
+  itemNumberFormat         String?           @default("default")
+  subProfiles              BrandSubProfile[]
+  clients                  Client[]
 
   @@index([slug])
 }
 
 model BrandSubProfile {
   id             String       @id @default(cuid())
-  name           String // display name shown in brand select
+  name           String
   brandProfileId String
+  headerLeftV1   String       @default("")
+  headerRightV1  String       @default("")
+  footerLeftV1   String       @default("")
+  footerRightV1  String       @default("")
+  headerLeftV2   String       @default("")
+  headerRightV2  String       @default("")
+  footerLeftV2   String       @default("")
+  footerRightV2  String       @default("")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   brandProfile   BrandProfile @relation(fields: [brandProfileId], references: [id], onDelete: Cascade)
-
-  // Variant 1 — multiline (detailed header/footer)
-  headerLeftV1  String @default("")
-  headerRightV1 String @default("")
-  footerLeftV1  String @default("")
-  footerRightV1 String @default("")
-
-  // Variant 2 — single line (compact header/footer)
-  headerLeftV2  String @default("")
-  headerRightV2 String @default("")
-  footerLeftV2  String @default("")
-  footerRightV2 String @default("")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([brandProfileId])
 }
-
-// ── Multi-tenant project system ──────────────────────────────────────
 
 model Client {
   id             String        @id @default(cuid())
   name           String
   slug           String        @unique
-  brandSettings  Json          @default("{}") // legacy — migrating to brandProfile
-  brandProfileId String?
-  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id])
+  brandSettings  Json          @default("{}")
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id])
   projects       Project[]
 
   @@index([slug])
@@ -301,9 +271,9 @@ model Client {
 model Project {
   id        String           @id @default(cuid())
   name      String
-  slug      String           @unique // used as subdomain: slug.domain.com
+  slug      String           @unique
   clientId  String
-  domain    String?          @unique // optional custom domain
+  domain    String?          @unique
   settings  Json             @default("{}")
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
@@ -314,19 +284,11 @@ model Project {
   @@index([clientId])
 }
 
-enum ContentType {
-  WORKSHEET
-  EBOOK
-  COURSE
-  AI_TOOL
-  PRESENTATION
-}
-
 model ProjectContent {
   id          String      @id @default(cuid())
   projectId   String
   contentType ContentType
-  contentId   String // references Worksheet.id, EBook.id, Course.id, Presentation.id, or AI tool registry key
+  contentId   String
   createdAt   DateTime    @default(now())
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -335,17 +297,15 @@ model ProjectContent {
   @@index([projectId])
 }
 
-// ── Flashcard Collections ────────────────────────────────────────────
-
 model FlashcardCollection {
-  id          String                    @id @default(cuid())
+  id          String                   @id @default(cuid())
   userId      String
-  slug        String                    @unique
+  slug        String                   @unique
   title       String
   description String?
-  published   Boolean                   @default(true)
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  published   Boolean                  @default(true)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
   sets        FlashcardCollectionSet[]
 
   @@index([slug])
@@ -353,14 +313,46 @@ model FlashcardCollection {
 }
 
 model FlashcardCollectionSet {
-  id           String                @id @default(cuid())
+  id           String              @id @default(cuid())
   collectionId String
   worksheetId  String
   order        Int
-  addedAt      DateTime              @default(now())
-  collection   FlashcardCollection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  addedAt      DateTime            @default(now())
+  collection   FlashcardCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
   @@unique([collectionId, worksheetId])
   @@index([collectionId])
   @@index([worksheetId])
+}
+
+enum AiToolRunStatus {
+  ACTIVE
+  COMPLETED
+  ERROR
+  ARCHIVED
+}
+
+enum AiToolMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum AiToolMessageKind {
+  USER_TEXT
+  ASSISTANT_TEXT
+  QUESTION_CARD
+  ANSWER_CARD
+  REVIEW_CARD
+  RESULT_CARD
+  ERROR_CARD
+  SYSTEM_STATUS
+}
+
+enum ContentType {
+  WORKSHEET
+  EBOOK
+  COURSE
+  AI_TOOL
+  PRESENTATION
 }
