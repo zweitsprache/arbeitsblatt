@@ -28,20 +28,154 @@ function deterministicShuffle<T>(items: T[], rand: () => number): T[] {
 
 type SpellingRowItem = { text: string; isOriginal: boolean };
 
+function getProtectedDigitIndexSet(
+  input: string,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
+): Set<number> {
+  const digitIndices = Array.from(input)
+    .map((char, index) => (/\d/.test(char) ? index : -1))
+    .filter((index) => index >= 0);
+  const leftProtectedCount = Math.max(0, Math.min(digitIndices.length, keepLeftCharacters));
+  const rightProtectedCount = Math.max(0, Math.min(digitIndices.length - leftProtectedCount, keepRightCharacters));
+  const protectedIndices = new Set<number>();
+
+  for (const index of digitIndices.slice(0, leftProtectedCount)) {
+    protectedIndices.add(index);
+  }
+
+  for (const index of digitIndices.slice(digitIndices.length - rightProtectedCount)) {
+    protectedIndices.add(index);
+  }
+
+  return protectedIndices;
+}
+
+function buildSingleNumberTypo(
+  input: string,
+  seedKey: string,
+  protectedIndices: Set<number>,
+): string {
+  const chars = Array.from(input);
+  const mutableDigitIndices = chars
+    .map((char, index) => (/\d/.test(char) && !protectedIndices.has(index) ? index : -1))
+    .filter((index) => index >= 0);
+  const fallbackDigitIndices = chars
+    .map((char, index) => (/\d/.test(char) ? index : -1))
+    .filter((index) => index >= 0);
+  const candidateIndices = mutableDigitIndices.length > 0 ? mutableDigitIndices : fallbackDigitIndices;
+
+  if (candidateIndices.length === 0) {
+    return input;
+  }
+
+  const rand = mulberry32(hashString(`${seedKey}:number-typo`));
+  const digitIndex = candidateIndices[Math.floor(rand() * candidateIndices.length)];
+  const currentDigit = chars[digitIndex] ?? "0";
+  chars[digitIndex] = currentDigit === "9" ? "0" : String(Number(currentDigit) + 1);
+  return chars.join("");
+}
+
+function jumbleNumber(
+  input: string,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
+  seedKey: string,
+): string {
+  const chars = Array.from(input);
+  const protectedIndices = getProtectedDigitIndexSet(input, keepLeftCharacters, keepRightCharacters);
+  const mutableDigitIndices = chars
+    .map((char, index) => (/\d/.test(char) && !protectedIndices.has(index) ? index : -1))
+    .filter((index) => index >= 0);
+
+  if (mutableDigitIndices.length <= 1) {
+    return buildSingleNumberTypo(input, seedKey, protectedIndices);
+  }
+
+  const digitsToShuffle = mutableDigitIndices.map((index) => chars[index]);
+  const rand = mulberry32(hashString(`${seedKey}:number-shuffle`));
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const shuffledDigits = deterministicShuffle(digitsToShuffle, rand);
+    const nextChars = [...chars];
+    mutableDigitIndices.forEach((charIndex, index) => {
+      nextChars[charIndex] = shuffledDigits[index] ?? nextChars[charIndex];
+    });
+    const candidate = nextChars.join("");
+    if (candidate !== input) {
+      return candidate;
+    }
+  }
+
+  const rotatedDigits = [...digitsToShuffle.slice(1), digitsToShuffle[0]];
+  const fallbackChars = [...chars];
+  mutableDigitIndices.forEach((charIndex, index) => {
+    fallbackChars[charIndex] = rotatedDigits[index] ?? fallbackChars[charIndex];
+  });
+  const fallback = fallbackChars.join("");
+  if (fallback !== input) {
+    return fallback;
+  }
+
+  return buildSingleNumberTypo(input, seedKey, protectedIndices);
+}
+
+function shiftCharacter(char: string): string {
+  if (char >= "a" && char <= "y") return String.fromCharCode(char.charCodeAt(0) + 1);
+  if (char === "z") return "a";
+  if (char >= "A" && char <= "Y") return String.fromCharCode(char.charCodeAt(0) + 1);
+  if (char === "Z") return "A";
+  return char === "x" ? "y" : "x";
+}
+
+function buildSingleWordTypo(
+  word: string,
+  startIndex: number,
+  endIndex: number,
+  seedKey: string,
+): string {
+  const chars = word.split("");
+  const rand = mulberry32(hashString(`${seedKey}:typo`));
+  const mutableIndices = Array.from(
+    { length: Math.max(0, endIndex - startIndex) },
+    (_, index) => startIndex + index,
+  );
+  const eligibleIndices = mutableIndices.length > 0
+    ? mutableIndices
+    : Array.from({ length: chars.length }, (_, index) => index);
+
+  if (eligibleIndices.length === 0) {
+    return word;
+  }
+
+  const typoIndex = eligibleIndices[Math.floor(rand() * eligibleIndices.length)];
+  const originalChar = chars[typoIndex] ?? "";
+  const neighborChars = [chars[typoIndex - 1], chars[typoIndex + 1]].filter(
+    (char): char is string => typeof char === "string" && char.length > 0 && char !== originalChar,
+  );
+  const replacement = neighborChars[0] ?? shiftCharacter(originalChar);
+  chars[typoIndex] = replacement;
+  const candidate = chars.join("");
+
+  return candidate === word ? `${word}${replacement}` : candidate;
+}
+
 function jumbleSingleWord(
   word: string,
-  keepFirstLetter: boolean,
-  keepLastLetter: boolean,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
   seedKey: string,
 ): string {
   if (word.length <= 1) return word;
 
   const chars = word.split("");
-  const startIndex = keepFirstLetter ? 1 : 0;
-  const endIndex = keepLastLetter ? chars.length - 1 : chars.length;
+  const startIndex = Math.max(0, Math.min(chars.length, keepLeftCharacters));
+  const endIndex = Math.max(startIndex, chars.length - Math.max(0, Math.min(chars.length - startIndex, keepRightCharacters)));
   const middle = chars.slice(startIndex, endIndex);
 
-  if (middle.length <= 1) return word;
+  if (middle.length <= 1) {
+    return buildSingleWordTypo(word, startIndex, endIndex, seedKey);
+  }
 
   const rand = mulberry32(hashString(seedKey));
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -60,7 +194,9 @@ function jumbleSingleWord(
     ...rotated,
     ...chars.slice(endIndex),
   ].join("");
-  return fallback === word ? word : fallback;
+  if (fallback !== word) return fallback;
+
+  return buildSingleWordTypo(word, startIndex, endIndex, seedKey);
 }
 
 function applyWordOrder(
@@ -84,23 +220,23 @@ function applyWordOrder(
 
 function jumbleWord(
   word: string,
-  keepFirstLetter: boolean,
-  keepLastLetter: boolean,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
   seedKey: string,
 ): string {
   if (!/\s/.test(word)) {
-    return jumbleSingleWord(word, keepFirstLetter, keepLastLetter, seedKey);
+    return jumbleSingleWord(word, keepLeftCharacters, keepRightCharacters, seedKey);
   }
 
   const segments = word.split(/(\s+)/).filter((segment) => segment.length > 0);
   const wordSegments = segments.filter((segment) => !/^\s+$/.test(segment));
 
   if (wordSegments.length <= 1) {
-    return jumbleSingleWord(word, keepFirstLetter, keepLastLetter, seedKey);
+    return jumbleSingleWord(word, keepLeftCharacters, keepRightCharacters, seedKey);
   }
 
   const jumbledWords = wordSegments.map((segment, index) =>
-    jumbleSingleWord(segment, keepFirstLetter, keepLastLetter, `${seedKey}:word:${index}`),
+    jumbleSingleWord(segment, keepLeftCharacters, keepRightCharacters, `${seedKey}:word:${index}`),
   );
 
   const originalOrderCandidate = applyWordOrder(segments, jumbledWords);
@@ -128,23 +264,26 @@ function jumbleWord(
 
 export function buildCorrectSpellingRow(
   word: string,
-  keepFirstLetter: boolean,
-  keepLastLetter: boolean,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
   seedKey: string,
   slotCount = 10,
 ): SpellingRowItem[] {
   const safeSlotCount = Math.max(1, slotCount);
-  const rand = mulberry32(hashString(seedKey));
-  const minOriginals = Math.max(1, Math.ceil(safeSlotCount * 0.3));
-  const maxOriginals = Math.max(minOriginals, Math.floor(safeSlotCount * 0.5));
-  const originalCount = minOriginals + Math.floor(rand() * (maxOriginals - minOriginals + 1));
-  const originalPositions = new Set(
-    deterministicShuffle(
-      Array.from({ length: Math.max(0, safeSlotCount - 1) }, (_, index) => index + 1),
+  const rand = mulberry32(hashString(`${seedKey}:originals`));
+  const additionalOriginalCount = Math.max(1, Math.round(Math.max(0, safeSlotCount - 1) / 3));
+  const originalPositions = new Set<number>([0]);
+
+  if (safeSlotCount > 1) {
+    const shuffledPositions = deterministicShuffle(
+      Array.from({ length: safeSlotCount - 1 }, (_, index) => index + 1),
       rand,
-    ).slice(0, Math.max(0, originalCount - 1)),
-  );
-  originalPositions.add(0);
+    );
+
+    for (const position of shuffledPositions.slice(0, additionalOriginalCount)) {
+      originalPositions.add(position);
+    }
+  }
 
   return Array.from({ length: safeSlotCount }, (_, index) => {
     if (originalPositions.has(index)) {
@@ -152,7 +291,42 @@ export function buildCorrectSpellingRow(
     }
 
     return {
-      text: jumbleWord(word, keepFirstLetter, keepLastLetter, `${seedKey}:${index}`),
+      text: jumbleWord(word, keepLeftCharacters, keepRightCharacters, `${seedKey}:${index}`),
+      isOriginal: false,
+    };
+  });
+}
+
+export function buildCorrectNumbersRow(
+  value: string,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
+  seedKey: string,
+  slotCount = 10,
+): SpellingRowItem[] {
+  const safeSlotCount = Math.max(1, slotCount);
+  const rand = mulberry32(hashString(`${seedKey}:originals`));
+  const additionalOriginalCount = Math.max(1, Math.round(Math.max(0, safeSlotCount - 1) / 3));
+  const originalPositions = new Set<number>([0]);
+
+  if (safeSlotCount > 1) {
+    const shuffledPositions = deterministicShuffle(
+      Array.from({ length: safeSlotCount - 1 }, (_, index) => index + 1),
+      rand,
+    );
+
+    for (const position of shuffledPositions.slice(0, additionalOriginalCount)) {
+      originalPositions.add(position);
+    }
+  }
+
+  return Array.from({ length: safeSlotCount }, (_, index) => {
+    if (originalPositions.has(index)) {
+      return { text: value, isOriginal: true };
+    }
+
+    return {
+      text: jumbleNumber(value, keepLeftCharacters, keepRightCharacters, `${seedKey}:${index}`),
       isOriginal: false,
     };
   });
@@ -160,8 +334,8 @@ export function buildCorrectSpellingRow(
 
 function getMissingLetterIndices(
   word: string,
-  keepFirstLetter: boolean,
-  keepLastLetter: boolean,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
 ): number[] {
   const chars = Array.from(word);
   const candidateIndices = chars
@@ -174,12 +348,15 @@ function getMissingLetterIndices(
 
   let eligibleIndices = [...candidateIndices];
 
-  if (keepFirstLetter && eligibleIndices.length > 0) {
-    eligibleIndices = eligibleIndices.slice(1);
+  const leftProtectedCount = Math.max(0, Math.min(eligibleIndices.length, keepLeftCharacters));
+  const rightProtectedCount = Math.max(0, Math.min(eligibleIndices.length - leftProtectedCount, keepRightCharacters));
+
+  if (leftProtectedCount > 0 && eligibleIndices.length > 0) {
+    eligibleIndices = eligibleIndices.slice(leftProtectedCount);
   }
 
-  if (keepLastLetter && eligibleIndices.length > 0) {
-    eligibleIndices = eligibleIndices.slice(0, -1);
+  if (rightProtectedCount > 0 && eligibleIndices.length > 0) {
+    eligibleIndices = eligibleIndices.slice(0, Math.max(0, eligibleIndices.length - rightProtectedCount));
   }
 
   return eligibleIndices.length > 0 ? eligibleIndices : candidateIndices;
@@ -194,13 +371,13 @@ function buildMissingLetterVariant(word: string, index: number): string {
 
 export function buildMissingLettersRow(
   word: string,
-  keepFirstLetter: boolean,
-  keepLastLetter: boolean,
+  keepLeftCharacters: number,
+  keepRightCharacters: number,
   seedKey: string,
   slotCount = 10,
 ): SpellingRowItem[] {
   const safeSlotCount = Math.max(1, slotCount);
-  const eligibleIndices = getMissingLetterIndices(word, keepFirstLetter, keepLastLetter);
+  const eligibleIndices = getMissingLetterIndices(word, keepLeftCharacters, keepRightCharacters);
 
   if (eligibleIndices.length === 0) {
     return Array.from({ length: safeSlotCount }, (_, index) => ({

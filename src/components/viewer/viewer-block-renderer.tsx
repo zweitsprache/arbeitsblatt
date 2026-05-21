@@ -44,6 +44,7 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
+  CorrectNumbersBlock,
   MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
@@ -89,7 +90,7 @@ import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
-import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
+import { buildCorrectNumbersRow, buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { getCardPairDisplayText, getCardPairItems, getCardPairs, getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike, RoughRoundedRectHighlights, RoughSvgPaths } from "@/components/ui/rough-example-circle";
 import { findWordSearchPlacements } from "@/lib/word-search";
@@ -2597,7 +2598,7 @@ function ImageTextTableView({ block, accentColor, mode, instructionIndex, showSo
           );
         })}
       </div>
-      <div className="space-y-2">
+      <div className={block.twoWritingColumns ? "grid grid-cols-2 gap-x-4 gap-y-2" : "space-y-2"}>
         {block.items.map((item, index) => (
           <div key={item.id} className="image-text-table-row grid grid-cols-[auto_1fr] gap-2 items-end">
             <span className="text-cv-base font-medium text-muted-foreground">{index + 1}.</span>
@@ -4147,6 +4148,12 @@ function renderMissingLetterText(
     const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
     const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
     const shouldRenderSolution = showSolutionsOnRemainingBlanks && answer.trim() !== "" && !shouldRenderExample;
+    const blankShellStyle: React.CSSProperties = {
+      minHeight: "1.25rem",
+      lineHeight: "1.25rem",
+      ...getBlankWidthStyle(width, false),
+      ...spacing.style,
+    };
 
     if (shouldRenderExample) {
       exampleShown = true;
@@ -4154,7 +4161,7 @@ function renderMissingLetterText(
         <span
           key={index}
           className={`relative inline-flex rounded-[3px] bg-gray-100 align-middle overflow-hidden ${spacing.className}`}
-          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+          style={blankShellStyle}
         >
           <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
           <span
@@ -4179,7 +4186,7 @@ function renderMissingLetterText(
         <span
           key={index}
           className={`relative inline-flex rounded-[3px] bg-gray-100 align-middle overflow-hidden ${spacing.className}`}
-          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+          style={blankShellStyle}
         >
           <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
           <span
@@ -4203,9 +4210,10 @@ function renderMissingLetterText(
       <span
         key={index}
         aria-hidden="true"
-        className={`inline-flex rounded-[3px] bg-gray-100 align-middle ${spacing.className}`}
-        style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+        className={`relative inline-flex rounded-[3px] bg-gray-100 align-middle overflow-hidden ${spacing.className}`}
+        style={blankShellStyle}
       >
+        <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
         <span className="sr-only">missing letter</span>
       </span>
     );
@@ -4666,7 +4674,7 @@ function ArticleTrainingView({
                   )}
                 </div>
               ))}
-              <span className="flex-1">{item.text}</span>
+              <span className={`flex-1${showSolutions && !interactive ? " text-green-700 font-semibold" : ""}`}>{item.text}</span>
               {block.showWritingLine && (
                 <div className="flex-1">
                   {isOnline && interactive ? (
@@ -4679,7 +4687,9 @@ function ArticleTrainingView({
                       style={{ backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10) }}
                     />
                   ) : showSolutions ? (
-                    <span className="text-green-800 font-semibold text-cv-sm">{item.correctArticle} {item.text}</span>
+                    <span className="text-green-700 font-semibold">
+                      {item.correctArticle} {item.text}
+                    </span>
                   ) : (
                     <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
                   )}
@@ -7811,7 +7821,7 @@ function CorrectSpellingView({
   bodyFontSize,
   instructionIndex,
 }: {
-  block: CorrectSpellingBlock | MissingLettersBlock;
+  block: CorrectSpellingBlock | CorrectNumbersBlock | MissingLettersBlock;
   mode: ViewMode;
   interactive: boolean;
   answer: unknown;
@@ -7826,7 +7836,13 @@ function CorrectSpellingView({
   const isOnline = mode === "online";
   const fontFamily = bodyFont || "inherit";
   const legacyDisplayCount = block.displayCount ?? 10;
-  const buildRow = block.type === "missing-letters" ? buildMissingLettersRow : buildCorrectSpellingRow;
+  const buildRow = block.type === "missing-letters"
+    ? buildMissingLettersRow
+    : block.type === "correct-numbers"
+      ? buildCorrectNumbersRow
+      : buildCorrectSpellingRow;
+  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
+  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
   const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
 
   const orderedWords = React.useMemo(() => {
@@ -7875,8 +7891,8 @@ function CorrectSpellingView({
           const isExampleRow = item.id === exampleWordId;
           const variants = buildRow(
             item.word,
-            block.keepFirstLetter,
-            block.keepLastLetter,
+            keepLeftCharacters,
+            keepRightCharacters,
             `${block.id}:${item.id}`,
             displayCount,
           );
@@ -7889,8 +7905,9 @@ function CorrectSpellingView({
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
                 {variants.map((variant, variantIndex) =>
                   (() => {
+                    const isCorrectChoiceBlock = block.type === "correct-spelling" || block.type === "correct-numbers";
                     const showExampleChip =
-                      block.type === "correct-spelling" &&
+                      isCorrectChoiceBlock &&
                       isExampleRow &&
                       !exampleChipShown &&
                       variant.isOriginal &&
@@ -7910,13 +7927,13 @@ function CorrectSpellingView({
                     }
 
                     const showSolutionCircle =
-                      block.type === "correct-spelling" &&
+                      isCorrectChoiceBlock &&
                       showSolutions &&
                       variant.isOriginal &&
                       variantIndex !== 0 &&
                       !showExampleChip;
                     const shouldHighlightVariant =
-                      block.type === "correct-spelling"
+                      isCorrectChoiceBlock
                         ? variantIndex === 0
                         : variantIndex === 0 || (showSolutions && variant.isOriginal);
                     const highlightClass = "text-green-700 border-green-300 bg-green-50";
@@ -9100,6 +9117,11 @@ function DialogueView({
                 {renderSpeakerIcon(item.icon)}
               </span>
             )}
+            {block.showSpeakers ? (
+              <span className="w-20 shrink-0 font-semibold leading-5">
+                {item.speaker || "\u00A0"}
+              </span>
+            ) : null}
             {block.showOriginal ? (
               <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
                 <div className="min-w-0 flex flex-wrap items-center">
@@ -10478,6 +10500,8 @@ export function ViewerBlockRenderer({
           instructionIndex={instructionIndex}
         />
       );
+    case "correct-spelling":
+    case "correct-numbers":
     case "missing-letters":
       return (
         <CorrectSpellingView

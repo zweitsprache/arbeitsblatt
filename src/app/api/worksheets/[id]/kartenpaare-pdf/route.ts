@@ -201,7 +201,9 @@ function buildPage(
   mode: "A" | "B" | "A-back" | "B-back",
   worksheetId: string,
   cardNumbers: number[],
-  brand: BrandInfo
+  brand: BrandInfo,
+  pageNumber: number,
+  totalDocumentPages: number
 ): string {
   const start = pageIndex * GRID_CELLS;
   const pageCards = cards.slice(start, start + GRID_CELLS);
@@ -260,15 +262,16 @@ function buildPage(
     brand.footerRight,
     `{worksheet_uuid}<br/>${currentDate}`
   );
+  const footerCenterText = `${pageNumber}/${totalDocumentPages}`;
 
   const headerHtml = `<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;padding:10mm 15mm 0 15mm;z-index:10;">
     <img src="${brand.logoUrl}" style="width:6mm;height:auto;" />
   </div>`;
 
-  const footerHtml = `<div style="position:absolute;bottom:0;left:0;width:100%;height:25mm;padding:0 15mm 8mm 15mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-end;font-size:7pt;font-family:${footerFont};font-weight:400;line-height:1.5;color:#666;z-index:10;">
-    <div class="footer-col" style="flex:1;min-width:0;text-align:left;">${footerLeftText}</div>
-    <div class="footer-col" style="flex:1;min-width:0;"></div>
-    <div class="footer-col" style="flex:1;min-width:0;text-align:right;">${footerRightText}</div>
+  const footerHtml = `<div style="position:absolute;bottom:0;left:0;width:100%;height:25mm;padding:0 15mm 8mm 15mm;box-sizing:border-box;display:flex;align-items:flex-end;font-size:7pt;font-family:${footerFont};font-weight:400;line-height:1.5;color:#666;z-index:10;">
+    <div class="footer-col" style="width:45%;min-width:0;text-align:left;">${footerLeftText}</div>
+    <div class="footer-col" style="width:10%;min-width:0;text-align:center;">${footerCenterText}</div>
+    <div class="footer-col" style="width:45%;min-width:0;text-align:right;">${footerRightText}</div>
   </div>`;
 
   return `<div class="page">
@@ -288,15 +291,17 @@ function buildFullHtml(
   brand: BrandInfo
 ): string {
   const totalPages = Math.ceil(cards.length / GRID_CELLS);
+  const totalDocumentPages = totalPages * 4;
   const cardNumbers = assignCardNumbers(cards.length, worksheetId);
   let pagesHtml = "";
 
   // Per-batch sequence for duplex printing: A-front → A-back → B-front → B-back
   for (let i = 0; i < totalPages; i++) {
-    pagesHtml += buildPage(cards, i, "A", worksheetId, cardNumbers, brand);
-    pagesHtml += buildPage(cards, i, "A-back", worksheetId, cardNumbers, brand);
-    pagesHtml += buildPage(cards, i, "B", worksheetId, cardNumbers, brand);
-    pagesHtml += buildPage(cards, i, "B-back", worksheetId, cardNumbers, brand);
+    const pageOffset = i * 4;
+    pagesHtml += buildPage(cards, i, "A", worksheetId, cardNumbers, brand, pageOffset + 1, totalDocumentPages);
+    pagesHtml += buildPage(cards, i, "A-back", worksheetId, cardNumbers, brand, pageOffset + 2, totalDocumentPages);
+    pagesHtml += buildPage(cards, i, "B", worksheetId, cardNumbers, brand, pageOffset + 3, totalDocumentPages);
+    pagesHtml += buildPage(cards, i, "B-back", worksheetId, cardNumbers, brand, pageOffset + 4, totalDocumentPages);
   }
 
   const fontsLink = brand.googleFontsUrl

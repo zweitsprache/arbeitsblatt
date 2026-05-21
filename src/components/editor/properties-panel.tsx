@@ -69,6 +69,7 @@ import {
   SortingCategoriesBlock,
   SortingCategory,
   CorrectSpellingBlock,
+  CorrectNumbersBlock,
   MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
@@ -205,8 +206,8 @@ function ChInput({
   };
 
   const wrapperClass = hasOverride
-    ? "border-l-2 border-l-amber-400 pl-1"
-    : "";
+    ? "w-full border-l-2 border-l-amber-400 pl-1"
+    : "w-full";
 
   const inputEl = multiline ? (
     <textarea
@@ -216,11 +217,11 @@ function ChInput({
       placeholder={placeholder}
     />
   ) : (
-    <div className="flex items-center gap-1">
+    <div className="flex w-full min-w-0 items-center gap-1">
       <Input
         value={effectiveValue}
         onChange={(e) => handleChange(e.target.value)}
-        className={`${className || ""} ${hasOverride ? "bg-amber-50/50" : ""} flex-1`}
+        className={`${className || ""} ${hasOverride ? "bg-amber-50/50" : ""} min-w-0 flex-1`}
         placeholder={placeholder}
       />
       {hasOverride && (
@@ -1088,6 +1089,18 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
             dispatch({
               type: "UPDATE_BLOCK",
               payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("twoWritingColumns")}</Label>
+        <Switch
+          checked={block.twoWritingColumns ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { twoWritingColumns: checked } },
             })
           }
         />
@@ -1997,9 +2010,65 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const isPronunciation = block.type === "pronunciation";
+  const [aiPrompt, setAiPrompt] = React.useState("");
+  const [aiError, setAiError] = React.useState<string | null>(null);
+  const [aiMode, setAiMode] = React.useState<"replace" | "append">("replace");
+  const [isGeneratingAi, setIsGeneratingAi] = React.useState(false);
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleAiGenerate = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt || isGeneratingAi) return;
+
+    setAiError(null);
+    setIsGeneratingAi(true);
+
+    try {
+      const res = await authFetch("/api/ai/generate-matching", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          blockType: block.type,
+          existingPairs: block.pairs.slice(0, 8),
+          leftHeader: isPronunciation ? block.leftHeader : undefined,
+          rightHeader: isPronunciation ? block.rightHeader : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || tc("generationFailed"));
+      }
+
+      const generatedPairs = (data.pairs as { left: string; right: string }[]).map((pair, index) => ({
+        id: `p${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+        left: pair.left,
+        right: pair.right,
+      }));
+
+      const pairs = aiMode === "append"
+        ? [...block.pairs, ...generatedPairs]
+        : generatedPairs;
+
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: {
+          id: block.id,
+          updates: {
+            pairs,
+            ...(aiMode === "replace" ? { pairOrder: undefined } : {}),
+          },
+        },
+      });
+      setAiPrompt("");
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : tc("generationFailed"));
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const handleCsvImport = () => {
     setCsvError(null);
@@ -2260,6 +2329,53 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
             {t("resetOrder")}
           </Button>
         )}
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("aiMatchingHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[88px] resize-y"
+          placeholder={t("aiMatchingPromptPlaceholder")}
+          value={aiPrompt}
+          onChange={(e) => {
+            setAiPrompt(e.target.value);
+            setAiError(null);
+          }}
+        />
+        {aiError && (
+          <p className="text-xs text-destructive mt-1">{aiError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={aiMode}
+            onValueChange={(value) => setAiMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleAiGenerate}
+            disabled={!aiPrompt.trim() || isGeneratingAi}
+          >
+            {isGeneratingAi ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            {t("aiGenerate")}
+          </Button>
+        </div>
       </div>
       <Separator />
       <div>
@@ -5744,6 +5860,23 @@ function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
 
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   const handleCsvImport = () => {
     setCsvError(null);
     const text = csvText.trim();
@@ -5809,8 +5942,8 @@ function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -5823,37 +5956,19 @@ function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
           }
         />
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("articleItems")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("articleItems")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("articleItemCount", { count: block.items.length })}
         </p>
       </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("writingLine")}</Label>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={block.showWritingLine}
-            onCheckedChange={(checked) =>
-              dispatch({
-                type: "UPDATE_BLOCK",
-                payload: { id: block.id, updates: { showWritingLine: checked } },
-              })
-            }
-          />
-          <span className="text-xs text-muted-foreground">{t("showWritingLine")}</span>
-        </div>
-      </div>
-      <Separator />
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground">
           {t("articleCsvImportHelp")}
         </p>
         <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          className="w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
           placeholder={t("articleCsvPlaceholder")}
           value={csvText}
           onChange={(e) => {
@@ -5864,12 +5979,12 @@ function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
         {csvError && (
           <p className="text-xs text-destructive mt-1">{csvError}</p>
         )}
-        <div className="flex gap-1 mt-1">
+        <div className="space-y-2 mt-1">
           <Select
             value={csvMode}
             onValueChange={(v) => setCsvMode(v as "replace" | "append")}
           >
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger size="sm" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -5880,13 +5995,28 @@ function ArticleTrainingProps({ block }: { block: ArticleTrainingBlock }) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="w-full"
             onClick={handleCsvImport}
             disabled={!csvText.trim()}
           >
             <Upload className="h-4 w-4 mr-2" />
             {t("csvImportButton")}
           </Button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("showWritingLine"),
+            block.showWritingLine,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWritingLine: checked } },
+              }),
+            { withTopDivider: true, withBottomBorder: false }
+          )}
         </div>
       </div>
     </div>
@@ -7485,11 +7615,32 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
   );
 }
 
-function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | MissingLettersBlock }) {
+function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | CorrectNumbersBlock | MissingLettersBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const isNumberBlock = block.type === "correct-numbers";
   const legacyDisplayCount = block.displayCount ?? 10;
+  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
+  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const updateKeepCounts = (updates: { keepLeftCharacters?: number; keepRightCharacters?: number }) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          keepLeftCharacters: updates.keepLeftCharacters ?? keepLeftCharacters,
+          keepRightCharacters: updates.keepRightCharacters ?? keepRightCharacters,
+          keepFirstLetter: undefined,
+          keepLastLetter: undefined,
+        },
+      },
+    });
+  };
 
   const updateWord = (index: number, word: string) => {
     const newWords = [...block.words];
@@ -7506,7 +7657,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Missing
       payload: {
         id: block.id,
         updates: {
-          words: [...block.words, { id: `cs${Date.now()}`, word: "word", displayCount: legacyDisplayCount }],
+          words: [...block.words, { id: `cs${Date.now()}`, word: isNumberBlock ? "074 123 45 67" : "word", displayCount: legacyDisplayCount }],
         },
       },
     });
@@ -7537,6 +7688,37 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Missing
     });
   };
 
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const lines = csvText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const importedWords = lines.map((word, index) => ({
+      id: `cs${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+      word,
+      displayCount: legacyDisplayCount,
+    }));
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          words: csvMode === "append" ? [...block.words, ...importedWords] : importedWords,
+          ...(csvMode === "replace" ? { itemOrder: undefined } : {}),
+        },
+      },
+    });
+    setCsvText("");
+  };
+
   return (
     <div className="space-y-3">
       <div>
@@ -7553,29 +7735,31 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Missing
           }
         />
       </div>
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={block.keepFirstLetter}
-          onCheckedChange={(v) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { keepFirstLetter: v } },
-            })
-          }
-        />
+      <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepFirstLetter")}</Label>
-      </div>
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={block.keepLastLetter}
-          onCheckedChange={(v) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { keepLastLetter: v } },
-            })
-          }
+        <Input
+          type="number"
+          min={0}
+          value={String(keepLeftCharacters)}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            updateKeepCounts({ keepLeftCharacters: Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0 });
+          }}
+          className="h-8 text-xs"
         />
+      </div>
+      <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepLastLetter")}</Label>
+        <Input
+          type="number"
+          min={0}
+          value={String(keepRightCharacters)}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            updateKeepCounts({ keepRightCharacters: Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0 });
+          }}
+          className="h-8 text-xs"
+        />
       </div>
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("showFirstAsExample")}</Label>
@@ -7588,6 +7772,42 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Missing
             })
           }
         />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("spellingWordsCsvImportHelp")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={isNumberBlock ? t("correctNumbersCsvPlaceholder") : t("spellingWordsCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(value) => setCsvMode(value as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleCsvImport} disabled={!csvText.trim()}>
+            {t("csvImportButton")}
+          </Button>
+        </div>
       </div>
       <Separator />
       <div className="space-y-2">
@@ -8951,6 +9171,23 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
   const tc = useTranslations("common");
   const brandSlug = state.brandProfile.slug || state.settings.brand || "edoomio";
 
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
   const renderIcon = (icon: DialogueSpeakerIcon) => {
     return <DialogueSpeakerIconGlyph icon={icon} brandSlug={brandSlug} className="w-4 h-4 inline-block object-contain" />;
   };
@@ -9018,8 +9255,8 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -9032,34 +9269,10 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
           }
         />
       </div>
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showWordBank")}</Label>
-        <Switch
-          checked={block.showWordBank ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showWordBank: checked } },
-            })
-          }
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showOriginal")}</Label>
-        <Switch
-          checked={block.showOriginal ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showOriginal: checked } },
-            })
-          }
-        />
-      </div>
       {block.showOriginal && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("colRatio")}</Label>
+          <div className="flex items-center justify-between">
             <Label className="text-sm">{t("colRatio")}</Label>
             <span className="text-xs text-muted-foreground">
               {Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}% / {100 - Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}%
@@ -9085,109 +9298,147 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
           />
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">{t("showFirstAsExample")}</Label>
-        <Switch
-          checked={block.showFirstAsExample ?? false}
-          onCheckedChange={(checked) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { showFirstAsExample: checked } },
-            })
-          }
-        />
-      </div>
-      <Separator />
-      <div>
-        <p className="text-xs text-muted-foreground mb-2">
-          {t("dialogueGapHelp")}
-        </p>
-      </div>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("dialogueItems")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("dialogueItems")}</Label>
         {block.items.map((item, i) => (
-          <div key={item.id} className="space-y-1 border rounded p-2 bg-white">
-            <div className="flex items-center gap-1">
-              {(() => {
-                const currentIcon = DIALOGUE_SPEAKER_ICON_OPTIONS.some((opt) => opt.value === item.icon)
-                  ? item.icon
-                  : "circle";
+          <div key={item.id} className="space-y-1.5 border-b border-border pb-2 last:border-b-0 last:pb-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                {(() => {
+                  const currentIcon = DIALOGUE_SPEAKER_ICON_OPTIONS.some((opt) => opt.value === item.icon)
+                    ? item.icon
+                    : "circle";
 
-                return (
-              <Select
-                value={currentIcon}
-                onValueChange={(v) => updateItem(i, { icon: v as DialogueSpeakerIcon })}
-              >
-                <SelectTrigger className="w-[56px] h-8 text-xs px-1.5">
-                  <SelectValue>
-                    <span className="flex items-center justify-center w-full gap-0">
-                      {renderIcon(currentIcon)}
-                      <span className="sr-only">{currentIcon}</span>
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {DIALOGUE_SPEAKER_ICON_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      <span className="flex items-center gap-2">
-                        {renderIcon(opt.value)}
-                        <span className="sr-only">{opt.label}</span>
+                  return (
+                <Select
+                  value={currentIcon}
+                  onValueChange={(v) => updateItem(i, { icon: v as DialogueSpeakerIcon })}
+                >
+                  <SelectTrigger className="h-8 w-[56px] shrink-0 text-xs px-1.5">
+                    <SelectValue>
+                      <span className="flex items-center justify-center w-full gap-0">
+                        {renderIcon(currentIcon)}
+                        <span className="sr-only">{currentIcon}</span>
                       </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-                );
-              })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIALOGUE_SPEAKER_ICON_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <span className="flex items-center gap-2">
+                          {renderIcon(opt.value)}
+                          <span className="sr-only">{opt.label}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                  );
+                })()}
+                <div className="min-w-0 flex-1">
+                  <ChInput
+                    blockId={block.id}
+                    fieldPath={`items.${i}.speaker`}
+                    baseValue={item.speaker}
+                    onBaseChange={(v) => updateItem(i, { speaker: v })}
+                    className="h-8 w-full text-xs"
+                    placeholder={t("dialogueSpeaker")}
+                  />
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <div className="flex flex-col">
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "up")}
+                    disabled={i === 0}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                  </button>
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "down")}
+                    disabled={i === block.items.length - 1}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => removeItem(i)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0" />
               <ChInput
                 blockId={block.id}
-                fieldPath={`items.${i}.speaker`}
-                baseValue={item.speaker}
-                onBaseChange={(v) => updateItem(i, { speaker: v })}
-                className="h-8 text-xs w-16"
-                placeholder={t("dialogueSpeaker")}
+                fieldPath={`items.${i}.text`}
+                baseValue={item.text}
+                onBaseChange={(v) => updateItem(i, { text: v })}
+                className="h-8 flex-1 text-xs"
+                placeholder={t("dialogueTextPlaceholder")}
               />
-              <div className="flex-1" />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => moveItem(i, "up")}
-                disabled={i === 0}
-              >
-                <ChevronUp className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => moveItem(i, "down")}
-                disabled={i === block.items.length - 1}
-              >
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => removeItem(i)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
             </div>
-            <ChInput
-              blockId={block.id}
-              fieldPath={`items.${i}.text`}
-              baseValue={item.text}
-              onBaseChange={(v) => updateItem(i, { text: v })}
-              className="h-8 text-xs"
-              placeholder={t("dialogueTextPlaceholder")}
-            />
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
         </Button>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("showWordBank"),
+            block.showWordBank ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWordBank: checked } },
+              }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(
+            t("showOriginal"),
+            block.showOriginal ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showOriginal: checked } },
+              })
+          )}
+          {renderSwitchRow(
+            t("showSpeakers"),
+            block.showSpeakers ?? true,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showSpeakers: checked } },
+              })
+          )}
+          {renderSwitchRow(
+            t("showFirstAsExample"),
+            block.showFirstAsExample ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showFirstAsExample: checked } },
+              }),
+            { withBottomBorder: false }
+          )}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-sky-800 uppercase tracking-wider px-2 py-1.5 bg-sky-100 rounded-[4px] block">{tc("notes")}</Label>
+        <p className="text-sm text-muted-foreground">
+          {t("dialogueGapHelp")}
+        </p>
       </div>
     </div>
   );
@@ -12258,6 +12509,7 @@ export function PropertiesPanel() {
       case "sorting-categories":
         return <SortingCategoriesProps block={selectedBlock} />;
       case "correct-spelling":
+      case "correct-numbers":
         return <CorrectSpellingProps block={selectedBlock} />;
       case "missing-letters":
         return <CorrectSpellingProps block={selectedBlock} />;

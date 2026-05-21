@@ -173,6 +173,18 @@ Use this structure for new entries:
 - pattern decided: item-selection editors that combine media, text, and optional icon metadata should split those concerns into separate titled subsections instead of wrapping them in one decorative card; CSV/import controls in the narrow sidebar should stack vertically at full width rather than sharing one compressed action row.
 - follow-up extraction candidate: a shared selected-item editor scaffold with optional image, text, icon, and destructive-action sections for domino, card-pairs, and similar media-backed item blocks.
 
+#### Dialogue
+
+- changed: dialogue props now use titled `INSTRUCTION`, optional `COL RATIO`, `DIALOGUE LINES`, trailing editable `SETTINGS`, and trailing `NOTES` sections instead of raw separators; the notes/help copy now sits below the editable props and uses a distinct section-header color from normal editable sections. Dialogue output can also show a dedicated semibold speaker-name column between the icon and the dialogue text.
+- pattern decided: compact conversation editors should keep behavioral toggles inside the standard divider-based settings group, while each dialogue row should use the same indexed list language as other narrow-sidebar item editors rather than a separate boxed card treatment. When a block includes both normal editable sections and a notes/reference section, `SETTINGS` should be the last editable section immediately above `NOTES` so behavioral toggles stay closest to the end of the editable surface. Optional speaker metadata in rendered dialogue should live in its own fixed column between iconography and content rather than being merged into the main dialogue text flow.
+- follow-up extraction candidate: a shared indexed dialogue-row editor with pluggable leading controls for icon metadata and compact reorder/delete actions.
+
+#### Article Training
+
+- changed: article-training props now use the same compact titled sections as the newer editors, with `INSTRUCTION`, `NOUNS`, `CSV IMPORT`, and trailing `SETTINGS` instead of separator-driven stacks; the writing-line toggle now lives in the standard divider-row settings section. The inline article-training editor no longer uses the older table-plus-green-dot control style and now uses compact bordered rows with square article selectors.
+- pattern decided: simple metadata-plus-import editors should still use explicit titled sections even when most item editing happens inline in the block renderer. When a block shows the correct solution inside a writing-line answer area, it should use the newer handwriting-style solution rendering rather than a leftover small green label treatment. Inline block editors that stay inside the canvas should still use the same compact row language as the props panel instead of older spreadsheet-like tables when the interaction is really item selection plus text editing.
+- follow-up extraction candidate: a shared compact import section with replace/append controls and a shared handwriting-solution helper for line-based answer blocks.
+
 #### Quartett
 
 - changed: quartett now uses the shared card-list props editor instead of a duplicated standalone implementation, and its settings, CSV import, and item editors now follow the compact titled-section pattern used by the other refactored blocks.

@@ -1,6 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
+
+type LibraryOrientation = "portrait" | "landscape" | "landscape-canva";
+
+interface LibraryWorksheetRow {
+  id: string;
+  type: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  orientation: LibraryOrientation;
+  hasThumbnail: boolean;
+  itemCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface LibraryEbookRow {
+  id: string;
+  title: string;
+  slug: string;
+  orientation: Extract<LibraryOrientation, "portrait" | "landscape">;
+  hasThumbnail: boolean;
+  itemCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // GET /api/library — list items for the logged-in user (all types)
 export async function GET(req: NextRequest) {
@@ -11,125 +38,116 @@ export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get("search");
   const type = req.nextUrl.searchParams.get("type"); // "worksheet" | "cards" | "flashcards" | "grammar-table" | null (all)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const worksheetWhere: any = { userId };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ebookWhere: any = { userId };
-
-  if (type && type !== "ebook") {
-    worksheetWhere.type = type;
-  }
-
-  if (search) {
-    worksheetWhere.title = { contains: search, mode: "insensitive" };
-    ebookWhere.title = { contains: search, mode: "insensitive" };
-  }
-
   const includeWorksheets = !type || type !== "ebook";
   const includeEbooks = !type || type === "ebook";
 
+  const worksheetConditions: Prisma.Sql[] = [
+    Prisma.sql`"userId" = ${userId}`,
+  ];
+  const ebookConditions: Prisma.Sql[] = [
+    Prisma.sql`"userId" = ${userId}`,
+  ];
+
+  if (type && type !== "ebook") {
+    worksheetConditions.push(Prisma.sql`type = ${type}`);
+  }
+
+  if (search) {
+    const searchPattern = `%${search}%`;
+    worksheetConditions.push(Prisma.sql`title ILIKE ${searchPattern}`);
+    ebookConditions.push(Prisma.sql`title ILIKE ${searchPattern}`);
+  }
+
   const [worksheets, ebooks] = await Promise.all([
     includeWorksheets
-      ? prisma.worksheet.findMany({
-          where: worksheetWhere,
-          orderBy: { updatedAt: "desc" },
-          select: {
-            id: true,
-            type: true,
-            title: true,
-            slug: true,
-            description: true,
-            blocks: true,
-            settings: true,
-            thumbnail: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
+      ? prisma.$queryRaw<LibraryWorksheetRow[]>(Prisma.sql`
+          SELECT
+            id,
+            type,
+            title,
+            slug,
+            description,
+            CASE
+              WHEN type IN ('cards', 'flashcards', 'grammar-table') THEN 'landscape'
+              WHEN EXISTS (
+                SELECT 1
+                FROM jsonb_array_elements(
+                  CASE
+                    WHEN jsonb_typeof(blocks) = 'array' THEN blocks
+                    ELSE '[]'::jsonb
+                  END
+                ) AS block
+                WHERE block->>'type' IN ('domino', 'flashcards')
+              ) THEN 'landscape-canva'
+              WHEN settings->>'orientation' = 'landscape-canva' THEN 'landscape-canva'
+              WHEN settings->>'orientation' = 'landscape' THEN 'landscape'
+              WHEN settings->>'orientation' = 'portrait' THEN 'portrait'
+              ELSE 'portrait'
+            END AS orientation,
+            thumbnail IS NOT NULL AS "hasThumbnail",
+            CASE
+              WHEN jsonb_typeof(blocks) = 'array' THEN jsonb_array_length(blocks)
+              ELSE 0
+            END AS "itemCount",
+            "createdAt",
+            "updatedAt"
+          FROM "Worksheet"
+          WHERE ${Prisma.join(worksheetConditions, Prisma.sql` AND `)}
+          ORDER BY "updatedAt" DESC
+        `)
       : Promise.resolve([]),
     includeEbooks
-      ? prisma.eBook.findMany({
-          where: ebookWhere,
-          orderBy: { updatedAt: "desc" },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            coverSettings: true,
-            chapters: true,
-            thumbnail: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
+      ? prisma.$queryRaw<LibraryEbookRow[]>(Prisma.sql`
+          SELECT
+            id,
+            title,
+            slug,
+            CASE
+              WHEN "coverSettings"->>'orientation' = 'landscape' THEN 'landscape'
+              ELSE 'portrait'
+            END AS orientation,
+            thumbnail IS NOT NULL AS "hasThumbnail",
+            CASE
+              WHEN jsonb_typeof(chapters) = 'array' THEN jsonb_array_length(chapters)
+              ELSE 0
+            END AS "itemCount",
+            "createdAt",
+            "updatedAt"
+          FROM "EBook"
+          WHERE ${Prisma.join(ebookConditions, Prisma.sql` AND `)}
+          ORDER BY "updatedAt" DESC
+        `)
       : Promise.resolve([]),
   ]);
-
-  // Helper to extract orientation from settings JSON
-  function getOrientation(
-    settings: unknown,
-    blocks: unknown,
-    fallback: "portrait" | "landscape" | "landscape-canva"
-  ): "portrait" | "landscape" | "landscape-canva" {
-    if (Array.isArray(blocks) && blocks.some((block) => typeof block === "object" && block && "type" in (block as Record<string, unknown>) && ["domino", "flashcards"].includes(String((block as Record<string, unknown>).type)))) {
-      return "landscape-canva";
-    }
-    if (
-      settings &&
-      typeof settings === "object" &&
-      "orientation" in (settings as Record<string, unknown>)
-    ) {
-      const val = (settings as Record<string, unknown>).orientation;
-      if (val === "landscape-canva") return "landscape-canva";
-      if (val === "landscape") return "landscape";
-      if (val === "portrait") return "portrait";
-    }
-    return fallback;
-  }
 
   // Normalize into a unified format
   const items = [
     ...worksheets.map((w) => {
-      // Cards, flashcards, grammar-tables are always landscape
-      const defaultOrientation =
-        w.type === "cards" ||
-        w.type === "flashcards" ||
-        w.type === "grammar-table"
-          ? ("landscape" as const)
-          : ("portrait" as const);
-
       return {
         id: w.id,
         type: w.type,
         title: w.title,
         slug: w.slug,
         description: w.description,
-        orientation: getOrientation(w.settings, w.blocks, defaultOrientation),
+        orientation: w.orientation,
         thumbnailUrl: `/api/worksheets/${w.id}/thumbnail`,
-        hasThumbnail: !!w.thumbnail,
-        itemCount: Array.isArray(w.blocks)
-          ? (w.blocks as unknown[]).length
-          : 0,
+        hasThumbnail: w.hasThumbnail,
+        itemCount: w.itemCount,
         createdAt: w.createdAt,
         updatedAt: w.updatedAt,
       };
     }),
     ...ebooks.map((e) => {
-      const ebookSettings = e.coverSettings as Record<string, unknown> | null;
       return {
         id: e.id,
         type: "ebook" as const,
         title: e.title,
         slug: e.slug,
         description: null,
-        orientation: getOrientation(ebookSettings, null, "portrait") as
-          | "portrait"
-          | "landscape",
+        orientation: e.orientation,
         thumbnailUrl: `/api/worksheets/${e.id}/thumbnail`,
-        hasThumbnail: !!e.thumbnail,
-        itemCount: Array.isArray(e.chapters)
-          ? (e.chapters as unknown[]).length
-          : 0,
+        hasThumbnail: e.hasThumbnail,
+        itemCount: e.itemCount,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
       };

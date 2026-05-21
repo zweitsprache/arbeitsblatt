@@ -44,6 +44,7 @@ import {
   WordSearchBlock,
   SortingCategoriesBlock,
   CorrectSpellingBlock,
+  CorrectNumbersBlock,
   MissingLettersBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
@@ -87,10 +88,11 @@ import {
   FreeFormBlock,
   BRAND_ICON_LOGOS,
   ViewMode,
+  applyBrandOverrides,
 } from "@/types/worksheet";
 import { TriangleAlert } from "lucide-react";
 import { useEditor } from "@/store/editor-store";
-import { buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
+import { buildCorrectNumbersRow, buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { getCardPairDisplayText, getCardPairs, getCardPairItems, getDominoEditorTextClass, getDominoItems, getDominoPairs, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
@@ -319,6 +321,12 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
     const { answer, width } = parseBlankContent(raw);
     const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
     const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+    const blankShellStyle: React.CSSProperties = {
+      minHeight: "1.25rem",
+      lineHeight: "1.25rem",
+      ...getBlankWidthStyle(width, false),
+      ...spacing.style,
+    };
 
     if (shouldRenderExample) {
       exampleShown = true;
@@ -326,7 +334,7 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
         <span
           key={index}
           className={`relative inline-flex rounded-[3px] bg-background/80 align-middle overflow-hidden ${spacing.className}`}
-          style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+          style={blankShellStyle}
         >
           <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
           <span
@@ -350,9 +358,10 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
       <span
         key={index}
         aria-hidden="true"
-        className={`inline-flex rounded-[3px] bg-background/80 align-middle ${spacing.className}`}
-        style={{ ...getBlankWidthStyle(width, false), ...spacing.style }}
+        className={`relative inline-flex rounded-[3px] bg-background/80 align-middle overflow-hidden ${spacing.className}`}
+        style={blankShellStyle}
       >
+        <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || "\u00A0"}</span>
         <span className="sr-only">missing letter</span>
       </span>
     );
@@ -1576,7 +1585,11 @@ function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
           );
         })}
       </div>
-      <div className="space-y-2 rounded border border-dashed border-muted-foreground/30 p-3">
+      <div
+        className={`rounded border border-dashed border-muted-foreground/30 p-3 ${
+          block.twoWritingColumns ? "grid grid-cols-2 gap-x-4 gap-y-2" : "space-y-2"
+        }`}
+      >
         {block.items.map((item, index) => (
           <div key={item.id} className="grid grid-cols-[auto_1fr] gap-2 items-end">
             <span className="text-sm font-medium text-muted-foreground">{index + 1}.</span>
@@ -3370,6 +3383,8 @@ function ArticleTrainingRenderer({
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const articles: ArticleAnswer[] = ["der", "das", "die"];
+  const articleOptionClass =
+    "flex h-6 w-6 items-center justify-center rounded-[4px] border text-[11px] font-semibold uppercase transition-colors";
 
   const updateItem = (id: string, updates: Partial<{ text: string; correctArticle: ArticleAnswer }>) => {
     dispatch({
@@ -3415,83 +3430,77 @@ function ArticleTrainingRenderer({
 
   return (
     <div className="space-y-2">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="w-8 p-2 border-b"></th>
-            {articles.map((a) => (
-              <th key={a} className="w-14 p-2 border-b text-center font-medium text-muted-foreground">{a}</th>
-            ))}
-            <th className="text-left py-2 px-2 border-b font-bold text-foreground">{t("articleNoun")}</th>
-            {block.showWritingLine && (
-              <th className="text-left py-2 px-2 border-b font-bold text-muted-foreground">{t("articleWritingLine")}</th>
-            )}
-            <th className="w-8 p-2 border-b"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {block.items.map((item, idx) => (
-            <tr key={item.id} className="group/row border-b last:border-b-0">
-              <td className="p-2 text-center">
-                <ItemNumberBadge index={idx + 1} />
-              </td>
+      <div className="flex items-center gap-3 border-b border-border pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="w-6 shrink-0" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {articles.map((a) => (
+            <span key={a} className="flex h-6 w-6 items-center justify-center">
+              {a}
+            </span>
+          ))}
+        </div>
+        <span className="flex-1">{t("articleNoun")}</span>
+        {block.showWritingLine ? <span className="min-w-[100px] flex-1">{t("articleWritingLine")}</span> : null}
+        <span className="w-7 shrink-0" />
+      </div>
+
+      <div>
+        {block.items.map((item, idx) => (
+          <div key={item.id} className="group/row flex items-center gap-3 border-b border-border py-2 last:border-b-0">
+            <ItemNumberBadge index={idx + 1} className="shrink-0" />
+            <div className="flex shrink-0 items-center gap-1.5">
               {articles.map((a) => (
-                <td key={a} className="p-2 text-center">
-                  <button
-                    className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors
-                      ${item.correctArticle === a
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-muted-foreground/30 hover:border-green-400"
-                      }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateItem(item.id, { correctArticle: a });
-                    }}
-                  >
-                    {item.correctArticle === a && <Check className="h-3 w-3" />}
-                  </button>
-                </td>
-              ))}
-              <td className="py-2 px-2">
-                <span
-                  className="outline-none block flex-1"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) => {
-                    const value = e.currentTarget.textContent || "";
-                    const arrIdx = block.items.findIndex((it) => it.id === item.id);
-                    localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                      updateItem(item.id, { text: value })
-                    );
-                  }}
-                >
-                  {item.text}
-                </span>
-              </td>
-              {block.showWritingLine && (
-                <td className="py-2 px-2">
-                  <div className="border-b border-muted-foreground/30 h-6 min-w-[100px]" />
-                </td>
-              )}
-              <td className="p-2 text-center">
                 <button
-                  className="opacity-0 group-hover/row:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity"
+                  key={a}
+                  className={`${articleOptionClass} ${
+                    item.correctArticle === a
+                      ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                      : "border-border text-muted-foreground hover:border-emerald-300 hover:text-foreground"
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeItem(item.id);
+                    updateItem(item.id, { correctArticle: a });
                   }}
                 >
-                  <X className="h-3 w-3 text-destructive" />
+                  {item.correctArticle === a ? <Check className="h-3 w-3" /> : null}
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              ))}
+            </div>
+            <span
+              className="min-w-0 flex-1 rounded-[4px] px-2 py-1 outline-none transition-colors hover:bg-muted/40 focus:bg-muted/60"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                const arrIdx = block.items.findIndex((it) => it.id === item.id);
+                localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                  updateItem(item.id, { text: value })
+                );
+              }}
+            >
+              {item.text}
+            </span>
+            {block.showWritingLine ? (
+              <div className="min-w-[100px] flex-1 px-2">
+                <div className="h-6 border-b border-muted-foreground/30" />
+              </div>
+            ) : null}
+            <button
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/row:opacity-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeItem(item.id);
+              }}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 pt-1">
         <button
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           onClick={(e) => {
             e.stopPropagation();
             addItem();
@@ -4600,12 +4609,18 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
   );
 }
 
-function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | MissingLettersBlock }) {
+function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | CorrectNumbersBlock | MissingLettersBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const legacyDisplayCount = block.displayCount ?? 10;
-  const buildRow = block.type === "missing-letters" ? buildMissingLettersRow : buildCorrectSpellingRow;
+  const buildRow = block.type === "missing-letters"
+    ? buildMissingLettersRow
+    : block.type === "correct-numbers"
+      ? buildCorrectNumbersRow
+      : buildCorrectSpellingRow;
+  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
+  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
   const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
 
   const orderedWords = React.useMemo(() => {
@@ -4685,8 +4700,8 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Miss
           const isExampleRow = item.id === exampleWordId;
           const variants = buildRow(
             item.word,
-            block.keepFirstLetter,
-            block.keepLastLetter,
+            keepLeftCharacters,
+            keepRightCharacters,
             `${block.id}:${item.id}`,
             displayCount,
           );
@@ -4699,8 +4714,9 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Miss
               <div className="flex flex-1 flex-wrap items-center gap-2 py-1">
                 {variants.map((variant, variantIndex) =>
                   (() => {
+                    const isCorrectChoiceBlock = block.type === "correct-spelling" || block.type === "correct-numbers";
                     const showExampleChip =
-                      block.type === "correct-spelling" &&
+                      isCorrectChoiceBlock &&
                       isExampleRow &&
                       !exampleChipShown &&
                       variant.isOriginal &&
@@ -4720,11 +4736,11 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Miss
                     }
 
                     const showSolutionCircle =
-                      block.type === "correct-spelling" &&
+                      isCorrectChoiceBlock &&
                       variant.isOriginal &&
                       variantIndex !== 0 &&
                       !showExampleChip;
-                    const shouldHighlightVariant = block.type === "correct-spelling" ? variantIndex === 0 : variantIndex === 0 || variant.isOriginal;
+                    const shouldHighlightVariant = isCorrectChoiceBlock ? variantIndex === 0 : variantIndex === 0 || variant.isOriginal;
                     const highlightClass = "border-green-300 bg-green-50 text-green-700";
 
                     return (
@@ -6819,6 +6835,11 @@ function DialogueRenderer({
                 {renderSpeakerIcon(item.icon)}
               </span>
             )}
+            {block.showSpeakers ? (
+              <span className="w-20 shrink-0 font-semibold leading-5">
+                {item.speaker || "\u00A0"}
+              </span>
+            ) : null}
             {block.showOriginal ? (
               <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
                 <div className="min-w-0">
@@ -8402,9 +8423,14 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
 }
 
 function FreeFormRenderer({ block }: { block: FreeFormBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("blockRenderer");
   const [open, setOpen] = React.useState(false);
+  const resolvedBrand = React.useMemo(
+    () => applyBrandOverrides(state.brandProfile, state.settings.brandOverrides),
+    [state.brandProfile, state.settings.brandOverrides],
+  );
+  const defaultTextFontFamily = resolvedBrand.bodyFont?.trim() || state.settings.fontFamily;
 
   const updateBlock = React.useCallback((updates: Partial<FreeFormBlock>) => {
     dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
@@ -8437,7 +8463,7 @@ function FreeFormRenderer({ block }: { block: FreeFormBlock }) {
           }}
           className="cursor-pointer"
         >
-          <FreeFormPreview scene={block.scene} title={block.title} />
+          <FreeFormPreview scene={block.scene} title={block.title} defaultTextFontFamily={defaultTextFontFamily} />
         </div>
       </div>
       <FreeFormEditorDialog
@@ -8549,7 +8575,7 @@ export function BlockRenderer({
     case "sorting-categories":
       return <SortingCategoriesRenderer block={block} />;
     case "correct-spelling":
-      return <CorrectSpellingRenderer block={block} />;
+    case "correct-numbers":
     case "missing-letters":
       return <CorrectSpellingRenderer block={block} />;
     case "unscramble-words":

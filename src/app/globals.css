@@ -637,6 +637,26 @@
   line-height: 1.5;
 }
 
+.print-worksheet-root.print-portrait .print-footer-content {
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  align-items: end;
+  justify-content: initial;
+}
+
+.print-worksheet-root.print-portrait .print-footer-content > div {
+  min-width: 0;
+  text-align: left;
+}
+
+.print-worksheet-root.print-portrait .print-footer-content > div:nth-child(2) {
+  text-align: center;
+}
+
+.print-worksheet-root.print-portrait .print-footer-content > div:last-child {
+  text-align: right;
+}
+
 .print-worksheet-root.print-has-domino .print-footer-content,
 .print-worksheet-root.print-has-flashcards .print-footer-content,
 .print-worksheet-root.print-has-card-pairs .print-footer-content,
@@ -1264,6 +1284,30 @@
     right: 0;
     bottom: 0;
     z-index: 2;
+  }
+
+  .print-worksheet-root.print-portrait .print-footer-content,
+  .print-portrait .print-footer-content {
+    display: grid;
+    grid-template-columns: 45% 10% 45%;
+    align-items: end;
+    justify-content: initial;
+  }
+
+  .print-worksheet-root.print-portrait .print-footer-content > div,
+  .print-portrait .print-footer-content > div {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .print-worksheet-root.print-portrait .print-footer-content > div:nth-child(2),
+  .print-portrait .print-footer-content > div:nth-child(2) {
+    text-align: center;
+  }
+
+  .print-worksheet-root.print-portrait .print-footer-content > div:last-child,
+  .print-portrait .print-footer-content > div:last-child {
+    text-align: right;
   }
 
   .print-body-content {

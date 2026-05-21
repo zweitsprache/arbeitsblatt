@@ -274,6 +274,7 @@ Rules:
   "imageScale": 100,
   "showImageNumberBadge": true,
   "showFirstAsExample": false,
+  "twoWritingColumns": false,
   "showWritingLines": false,
   "writingLinesCount": 1,
   "showWordBank": false

@@ -51,7 +51,7 @@ export function LibraryItemPreview({
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const showThumbnail = thumbnailUrl && !imgError;
+  const showThumbnail = thumbnailUrl && hasThumbnail && !imgError;
 
   return (
     <div

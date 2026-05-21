@@ -41,6 +41,7 @@ export type BlockType =
   | "word-search"
   | "sorting-categories"
   | "correct-spelling"
+  | "correct-numbers"
   | "missing-letters"
   | "unscramble-words"
   | "fix-sentences"
@@ -128,15 +129,24 @@ export interface SegmentationBlock extends BlockBase {
   showFirstAsExample?: boolean; // always true for now
 }
 
+export const FREE_FORM_SCENE_VERSION = 2;
+
 export type FreeFormElementType = "rect" | "circle" | "text";
+export type FreeFormTextAlign = "left" | "center" | "right" | "justify";
+export type FreeFormTextAutoSize = "auto-height" | "fixed";
 
 export interface FreeFormBaseElement {
   id: string;
   type: FreeFormElementType;
+  name?: string;
   x: number;
   y: number;
   rotation?: number;
   visible?: boolean;
+  locked?: boolean;
+  opacity?: number;
+  zIndex?: number;
+  groupId?: string | null;
 }
 
 export interface FreeFormRectElement extends FreeFormBaseElement {
@@ -164,7 +174,13 @@ export interface FreeFormTextElement extends FreeFormBaseElement {
   fontSize: number;
   fontFamily?: string;
   fontStyle?: string;
+  fontWeight?: string | number;
   width?: number;
+  height?: number;
+  lineHeight?: number;
+  letterSpacing?: number;
+  textAlign?: FreeFormTextAlign;
+  autoSize?: FreeFormTextAutoSize;
 }
 
 export type FreeFormElement = FreeFormRectElement | FreeFormCircleElement | FreeFormTextElement;
@@ -174,6 +190,11 @@ export type FreeFormElementUpdate = Partial<{
   y: number;
   rotation: number;
   visible: boolean;
+  locked: boolean;
+  opacity: number;
+  zIndex: number;
+  groupId: string | null;
+  name: string;
   width: number;
   height: number;
   fill: string;
@@ -185,13 +206,185 @@ export type FreeFormElementUpdate = Partial<{
   fontSize: number;
   fontFamily: string;
   fontStyle: string;
+  fontWeight: string | number;
+  lineHeight: number;
+  letterSpacing: number;
+  textAlign: FreeFormTextAlign;
+  autoSize: FreeFormTextAutoSize;
 }>;
 
 export interface FreeFormScene {
+  version: number;
   width: number;
   height: number;
   backgroundColor: string;
   elements: FreeFormElement[];
+}
+
+export interface FreeFormViewportState {
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+type FreeFormLegacyElement = {
+  id?: string;
+  type?: FreeFormElementType;
+  name?: string;
+  x?: number;
+  y?: number;
+  rotation?: number;
+  visible?: boolean;
+  locked?: boolean;
+  opacity?: number;
+  zIndex?: number;
+  groupId?: string | null;
+  width?: number;
+  height?: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  cornerRadius?: number;
+  radius?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  fontWeight?: string | number;
+  lineHeight?: number;
+  letterSpacing?: number;
+  textAlign?: FreeFormTextAlign;
+  autoSize?: FreeFormTextAutoSize;
+};
+
+type FreeFormLegacyScene = {
+  version?: number;
+  width?: number;
+  height?: number;
+  backgroundColor?: string;
+  elements?: FreeFormLegacyElement[];
+};
+
+function clampFreeFormOpacity(opacity: unknown): number {
+  if (typeof opacity !== "number" || Number.isNaN(opacity)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0, opacity));
+}
+
+function normalizeFreeFormElement(element: FreeFormLegacyElement, index: number): FreeFormElement {
+  const id = typeof element.id === "string" && element.id.trim() ? element.id : `free-form-${index + 1}`;
+  const common = {
+    id,
+    x: typeof element.x === "number" ? element.x : 0,
+    y: typeof element.y === "number" ? element.y : 0,
+    rotation: typeof element.rotation === "number" ? element.rotation : 0,
+    visible: element.visible !== false,
+    locked: element.locked === true,
+    opacity: clampFreeFormOpacity(element.opacity),
+    zIndex: typeof element.zIndex === "number" ? element.zIndex : index,
+    groupId: typeof element.groupId === "string" && element.groupId.trim() ? element.groupId : null,
+  } satisfies Omit<FreeFormBaseElement, "type">;
+
+  if (element.type === "circle") {
+    return {
+      ...common,
+      type: "circle",
+      name: typeof element.name === "string" && element.name.trim() ? element.name : `Circle ${index + 1}`,
+      radius: typeof element.radius === "number" ? element.radius : 48,
+      fill: typeof element.fill === "string" ? element.fill : "#fde68a",
+      stroke: typeof element.stroke === "string" ? element.stroke : undefined,
+      strokeWidth: typeof element.strokeWidth === "number" ? element.strokeWidth : undefined,
+    };
+  }
+
+  if (element.type === "text") {
+    return {
+      ...common,
+      type: "text",
+      name: typeof element.name === "string" && element.name.trim() ? element.name : `Text ${index + 1}`,
+      text: typeof element.text === "string" ? element.text : "Text",
+      fill: typeof element.fill === "string" ? element.fill : "#0f172a",
+      fontSize: typeof element.fontSize === "number" ? element.fontSize : 32,
+      fontFamily: typeof element.fontFamily === "string" ? element.fontFamily : undefined,
+      fontStyle: typeof element.fontStyle === "string" ? element.fontStyle : undefined,
+      fontWeight: typeof element.fontWeight === "string" || typeof element.fontWeight === "number" ? element.fontWeight : undefined,
+      width: typeof element.width === "number" ? element.width : 320,
+      height: typeof element.height === "number" ? element.height : undefined,
+      lineHeight: typeof element.lineHeight === "number" ? element.lineHeight : 1.2,
+      letterSpacing: typeof element.letterSpacing === "number" ? element.letterSpacing : 0,
+      textAlign: element.textAlign === "center" || element.textAlign === "right" || element.textAlign === "justify" ? element.textAlign : "left",
+      autoSize: element.autoSize === "fixed" ? "fixed" : "auto-height",
+    };
+  }
+
+  return {
+    ...common,
+    type: "rect",
+    name: typeof element.name === "string" && element.name.trim() ? element.name : `Rectangle ${index + 1}`,
+    width: typeof element.width === "number" ? element.width : 160,
+    height: typeof element.height === "number" ? element.height : 120,
+    fill: typeof element.fill === "string" ? element.fill : "#dbeafe",
+    stroke: typeof element.stroke === "string" ? element.stroke : undefined,
+    strokeWidth: typeof element.strokeWidth === "number" ? element.strokeWidth : undefined,
+    cornerRadius: typeof element.cornerRadius === "number" ? element.cornerRadius : undefined,
+  };
+}
+
+export function normalizeFreeFormScene(scene?: FreeFormLegacyScene | FreeFormScene | null): FreeFormScene {
+  const nextScene = scene ?? {};
+  const normalizedElements = (nextScene.elements ?? []).map(normalizeFreeFormElement);
+  const orderedElements = normalizedElements
+    .sort((left, right) => (left.zIndex ?? 0) - (right.zIndex ?? 0))
+    .map((element, index) => ({
+      ...element,
+      zIndex: index,
+    }));
+
+  return {
+    version: FREE_FORM_SCENE_VERSION,
+    width: typeof nextScene.width === "number" ? nextScene.width : 1200,
+    height: typeof nextScene.height === "number" ? nextScene.height : 800,
+    backgroundColor: typeof nextScene.backgroundColor === "string" ? nextScene.backgroundColor : "#fffdf6",
+    elements: orderedElements,
+  };
+}
+
+export function createDefaultFreeFormScene(): FreeFormScene {
+  return normalizeFreeFormScene({
+    width: 1200,
+    height: 800,
+    backgroundColor: "#fffdf6",
+    elements: [
+      {
+        id: "ff-rect-1",
+        type: "rect",
+        name: "Card",
+        x: 80,
+        y: 80,
+        width: 320,
+        height: 180,
+        fill: "#dbeafe",
+        stroke: "#2563eb",
+        strokeWidth: 2,
+        cornerRadius: 20,
+      },
+      {
+        id: "ff-text-1",
+        type: "text",
+        name: "Headline",
+        x: 120,
+        y: 130,
+        text: "Double-click the preview to open the editor.",
+        fill: "#1e293b",
+        fontSize: 34,
+        fontStyle: "bold",
+        width: 440,
+        textAlign: "left",
+      },
+    ],
+  });
 }
 
 export interface FreeFormBlock extends BlockBase {
@@ -330,6 +523,7 @@ export interface ImageTextTableBlock extends BlockBase {
   showImageNumberBadge: boolean;
   shuffleItems?: boolean;
   showFirstAsExample?: boolean;
+  twoWritingColumns?: boolean;
   showWritingLines: boolean;
   writingLinesCount: number;
   showWordBank: boolean;
@@ -832,8 +1026,21 @@ export interface CorrectSpellingBlock extends BlockBase {
   instruction: string;
   words: CorrectSpellingItem[];
   displayCount?: number;
-  keepFirstLetter: boolean;
-  keepLastLetter: boolean;
+  keepLeftCharacters: number;
+  keepRightCharacters: number;
+  keepFirstLetter?: boolean;
+  keepLastLetter?: boolean;
+  showFirstAsExample?: boolean;
+  itemOrder?: string[];
+}
+
+export interface CorrectNumbersBlock extends BlockBase {
+  type: "correct-numbers";
+  instruction: string;
+  words: CorrectSpellingItem[];
+  displayCount?: number;
+  keepLeftCharacters: number;
+  keepRightCharacters: number;
   showFirstAsExample?: boolean;
   itemOrder?: string[];
 }
@@ -843,8 +1050,10 @@ export interface MissingLettersBlock extends BlockBase {
   instruction: string;
   words: CorrectSpellingItem[];
   displayCount?: number;
-  keepFirstLetter: boolean;
-  keepLastLetter: boolean;
+  keepLeftCharacters: number;
+  keepRightCharacters: number;
+  keepFirstLetter?: boolean;
+  keepLastLetter?: boolean;
   showFirstAsExample?: boolean;
   itemOrder?: string[];
 }
@@ -948,6 +1157,7 @@ export interface DialogueBlock extends BlockBase {
   type: "dialogue";
   instruction: string;
   items: DialogueItem[];
+  showSpeakers?: boolean;
   showWordBank: boolean;
   showOriginal?: boolean;
   originalColumnRatio?: "1:1" | "3:2";
@@ -1247,6 +1457,7 @@ export type WorksheetBlock =
   | WordSearchBlock
   | SortingCategoriesBlock
   | CorrectSpellingBlock
+  | CorrectNumbersBlock
   | MissingLettersBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
@@ -1825,36 +2036,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         backgroundColor: "#fffdf6",
         elements: [
           {
-            id: "ff-rect-1",
-            type: "rect",
-            x: 80,
-            y: 80,
-            width: 320,
-            height: 180,
-            fill: "#dbeafe",
-            stroke: "#2563eb",
-            strokeWidth: 2,
-            cornerRadius: 20,
-          },
-          {
-            id: "ff-text-1",
-            type: "text",
-            x: 120,
-            y: 130,
-            text: "Double-click the preview to open the editor.",
-            fill: "#1e293b",
-            fontSize: 36,
-            width: 520,
-          },
-          {
-            id: "ff-circle-1",
-            type: "circle",
-            x: 960,
-            y: 220,
-            radius: 90,
-            fill: "#fde68a",
-            stroke: "#d97706",
-            strokeWidth: 2,
+          scene: createDefaultFreeFormScene(),
           }
         ],
       },
@@ -1972,6 +2154,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       showImageNumberBadge: true,
       shuffleItems: false,
       showFirstAsExample: false,
+      twoWritingColumns: false,
       showWritingLines: false,
       writingLinesCount: 1,
       showWordBank: false,
@@ -2589,8 +2772,32 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "cs2", word: "teacher", displayCount: 10 },
         { id: "cs3", word: "garden", displayCount: 10 },
       ],
-      keepFirstLetter: false,
-      keepLastLetter: false,
+      keepLeftCharacters: 0,
+      keepRightCharacters: 0,
+      showFirstAsExample: false,
+      itemOrder: undefined,
+      visibility: "both",
+    },
+  },
+  {
+    type: "correct-numbers",
+    label: "Correct Numbers",
+    description: "Find the correctly written number in each row",
+    labelKey: "correctNumbers",
+    descriptionKey: "correctNumbersDesc",
+    icon: "Hash",
+    category: "spelling",
+    translations: { de: { label: "Zahlen erkennen", description: "Die korrekt geschriebene Zahl in jeder Zeile finden" } },
+    defaultData: {
+      type: "correct-numbers",
+      instruction: "",
+      words: [
+        { id: "cn1", word: "074 123 45 67", displayCount: 10 },
+        { id: "cn2", word: "12'450.80", displayCount: 10 },
+        { id: "cn3", word: "1 234 567", displayCount: 10 },
+      ],
+      keepLeftCharacters: 0,
+      keepRightCharacters: 0,
       showFirstAsExample: false,
       itemOrder: undefined,
       visibility: "both",
@@ -2613,8 +2820,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "ml2", word: "teacher", displayCount: 10 },
         { id: "ml3", word: "garden", displayCount: 10 },
       ],
-      keepFirstLetter: false,
-      keepLastLetter: false,
+      keepLeftCharacters: 0,
+      keepRightCharacters: 0,
       showFirstAsExample: false,
       itemOrder: undefined,
       visibility: "both",
@@ -2830,11 +3037,12 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     translations: { de: { label: "Dialog", description: "Dialog mit Sprechersymbolen und Lücken" } },
     defaultData: {
       type: "dialogue",
-      instruction: "",
+      instruction: "Read the dialogue and complete the gaps.",
       items: [
-        { id: "dl1", speaker: "A", icon: "triangle", text: "Hello, how are you?" },
-        { id: "dl2", speaker: "B", icon: "circle", text: "I am fine, thank you!" },
+        { id: "dl1", speaker: "Mary", icon: "triangle", text: "Hello, {{blank:how}} are you?" },
+        { id: "dl2", speaker: "Peter", icon: "circle", text: "I am fine, thank you!" },
       ],
+      showSpeakers: true,
       showWordBank: false,
       showOriginal: false,
       originalColumnRatio: "1:1",
