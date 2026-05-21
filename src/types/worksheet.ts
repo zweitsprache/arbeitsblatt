@@ -1102,7 +1102,7 @@ export interface ReadingComprehensionBlock extends BlockBase {
   type: "reading-comprehension";
   instruction: string;
   sentences: ReadingComprehensionItem[];
-  layoutType?: "default" | "form" | "prefilled-form";
+  layoutType?: "default" | "form" | "prefilled-form" | "true-false";
   formFieldLabels?: string[];
   formColumns?: 1 | 2 | 3 | 4;
   showFirstAsExample?: boolean;
@@ -1112,6 +1112,7 @@ export interface ReadingComprehensionItem {
   id: string;
   question: string;
   beginning: string;
+  correctAnswer?: boolean;
   solution?: string;
   src?: string;
   fieldValues?: string[];

@@ -7841,8 +7841,10 @@ function CorrectSpellingView({
     : block.type === "correct-numbers"
       ? buildCorrectNumbersRow
       : buildCorrectSpellingRow;
-  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
-  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
+  const legacyKeepLeftCharacters = "keepFirstLetter" in block && block.keepFirstLetter ? 1 : 0;
+  const legacyKeepRightCharacters = "keepLastLetter" in block && block.keepLastLetter ? 1 : 0;
+  const keepLeftCharacters = block.keepLeftCharacters ?? legacyKeepLeftCharacters;
+  const keepRightCharacters = block.keepRightCharacters ?? legacyKeepRightCharacters;
   const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
 
   const orderedWords = React.useMemo(() => {
@@ -8441,10 +8443,137 @@ function ReadingComprehensionView({
     ? "flex min-h-[49px] items-center gap-3"
     : "flex min-h-[32.5px] items-center gap-3";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const isTrueFalseLayout = block.layoutType === "true-false";
   const isPrefilledFormLayout = block.layoutType === "prefilled-form";
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
+  const tc = useTranslations("common");
+
+  if (isTrueFalseLayout) {
+    const tfAnswers = (answer as Record<string, boolean | undefined> | undefined) || {};
+    const trueLabelText = tc("true");
+    const falseLabelText = tc("false");
+    const optionColumnWidth = `${Math.max(80, Math.min(180, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 28))}px`;
+
+    const handleSelect = (itemId: string, value: boolean) => {
+      if (!interactive || showResults || itemId === exampleSentenceId) return;
+      onAnswer({ ...tfAnswers, [itemId]: value });
+    };
+
+    const getOptionClass = (selected: boolean | undefined, correctAnswer: boolean, optionValue: boolean, isExampleRow: boolean) => {
+      if (isExampleRow) return "border-muted-foreground/30";
+      if (selected === undefined) return "border-muted-foreground/30 hover:border-primary/50";
+      if (selected === optionValue) {
+        return selected === correctAnswer
+          ? `${s.controlBoxFilled}`
+          : "border-red-500 bg-red-500 text-white";
+      }
+      if (showResults && correctAnswer === optionValue) {
+        return "border-blue-500 bg-blue-500 text-white";
+      }
+      return "border-muted-foreground/30";
+    };
+
+    return (
+      <div className="space-y-2">
+        <div>
+          {block.instruction && (
+            isOnline ? (
+              <div
+                className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+                style={{ color: accentColor || "var(--color-primary)" }}
+              >
+                <InstructionBadge instructionIndex={instructionIndex} />
+                <div className="flex items-center gap-3 flex-1">
+                  <p className="flex-1">{block.instruction}</p>
+                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                </div>
+              </div>
+            ) : (
+              <InstructionRow
+                instruction={block.instruction}
+                accentColor={accentColor}
+                mode={mode}
+                instructionIndex={instructionIndex}
+                trailingContent={(
+                  <>
+                    <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                    <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
+                  </>
+                )}
+              />
+            )
+          )}
+          <div className={ROW_CLASS}>
+            <span className="w-6 shrink-0" aria-hidden="true" />
+            <div className="flex-1 font-bold text-foreground" />
+            <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+            <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
+          </div>
+          <div>
+            {block.sentences.map((item, i) => {
+              const correctAnswer = item.correctAnswer !== false;
+              const selected = tfAnswers[item.id];
+              const isExampleRow = item.id === exampleSentenceId;
+              const showExampleMarker = isExampleRow;
+
+              return (
+                <div key={item.id} className={`${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"} border-b`}>
+                  {item.src ? (
+                    <div className="row-span-2 pr-3 flex items-center justify-center">
+                      <img
+                        src={item.src}
+                        alt=""
+                        className="block max-h-full max-w-full h-auto w-auto object-contain"
+                        style={{ borderRadius: "3px" }}
+                      />
+                    </div>
+                  ) : null}
+                  <div className={`${ROW_CLASS} items-start py-2`}>
+                    <ItemNumberBadge index={i + 1} className="shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">{item.question}</p>
+                      {item.beginning && <p className="text-sm text-muted-foreground">{item.beginning}</p>}
+                    </div>
+                    <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                      {!interactive && showSolutions ? (
+                        correctAnswer ? <div className={CONTROL_BOX_FILLED_CLASS} /> : <div className={CONTROL_BOX_CLASS} />
+                      ) : showExampleMarker && correctAnswer ? (
+                        renderHandwrittenMatrixIndicator("#0097dc")
+                      ) : (
+                        <button
+                          type="button"
+                          className={`${CONTROL_BOX_CLASS} transition-colors ${getOptionClass(selected, correctAnswer, true, isExampleRow)}`}
+                          onClick={() => handleSelect(item.id, true)}
+                          disabled={!interactive || showResults || isExampleRow}
+                        />
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                      {!interactive && showSolutions ? (
+                        !correctAnswer ? <div className={CONTROL_BOX_FILLED_CLASS} /> : <div className={CONTROL_BOX_CLASS} />
+                      ) : showExampleMarker && !correctAnswer ? (
+                        renderHandwrittenMatrixIndicator("#0097dc")
+                      ) : (
+                        <button
+                          type="button"
+                          className={`${CONTROL_BOX_CLASS} transition-colors ${getOptionClass(selected, correctAnswer, false, isExampleRow)}`}
+                          onClick={() => handleSelect(item.id, false)}
+                          disabled={!interactive || showResults || isExampleRow}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

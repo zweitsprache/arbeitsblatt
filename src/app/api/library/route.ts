@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
             "createdAt",
             "updatedAt"
           FROM "Worksheet"
-          WHERE ${Prisma.join(worksheetConditions, Prisma.sql` AND `)}
+            WHERE ${Prisma.join(worksheetConditions, " AND ")}
           ORDER BY "updatedAt" DESC
         `)
       : Promise.resolve([]),
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
             "createdAt",
             "updatedAt"
           FROM "EBook"
-          WHERE ${Prisma.join(ebookConditions, Prisma.sql` AND `)}
+            WHERE ${Prisma.join(ebookConditions, " AND ")}
           ORDER BY "updatedAt" DESC
         `)
       : Promise.resolve([]),

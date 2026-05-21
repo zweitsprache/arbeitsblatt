@@ -7621,8 +7621,10 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
   const tc = useTranslations("common");
   const isNumberBlock = block.type === "correct-numbers";
   const legacyDisplayCount = block.displayCount ?? 10;
-  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
-  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
+  const legacyKeepLeftCharacters = "keepFirstLetter" in block && block.keepFirstLetter ? 1 : 0;
+  const legacyKeepRightCharacters = "keepLastLetter" in block && block.keepLastLetter ? 1 : 0;
+  const keepLeftCharacters = block.keepLeftCharacters ?? legacyKeepLeftCharacters;
+  const keepRightCharacters = block.keepRightCharacters ?? legacyKeepRightCharacters;
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
@@ -8550,6 +8552,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const [activeSentenceIndex, setActiveSentenceIndex] = React.useState<number | null>(null);
   const [uploadingSentenceIndex, setUploadingSentenceIndex] = React.useState<number | null>(null);
+  const isTrueFalseLayout = block.layoutType === "true-false";
   const isPrefilledFormLayout = block.layoutType === "prefilled-form";
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
@@ -8567,6 +8570,16 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
     const newSentences = lines.map((line, i) => {
       const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
       const parts = line.split(sep).map((p) => p.trim());
+      if (isTrueFalseLayout) {
+        const answer = (parts[parts.length - 1] || "").toUpperCase();
+        const hasAnswer = ["R", "T", "W", "F"].includes(answer);
+        return {
+          id: `rc${Date.now()}-${i}`,
+          question: hasAnswer ? parts.slice(0, -1).join(sep === "\t" ? " " : ", ").trim() : line.trim(),
+          beginning: "",
+          correctAnswer: answer === "R" || answer === "T",
+        };
+      }
       return {
         id: `rc${Date.now()}-${i}`,
         question: parts[0] || "",
@@ -8588,7 +8601,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
     setCsvText("");
   };
 
-  const updateSentence = (index: number, updates: Partial<{ question: string; beginning: string; solution: string; src?: string; fieldValues: string[] }>) => {
+  const updateSentence = (index: number, updates: Partial<{ question: string; beginning: string; solution: string; src?: string; fieldValues: string[]; correctAnswer: boolean }>) => {
     const newSentences = [...block.sentences];
     newSentences[index] = { ...newSentences[index], ...updates };
     dispatch({
@@ -8605,7 +8618,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
         updates: {
           sentences: [
             ...block.sentences,
-            { id: `rc${Date.now()}`, question: "", beginning: "", fieldValues: formFieldLabels.map(() => "") },
+            { id: `rc${Date.now()}`, question: "", beginning: "", correctAnswer: true, fieldValues: formFieldLabels.map(() => "") },
           ],
         },
       },
@@ -8753,11 +8766,12 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
               payload: {
                 id: block.id,
                 updates: {
-                  layoutType: value as "default" | "form" | "prefilled-form",
+                  layoutType: value as "default" | "form" | "prefilled-form" | "true-false",
                   formFieldLabels: block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""],
                   formColumns: block.formColumns ?? 2,
                   sentences: block.sentences.map((item) => ({
                     ...item,
+                    correctAnswer: item.correctAnswer ?? true,
                     fieldValues: item.fieldValues ?? formFieldLabels.map(() => ""),
                   })),
                 },
@@ -8765,13 +8779,14 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
             })
           }
         >
-          <SelectTrigger className="w-[120px] h-8 text-xs">
+          <SelectTrigger className="w-[160px] h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="default">{t("readingComprehensionTypeDefault")}</SelectItem>
             <SelectItem value="form">{t("readingComprehensionTypeForm")}</SelectItem>
             <SelectItem value="prefilled-form">{t("readingComprehensionTypePrefilledForm")}</SelectItem>
+            <SelectItem value="true-false">{t("readingComprehensionTypeTrueFalse")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -8830,7 +8845,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       )}
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
-        <p className="text-xs text-muted-foreground">{t(isPrefilledFormLayout ? "readingComprehensionPrefilledFormHelp" : isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
+        <p className="text-xs text-muted-foreground">{t(isTrueFalseLayout ? "readingComprehensionTrueFalseHelp" : isPrefilledFormLayout ? "readingComprehensionPrefilledFormHelp" : isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
         {block.sentences.map((item, i) => (
           <div key={item.id} className="space-y-1">
             <div className="pl-1">
@@ -8843,7 +8858,53 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
                 placeholder={tc("question")}
               />
             </div>
-            {!isFormLayout ? (
+            {isTrueFalseLayout ? (
+              <>
+                <div className="flex items-center gap-1">
+                  <div className="flex-1">
+                    <ChInput
+                      blockId={block.id}
+                      fieldPath={`sentences.${i}.beginning`}
+                      baseValue={item.beginning}
+                      onBaseChange={(v) => updateSentence(i, { beginning: v })}
+                      className="h-8 text-xs"
+                      placeholder={t("readingComprehensionBeginningPlaceholder")}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md border border-input bg-background p-1">
+                    <Button
+                      type="button"
+                      variant={item.correctAnswer === false ? "ghost" : "secondary"}
+                      size="sm"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => updateSentence(i, { correctAnswer: true })}
+                    >
+                      {tc("true")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={item.correctAnswer === false ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => updateSentence(i, { correctAnswer: false })}
+                    >
+                      {tc("false")}
+                    </Button>
+                  </div>
+                  <div className="flex flex-col">
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, -1)} disabled={i === 0}>
+                      <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                    </button>
+                    <button className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30" onClick={() => moveSentence(i, 1)} disabled={i === block.sentences.length - 1}>
+                      <ArrowUpDown className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeSentence(i)} disabled={block.sentences.length <= 1}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </>
+            ) : !isFormLayout ? (
               <>
                 <div className="flex items-center gap-1">
                   <div className="flex-1">
@@ -8997,10 +9058,10 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
-        <p className="text-xs text-muted-foreground mb-1">{t("csvImportHelpReadingComprehension")}</p>
+        <p className="text-xs text-muted-foreground mb-1">{t(isTrueFalseLayout ? "csvImportHelpReadingComprehensionTrueFalse" : "csvImportHelpReadingComprehension")}</p>
         <textarea
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
-          placeholder={t("csvImportPlaceholderReadingComprehension")}
+          placeholder={t(isTrueFalseLayout ? "csvImportPlaceholderReadingComprehensionTrueFalse" : "csvImportPlaceholderReadingComprehension")}
           value={csvText}
           onChange={(e) => {
             setCsvText(e.target.value);

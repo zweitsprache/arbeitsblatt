@@ -4619,8 +4619,10 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
     : block.type === "correct-numbers"
       ? buildCorrectNumbersRow
       : buildCorrectSpellingRow;
-  const keepLeftCharacters = block.keepLeftCharacters ?? (block.keepFirstLetter ? 1 : 0);
-  const keepRightCharacters = block.keepRightCharacters ?? (block.keepLastLetter ? 1 : 0);
+  const legacyKeepLeftCharacters = "keepFirstLetter" in block && block.keepFirstLetter ? 1 : 0;
+  const legacyKeepRightCharacters = "keepLastLetter" in block && block.keepLastLetter ? 1 : 0;
+  const keepLeftCharacters = block.keepLeftCharacters ?? legacyKeepLeftCharacters;
+  const keepRightCharacters = block.keepRightCharacters ?? legacyKeepRightCharacters;
   const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
 
   const orderedWords = React.useMemo(() => {
@@ -5171,13 +5173,18 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
+  const tc = useTranslations("common");
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const isTrueFalseLayout = block.layoutType === "true-false";
   const isPrefilledFormLayout = block.layoutType === "prefilled-form";
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
+  const trueLabelText = tc("true");
+  const falseLabelText = tc("false");
+  const optionColumnWidth = `${Math.max(64, Math.min(160, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 24))}px`;
 
-  const updateSentence = (id: string, updates: Partial<{ question: string; beginning: string }>) => {
+  const updateSentence = (id: string, updates: Partial<{ question: string; beginning: string; correctAnswer: boolean }>) => {
     dispatch({
       type: "UPDATE_BLOCK",
       payload: {
@@ -5199,7 +5206,7 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
         updates: {
           sentences: [
             ...block.sentences,
-            { id: crypto.randomUUID(), question: "", beginning: "", fieldValues: formFieldLabels.map(() => "") },
+            { id: crypto.randomUUID(), question: "", beginning: "", correctAnswer: true, fieldValues: formFieldLabels.map(() => "") },
           ],
         },
       },
@@ -5236,6 +5243,102 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
       </div>
 
       <div>
+        {isTrueFalseLayout ? (
+          <div>
+            <div className="flex items-center gap-3 py-2 border-b">
+              <div className="flex-1 font-bold text-foreground" />
+              <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+              <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
+              <div className="w-8" />
+            </div>
+            {block.sentences.map((item, i) => (
+              <div
+                key={item.id}
+                className={`group/item border-b ${item.src ? "grid grid-cols-[106px_minmax(0,1fr)]" : "block"}`}
+              >
+                {item.src ? (
+                  <div className="row-span-2 pr-3 flex items-center justify-center">
+                    <img
+                      src={item.src}
+                      alt=""
+                      className="block max-h-full max-w-full h-auto w-auto object-contain"
+                      style={{ borderRadius: "3px" }}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex items-start gap-3 py-2">
+                  <ItemNumberBadge index={i + 1} />
+                  <div className="flex-1 space-y-1">
+                    <div
+                      className="font-medium outline-none"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const value = e.currentTarget.textContent || "";
+                        localeUpdate(block.id, `sentences.${i}.question`, value, () =>
+                          updateSentence(item.id, { question: value })
+                        );
+                      }}
+                    >
+                      {item.question}
+                    </div>
+                    <div
+                      className="outline-none text-sm text-muted-foreground"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const value = e.currentTarget.textContent || "";
+                        localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                          updateSentence(item.id, { beginning: value })
+                        );
+                      }}
+                    >
+                      {item.beginning}
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                    <button
+                      className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors ${
+                        item.correctAnswer !== false ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/30 hover:border-green-400"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateSentence(item.id, { correctAnswer: true });
+                      }}
+                    >
+                      {item.correctAnswer !== false && <Check className="h-3 w-3" />}
+                    </button>
+                  </div>
+                  <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                    <button
+                      className={`w-5 h-5 rounded-full border-2 inline-flex items-center justify-center transition-colors ${
+                        item.correctAnswer === false ? "bg-red-500 border-red-500 text-white" : "border-muted-foreground/30 hover:border-red-400"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateSentence(item.id, { correctAnswer: false });
+                      }}
+                    >
+                      {item.correctAnswer === false && <X className="h-3 w-3" />}
+                    </button>
+                  </div>
+                  <div className="w-8 flex items-center justify-center">
+                    <button
+                      className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity ${block.sentences.length <= 1 ? "invisible" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSentence(item.id);
+                      }}
+                    >
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
         {block.sentences.map((item, i) => (
           <div
             key={item.id}
@@ -5360,6 +5463,8 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
             )}
           </div>
         ))}
+          </>
+        )}
       </div>
       <button
         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
