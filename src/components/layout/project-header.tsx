@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
 /** Fallback logo when client has no custom brand logo */
-const DEFAULT_LOGO = "/logo/didaktiv_logo_brand.svg";
+const DEFAULT_LOGO = "/logo/didaktiv_logo_brand.png";
 
 const localeLabels: Record<string, string> = {
   de: "DE",
