@@ -18,12 +18,12 @@ setup("authenticate tutorial recorder", async ({ page }) => {
   await page.getByLabel(/password/i).fill(password);
 
   const submitButton = page
-    .getByRole("button", { name: /sign in|anmelden|weiter/i })
+    .getByRole("button", { name: /login|sign in|anmelden|weiter/i })
     .first();
 
   await submitButton.click();
-  await page.waitForURL(new RegExp(`/${locale}/`), { timeout: 30000 });
-
-  await expect(page).not.toHaveURL(new RegExp(`/auth/sign-in$`));
+  await page.waitForTimeout(2000);
+  await page.goto(`/${locale}/account/settings`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(new RegExp(`/${locale}/account/settings$`));
   await page.context().storageState({ path: authFile });
 });

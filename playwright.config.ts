@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.playwright.local" });
 dotenv.config({ path: ".env.local", override: false });
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests/tutorials",
@@ -17,10 +17,14 @@ export default defineConfig({
     baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "on",
-    viewport: { width: 1600, height: 900 },
+    video: {
+      mode: "on",
+      size: { width: 1920, height: 1080 },
+    },
+    viewport: { width: 1920, height: 1080 },
     launchOptions: {
-      slowMo: Number(process.env.PLAYWRIGHT_SLOWMO || 150),
+      slowMo: Number(process.env.PLAYWRIGHT_SLOWMO || 225),
+      args: ["--window-size=1920,1080"],
     },
   },
   projects: [
@@ -29,13 +33,14 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        viewport: { width: 1920, height: 1080 },
       },
     },
     {
       name: "chromium",
-      dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
+        viewport: { width: 1920, height: 1080 },
         storageState: "playwright/.auth/user.json",
       },
     },
