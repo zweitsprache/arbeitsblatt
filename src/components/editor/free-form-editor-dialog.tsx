@@ -7,6 +7,7 @@ import {
   FreeFormBlock,
   FreeFormCircleElement,
   FreeFormElement,
+  FreeFormElementUpdate,
   FreeFormRectElement,
   FreeFormScene,
   FreeFormTextElement,
@@ -200,7 +201,7 @@ export function FreeFormEditorDialog({ open, onOpenChange, block, onChange }: Fr
     updateScene(updateSceneElement(scene, id, (current) => ({ ...current, x, y })));
   }, [scene, updateScene]);
 
-  const updateSelectedTransform = React.useCallback((id: string, updates: Partial<FreeFormElement>) => {
+  const updateSelectedTransform = React.useCallback((id: string, updates: FreeFormElementUpdate) => {
     updateScene(updateSceneElement(scene, id, (current) => ({ ...current, ...updates })));
   }, [scene, updateScene]);
 

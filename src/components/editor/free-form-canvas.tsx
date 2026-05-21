@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
+import type Konva from "konva";
 import { Circle, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import {
   FreeFormCircleElement,
   FreeFormElement,
+  FreeFormElementUpdate,
   FreeFormRectElement,
   FreeFormScene,
   FreeFormTextElement,
@@ -18,7 +20,7 @@ type FreeFormCanvasProps = {
   interactive?: boolean;
   onSelect?: (id: string | null) => void;
   onMove?: (id: string, x: number, y: number) => void;
-  onTransform?: (id: string, updates: Partial<FreeFormElement>) => void;
+  onTransform?: (id: string, updates: FreeFormElementUpdate) => void;
 };
 
 export function FreeFormCanvas({
@@ -33,10 +35,10 @@ export function FreeFormCanvas({
 }: FreeFormCanvasProps) {
   const scaleX = width / Math.max(scene.width, 1);
   const scaleY = height / Math.max(scene.height, 1);
-  const shapeRefs = React.useRef<Record<string, unknown>>({});
-  const transformerRef = React.useRef<unknown>(null);
+  const shapeRefs = React.useRef<Record<string, Konva.Node>>({});
+  const transformerRef = React.useRef<Konva.Transformer | null>(null);
 
-  const setShapeRef = React.useCallback((id: string, node: unknown) => {
+  const setShapeRef = React.useCallback((id: string, node: Konva.Node | null) => {
     if (node) {
       shapeRefs.current[id] = node;
     } else {
@@ -46,7 +48,7 @@ export function FreeFormCanvas({
 
   const renderElement = React.useCallback((element: FreeFormElement) => {
     const commonProps = {
-      ref: (node: unknown) => setShapeRef(element.id, node),
+      ref: (node: Konva.Node | null) => setShapeRef(element.id, node),
       x: element.x,
       y: element.y,
       rotation: element.rotation ?? 0,
@@ -155,11 +157,11 @@ export function FreeFormCanvas({
   }, [onMove, onSelect, onTransform, selectedId, setShapeRef]);
 
   React.useEffect(() => {
-    const transformer = transformerRef.current as { nodes?: (nodes: unknown[]) => void; getLayer?: () => { batchDraw?: () => void } } | null;
-    if (!transformer?.nodes) return;
+    const transformer = transformerRef.current;
+    if (!transformer) return;
     const selectedNode = selectedId ? shapeRefs.current[selectedId] : null;
     transformer.nodes(selectedNode ? [selectedNode] : []);
-    transformer.getLayer?.()?.batchDraw?.();
+    transformer.getLayer()?.batchDraw();
   }, [selectedId, scene.elements]);
 
   return (

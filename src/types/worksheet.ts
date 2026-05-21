@@ -169,6 +169,24 @@ export interface FreeFormTextElement extends FreeFormBaseElement {
 
 export type FreeFormElement = FreeFormRectElement | FreeFormCircleElement | FreeFormTextElement;
 
+export type FreeFormElementUpdate = Partial<{
+  x: number;
+  y: number;
+  rotation: number;
+  visible: boolean;
+  width: number;
+  height: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  cornerRadius: number;
+  radius: number;
+  text: string;
+  fontSize: number;
+  fontFamily: string;
+  fontStyle: string;
+}>;
+
 export interface FreeFormScene {
   width: number;
   height: number;
