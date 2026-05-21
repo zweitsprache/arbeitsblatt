@@ -198,6 +198,15 @@ export function extractBlocksText(
         }
         break;
 
+      case "reading-comprehension":
+        if (block.instruction) parts.push(block.instruction);
+        if (block.readingText) parts.push(block.readingText);
+        for (const s of block.sentences ?? []) {
+          if (s.question) parts.push(s.question);
+          if (block.layoutType !== "true-false" && s.beginning) parts.push(s.beginning);
+        }
+        break;
+
       case "verb-table":
         parts.push(`Verb: ${block.verb}`);
         for (const row of [...(block.singularRows ?? []), ...(block.pluralRows ?? [])]) {

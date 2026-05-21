@@ -1101,6 +1101,9 @@ export interface TransformSentenceItem {
 export interface ReadingComprehensionBlock extends BlockBase {
   type: "reading-comprehension";
   instruction: string;
+  readingText?: string;
+  trueLabel?: string;
+  falseLabel?: string;
   sentences: ReadingComprehensionItem[];
   layoutType?: "default" | "form" | "prefilled-form" | "true-false";
   formFieldLabels?: string[];
@@ -2902,6 +2905,9 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "reading-comprehension",
       instruction: "Beantworte die Fragen zum Text.",
+      readingText: "",
+      trueLabel: "",
+      falseLabel: "",
       layoutType: "default",
       formFieldLabels: [""],
       formColumns: 2,

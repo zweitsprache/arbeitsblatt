@@ -975,7 +975,7 @@ const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
 const CONSISTENT_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b";
 const CONSISTENT_ROW_CLASS_PRINT = "flex min-h-[32.5px] items-center gap-3 border-b";
-const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex min-h-[49px] items-center gap-3 border-b font-bold";
+const CONSISTENT_INSTRUCTION_ROW_CLASS = "flex w-full min-w-0 min-h-[49px] items-center gap-3 border-b font-bold";
 const CONSISTENT_ITEM_BANK_CLASS = "flex min-h-[49px] flex-wrap items-center gap-2";
 const CONSISTENT_ITEM_BANK_CHIP_CLASS = "px-2 py-0.5 rounded border";
 const VIEWER_SECTION_GAP = {
@@ -1207,7 +1207,7 @@ function TaskContainer({
   return (
     <div>
       {(showPill || instruction) && (
-        <div className="flex items-end gap-3">
+        <div className="flex w-full min-w-0 items-end gap-3">
           {showPill && (
           <div
             className="py-1 px-3 text-xs font-semibold rounded-t-sm text-center uppercase flex items-center justify-center"
@@ -1222,7 +1222,7 @@ function TaskContainer({
               accentColor={accentColor}
               showBadge={false}
               withDivider={false}
-              rowClassName="pb-1"
+              rowClassName="min-w-0 flex-1 pb-1"
               style={instructionStyle}
             />
           )}
@@ -1262,17 +1262,17 @@ function InstructionRow({
   const isOnline = mode === "online";
   return (
     <div
-      className={`flex items-center gap-3 font-semibold ${withDivider ? "py-2 border-b" : ""} ${rowClassName || ""}`.trim()}
+      className={`flex w-full min-w-0 items-center gap-3 font-semibold ${withDivider ? "py-2 border-b" : ""} ${rowClassName || ""}`.trim()}
       style={{
         color: "var(--color-primary)",
         ...(style || {}),
       }}
     >
-      <div className={`flex items-center ${showBadge ? "gap-3" : ""} flex-1`.trim()}>
-        {showBadge && (
-          <InstructionBadge instructionIndex={instructionIndex} />
-        )}
-        <p>{instruction}</p>
+      {showBadge && (
+        <InstructionBadge instructionIndex={instructionIndex} />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="min-w-0">{instruction}</p>
       </div>
       {trailingContent}
     </div>
@@ -2809,7 +2809,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
           style={{ color: accentColor || "var(--color-primary)" }}
         >
           <InstructionBadge instructionIndex={instructionIndex} />
-          <p>{instructionText}</p>
+          <p className="min-w-0 flex-1">{instructionText}</p>
         </div>
       ) : (
         <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -2914,7 +2914,7 @@ function FillInBlankView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -3165,7 +3165,7 @@ function FillInBlankItemsView({
           style={{ color: accentColor || "var(--color-primary)" }}
         >
           <InstructionBadge instructionIndex={instructionIndex} />
-          <p>{instructionText}</p>
+          <p className="min-w-0 flex-1">{instructionText}</p>
         </div>
       ) : (
         <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -3509,7 +3509,7 @@ function FillInBlankItemsView({
                 style={{ color: accentColor || "var(--color-primary)" }}
               >
                 <InstructionBadge instructionIndex={instructionIndex} />
-                <p>{block.instruction}</p>
+                <p className="min-w-0 flex-1">{block.instruction}</p>
               </div>
             ) : (
               <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -3647,7 +3647,7 @@ function FillInBlankItemsView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -3842,7 +3842,7 @@ function FillInBlankItemsView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -3915,7 +3915,7 @@ function FillInBlankItemsView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -4321,8 +4321,8 @@ function renderSolvedFlashcardBackText(text: string): React.ReactNode {
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <div className="flex items-center gap-3 flex-1">
-                <p className="flex-1">{block.instruction}</p>
+              <div className="flex w-full min-w-0 items-center gap-3 flex-1">
+                <p className="min-w-0 flex-1">{block.instruction}</p>
                 <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
                 <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
               </div>
@@ -4333,12 +4333,6 @@ function renderSolvedFlashcardBackText(text: string): React.ReactNode {
               accentColor={accentColor}
               mode={mode}
               instructionIndex={instructionIndex}
-              trailingContent={(
-                <>
-                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
-                  <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
-                </>
-              )}
             />
           )
         )}
@@ -4377,8 +4371,8 @@ function renderSolvedFlashcardBackText(text: string): React.ReactNode {
             return (
               <div key={stmt.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
                 <ItemNumberBadge index={stmtIndex + 1} className="shrink-0" />
-                <span className="flex-1">{renderTfBlanks(stmt.text)}</span>
-                <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                <span className="min-w-0 flex-1">{renderTfBlanks(stmt.text)}</span>
+                <div className="shrink-0 self-center flex items-center justify-center" style={{ width: optionColumnWidth }}>
                   {showSolutions && !interactive ? (
                     stmt.correctAnswer ? (
                       <div className={CONTROL_BOX_FILLED_CLASS} />
@@ -4393,7 +4387,7 @@ function renderSolvedFlashcardBackText(text: string): React.ReactNode {
                     />
                   )}
                 </div>
-                <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                <div className="shrink-0 self-center flex items-center justify-center" style={{ width: optionColumnWidth }}>
                   {showSolutions && !interactive ? (
                     !stmt.correctAnswer ? (
                       <div className={CONTROL_BOX_FILLED_CLASS} />
@@ -4493,8 +4487,8 @@ function MCQMatrixView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <div className="flex items-center gap-3 flex-1">
-                <p className="flex-1">{block.instruction}</p>
+              <div className="flex w-full min-w-0 items-center gap-3 flex-1">
+                <p className="min-w-0 flex-1">{block.instruction}</p>
                 {block.options.map((option) => (
                   <div key={option.id} className="w-20" aria-hidden="true" />
                 ))}
@@ -4506,9 +4500,6 @@ function MCQMatrixView({
               accentColor={accentColor}
               mode={mode}
               instructionIndex={instructionIndex}
-              trailingContent={block.options.map((option) => (
-                <div key={option.id} className="w-20" aria-hidden="true" />
-              ))}
             />
           )
         )}
@@ -4626,7 +4617,7 @@ function ArticleTrainingView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -6324,7 +6315,7 @@ function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -6617,7 +6608,7 @@ function InlineChoicesView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -6705,7 +6696,7 @@ function MCQRowsView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -6956,7 +6947,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               style={{ color: accentColor || "var(--color-primary)" }}
             >
                 <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
               <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -7079,7 +7070,7 @@ function CrosswordView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -7466,7 +7457,7 @@ function CrosswordView({
               style={{ color: accentColor || "var(--color-primary)" }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -7740,7 +7731,7 @@ function UnscrambleWordsView({
             }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow
@@ -7873,7 +7864,7 @@ function CorrectSpellingView({
               }}
             >
               <InstructionBadge instructionIndex={instructionIndex} />
-              <p>{block.instruction}</p>
+              <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
           ) : (
             <InstructionRow
@@ -8048,7 +8039,7 @@ function FixSentencesView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -8231,7 +8222,7 @@ function CompleteSentencesView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
               <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
             <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -8452,8 +8443,8 @@ function ReadingComprehensionView({
 
   if (isTrueFalseLayout) {
     const tfAnswers = (answer as Record<string, boolean | undefined> | undefined) || {};
-    const trueLabelText = tc("true");
-    const falseLabelText = tc("false");
+    const trueLabelText = block.trueLabel || tc("true");
+    const falseLabelText = block.falseLabel || tc("false");
     const optionColumnWidth = `${Math.max(80, Math.min(180, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 28))}px`;
 
     const handleSelect = (itemId: string, value: boolean) => {
@@ -8485,8 +8476,8 @@ function ReadingComprehensionView({
                 style={{ color: accentColor || "var(--color-primary)" }}
               >
                 <InstructionBadge instructionIndex={instructionIndex} />
-                <div className="flex items-center gap-3 flex-1">
-                  <p className="flex-1">{block.instruction}</p>
+                <div className="flex w-full min-w-0 items-center gap-3 flex-1">
+                  <p className="min-w-0 flex-1">{block.instruction}</p>
                   <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
                   <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
                 </div>
@@ -8497,15 +8488,14 @@ function ReadingComprehensionView({
                 accentColor={accentColor}
                 mode={mode}
                 instructionIndex={instructionIndex}
-                trailingContent={(
-                  <>
-                    <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
-                    <div className="shrink-0" style={{ width: optionColumnWidth }} aria-hidden="true" />
-                  </>
-                )}
               />
             )
           )}
+          {(block.readingText || "").trim() ? (
+            <div className="whitespace-pre-wrap py-2 leading-6 text-foreground">
+              {block.readingText}
+            </div>
+          ) : null}
           <div className={ROW_CLASS}>
             <span className="w-6 shrink-0" aria-hidden="true" />
             <div className="flex-1 font-bold text-foreground" />
@@ -8531,13 +8521,12 @@ function ReadingComprehensionView({
                       />
                     </div>
                   ) : null}
-                  <div className={`${ROW_CLASS} items-start py-2`}>
+                  <div className="flex items-center gap-3 py-2">
                     <ItemNumberBadge index={i + 1} className="shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium">{item.question}</p>
-                      {item.beginning && <p className="text-sm text-muted-foreground">{item.beginning}</p>}
                     </div>
-                    <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                    <div className="shrink-0 self-center flex items-center justify-center" style={{ width: optionColumnWidth }}>
                       {!interactive && showSolutions ? (
                         correctAnswer ? <div className={CONTROL_BOX_FILLED_CLASS} /> : <div className={CONTROL_BOX_CLASS} />
                       ) : showExampleMarker && correctAnswer ? (
@@ -8551,7 +8540,7 @@ function ReadingComprehensionView({
                         />
                       )}
                     </div>
-                    <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>
+                    <div className="shrink-0 self-center flex items-center justify-center" style={{ width: optionColumnWidth }}>
                       {!interactive && showSolutions ? (
                         !correctAnswer ? <div className={CONTROL_BOX_FILLED_CLASS} /> : <div className={CONTROL_BOX_CLASS} />
                       ) : showExampleMarker && !correctAnswer ? (
@@ -8584,7 +8573,7 @@ function ReadingComprehensionView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
@@ -9208,7 +9197,7 @@ function DialogueView({
             style={{ color: accentColor || "var(--color-primary)" }}
           >
             <InstructionBadge instructionIndex={instructionIndex} />
-            <p>{block.instruction}</p>
+            <p className="min-w-0 flex-1">{block.instruction}</p>
           </div>
         ) : (
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />

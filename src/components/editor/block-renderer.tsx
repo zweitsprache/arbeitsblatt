@@ -5180,8 +5180,8 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
-  const trueLabelText = tc("true");
-  const falseLabelText = tc("false");
+  const trueLabelText = block.trueLabel || tc("true");
+  const falseLabelText = block.falseLabel || tc("false");
   const optionColumnWidth = `${Math.max(64, Math.min(160, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 24))}px`;
 
   const updateSentence = (id: string, updates: Partial<{ question: string; beginning: string; correctAnswer: boolean }>) => {
@@ -5242,6 +5242,36 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
         {block.instruction}
       </div>
 
+      {isTrueFalseLayout && (block.readingText || "").trim() ? (
+        <div
+          className="outline-none whitespace-pre-wrap text-sm leading-6 text-foreground"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            const value = e.currentTarget.textContent || "";
+            localeUpdate(block.id, "readingText", value, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { readingText: value } } })
+            );
+          }}
+        >
+          {block.readingText}
+        </div>
+      ) : isTrueFalseLayout ? (
+        <div
+          className="outline-none whitespace-pre-wrap text-sm leading-6 text-muted-foreground"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            const value = e.currentTarget.textContent || "";
+            localeUpdate(block.id, "readingText", value, () =>
+              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { readingText: value } } })
+            );
+          }}
+        >
+          {t("readingComprehensionReadingTextPlaceholder")}
+        </div>
+      ) : null}
+
       <div>
         {isTrueFalseLayout ? (
           <div>
@@ -5268,7 +5298,7 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                 ) : null}
                 <div className="flex items-start gap-3 py-2">
                   <ItemNumberBadge index={i + 1} />
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-1">
                     <div
                       className="font-medium outline-none"
                       contentEditable
@@ -5281,19 +5311,6 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                       }}
                     >
                       {item.question}
-                    </div>
-                    <div
-                      className="outline-none text-sm text-muted-foreground"
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => {
-                        const value = e.currentTarget.textContent || "";
-                        localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
-                          updateSentence(item.id, { beginning: value })
-                        );
-                      }}
-                    >
-                      {item.beginning}
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center justify-center" style={{ width: optionColumnWidth }}>

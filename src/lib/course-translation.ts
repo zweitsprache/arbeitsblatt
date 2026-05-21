@@ -375,6 +375,24 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "reading-comprehension": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      add("readingText", () => block.readingText || "", (v) => {
+        block.readingText = v;
+      });
+      for (const item of block.sentences) {
+        add(`sentences.${item.id}.question`, () => item.question, (v) => {
+          item.question = v;
+        });
+        add(`sentences.${item.id}.beginning`, () => item.beginning, (v) => {
+          item.beginning = v;
+        });
+      }
+      break;
+    }
+
     case "verb-table":
       // Verb conjugation tables are never translated
       break;

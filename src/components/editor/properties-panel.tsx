@@ -8790,6 +8790,57 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
           </SelectContent>
         </Select>
       </div>
+      {isTrueFalseLayout && (
+        <>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionReadingText")}</Label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[120px] resize-y"
+              value={block.readingText ?? ""}
+              placeholder={t("readingComprehensionReadingTextPlaceholder")}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { readingText: e.target.value } },
+                })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">{t("trueLabelProp")}</Label>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder={tc("true")}
+                  value={block.trueLabel || ""}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_BLOCK",
+                      payload: { id: block.id, updates: { trueLabel: e.target.value } },
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">{t("falseLabelProp")}</Label>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder={tc("false")}
+                  value={block.falseLabel || ""}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_BLOCK",
+                      payload: { id: block.id, updates: { falseLabel: e.target.value } },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       <Separator />
       {isFormLayout && (
         <>
@@ -8861,16 +8912,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
             {isTrueFalseLayout ? (
               <>
                 <div className="flex items-center gap-1">
-                  <div className="flex-1">
-                    <ChInput
-                      blockId={block.id}
-                      fieldPath={`sentences.${i}.beginning`}
-                      baseValue={item.beginning}
-                      onBaseChange={(v) => updateSentence(i, { beginning: v })}
-                      className="h-8 text-xs"
-                      placeholder={t("readingComprehensionBeginningPlaceholder")}
-                    />
-                  </div>
+                  <div className="flex-1" />
                   <div className="flex items-center gap-1 rounded-md border border-input bg-background p-1">
                     <Button
                       type="button"
