@@ -32,6 +32,7 @@ import {
   DominoBlock,
   CardPairsBlock,
   FlashcardsBlock,
+  AufgabenkartenBlock,
   BingoCardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
@@ -780,6 +781,10 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
 }
 
 // ─── Text ────────────────────────────────────────────────────
+function stripTrailingEmptyParagraphs(html: string): string {
+  return html.replace(/(?:\s*<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\u00a0)?\s*<\/p>\s*)+$/gi, "");
+}
+
 function TextRenderer({ block }: { block: TextBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
@@ -837,13 +842,19 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const richTextEl = (
     <RichTextEditor
       content={block.content}
-      onChange={(html) =>
-        localeUpdate(block.id, "content", html, () =>
-          dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+      onChange={(html) => {
+        const normalizedHtml = isRows ? stripTrailingEmptyParagraphs(html) : html;
+        localeUpdate(block.id, "content", normalizedHtml, () =>
+          dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: normalizedHtml } } })
         )
-      }
+      }}
       placeholder={t("startTyping")}
       floatingElement={imageEl}
+      editorClassName={
+        isRows
+          ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] py-2"
+          : undefined
+      }
     />
   );
 
@@ -6743,6 +6754,131 @@ function SyllableCardsRenderer({ block }: { block: SyllableCardsBlock }) {
   );
 }
 
+function AufgabenkartenRenderer({ block }: { block: AufgabenkartenBlock }) {
+  const { state, dispatch } = useEditor();
+  const items = block.items.length > 0
+    ? block.items
+    : Array.from({ length: 6 }, (_, index) => ({
+        id: `aufgabenkarten-item-${index + 1}`,
+        text: "",
+        imageUrl: "",
+      }));
+  const textClass = getDominoEditorTextClass(block.textSize);
+  const title = block.title?.trim();
+  const subtitle = block.subtitle?.trim() || "";
+  const logoSrc = BRAND_ICON_LOGOS[state.brandProfile.slug || state.settings.brand || "edoomio"] || BRAND_ICON_LOGOS.edoomio;
+  const titleColor = resolveHeadingOverrideColor(
+    state.brandProfile.h3HeadingColor,
+    state.brandProfile.primaryColor,
+    state.brandProfile.accentColor,
+  );
+
+  const removeItem = (itemIndex: number) => {
+    const nextItems = items.filter((_, index) => index !== itemIndex);
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } });
+    if (state.selectedBlockId === block.id) {
+      dispatch({ type: "SET_ACTIVE_ITEM", payload: null });
+    }
+  };
+
+  const glueEllipsis = (value: string) => value.replace(/\s…/g, "\u00A0…");
+
+  const getCardContent = (item: AufgabenkartenBlock["items"][number]) => {
+    const cardTitle = glueEllipsis(item.title?.trim() || "");
+    const cardTask = glueEllipsis((item.task ?? item.text ?? "").trim());
+    const chunkLine = glueEllipsis((item.chunks ?? []).map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0).join(" | "));
+    return { cardTitle, cardTask, chunkLine };
+  };
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? (
+        <h3
+          className="text-xl text-left"
+          style={{
+            width: "100%",
+            fontWeight: 800,
+            fontFamily: state.brandProfile.headlineFont,
+            ...(titleColor ? { color: titleColor } : {}),
+          }}
+        >
+          {title}
+        </h3>
+      ) : null}
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", width: "fit-content" }}>
+        {items.map((item, itemIndex) => {
+          const { cardTitle, cardTask, chunkLine } = getCardContent(item);
+          const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
+          return (
+            <div key={item.id || itemIndex} className="group relative">
+              <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {itemIndex + 1}
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removeItem(itemIndex);
+                }}
+                className="absolute right-1 top-1 z-20 rounded-full bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity group-hover:opacity-100 hover:text-red-600"
+                title={state.localeMode === "DE" ? "Karte entfernen" : "Remove card"}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                  dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
+                }}
+                className={`relative flex h-[56mm] w-[36mm] flex-col items-start justify-start overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8 text-left transition-colors ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                style={
+                  item.imageUrl
+                    ? {
+                        backgroundImage: `url(${item.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : undefined
+                }
+              >
+                {logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoSrc}
+                    alt=""
+                    style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain" }}
+                  />
+                ) : null}
+                {!item.imageUrl ? <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
+                {cardTitle || cardTask || chunkLine ? (
+                  <div
+                    className={`aufgabenkarten-card-content relative z-10 w-full rounded-sm bg-background/80 px-1 py-1 ${textClass}`}
+                    style={{ textAlign: "left" }}
+                  >
+                    {cardTitle ? <h3>{cardTitle}</h3> : null}
+                    {cardTask ? <p>{cardTask}</p> : null}
+                    {chunkLine ? <p className="aufgabenkarten-chunks" style={{ color: state.brandProfile.primaryColor }}>{chunkLine}</p> : null}
+                  </div>
+                ) : null}
+                {subtitle ? (
+                  <div
+                    className="absolute z-10 whitespace-pre-wrap break-words text-muted-foreground"
+                    style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
+                  >
+                    {subtitle}
+                  </div>
+                ) : null}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Dialogue ────────────────────────────────────────────────
 function DialogueRenderer({
   block,
@@ -7434,6 +7570,7 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
       .filter((entry) => entry.trim().length > 0),
   }));
   const blockTitle = block.title?.trim();
+  const subtitle = block.subtitle?.trim() || "";
   const reservedTitleHeight = "1.75rem";
 
   return (
@@ -7451,7 +7588,7 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
             style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
           >
             <div style={{ minHeight: reservedTitleHeight }} />
-            <div className="space-y-3 pt-3">
+            <div className="space-y-3 pt-3 pb-6">
               <div className="text-lg font-bold leading-snug whitespace-pre-wrap break-words text-foreground">
                 {card.word || "..."}
               </div>
@@ -7467,6 +7604,14 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
                 ))}
               </div>
             </div>
+            {subtitle ? (
+              <div
+                className="absolute text-muted-foreground whitespace-pre-wrap break-words"
+                style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
+              >
+                {subtitle}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -8736,6 +8881,8 @@ export function BlockRenderer({
       return <CardPairsRenderer block={block as CardPairsBlock} />;
     case "flashcards":
       return <FlashcardsRenderer block={block as FlashcardsBlock} />;
+    case "aufgabenkarten":
+      return <AufgabenkartenRenderer block={block as AufgabenkartenBlock} />;
     case "syllable-cards":
       return <SyllableCardsRenderer block={block as SyllableCardsBlock} />;
     case "board-game":

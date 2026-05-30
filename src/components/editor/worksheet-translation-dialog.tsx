@@ -48,7 +48,11 @@ const LANGUAGE_LABELS: Record<string, string> = Object.fromEntries(
   AVAILABLE_LANGUAGES.map(({ code, label }) => [code, label])
 );
 
-export function WorksheetTranslationDialog() {
+export function WorksheetTranslationDialog({
+  buttonClassName,
+}: {
+  buttonClassName?: string;
+} = {}) {
   const t = useTranslations("toolbar");
   const { state, save, dispatch } = useEditor();
   const [open, setOpen] = useState(false);
@@ -158,7 +162,7 @@ export function WorksheetTranslationDialog() {
       <Tooltip>
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className={`gap-2 ${buttonClassName ?? ""}`}>
               <Languages className="h-4 w-4" />
               {t("translations")}
             </Button>

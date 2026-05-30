@@ -152,7 +152,7 @@ export function PrintPreview({
   const [iframeHeight, setIframeHeight] = useState(5000);
 
   const noWorksheet = !state.worksheetId;
-  const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards");
+  const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
   const previewPageWidth = cardBlocksForceCanva || state.settings.orientation !== "portrait" ? 1123 : 794;
   const usePagedMode = engine === "pagedjs" && enablePagedMode;
 

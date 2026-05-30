@@ -75,7 +75,7 @@ export function WorksheetCanvas({
       className="flex-1 overflow-auto canvas-scroll"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      <div className="flex justify-center py-8 px-4">
+      <div className="flex justify-center pt-4 pb-8 px-4">
         <div
           ref={state.blocks.length === 0 ? setCanvasRef : undefined}
           className={`editor-canvas bg-white shadow-lg rounded-sm border transition-colors
@@ -138,7 +138,7 @@ export function WorksheetCanvas({
                         <DropIndicator isActive={showAbove} />
                       )}
                       <div
-                        style={index > 0 ? { marginTop: "var(--block-gap)" } : undefined}
+                        style={index > 0 ? { marginTop: "var(--block-gap, 6px)" } : undefined}
                       >
                         <SortableBlock
                           block={block}

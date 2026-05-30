@@ -41,7 +41,6 @@ import {
 } from "next/navigation";
 import {
   Save,
-  Printer,
   Monitor,
   Globe,
   Download,
@@ -59,7 +58,6 @@ import {
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
-import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 
 export function EditorToolbar({
   editorVersion = "v1",
@@ -105,7 +103,7 @@ export function EditorToolbar({
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
-  const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards");
+  const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
   const effectivePdfFormat = cardBlocksForceCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
   const canEditTitle = access.features.editTitle;
   const canEditWorksheetSettings = access.features.editWorksheetSettings;
@@ -335,31 +333,7 @@ export function EditorToolbar({
 
   return (
     <>
-      <div className="h-14 bg-background flex items-center px-4 gap-2 shrink-0">
-        {/* Title */}
-        <div className="flex items-center gap-1 max-w-[560px]">
-          <Input
-            value={displayTitle}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            disabled={!canEditTitle}
-            className={`h-8 font-medium flex-1 ${
-              isDeOverrideMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
-            }`}
-            placeholder={t("titlePlaceholder")}
-          />
-          {isDeOverrideMode && titleHasOverride && (
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } })}
-              disabled={!canEditTitle}
-              className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-amber-500 hover:text-red-500 shrink-0"
-              title={t("clearChTitle")}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-
+      <div className="relative z-10 h-14 bg-background flex items-center px-4 gap-2 shrink-0 shadow-[0_3px_10px_rgba(15,23,42,0.10)] border-b border-slate-200/50">
         {state.isDirty && (
           <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
             {tc("unsaved")}
@@ -387,129 +361,6 @@ export function EditorToolbar({
           </Button>
         )}
 
-        {/* Brand selector */}
-        <div className="flex items-center gap-1">
-          <Select
-            value={
-              state.settings.subProfileId
-                ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
-                : state.settings.brand || "edoomio"
-            }
-            disabled={!canEditWorksheetSettings}
-            onValueChange={(value: string) => {
-              const [slug, subId] = value.split("::");
-              dispatch({
-                type: "UPDATE_SETTINGS",
-                payload: {
-                  brand: slug as Brand,
-                  subProfileId: subId || undefined,
-                  brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
-                },
-              });
-            }}
-          >
-            <SelectTrigger className="h-8 w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {state.availableBrands.length > 0
-                ? state.availableBrands.map((bp) => {
-                    const subs = bp.subProfiles ?? [];
-                    if (subs.length === 0) {
-                      return (
-                        <SelectItem key={bp.slug} value={bp.slug}>
-                          {bp.name}
-                        </SelectItem>
-                      );
-                    }
-                    return (
-                      <SelectGroup key={bp.slug}>
-                        <SelectLabel className="text-xs text-muted-foreground">{bp.name}</SelectLabel>
-                        <SelectItem value={bp.slug}>
-                          {bp.name}
-                        </SelectItem>
-                        {subs.map((sp: BrandSubProfile) => (
-                          <SelectItem key={sp.id} value={`${bp.slug}::${sp.id}`}>
-                            {bp.name} / {sp.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  })
-                : <>
-                    <SelectItem value="edoomio">edoomio</SelectItem>
-                    <SelectItem value="lingostar">lingostar</SelectItem>
-                    <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
-                  </>
-              }
-            </SelectContent>
-          </Select>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                disabled={!canEditWorksheetSettings}
-                onClick={() => setShowBrandSettings(true)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("brandSettings")}</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* DE / CH locale toggle */}
-        <div className="flex items-center bg-muted rounded-lg p-0.5">
-          <Button
-            variant={state.localeMode === "DE" ? "default" : "ghost"}
-            size="sm"
-            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "DE" ? "shadow-sm" : ""}`}
-            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
-          >
-            {"🇩🇪"} DE
-          </Button>
-          <Button
-            variant={state.localeMode === "CH" ? "default" : "ghost"}
-            size="sm"
-            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "CH" ? "shadow-sm" : ""}`}
-            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
-          >
-            {"🇨🇭"} CH
-            {countChOverrides(state.settings.chOverrides) > 0 && (
-              <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px] bg-amber-100 text-amber-700">
-                {countChOverrides(state.settings.chOverrides)}
-              </Badge>
-            )}
-          </Button>
-        </div>
-
-        {/* Mode toggle */}
-        <div className="flex items-center bg-muted rounded-lg p-0.5">
-          <Button
-            variant={state.viewMode === "print" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5"
-            onClick={() => dispatch({ type: "SET_VIEW_MODE", payload: "print" })}
-          >
-            <Printer className="h-3.5 w-3.5" />
-            {tc("print")}
-          </Button>
-          <Button
-            variant={state.viewMode === "online" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5"
-            onClick={() =>
-              dispatch({ type: "SET_VIEW_MODE", payload: "online" })
-            }
-          >
-            <Monitor className="h-3.5 w-3.5" />
-            {tc("online")}
-          </Button>
-        </div>
-
-
         {/* Print Preview */}
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -517,12 +368,12 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5"
+                className="h-8 w-36 px-2"
                 disabled={!canPreviewWorksheet}
                 onClick={() => setShowPrintPreview(true)}
               >
-                <Printer className="h-3.5 w-3.5" />
-                {t("printPreview")}
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex-1 text-center">Übersetzungen</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("printPreviewTooltip")}</TooltipContent>
@@ -532,12 +383,13 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2"
+                className="h-8 w-36 px-2"
                 disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(false)}
                 aria-label={t("openInNewTab")}
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex-1 text-center">Arbeitsblatt</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("openInNewTab")}</TooltipContent>
@@ -547,13 +399,13 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1 px-2"
+                className="h-8 w-36 px-2"
                 disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(true)}
                 aria-label={`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}
               >
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold leading-none">{t("pdfSolutionsOnly")}</span>
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex-1 text-center">Lösungen</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>{`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}</TooltipContent>
@@ -566,20 +418,17 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5"
+              className="h-8 w-36 px-2"
               disabled={!canPreviewWorksheet}
               onClick={() => setShowOnlinePreview(true)}
             >
-              <Eye className="h-3.5 w-3.5" />
-              {tc("preview")}
+              <Eye className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 text-center">Online</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t("previewOnline")}</TooltipContent>
         </Tooltip>
 
-
-        {/* Actions */}
-        {canEditWorksheetSettings && <WorksheetTranslationDialog />}
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -851,86 +700,6 @@ export function EditorToolbar({
         </DialogContent>
       </Dialog>
 
-      {/* Brand Settings Dialog */}
-      <Dialog open={showBrandSettings} onOpenChange={setShowBrandSettings}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("brandSettings")} – {state.brandProfile.name || state.settings.brand || "edoomio"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-sm font-medium">{t("brandLogo")}</Label>
-              <Input
-                value={resolvedBrand.logo}
-                onChange={(e) => updateBrandOverrides({ logo: e.target.value })}
-                placeholder="/logo/my-logo.svg"
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">{t("brandLogoHelp")}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("organization")}</Label>
-              <Input
-                value={resolvedBrand.organization}
-                onChange={(e) => updateBrandOverrides({ organization: e.target.value })}
-                placeholder={t("organizationPlaceholder")}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("teacher")}</Label>
-              <Input
-                value={resolvedBrand.teacher}
-                onChange={(e) => updateBrandOverrides({ teacher: e.target.value })}
-                placeholder={t("teacherPlaceholder")}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("headerRight")}</Label>
-              <textarea
-                value={resolvedBrand.headerRight}
-                onChange={(e) => updateBrandOverrides({ headerRight: e.target.value })}
-                placeholder="HTML..."
-                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="rounded-md bg-muted/50 p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1">{t("availableVariables")}</p>
-              <p className="text-xs text-muted-foreground font-mono">
-                {"{current_date}"} · {"{current_year}"} · {"{current_page}"} · {"{no_of_pages}"} · {"{organization}"} · {"{teacher}"} · {"{worksheet_uuid}"}
-              </p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("footerLeft")}</Label>
-              <textarea
-                value={resolvedBrand.footerLeft}
-                onChange={(e) => updateBrandOverrides({ footerLeft: e.target.value })}
-                placeholder="HTML..."
-                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("footerCenter")}</Label>
-              <textarea
-                value={resolvedBrand.footerCenter}
-                onChange={(e) => updateBrandOverrides({ footerCenter: e.target.value })}
-                placeholder="HTML..."
-                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">{t("footerRight")}</Label>
-              <textarea
-                value={resolvedBrand.footerRight}
-                onChange={(e) => updateBrandOverrides({ footerRight: e.target.value })}
-                placeholder="HTML..."
-                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

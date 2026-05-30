@@ -113,7 +113,7 @@ function DraggableBlockItem({ definition, disabled = false }: { definition: Bloc
       {...listeners}
       {...attributes}
       aria-disabled={disabled}
-      className={`flex items-center gap-3 p-3 rounded-lg bg-card cursor-grab
+      className={`flex items-center gap-3 p-3 rounded-[4px] border border-border bg-card cursor-grab
         hover:bg-accent transition-colors
         ${disabled ? "cursor-not-allowed opacity-50 hover:bg-card" : ""}
         ${isDragging ? "opacity-50 shadow-lg" : ""}`}
@@ -188,8 +188,8 @@ export function BlockSidebar({
   };
 
   return (
-    <div className="w-80 shrink-0 flex flex-col h-full min-h-0 pt-8 pb-8">
-      <div className="flex flex-col h-full bg-slate-50 rounded-sm overflow-hidden">
+    <div className="w-80 shrink-0 flex flex-col h-full min-h-0 pt-4 pb-8">
+      <div className="flex flex-col h-full border border-foreground rounded-sm overflow-hidden min-h-0">
         <div className="flex flex-col h-full overflow-hidden">
           <div className="p-3">
             <div className="relative">
@@ -207,7 +207,7 @@ export function BlockSidebar({
               {/* Headings blocks */}
               {categories.headings.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("headingsCategory", "Headings")}
                   </div>
                   <div className="space-y-1.5">
@@ -219,7 +219,7 @@ export function BlockSidebar({
               {/* Content blocks */}
               {categories.content.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("contentCategory", "Text")}
                   </div>
                   <div className="space-y-1.5">
@@ -231,7 +231,7 @@ export function BlockSidebar({
               {/* Image blocks */}
               {categories.images.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("imagesCategory", "Images and Graphics")}
                   </div>
                   <div className="space-y-1.5">
@@ -243,7 +243,7 @@ export function BlockSidebar({
               {/* Vocabulary blocks */}
               {categories.vocabulary.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("vocabularyCategory", "Vocabulary")}
                   </div>
                   <div className="space-y-1.5">
@@ -255,7 +255,7 @@ export function BlockSidebar({
               {/* Games blocks */}
               {categories.games.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("gamesCategory", "Games")}
                   </div>
                   <div className="space-y-1.5">
@@ -267,7 +267,7 @@ export function BlockSidebar({
               {/* Spelling blocks */}
               {categories.spelling.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("spellingCategory", "Spelling")}
                   </div>
                   <div className="space-y-1.5">
@@ -279,7 +279,7 @@ export function BlockSidebar({
               {/* Cards blocks */}
               {categories.cards.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("cardsCategory", "Cards")}
                   </div>
                   <div className="space-y-1.5">
@@ -291,7 +291,7 @@ export function BlockSidebar({
               {/* Mockup blocks */}
               {categories.mockup.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("mockupCategory", "Mockups")}
                   </div>
                   <div className="space-y-1.5">
@@ -303,7 +303,7 @@ export function BlockSidebar({
               {/* Numbering blocks */}
               {categories.numbering.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("numberingCategory", "Numbering")}
                   </div>
                   <div className="space-y-1.5">
@@ -315,7 +315,7 @@ export function BlockSidebar({
               {/* Memory aids blocks */}
               {categories.memoryAids.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("memoryAidsCategory", "Memory Aids")}
                   </div>
                   <div className="space-y-1.5">
@@ -327,7 +327,7 @@ export function BlockSidebar({
               {/* Multimedia blocks */}
               {categories.multimedia.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("multimediaCategory", "Multimedia")}
                   </div>
                   <div className="space-y-1.5">
@@ -339,7 +339,7 @@ export function BlockSidebar({
               {/* Layout blocks */}
               {categories.layout.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("layoutCategory", "Layout")}
                   </div>
                   <div className="space-y-1.5">
@@ -351,7 +351,7 @@ export function BlockSidebar({
               {/* Interactive blocks */}
               {categories.interactive.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("interactiveCategory", "Interactive")}
                   </div>
                   <div className="space-y-1.5">
@@ -363,7 +363,7 @@ export function BlockSidebar({
               {/* AI Tools blocks */}
               {categories.aiTools.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-md mb-2">
+                  <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-[4px] mb-2">
                     {ts("aiToolsCategory", "AI Tools")}
                   </div>
                   <div className="space-y-1.5">

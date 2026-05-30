@@ -287,6 +287,7 @@ export function WorksheetViewer({
   const hasFooterRight = !!processedFooterRight;
   const hasDominoBlock = visibleBlocks.some((block) => block.type === "domino");
   const hasFlashcardsBlock = visibleBlocks.some((block) => block.type === "flashcards");
+  const hasAufgabenkartenBlock = visibleBlocks.some((block) => block.type === "aufgabenkarten");
   const hasCardPairsBlock = visibleBlocks.some((block) => block.type === "card-pairs");
   const hasQuartettBlock = visibleBlocks.some((block) => block.type === "quartett");
   const hasTabooBlock = visibleBlocks.some((block) => block.type === "taboo");
@@ -294,8 +295,8 @@ export function WorksheetViewer({
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
-  const suppressCanvaSideRail = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
-  const useDedicatedCardPrintHeader = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
+  const suppressCanvaSideRail = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasAufgabenkartenBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
+  const useDedicatedCardPrintHeader = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasAufgabenkartenBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
   const useDedicatedCardPrintFooter = false;
   const useDedicatedQuartettPrintFooter = mode === "print" && isCanvaLandscape && (hasQuartettBlock || hasTabooBlock) && showPrintFooter;
   const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
@@ -357,7 +358,7 @@ export function WorksheetViewer({
 
   return (
     <div
-      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasCardPairsBlock ? "print-has-card-pairs" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
+      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasAufgabenkartenBlock ? "print-has-aufgabenkarten" : ""} ${hasCardPairsBlock ? "print-has-card-pairs" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
       style={viewerCssVars}
     >
       {fontStylesheetUrls.map((href) => (

@@ -43,7 +43,7 @@ export default async function PrintWorksheetPage({
   });
 
   let blocks = migratedLocaleData.blocks;
-  const cardBlocksForceCanva = blocks.some((block) => block.type === "domino" || block.type === "flashcards");
+  const cardBlocksForceCanva = blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
   const rawSettings = worksheet.settings as unknown as Partial<WorksheetSettings>;
   const brand = ((rawSettings?.brand as string) || "edoomio") as Brand;
   const now = new Date();

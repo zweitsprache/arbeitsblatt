@@ -199,6 +199,20 @@
   margin-bottom: 0;
 }
 
+.aufgabenkarten-card-content h3,
+.aufgabenkarten-card-content p {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+
+.aufgabenkarten-card-content > p:last-child {
+  margin-bottom: 0;
+}
+
+.aufgabenkarten-card-content .aufgabenkarten-chunks {
+  font-size: 0.92em;
+}
+
 .tiptap-compact .tiptap p,
 .tiptap-compact.tiptap p {
   margin-top: 0 !important;
@@ -248,6 +262,17 @@
 .tiptap-rows.tiptap p:first-child,
 .tiptap-rows .ProseMirror p:first-child {
   border-top: 1px solid #d1d5db !important;
+}
+
+/* Do not render the technical trailing empty paragraph as an extra rows entry in the editor */
+.tiptap-rows .ProseMirror p:last-child:has(> br.ProseMirror-trailingBreak:only-child) {
+  border-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.tiptap-rows .ProseMirror p:last-child:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  display: none !important;
 }
 
 /* Kompetenzziele: goal icon */
@@ -659,6 +684,7 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content,
 .print-worksheet-root.print-has-flashcards .print-footer-content,
+.print-worksheet-root.print-has-aufgabenkarten .print-footer-content,
 .print-worksheet-root.print-has-card-pairs .print-footer-content,
 .print-worksheet-root.print-has-syllable-cards .print-footer-content {
   width: 261mm;
@@ -668,6 +694,7 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content,
 .print-worksheet-root.print-has-flashcards .print-footer-content,
+.print-worksheet-root.print-has-aufgabenkarten .print-footer-content,
 .print-worksheet-root.print-has-card-pairs .print-footer-content,
 .print-worksheet-root.print-has-syllable-cards .print-footer-content {
   display: grid;
@@ -678,6 +705,7 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content > div,
 .print-worksheet-root.print-has-flashcards .print-footer-content > div,
+.print-worksheet-root.print-has-aufgabenkarten .print-footer-content > div,
 .print-worksheet-root.print-has-card-pairs .print-footer-content > div,
 .print-worksheet-root.print-has-syllable-cards .print-footer-content > div {
   min-width: 0;
@@ -686,6 +714,7 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content > div:nth-child(2),
 .print-worksheet-root.print-has-flashcards .print-footer-content > div:nth-child(2),
+.print-worksheet-root.print-has-aufgabenkarten .print-footer-content > div:nth-child(2),
 .print-worksheet-root.print-has-card-pairs .print-footer-content > div:nth-child(2),
 .print-worksheet-root.print-has-syllable-cards .print-footer-content > div:nth-child(2) {
   text-align: center;
@@ -693,6 +722,7 @@
 
 .print-worksheet-root.print-has-domino .print-footer-content > div:last-child,
 .print-worksheet-root.print-has-flashcards .print-footer-content > div:last-child,
+.print-worksheet-root.print-has-aufgabenkarten .print-footer-content > div:last-child,
 .print-worksheet-root.print-has-card-pairs .print-footer-content > div:last-child,
 .print-worksheet-root.print-has-syllable-cards .print-footer-content > div:last-child {
   text-align: right;
@@ -887,6 +917,7 @@
 .print-worksheet-root.print-skin-final :is(
   .worksheet-block-domino,
   .worksheet-block-flashcards,
+  .worksheet-block-aufgabenkarten,
   .worksheet-block-bingo-cards,
   .worksheet-block-quartett,
   .worksheet-block-taboo,
@@ -894,6 +925,7 @@
 ) + :is(
   .worksheet-block-domino,
   .worksheet-block-flashcards,
+  .worksheet-block-aufgabenkarten,
   .worksheet-block-bingo-cards,
   .worksheet-block-quartett,
   .worksheet-block-taboo,

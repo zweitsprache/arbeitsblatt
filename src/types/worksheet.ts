@@ -81,6 +81,7 @@ export type BlockType =
   | "card-pairs"
   | "domino"
   | "flashcards"
+  | "aufgabenkarten"
   | "board-game"
   | "grid"
   | "segmentation"
@@ -394,10 +395,11 @@ export interface FreeFormBlock extends BlockBase {
   scene: FreeFormScene;
 }
 
-export type ExclusiveWorksheetBlockType = "flashcards" | "card-pairs" | "domino" | "quartett" | "taboo" | "syllable-cards";
+export type ExclusiveWorksheetBlockType = "flashcards" | "aufgabenkarten" | "card-pairs" | "domino" | "quartett" | "taboo" | "syllable-cards";
 
 export const EXCLUSIVE_WORKSHEET_BLOCK_TYPES: ReadonlySet<ExclusiveWorksheetBlockType> = new Set([
   "flashcards",
+  "aufgabenkarten",
   "card-pairs",
   "domino",
   "quartett",
@@ -588,6 +590,7 @@ const BRAND_ICON_LOGOS_BASE: Record<string, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
   "agi-frauenfeld": "/logo/logo-stadt-frauenfeld.svg",
+  "theresia-banz": "/logo/theresia_banz.svg",
   "treffpunkt-schweiz": "/brands/treffpunkt_icon.svg",
 };
 
@@ -776,6 +779,20 @@ export interface FlashcardsBlock extends BlockBase {
   footer?: string;
   items: BoardGameCell[];
   shufflePairs?: boolean;
+  textSize?: DominoTextSize;
+}
+
+export interface AufgabenkartenItem extends BoardGameCell {
+  title?: string;
+  task?: string;
+  chunks?: string[];
+}
+
+export interface AufgabenkartenBlock extends BlockBase {
+  type: "aufgabenkarten";
+  title?: string;
+  subtitle?: string;
+  items: AufgabenkartenItem[];
   textSize?: DominoTextSize;
 }
 
@@ -1327,6 +1344,7 @@ export interface QuartettBlock extends BlockBase {
 export interface TabooBlock extends BlockBase {
   type: "taboo";
   title?: string;
+  subtitle?: string;
   items: QuartettItem[];
 }
 
@@ -1497,6 +1515,7 @@ export type WorksheetBlock =
   | DominoBlock
   | CardPairsBlock
   | FlashcardsBlock
+  | AufgabenkartenBlock
   | SyllableCardsBlock
   | BoardGameBlock
   | AiPromptBlock
@@ -2363,6 +2382,31 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         imageUrl: "",
       })),
       shufflePairs: false,
+      textSize: "m",
+      visibility: "both",
+    },
+  },
+  {
+    type: "aufgabenkarten",
+    label: "Aufgabenkarten",
+    description: "Single-sided task cards",
+    labelKey: "aufgabenkarten",
+    descriptionKey: "aufgabenkartenDesc",
+    icon: "RectangleVertical",
+    category: "cards",
+    translations: { de: { label: "Aufgabenkarten", description: "Einseitige Aufgabenkarten" } },
+    defaultData: {
+      type: "aufgabenkarten",
+      title: "",
+      subtitle: "",
+      items: Array.from({ length: 6 }, (_, index) => ({
+        id: `aufgabenkarten-item-${index + 1}`,
+        title: "",
+        task: "",
+        chunks: [],
+        text: "",
+        imageUrl: "",
+      })),
       textSize: "m",
       visibility: "both",
     },
@@ -3275,6 +3319,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   defaultData: {
     type: "taboo",
     title: "",
+    subtitle: "",
     items: [
       {
         id: crypto.randomUUID(),

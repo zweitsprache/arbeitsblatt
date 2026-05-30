@@ -25,6 +25,7 @@ import {
   Dices,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
@@ -199,17 +200,14 @@ function isItemActive(pathname: string, item: NavItem) {
 }
 
 function SectionTitle({
-  icon: Icon,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-3 mb-2 mt-5 flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
-      <Icon className="h-3.5 w-3.5" />
+    <Label className="mx-3 text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
       {children}
-    </div>
+    </Label>
   );
 }
 
@@ -232,16 +230,16 @@ function getNavItemClassName({
   disabled?: boolean;
 }) {
   return cn(
-    "group relative flex items-center text-sm font-medium transition-colors",
+    "group relative flex items-center text-sm font-medium leading-normal transition-colors",
     collapsed
-      ? "h-10 w-10 justify-center rounded-lg"
-      : "min-h-8 w-full justify-start gap-3 rounded-xl px-3 py-1.5",
+      ? "h-11 w-11 justify-center"
+      : "h-8 w-full justify-start gap-2 px-2",
     disabled && "cursor-not-allowed",
     collapsed && !disabled && !isActive && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-    collapsed && isActive && "bg-slate-900 text-white shadow-sm",
+    collapsed && isActive && "text-slate-900",
     collapsed && disabled && "text-slate-300",
     !collapsed && !disabled && !isActive && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    !collapsed && isActive && "bg-slate-900 text-white shadow-sm",
+    !collapsed && isActive && "text-slate-900 font-semibold",
     !collapsed && disabled && "text-slate-300",
   );
 }
@@ -261,14 +259,11 @@ function SidebarNavItem({
     <>
       {!collapsed && (
         <item.icon
-          className={cn(
-            "shrink-0",
-            isActive ? "h-4.5 w-4.5" : "h-4 w-4",
-          )}
+          className="h-3.5 w-3.5 shrink-0"
         />
       )}
       {collapsed && isActive && (
-        <span className="absolute left-1 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-white/80" />
+        <span className="absolute left-1 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-slate-900/70" />
       )}
       {collapsed && <item.icon className="h-4 w-4 shrink-0" />}
       {!collapsed && <span className="truncate">{label}</span>}
@@ -314,14 +309,12 @@ function SidebarNavItem({
 
 function SidebarSection({
   title,
-  icon,
   items,
   pathname,
   collapsed,
   t,
 }: {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
   pathname: string;
   collapsed: boolean;
@@ -329,8 +322,8 @@ function SidebarSection({
 }) {
   return (
     <div>
-      {collapsed ? <CollapsedSectionDivider /> : <SectionTitle icon={icon}>{title}</SectionTitle>}
-      <nav className={cn("space-y-1", collapsed ? "px-2" : "px-3")}> 
+      {collapsed ? <CollapsedSectionDivider /> : <SectionTitle>{title}</SectionTitle>}
+      <nav className={cn("divide-y divide-slate-200", collapsed ? "px-2" : "px-3")}>
         {items.map((item) => (
           <SidebarNavItem
             key={item.labelKey}
@@ -372,8 +365,11 @@ export function AppSidebar({
         <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
 
           <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
-            <div className={cn(collapsed ? "py-3 space-y-1" : "py-4 space-y-2")}> 
-              <nav className={cn("space-y-1", collapsed ? "px-2" : "px-3")}>
+            <div className={cn(collapsed ? "py-3 space-y-0" : "py-4 space-y-0")}> 
+              {!collapsed && visibleTopItems.length > 0 && (
+                <SectionTitle>{t("home")}</SectionTitle>
+              )}
+              <nav className={cn("divide-y divide-slate-200", collapsed ? "px-2" : "px-3")}>
                 {visibleTopItems.map((item) => (
                   <SidebarNavItem
                     key={item.href}
@@ -389,7 +385,6 @@ export function AppSidebar({
                 <SidebarSection
                   key={section.titleKey}
                   title={t(section.titleKey)}
-                  icon={section.icon}
                   items={section.items}
                   pathname={pathname}
                   collapsed={collapsed}

@@ -29,6 +29,7 @@ import {
   DominoBlock,
   CardPairsBlock,
   FlashcardsBlock,
+  AufgabenkartenBlock,
   BingoCardsBlock,
   SyllableCardsBlock,
   BoardGameBlock,
@@ -377,11 +378,13 @@ function TabooCardContent({
   logoSrc,
   titleColor,
   titleFont,
+  subtitle,
 }: {
   card: TabooCardVariant;
   logoSrc?: string;
   titleColor: string;
   titleFont?: string;
+  subtitle?: string;
 }) {
   const reservedTitleHeight = "10mm";
 
@@ -421,7 +424,7 @@ function TabooCardContent({
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          padding: "16mm 0 0",
+          padding: "16mm 0 6mm",
         }}
       >
         <div
@@ -468,6 +471,24 @@ function TabooCardContent({
           ))}
         </div>
       </div>
+      {subtitle ? (
+        <div
+          style={{
+            position: "absolute",
+            left: "3mm",
+            bottom: "3mm",
+            maxWidth: "calc(100% - 6mm)",
+            fontSize: "7pt",
+            lineHeight: 1.1,
+            color: "#6b7280",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            ...(titleFont ? { fontFamily: titleFont } : {}),
+          }}
+        >
+          {subtitle}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -499,6 +520,7 @@ function QuartettView({
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
   const cardTitleColor = headingColor || primaryColor;
   const blockTitle = block.title?.trim() || "";
+  const subtitle = block.subtitle?.trim() || "";
   const cardWidthMm = 58;
   const cardHeightMm = 87;
   const columns = 4;
@@ -743,6 +765,7 @@ function TabooView({
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
   const cardTitleColor = headingColor || primaryColor;
   const blockTitle = block.title?.trim() || "";
+  const subtitle = block.subtitle?.trim() || "";
   const cardWidthMm = 58;
   const cardHeightMm = 87;
   const columns = 4;
@@ -916,6 +939,7 @@ function TabooView({
                         logoSrc={logoSrc}
                         titleColor={cardTitleColor}
                         titleFont={resolvedHeadlineFont}
+                        subtitle={subtitle}
                       />
                     ) : null}
                   </div>
@@ -950,6 +974,7 @@ function TabooView({
               logoSrc={logoSrc}
               titleColor={cardTitleColor}
               titleFont={resolvedHeadlineFont}
+              subtitle={subtitle}
             />
           </div>
         ))}
@@ -1687,7 +1712,7 @@ function NumberedHeadingView({
   );
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, translationScale, primaryColor = "#1a1a1a", instructionIndex, accentColor }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; instructionIndex?: number; accentColor?: string | null }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, isRtl = false, translationScale, primaryColor = "#1a1a1a", instructionIndex, accentColor, brand = "edoomio" }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; instructionIndex?: number; accentColor?: string | null; brand?: Brand }) {
   // Only highlight {{de:…}} markers with accent color when the worksheet is translated
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
@@ -1732,11 +1757,16 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     return <svg {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
   };
 
+  const rowIconSlotWidth = "1.5rem";
+  const rowIconSlotGap = "0.5rem";
+  const rowIconTextLane = `calc(${rowIconSlotWidth} + ${rowIconSlotGap})`;
+
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   const showBilingualDivider = block.bilingualDivider === true;
-  const resolvedBodyFont = bodyFont || "inherit";
+  const fallbackBrandBodyFont = getBrandFonts(brand).bodyFont;
+  const resolvedBodyFont = bodyFont || fallbackBrandBodyFont || "inherit";
   const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
   const resolvedContentFont = hasExampleBox ? "var(--worksheet-example-font, inherit)" : resolvedBodyFont;
   const resolvedOriginalContentFont = hasExampleBox
@@ -1757,6 +1787,9 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const translatedFontStyle: React.CSSProperties | undefined = isBilingual
     ? { ...baseTextStyle, ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}) }
+    : undefined;
+  const translatedDirectionStyle: React.CSSProperties | undefined = isRtl
+    ? { direction: "rtl", textAlign: "right", unicodeBidi: "plaintext" }
     : undefined;
   const bilingualGrid: React.CSSProperties = {
     display: "grid",
@@ -1810,11 +1843,12 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   ) : null;
 
   /** Render a single column of tiptap content (used for both original and translated) */
-  const renderContent = (html: string) => {
+  const renderContent = (html: string, wrapperStyle?: React.CSSProperties) => {
     const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor));
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
+        style={wrapperStyle}
         dangerouslySetInnerHTML={{ __html: processed }}
       />
     );
@@ -1844,7 +1878,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Wrap content in bilingual 2-column grid if active */
   const wrapBilingual = (translatedHtml: string, originalHtml?: string) => {
-    if (!isBilingual || !originalHtml) return renderContent(translatedHtml);
+    if (!isBilingual || !originalHtml) return renderContent(translatedHtml, translatedDirectionStyle);
 
     // For rows style: render paragraph-by-paragraph aligned rows
     if (isRows) {
@@ -1852,7 +1886,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const translatedParas = splitRowItems(translatedHtml);
       const maxLen = Math.max(originalParas.length, translatedParas.length);
       const cellBase: React.CSSProperties = {
-        padding: "0.375rem 0.75rem 0.375rem 1.75rem",
+        padding: `0.375rem 0.625rem 0.375rem ${rowIconTextLane}`,
         position: "relative",
         borderBottom: "1px solid #d1d5db",
         lineHeight: "1.35em",
@@ -1864,8 +1898,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div style={{ ...cellBase, ...translatedFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+              <div style={{ ...cellBase, ...translatedFontStyle, ...translatedDirectionStyle, ...(isRtl ? { padding: `0.375rem ${rowIconTextLane} 0.375rem 0.625rem` } : {}), ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
+                <div style={{ position: "absolute", ...(isRtl ? { right: 0 } : { left: 0 }), top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -1884,7 +1918,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       if (hasListRows) {
         return renderBilingualGrid(
           <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-          <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+          <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml)}</div>,
           undefined,
           { showDivider: showBilingualDivider },
         );
@@ -1900,7 +1934,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
               <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...originalFontStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
-              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle }}>
+              <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle, ...translatedDirectionStyle }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
               </div>
             </React.Fragment>
@@ -1909,7 +1943,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
     return renderBilingualGrid(
       <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-      <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(translatedHtml)}</div>,
+      <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml)}</div>,
       baseTextStyle,
       { showDivider: showBilingualDivider },
     );
@@ -1944,7 +1978,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
           {showStacked ? (
             <div>
               <div style={baseTextStyle}>{renderContent(originalBlock.content)}</div>
-              <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle }}>{renderContent(block.content)}</div>
+              <div style={{ borderTop: `1px solid ${primaryColor}30`, marginTop: "0.25rem", paddingTop: "0.25rem", fontWeight: 400, ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(block.content)}</div>
             </div>
           ) : (
             renderContent(block.content)
@@ -1983,10 +2017,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: iconColor }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: rowIconSlotGap, display: "flex", alignItems: "center", justifyContent: "flex-start", color: iconColor }}>
                 <HintRowIcon />
               </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.75rem 0.375rem 0.5rem" }}>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.625rem 0.375rem 0" }}>
                 {isHinweis
                   ? renderContent(para)
                   : <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />}
@@ -2016,10 +2050,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: "2rem", display: "flex", alignItems: "center", justifyContent: "flex-start", paddingLeft: "0.625rem", color: "#475569" }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: rowIconSlotGap, display: "flex", alignItems: "center", justifyContent: "flex-start", color: "#475569" }}>
                 <RowsIconSvg />
               </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.75rem 0.375rem 0.5rem" }}>
+              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.625rem 0.375rem 0" }}>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
               </div>
             </div>
@@ -2075,7 +2109,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
             </div>
             <div className={s.hintBody}>
               {imageEl}
-              <div className="tiptap-bilingual-translated" style={translatedFontStyle}>{renderContent(block.content)}</div>
+              <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(block.content)}</div>
             </div>
           </div>,
           undefined,
@@ -4992,6 +5026,8 @@ const CARD_CANVA_CARD_PAIR_CELL_WIDTH_MM = CARD_CANVA_DOMINO_CELL_WIDTH_MM;
 const CARD_CANVA_CARD_PAIR_CELL_HEIGHT_MM = CARD_CANVA_DOMINO_CELL_WIDTH_MM;
 const CARD_CANVA_FLASHCARD_CELL_WIDTH_MM = 87;
 const CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM = 37;
+const CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM = CARD_CANVA_FLASHCARD_CELL_WIDTH_MM;
+const CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM = CARD_CANVA_FLASHCARD_CELL_HEIGHT_MM * 2;
 const CARD_CANVA_SYLLABLE_CELL_WIDTH_MM = 87;
 const CARD_CANVA_SYLLABLE_CELL_HEIGHT_MM = 37;
 
@@ -5476,7 +5512,6 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
       key={pageKey}
       title={title}
       titleStyle={titleStyle}
-      logoSrc={logoSrc}
       pageStyle={{
         position: "relative",
         display: "flex",
@@ -6083,6 +6118,217 @@ function CardPairsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a
             {pairItems.length === 1 ? <div className="h-[34mm] w-[34mm] bg-background" /> : null}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: AufgabenkartenBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+  const items = block.items.length > 0
+    ? block.items
+    : Array.from({ length: 6 }, (_, index) => ({
+        id: `aufgabenkarten-item-${index + 1}`,
+        text: "",
+        imageUrl: "",
+      }));
+  const title = block.title?.trim();
+  const subtitle = block.subtitle?.trim() || "";
+  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const viewerTextClass = getDominoEditorTextClass(block.textSize);
+  const printFontSize = getDominoPrintFontSize(block.textSize);
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
+  const titleStyle: React.CSSProperties = {
+    width: "100%",
+    ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
+    fontWeight: resolvedHeadingWeight,
+    color: headingColor || primaryColor,
+    textAlign: "left",
+  };
+  const cutIconGap = "2.5mm";
+  const cutIconStyleBase: React.CSSProperties = {
+    position: "absolute",
+    width: "3.5mm",
+    height: "3.5mm",
+    color: "#9ca3af",
+    strokeWidth: 1.75,
+    overflow: "visible",
+  };
+
+  const glueEllipsis = (value: string) => value.replace(/\s…/g, "\u00A0…");
+
+  const getCardContent = (item: AufgabenkartenBlock["items"][number] | null) => {
+    const cardTitle = glueEllipsis(item?.title?.trim() || "");
+    const cardTask = glueEllipsis((item?.task ?? item?.text ?? "").trim());
+    const chunkLine = glueEllipsis((item?.chunks ?? []).map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0).join(" | "));
+    return { cardTitle, cardTask, chunkLine };
+  };
+
+  const renderPrintPage = (pageItems: Array<AufgabenkartenBlock["items"][number] | null>, pageKey: string) => (
+    <CardCanvaPrintPageFrame
+      key={pageKey}
+      title={title}
+      titleStyle={titleStyle}
+      logoSrc={logoSrc}
+      pageStyle={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        breakAfter: "page",
+        pageBreakAfter: "always",
+      }}
+    >
+      <CardCanvaPrintContentArea>
+        <div style={{ position: "relative", width: CARD_CANVA_FRAME_WIDTH, height: `${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM * 2}mm` }}>
+          {Array.from({ length: 4 }, (_, lineIndex) => (
+            <React.Fragment key={`${pageKey}-v-${lineIndex}`}>
+              <div style={{ position: "absolute", top: 0, left: `${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm`, height: `${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM * 2}mm`, borderLeft: "1px dashed #9ca3af" }} />
+              <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm - 1.75mm)`, top: `calc(-3.5mm - ${cutIconGap})`, transform: "rotate(90deg)" }} />
+              <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm - 1.75mm)`, top: `calc(${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM * 2}mm + ${cutIconGap})`, transform: "rotate(-90deg)" }} />
+            </React.Fragment>
+          ))}
+          {Array.from({ length: 3 }, (_, lineIndex) => (
+            <React.Fragment key={`${pageKey}-h-${lineIndex}`}>
+              <div style={{ position: "absolute", left: 0, top: `${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm`, width: CARD_CANVA_FRAME_WIDTH, borderTop: "1px dashed #9ca3af" }} />
+              <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(-3.5mm - ${cutIconGap})`, top: `calc(${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm - 1.75mm)` }} />
+              <Scissors aria-hidden="true" style={{ ...cutIconStyleBase, left: `calc(${CARD_CANVA_FRAME_WIDTH} + ${cutIconGap})`, top: `calc(${lineIndex * CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm - 1.75mm)`, transform: "rotate(180deg)" }} />
+            </React.Fragment>
+          ))}
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(3, ${CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm)`, gridTemplateRows: `repeat(2, ${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm)`, width: CARD_CANVA_FRAME_WIDTH, height: `${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM * 2}mm` }}>
+            {pageItems.map((item, index) => (
+              (() => {
+                const { cardTitle, cardTask, chunkLine } = getCardContent(item);
+                return (
+              <div
+                key={item?.id || `${pageKey}-slot-${index}`}
+                style={{
+                  position: "relative",
+                  width: `${CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm`,
+                  height: `${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm`,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "flex-start",
+                  padding: "10mm 4mm 10mm",
+                  textAlign: "left",
+                  backgroundImage: item?.imageUrl ? `url(${item.imageUrl})` : undefined,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              >
+                {logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoSrc}
+                    alt=""
+                    style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain", zIndex: 1 }}
+                  />
+                ) : null}
+                {cardTitle || cardTask || chunkLine ? (
+                  <div
+                    className="aufgabenkarten-card-content max-w-none"
+                    style={{ position: "relative", zIndex: 1, padding: "2mm", borderRadius: "4px", background: "rgba(255,255,255,0.82)", fontSize: printFontSize, fontWeight: 500, lineHeight: 1.2, width: "100%", textAlign: "left" }}
+                  >
+                    {cardTitle ? <h3>{cardTitle}</h3> : null}
+                    {cardTask ? <p>{cardTask}</p> : null}
+                    {chunkLine ? <p className="aufgabenkarten-chunks" style={{ color: primaryColor }}>{chunkLine}</p> : null}
+                  </div>
+                ) : null}
+                {subtitle ? (
+                  <div style={{ position: "absolute", left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "7pt", lineHeight: 1.1, color: "#6b7280", whiteSpace: "pre-wrap", wordBreak: "break-word", ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}) }}>
+                    {subtitle}
+                  </div>
+                ) : null}
+              </div>
+                );
+              })()
+            ))}
+          </div>
+        </div>
+      </CardCanvaPrintContentArea>
+    </CardCanvaPrintPageFrame>
+  );
+
+  if (mode === "print") {
+    const cardsPerPage = 6;
+    const pageCount = Math.max(1, Math.ceil(items.length / cardsPerPage));
+    const pages = Array.from({ length: pageCount }, (_, pageIndex) => {
+      const start = pageIndex * cardsPerPage;
+      const pageItems = items.slice(start, start + cardsPerPage);
+      return Array.from({ length: cardsPerPage }, (_, slotIndex) => pageItems[slotIndex] ?? null);
+    });
+
+    return (
+      <>
+        {pages.map((pageItems, pageIndex) => {
+          const page = renderPrintPage(pageItems, `aufgabenkarten-${pageIndex}`);
+          return React.cloneElement(page, {
+            key: page.key,
+            style: {
+              ...(page.props.style || {}),
+              breakAfter: pageIndex < pages.length - 1 ? "page" : undefined,
+              pageBreakAfter: pageIndex < pages.length - 1 ? "always" : undefined,
+            },
+          });
+        })}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-3" style={{ width: "fit-content", margin: "0 auto" }}>
+      {title ? <h3 className="text-cv-xl" style={titleStyle}>{title}</h3> : null}
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", width: "fit-content" }}>
+        {items.map((item, index) => {
+          const { cardTitle, cardTask, chunkLine } = getCardContent(item);
+          return (
+          <div
+            key={item.id || `aufgabenkarten-view-${index}`}
+            className="relative flex h-[56mm] w-[36mm] flex-col items-start justify-start overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8"
+            style={
+              item.imageUrl
+                ? {
+                    backgroundImage: `url(${item.imageUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }
+                : undefined
+            }
+          >
+            {logoSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoSrc}
+                alt=""
+                style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain" }}
+              />
+            ) : null}
+            {!item.imageUrl ? <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
+            {cardTitle || cardTask || chunkLine ? (
+              <div
+                className={`aufgabenkarten-card-content relative z-10 w-full rounded-sm bg-background/80 px-1 py-1 ${viewerTextClass}`}
+                style={{ textAlign: "left" }}
+              >
+                {cardTitle ? <h3>{cardTitle}</h3> : null}
+                {cardTask ? <p>{cardTask}</p> : null}
+                {chunkLine ? <p className="aufgabenkarten-chunks" style={{ color: primaryColor }}>{chunkLine}</p> : null}
+              </div>
+            ) : null}
+            {subtitle ? (
+              <div
+                className="absolute z-10 whitespace-pre-wrap break-words"
+                style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "7pt", lineHeight: 1.1, color: "#6b7280", ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}) }}
+              >
+                {subtitle}
+              </div>
+            ) : null}
+          </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -10332,7 +10578,7 @@ export function ViewerBlockRenderer({
       );
     }
     case "text":
-      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex}/>;
+      return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex} brand={brand}/>;
     case "syllables":
       return <SyllablesView block={block} />;
     case "image":
@@ -10782,6 +11028,8 @@ export function ViewerBlockRenderer({
       return <CardPairsView block={block as CardPairsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "flashcards":
       return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+    case "aufgabenkarten":
+      return <AufgabenkartenView block={block as AufgabenkartenBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "bingo-cards":
       return <BingoCardsRenderer block={block as BingoCardsBlock} mode={mode} />;
     case "syllable-cards":

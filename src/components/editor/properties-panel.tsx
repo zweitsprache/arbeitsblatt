@@ -23,7 +23,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -54,6 +56,7 @@ import {
   DominoBlock,
   CardPairsBlock,
   FlashcardsBlock,
+  AufgabenkartenBlock,
   SyllableCardsBlock,
   TrueFalseMatrixBlock,
   MCQMatrixBlock,
@@ -111,24 +114,31 @@ import {
   FreeFormBlock,
   BlockDisplayOn,
   BlockVisibility,
+  Brand,
+  BrandOverrides,
+  BrandSubProfile,
+  DEFAULT_BRAND_SETTINGS,
   TextBlockStyle,
   ImageBlockStyle,
+  applyBrandOverrides,
   BLOCK_LIBRARY,
 } from "@/types/worksheet";
 import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
 import { formatCrosswordItemsText, parseCrosswordItemsText } from "@/lib/crossword";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw, Settings } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { hasChOverride } from "@/lib/locale-utils";
+import { countChOverrides } from "@/lib/locale-utils";
 import { AiTrueFalseModal } from "./ai-true-false-modal";
 import { AiVerbTableModal } from "./ai-verb-table-modal";
 import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
 import { BingoCardsPropEditor } from "./BingoCardsPropEditor";
+import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { getChoiceGroups, updateChoiceGroup, validateChoices } from "@/lib/inline-choice-utils";
 import {
@@ -329,7 +339,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("content")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="content"
@@ -343,7 +353,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
         />
       </div>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("level")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("level")}</Label>
         <Select
           value={String(block.level)}
           onValueChange={(v) =>
@@ -366,7 +376,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
       </div>
       {isNumberedHeading && (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("startNumber")}</Label>
           <Input
             type="number"
             min={1}
@@ -384,7 +394,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
         </div>
       )}
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("settings")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
         <div>
           {renderSwitchRow(
             t("bilingual"),
@@ -456,7 +466,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageUrl")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("imageUrl")}</Label>
         {block.src ? (
           <div className="space-y-2">
             <div className="relative group/img rounded overflow-hidden border">
@@ -537,7 +547,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         )}
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("altText")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("altText")}</Label>
         <Input
           value={block.alt}
           onChange={(e) =>
@@ -549,7 +559,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("widthPx")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("widthPx")}</Label>
         <Input
           type="number"
           value={block.width || ""}
@@ -566,7 +576,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("heightPx")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("heightPx")}</Label>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -616,7 +626,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("caption")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("caption")}</Label>
         <Input
           value={block.caption || ""}
           onChange={(e) =>
@@ -628,7 +638,7 @@ function ImageProps({ block }: { block: ImageBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageBlockStyle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("imageBlockStyle")}</Label>
         <select
           value={block.imageStyle || "standard"}
           onChange={(e) =>
@@ -743,7 +753,7 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("cards")}</Label>
         {block.items.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
@@ -795,7 +805,7 @@ function ImageCardsProps({ block }: { block: ImageCardsBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageAspectRatio")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("imageAspectRatio")}</Label>
         <div className="flex gap-1">
           {(["16:9", "4:3", "1:1", "3:4", "9:16"] as const).map((ratio) => (
             <Button
@@ -929,7 +939,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -944,7 +954,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("columns")}</Label>
         <Select
           value={String(block.columns)}
           onValueChange={(v) =>
@@ -967,7 +977,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("cards")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("cards")}</Label>
         {block.items.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
@@ -1019,7 +1029,7 @@ function ImageTextTableProps({ block }: { block: ImageTextTableBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("imageAspectRatio")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("imageAspectRatio")}</Label>
         <div className="flex gap-1">
           {(["16:9", "4:3", "1:1", "3:4", "9:16"] as const).map((ratio) => (
             <Button
@@ -1495,7 +1505,7 @@ function SpacerProps({ block }: { block: SpacerBlock }) {
   const t = useTranslations("properties");
   return (
     <div>
-      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("heightPx")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("heightPx")}</Label>
       <Input
         type="number"
         value={block.height}
@@ -1516,7 +1526,7 @@ function WritingLinesProps({ block }: { block: WritingLinesBlock }) {
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfLines")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfLines")}</Label>
         <Input
           type="number"
           min={1}
@@ -1531,7 +1541,7 @@ function WritingLinesProps({ block }: { block: WritingLinesBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("lineSpacing")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("lineSpacing")}</Label>
         <Slider
           value={[block.lineSpacing]}
           min={16}
@@ -1555,7 +1565,7 @@ function WritingRowsProps({ block }: { block: WritingRowsBlock }) {
   const t = useTranslations("properties");
   return (
     <div>
-      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfRows")}</Label>
       <Input
         type="number"
         min={1}
@@ -1578,7 +1588,7 @@ function DividerProps({ block }: { block: DividerBlock }) {
   const tc = useTranslations("common");
   return (
     <div>
-      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("style")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("style")}</Label>
       <Select
         value={block.style}
         onValueChange={(v) =>
@@ -1644,7 +1654,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("question")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="question"
@@ -1667,11 +1677,11 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("allowMultiple")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("allowMultiple")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("options")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("options")}</Label>
         {block.options.map((opt, i) => (
           <div key={opt.id} className="flex items-center gap-2">
             <input
@@ -1706,7 +1716,7 @@ function MultipleChoiceProps({ block }: { block: MultipleChoiceBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiGeneration")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {t("autoGenerate")}
         </p>
@@ -1732,7 +1742,7 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("question")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("question")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="question"
@@ -1746,7 +1756,7 @@ function OpenResponseProps({ block }: { block: OpenResponseBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfLines")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfLines")}</Label>
         <Input
           type="number"
           min={1}
@@ -1771,7 +1781,7 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -1786,7 +1796,7 @@ function FillInBlankProps({ block }: { block: FillInBlankBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("content")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("fillInBlankHelp")}
         </p>
@@ -1891,7 +1901,7 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -1969,7 +1979,7 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("fillInBlankItemsCsvHelp")}
         </p>
@@ -2172,7 +2182,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -2186,7 +2196,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("text")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("text")}</Label>
         <textarea
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[88px] resize-y"
           placeholder={t("dialogueTextPlaceholder")}
@@ -2203,7 +2213,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
         <>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("headerLeft")}</Label>
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("headerLeft")}</Label>
               <ChInput
                 blockId={block.id}
                 fieldPath="leftHeader"
@@ -2217,7 +2227,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
               />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("headerRight")}</Label>
+              <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("headerRight")}</Label>
               <ChInput
                 blockId={block.id}
                 fieldPath="rightHeader"
@@ -2272,7 +2282,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("pairs")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("pairs")}</Label>
         {orderedPairs.map((pair) => {
           const pairIndex = block.pairs.findIndex((currentPair) => currentPair.id === pair.id);
           return (
@@ -2332,7 +2342,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiGeneration")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("aiMatchingHelp")}
         </p>
@@ -2379,7 +2389,7 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelp")}
         </p>
@@ -2504,7 +2514,7 @@ function TwoColumnFillProps({ block }: { block: TwoColumnFillBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -2587,7 +2597,7 @@ function TwoColumnFillProps({ block }: { block: TwoColumnFillBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("items")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("items")}</Label>
         {block.items.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <div className="flex-1">
@@ -2627,7 +2637,7 @@ function TwoColumnFillProps({ block }: { block: TwoColumnFillBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelp")}
         </p>
@@ -2913,7 +2923,7 @@ function WordBankProps({ block }: { block: WordBankBlock }) {
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("words")}</Label>
       {block.words.map((word, i) => (
         <div key={i} className="flex items-center gap-1">
           <Input
@@ -3101,7 +3111,7 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfColumns")}</Label>
         <div className="flex gap-1 mt-1.5">
           {[1, 2, 3, 4].map((n) => (
             <Button
@@ -3118,7 +3128,7 @@ function ColumnsProps({ block }: { block: ColumnsBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnColors")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("columnColors")}</Label>
         {normalizedColumnBgColors.map((color, colIndex) => (
           <div key={colIndex} className="space-y-2 rounded-md border border-slate-200 p-2">
             <div className="flex items-center justify-between">
@@ -3192,7 +3202,7 @@ function GridProps({ block }: { block: GridBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfRows")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfRows")}</Label>
         <div className="flex gap-1 mt-1.5">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <Button
@@ -3208,7 +3218,7 @@ function GridProps({ block }: { block: GridBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("numberOfColumns")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("numberOfColumns")}</Label>
         <div className="flex gap-1 mt-1.5">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <Button
@@ -3644,7 +3654,7 @@ function DominoProps({ block }: { block: DominoBlock }) {
     if (!text) return;
 
     const parsed = text
-      .split("|")
+      .split(/[\t\r\n]+/)
       .map((part) => part.trim())
       .filter((part) => part.length > 0);
 
@@ -4162,7 +4172,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("title")}
         </Label>
         <Input
@@ -4177,7 +4187,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("footer")}
         </Label>
         <Input
@@ -4192,7 +4202,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("pairingMode")}
         </Label>
         <Select
@@ -4226,7 +4236,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
         <div className="flex gap-1">
           {(["s", "m", "l", "xl"] as const).map((size) => (
             <Button
@@ -4247,7 +4257,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           Selected Item
         </Label>
         <Input
@@ -4321,7 +4331,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
           )}
 
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               Text
             </Label>
             <textarea
@@ -4359,7 +4369,7 @@ function CardPairsProps({ block }: { block: CardPairsBlock }) {
       ) : null}
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {pairingMode === "same" ? t("cardPairsCsvImportHelpSame") : t("cardPairsCsvImportHelpDifferent")}
         </p>
@@ -4559,7 +4569,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("title")}
         </Label>
         <Input
@@ -4574,7 +4584,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("footer")}
         </Label>
         <Input
@@ -4601,7 +4611,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
         <div className="flex gap-1">
           {(["s", "m", "l", "xl"] as const).map((size) => (
             <Button
@@ -4622,7 +4632,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           Selected Item
         </Label>
         <Input
@@ -4693,7 +4703,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
           )}
 
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               Text
             </Label>
             <textarea
@@ -4731,7 +4741,7 @@ function FlashcardsProps({ block }: { block: FlashcardsBlock }) {
       ) : null}
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {t("flashcardsCsvImportHelp")}
         </p>
@@ -4916,7 +4926,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("title")}
         </Label>
         <Input
@@ -4931,7 +4941,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("footer")}
         </Label>
         <Input
@@ -4946,7 +4956,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textSize")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
         <div className="flex gap-1">
           {(["s", "m", "l", "xl"] as const).map((size) => (
             <Button
@@ -4967,7 +4977,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("selectedItem")}
         </Label>
         <Input readOnly value={selectedItemIndex === null ? t("clickCardToEdit") : `Item ${selectedItemIndex + 1}`} />
@@ -5030,7 +5040,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
           )}
 
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               {t("cardText")}
             </Label>
             <textarea
@@ -5078,7 +5088,7 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
       ) : null}
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">{t("syllableCardsCsvHelp")}</p>
         <textarea
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[96px] resize-y"
@@ -5102,6 +5112,618 @@ function SyllableCardsProps({ block }: { block: SyllableCardsBlock }) {
           </Select>
           <Button variant="outline" size="sm" className="flex-1" onClick={handleCsvImport} disabled={!csvText.trim()}>
             <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={addCard}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("addCard")}
+        </Button>
+        <Button variant="outline" size="sm" className="flex-1" onClick={clearItems}>
+          <Trash2 className="h-4 w-4 mr-2" />
+          {t("clear")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AufgabenkartenProps({ block }: { block: AufgabenkartenBlock }) {
+  const { state, dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const { upload } = useUpload();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [browserOpen, setBrowserOpen] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [jsonText, setJsonText] = React.useState("");
+  const [jsonError, setJsonError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const normalizeChunks = (chunks: unknown): string[] => {
+    if (Array.isArray(chunks)) {
+      return chunks.map((chunk) => (typeof chunk === "string" ? chunk.trim() : "")).filter((chunk) => chunk.length > 0);
+    }
+    if (typeof chunks === "string") {
+      return chunks.split("|").map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0);
+    }
+    return [];
+  };
+
+  const normalizeItem = (item: Partial<AufgabenkartenBlock["items"][number]>, index: number) => {
+    const title = typeof item.title === "string" ? item.title : "";
+    const task = typeof item.task === "string"
+      ? item.task
+      : (typeof item.text === "string" ? item.text : "");
+    const chunks = normalizeChunks(item.chunks);
+
+    return {
+      id: item.id || `aufgabenkarten-item-${index + 1}`,
+      title,
+      task,
+      chunks,
+      text: task,
+      imageUrl: item.imageUrl || "",
+      speakerIcon: item.speakerIcon ?? null,
+    };
+  };
+
+  const defaultItems = React.useMemo(
+    () => Array.from({ length: 6 }, (_, index) => ({
+      id: `aufgabenkarten-item-${index + 1}`,
+      title: "",
+      task: "",
+      chunks: [],
+      text: "",
+      imageUrl: "",
+      speakerIcon: null,
+    })),
+    [],
+  );
+  const items = block.items.length > 0 ? block.items.map((item, index) => normalizeItem(item, index)) : defaultItems;
+  const selectedItemIndex = state.activeItemIndex;
+  const selectedItem = selectedItemIndex !== null ? items[selectedItemIndex] : null;
+
+  const buildItems = (cards: Array<{ title?: string; task?: string; chunks?: string[] }>) => {
+    return cards.map((card, index) => normalizeItem({
+      id: `aufgabenkarten-item-${index + 1}`,
+      title: card.title || "",
+      task: card.task || "",
+      chunks: card.chunks || [],
+      text: card.task || "",
+      imageUrl: "",
+      speakerIcon: null,
+    }, index));
+  };
+
+  const updateItem = (index: number, updates: Partial<AufgabenkartenBlock["items"][number]>) => {
+    const nextItems = items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...updates } : item));
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
+  const handleFileSelected = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    setCropOpen(true);
+  };
+
+  const handleCropComplete = async (result: CropResult) => {
+    if (selectedItemIndex === null) return;
+    setIsUploading(true);
+    try {
+      const file = new File([result.blob], `aufgabenkarten-item-${selectedItemIndex + 1}.png`, { type: "image/png" });
+      const uploadResult = await upload(file);
+      updateItem(selectedItemIndex, { imageUrl: uploadResult.url });
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      URL.revokeObjectURL(result.url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileSelected(file);
+    }
+  };
+
+  const clearItems = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: items.map((item) => ({
+            ...item,
+            title: "",
+            task: "",
+            chunks: [],
+            text: "",
+            imageUrl: "",
+            speakerIcon: null,
+          })),
+        },
+      },
+    });
+  };
+
+  const addCard = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...items,
+            {
+              id: `aufgabenkarten-item-${items.length + 1}`,
+              title: "",
+              task: "",
+              chunks: [],
+              text: "",
+              imageUrl: "",
+              speakerIcon: null,
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const splitCsvRows = (input: string) => {
+    const rows: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < input.length; i += 1) {
+      const char = input[i];
+      const next = input[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && next === '"') {
+          current += '""';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+          current += char;
+        }
+        continue;
+      }
+
+      if ((char === "\n" || char === "\r") && !inQuotes) {
+        const normalized = current.trim();
+        if (normalized) rows.push(normalized);
+        current = "";
+
+        if (char === "\r" && next === "\n") {
+          i += 1;
+        }
+        continue;
+      }
+
+      current += char;
+    }
+
+    const last = current.trim();
+    if (last) rows.push(last);
+    return rows;
+  };
+
+  const parseDelimitedRow = (line: string, delimiter: string) => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      const next = line[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && next === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (char === delimiter && !inQuotes) {
+        values.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    values.push(current.trim());
+    return values;
+  };
+
+  const detectDelimiter = (line: string) => {
+    const candidates = [";", "\t", ","];
+    let best = ";";
+    let bestCount = -1;
+
+    for (const candidate of candidates) {
+      const count = parseDelimitedRow(line, candidate).length;
+      if (count > bestCount) {
+        best = candidate;
+        bestCount = count;
+      }
+    }
+
+    return best;
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    setJsonError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const rows = splitCsvRows(text);
+    if (rows.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const delimiter = detectDelimiter(rows[0]);
+    const parsedCards = rows
+      .map((row) => parseDelimitedRow(row, delimiter).map((part) => part.trim()))
+      .map((columns) => {
+        if (columns.length >= 3) {
+          return {
+            title: columns[0],
+            task: columns[1],
+            chunks: columns.slice(2).join(delimiter).split("|").map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0),
+          };
+        }
+        if (columns.length === 2) {
+          return {
+            title: columns[0],
+            task: columns[1],
+            chunks: [] as string[],
+          };
+        }
+        return {
+          title: "",
+          task: columns[0] || "",
+          chunks: [] as string[],
+        };
+      })
+      .filter((card) => card.title || card.task || card.chunks.length > 0);
+
+    if (parsedCards.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const existingCards = items.map((item) => ({
+      title: item.title || "",
+      task: item.task || item.text || "",
+      chunks: normalizeChunks(item.chunks),
+    }));
+    const nextCards = csvMode === "append" ? [...existingCards, ...parsedCards] : parsedCards;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: buildItems(nextCards) },
+      },
+    });
+    setCsvText("");
+  };
+
+  const handleJsonImport = () => {
+    setCsvError(null);
+    setJsonError(null);
+    const text = jsonText.trim();
+    if (!text) return;
+
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      const source = Array.isArray(parsed)
+        ? parsed
+        : (parsed && typeof parsed === "object" && Array.isArray((parsed as { items?: unknown[] }).items)
+          ? (parsed as { items: unknown[] }).items
+          : null);
+
+      if (!source) {
+        setJsonError(t("jsonImportInvalid"));
+        return;
+      }
+
+      const parsedCards = source
+        .map((entry, index) => {
+          if (!entry || typeof entry !== "object") return null;
+          const card = entry as { title?: unknown; task?: unknown; text?: unknown; chunks?: unknown };
+          return {
+            title: typeof card.title === "string" ? card.title : "",
+            task: typeof card.task === "string" ? card.task : (typeof card.text === "string" ? card.text : ""),
+            chunks: normalizeChunks(card.chunks),
+            order: index,
+          };
+        })
+        .filter((card): card is { title: string; task: string; chunks: string[]; order: number } => Boolean(card))
+        .sort((a, b) => a.order - b.order)
+        .map(({ title, task, chunks }) => ({ title, task, chunks }))
+        .filter((card) => card.title || card.task || card.chunks.length > 0);
+
+      if (parsedCards.length === 0) {
+        setJsonError(t("csvNoData"));
+        return;
+      }
+
+      const existingCards = items.map((item) => ({
+        title: item.title || "",
+        task: item.task || item.text || "",
+        chunks: normalizeChunks(item.chunks),
+      }));
+      const nextCards = csvMode === "append" ? [...existingCards, ...parsedCards] : parsedCards;
+
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: {
+          id: block.id,
+          updates: { items: buildItems(nextCards) },
+        },
+      });
+      setJsonText("");
+    } catch {
+      setJsonError(t("jsonImportInvalid"));
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+          {t("title")}
+        </Label>
+        <Input
+          value={block.title ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { title: e.target.value } },
+            })
+          }
+          placeholder={t("title")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+          {t("aufgabenkartenSubtitle")}
+        </Label>
+        <Input
+          value={block.subtitle ?? ""}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { subtitle: e.target.value } },
+            })
+          }
+          placeholder={t("aufgabenkartenSubtitlePlaceholder")}
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textSize")}</Label>
+        <div className="flex gap-1">
+          {(["s", "m", "l", "xl"] as const).map((size) => (
+            <Button
+              key={size}
+              variant={(block.textSize ?? "m") === size ? "default" : "outline"}
+              size="sm"
+              className="flex-1 text-xs px-1 uppercase"
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textSize: size } },
+                })
+              }
+            >
+              {size}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+          {t("selectedItem")}
+        </Label>
+        <Input readOnly value={selectedItemIndex === null ? t("clickCardToEdit") : `Item ${selectedItemIndex + 1}`} />
+      </div>
+      {selectedItemIndex !== null && selectedItem ? (
+        <div className="space-y-3 rounded-md border border-slate-200 p-3 bg-white">
+          {selectedItem.imageUrl ? (
+            <div className="space-y-2">
+              <div className="relative group/img rounded overflow-hidden border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedItem.imageUrl} alt={selectedItem.task || selectedItem.title || "Aufgabenkarten item"} className="w-full" />
+                <button
+                  type="button"
+                  onClick={() => updateItem(selectedItemIndex, { imageUrl: "" })}
+                  className="absolute top-1 right-1 opacity-0 group-hover/img:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                {t("replaceImage")}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+                  isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                />
+                {isUploading ? (
+                  <span className="text-xs text-muted-foreground">{t("uploading")}</span>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                    <span className="text-xs text-muted-foreground">{t("textImageDragOrClick")}</span>
+                  </>
+                )}
+              </label>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setBrowserOpen(true)}>
+                <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                {t("mediaBrowser")}
+              </Button>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+              {t("aufgabenkartenCardTitle")}
+            </Label>
+            <Input
+              value={selectedItem.title ?? ""}
+              onChange={(e) => updateItem(selectedItemIndex, { title: e.target.value })}
+              placeholder={t("aufgabenkartenCardTitlePlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+              {t("aufgabenkartenCardTask")}
+            </Label>
+            <textarea
+              value={selectedItem.task ?? selectedItem.text ?? ""}
+              onChange={(e) => updateItem(selectedItemIndex, { task: e.target.value, text: e.target.value })}
+              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              placeholder={t("aufgabenkartenCardTaskPlaceholder")}
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+              {t("aufgabenkartenCardChunks")}
+            </Label>
+            <textarea
+              value={(selectedItem.chunks ?? []).join("\n")}
+              onChange={(e) => updateItem(selectedItemIndex, {
+                chunks: e.target.value
+                  .split(/\r?\n/)
+                  .map((chunk) => chunk.trim())
+                  .filter((chunk) => chunk.length > 0),
+              })}
+              className="w-full min-h-[90px] rounded-md border border-input bg-background p-2 text-sm resize-y"
+              placeholder={t("aufgabenkartenCardChunksPlaceholder")}
+            />
+          </div>
+
+          <MediaBrowserDialog
+            open={browserOpen}
+            onOpenChange={setBrowserOpen}
+            onSelectUrl={(url) => {
+              if (selectedItemIndex === null) return;
+              updateItem(selectedItemIndex, { imageUrl: url });
+            }}
+            onSelectFile={handleFileSelected}
+          />
+
+          <ImageCropDialog
+            imageSrc={cropSrc}
+            open={cropOpen}
+            onOpenChange={(open) => {
+              setCropOpen(open);
+              if (!open && cropSrc) {
+                URL.revokeObjectURL(cropSrc);
+                setCropSrc(null);
+              }
+            }}
+            onCropComplete={handleCropComplete}
+            title={t("cropImage")}
+          />
+        </div>
+      ) : null}
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">{t("aufgabenkartenCsvImportHelp")}</p>
+        <textarea
+          className="w-full min-h-[110px] rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+          placeholder={t("aufgabenkartenCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+        <div className="mt-2 flex items-center gap-2">
+          <Select value={csvMode} onValueChange={(v) => setCsvMode(v as "replace" | "append")}>
+            <SelectTrigger className="h-8 w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8" onClick={handleCsvImport} disabled={!csvText.trim()}>
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("jsonImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-2">{t("aufgabenkartenJsonImportHelp")}</p>
+        <textarea
+          className="w-full min-h-[110px] rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+          placeholder={t("aufgabenkartenJsonPlaceholder")}
+          value={jsonText}
+          onChange={(e) => {
+            setJsonText(e.target.value);
+            setJsonError(null);
+          }}
+        />
+        {jsonError && <p className="text-xs text-destructive mt-1">{jsonError}</p>}
+        <div className="mt-2 flex items-center gap-2">
+          <Select value={csvMode} onValueChange={(v) => setCsvMode(v as "replace" | "append")}>
+            <SelectTrigger className="h-8 w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8" onClick={handleJsonImport} disabled={!jsonText.trim()}>
             {t("csvImportButton")}
           </Button>
         </div>
@@ -5184,7 +5806,7 @@ function TextProps({ block }: { block: TextBlock }) {
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("content")}</Label>
         <Button
           variant="outline"
           size="sm"
@@ -5196,7 +5818,7 @@ function TextProps({ block }: { block: TextBlock }) {
         </Button>
       </div>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textStyle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textStyle")}</Label>
         <Select
           value={block.textStyle || "standard"}
           onValueChange={(value) =>
@@ -5235,7 +5857,7 @@ function TextProps({ block }: { block: TextBlock }) {
       {(block.textStyle === "example" || block.textStyle === "example-standard" || block.textStyle === "example-improved") && (
         <>
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textComment")}</Label>
             <textarea
               value={block.comment || ""}
               onChange={(e) =>
@@ -5252,7 +5874,7 @@ function TextProps({ block }: { block: TextBlock }) {
         </>
       )}
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("settings")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
         <div>
           {renderSwitchRow(
             t("bilingual"),
@@ -5289,7 +5911,7 @@ function TextProps({ block }: { block: TextBlock }) {
         </div>
       </div>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("image")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("image")}</Label>
         {block.imageSrc ? (
           <div className="space-y-3">
             <div className="relative group/img rounded overflow-hidden border">
@@ -5438,7 +6060,7 @@ function SyllablesProps({ block }: { block: SyllablesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("content")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("content")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="content"
@@ -5534,7 +6156,7 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("columnLabels")}</Label>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">{t("trueLabelProp")}</Label>
@@ -5577,18 +6199,18 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("statements")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("statements")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("statementCount", { count: block.statements.length })}
         </p>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelp")}
         </p>
@@ -5631,7 +6253,7 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiGeneration")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {t("autoGenerateStatements")}
         </p>
@@ -5647,7 +6269,7 @@ function TrueFalseMatrixProps({ block }: { block: TrueFalseMatrixBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("shuffleItems")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("shuffleItems")}</Label>
         <Button
           variant="outline"
           size="sm"
@@ -5716,7 +6338,7 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -5740,11 +6362,11 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("columnLabels")}</Label>
         <div className="space-y-2">
           {block.options.map((option) => (
             <div key={option.id} className="flex items-center gap-2">
@@ -5794,12 +6416,12 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("items")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("items")}</Label>
         <p className="text-xs text-muted-foreground">{t("statementCount", { count: block.statements.length })}</p>
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("shuffleItems")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("shuffleItems")}</Label>
         <Button
           variant="outline"
           size="sm"
@@ -6088,7 +6710,7 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -6111,11 +6733,11 @@ function OrderItemsProps({ block }: { block: OrderItemsBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("itemsInOrder")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("itemsInOrder")}</Label>
         {sortedItems.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground w-4 shrink-0 text-right">{i + 1}.</span>
@@ -6273,7 +6895,7 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -6374,7 +6996,7 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelpInlineChoices")}
         </p>
@@ -6417,7 +7039,7 @@ function InlineChoicesProps({ block }: { block: InlineChoicesBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiGeneration")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {t("aiVerbExerciseHint")}
         </p>
@@ -6515,7 +7137,7 @@ function MCQRowsProps({ block }: { block: MCQRowsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -6530,7 +7152,7 @@ function MCQRowsProps({ block }: { block: MCQRowsBlock }) {
       </div>
 
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("choicesPerItem")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("choicesPerItem")}</Label>
         <Input
           type="number"
           min={2}
@@ -6985,7 +7607,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
       <div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("sortingCategoriesCsvImportHelp")}
         </p>
@@ -7027,7 +7649,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
         </div>
       </div>
       <Separator />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -7234,7 +7856,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -7250,7 +7872,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
       <Separator />
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("columns")}</Label>
           <Input
             type="number"
             min={4}
@@ -7269,7 +7891,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
           />
         </div>
         <div>
-          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("rows")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("rows")}</Label>
           <Input
             type="number"
             min={4}
@@ -7289,7 +7911,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("rowHeight")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("rowHeight")}</Label>
         <Input
           type="number"
           min={1.4}
@@ -7321,7 +7943,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showWordList")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showWordList")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch
@@ -7333,10 +7955,10 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showFirstAsExample")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showFirstAsExample")}</Label>
       </div>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("wordSearchDirections")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("wordSearchDirections")}</Label>
         <div className="grid grid-cols-2 gap-2">
           {directionKeys.map((direction) => {
             const labelKey = `wordSearchDirection${direction.charAt(0).toUpperCase()}${direction.slice(1)}` as const;
@@ -7354,7 +7976,7 @@ function WordSearchProps({ block }: { block: WordSearchBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("words")}</Label>
         {block.words.map((word, i) => (
           <div key={i} className="flex items-center gap-1">
             <div className="flex-1">
@@ -7514,7 +8136,7 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -7537,7 +8159,7 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepFirstLetter")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("keepFirstLetter")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch
@@ -7549,7 +8171,7 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("lowercaseAll")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("lowercaseAll")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch
@@ -7561,11 +8183,11 @@ function UnscrambleWordsProps({ block }: { block: UnscrambleWordsBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showTaskLabel")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("words")}</Label>
         {block.words.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <div className="flex-1">
@@ -7724,7 +8346,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -7738,7 +8360,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepFirstLetter")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("keepFirstLetter")}</Label>
         <Input
           type="number"
           min={0}
@@ -7751,7 +8373,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("keepLastLetter")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("keepLastLetter")}</Label>
         <Input
           type="number"
           min={0}
@@ -7777,7 +8399,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("spellingWordsCsvImportHelp")}
         </p>
@@ -7813,7 +8435,7 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("words")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("words")}</Label>
         {block.words.map((item, i) => (
           <div key={item.id} className="flex items-center gap-1">
             <div className="flex-1">
@@ -7910,7 +8532,7 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -7925,7 +8547,7 @@ function FixSentencesProps({ block }: { block: FixSentencesBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("sentences")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("fixSentencesHelp")}
         </p>
@@ -8060,7 +8682,7 @@ function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -8075,7 +8697,7 @@ function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("sentences")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("completeSentencesHelp")}
         </p>
@@ -8108,7 +8730,7 @@ function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelpCompleteSentences")}
         </p>
@@ -8281,7 +8903,7 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -8296,7 +8918,7 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
       </div>
       <Separator />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("sentences")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("transformSentencesHelp")}
         </p>
@@ -8448,7 +9070,7 @@ function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) 
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("csvImportHelpTransformSentences")}
         </p>
@@ -8743,7 +9365,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -8757,7 +9379,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionType")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("readingComprehensionType")}</Label>
         <Select
           value={block.layoutType ?? "default"}
           onValueChange={(value) =>
@@ -8793,7 +9415,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       {isTrueFalseLayout && (
         <>
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionReadingText")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("readingComprehensionReadingText")}</Label>
             <textarea
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[120px] resize-y"
               value={block.readingText ?? ""}
@@ -8807,7 +9429,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
             />
           </div>
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("columnLabels")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("columnLabels")}</Label>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">{t("trueLabelProp")}</Label>
@@ -8845,7 +9467,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       {isFormLayout && (
         <>
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("readingComprehensionFieldLabels")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("readingComprehensionFieldLabels")}</Label>
             {formFieldLabels.map((label, index) => (
               <div key={index} className="flex items-center gap-1">
                 <Input
@@ -8870,7 +9492,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
             </Button>
           </div>
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("columns")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("columns")}</Label>
             <Select
               value={formColumns}
               onValueChange={(value) =>
@@ -8895,7 +9517,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
         </>
       )}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("sentences")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("sentences")}</Label>
         <p className="text-xs text-muted-foreground">{t(isTrueFalseLayout ? "readingComprehensionTrueFalseHelp" : isPrefilledFormLayout ? "readingComprehensionPrefilledFormHelp" : isFormLayout ? "readingComprehensionFormHelp" : "readingComprehensionHelp")}</p>
         {block.sentences.map((item, i) => (
           <div key={item.id} className="space-y-1">
@@ -9099,7 +9721,7 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">{t(isTrueFalseLayout ? "csvImportHelpReadingComprehensionTrueFalse" : "csvImportHelpReadingComprehension")}</p>
         <textarea
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
@@ -9183,7 +9805,7 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("verbTableVerb")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("verbTableVerb")}</Label>
         <Input
           value={block.verb}
           onChange={(e) =>
@@ -9205,7 +9827,7 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("splitConjugation")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("splitConjugation")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch
@@ -9217,7 +9839,7 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showConjugations")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showConjugations")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch
@@ -9229,11 +9851,11 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
             })
           }
         />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("showInfinitive")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("showInfinitive")}</Label>
       </div>
       {(block.showInfinitive ?? true) && (
         <div>
-          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("infinitiveOverride")}</Label>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("infinitiveOverride")}</Label>
           <Input
             value={block.infinitiveOverride ?? ""}
             onChange={(e) =>
@@ -9248,7 +9870,7 @@ function VerbTableProps({ block }: { block: VerbTableBlock }) {
       )}
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiGeneration")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiGeneration")}</Label>
         <p className="text-xs text-muted-foreground mb-2">
           {t("autoGenerateVerbs")}
         </p>
@@ -9583,7 +10205,7 @@ function EmailSkeletonProps({ block }: { block: EmailSkeletonBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailStyle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("emailStyle")}</Label>
         <Select
           value={block.emailStyle || "none"}
           onValueChange={(v) => update({ emailStyle: v as EmailSkeletonStyle })}
@@ -9600,7 +10222,7 @@ function EmailSkeletonProps({ block }: { block: EmailSkeletonBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailHeader")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("emailHeader")}</Label>
         <div className="space-y-2">
           <div>
             <Label className="text-xs text-muted-foreground">{t("emailFrom")}</Label>
@@ -9636,7 +10258,7 @@ function EmailSkeletonProps({ block }: { block: EmailSkeletonBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("emailAttachments")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("emailAttachments")}</Label>
         <div className="space-y-2">
           {attachments.map((att, i) => (
             <div key={att.id} className="flex items-center gap-1">
@@ -9667,7 +10289,7 @@ function EmailSkeletonProps({ block }: { block: EmailSkeletonBlock }) {
         <>
           <Separator />
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textComment")}</Label>
             <textarea
               value={block.comment || ""}
               onChange={(e) => update({ comment: e.target.value })}
@@ -9697,7 +10319,7 @@ function JobApplicationProps({ block }: { block: JobApplicationBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("jobStyle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("jobStyle")}</Label>
         <Select
           value={block.applicationStyle || "none"}
           onValueChange={(v) => update({ applicationStyle: v as JobApplicationStyle })}
@@ -9714,7 +10336,7 @@ function JobApplicationProps({ block }: { block: JobApplicationBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("jobPersonalData")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("jobPersonalData")}</Label>
         <div className="space-y-2">
           <div>
             <Label className="text-xs text-muted-foreground">{t("jobFirstName")}</Label>
@@ -9772,7 +10394,7 @@ function JobApplicationProps({ block }: { block: JobApplicationBlock }) {
         <>
           <Separator />
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textComment")}</Label>
             <textarea
               value={block.comment || ""}
               onChange={(e) => update({ comment: e.target.value })}
@@ -9880,7 +10502,7 @@ function ChartProps({ block }: { block: ChartBlock }) {
     <div className="space-y-4">
       {/* Chart Type */}
       <div>
-        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{t("chartType")}</div>
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">{t("chartType")}</div>
         <Select value={block.chartType} onValueChange={(v) => update({ chartType: v as ChartBlock["chartType"] })}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -9897,7 +10519,7 @@ function ChartProps({ block }: { block: ChartBlock }) {
 
       {/* Display options */}
       <div>
-        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{t("chartDisplay")}</div>
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">{t("chartDisplay")}</div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-xs">{t("chartShowLegend")}</Label>
@@ -9921,7 +10543,7 @@ function ChartProps({ block }: { block: ChartBlock }) {
         <>
           <Separator />
           <div>
-            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{t("chartAxes")}</div>
+            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">{t("chartAxes")}</div>
             <div className="space-y-2">
               <div>
                 <Label className="text-xs">{t("chartXAxis")}</Label>
@@ -9950,7 +10572,7 @@ function ChartProps({ block }: { block: ChartBlock }) {
 
       {/* Data points */}
       <div>
-        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">
           {t("chartData")} ({block.data.length})
         </div>
         <div className="space-y-2">
@@ -9996,7 +10618,7 @@ function ChartProps({ block }: { block: ChartBlock }) {
 
       {/* JSON Import */}
       <div>
-        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">{t("chartJsonImport")}</div>
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">{t("chartJsonImport")}</div>
         <p className="text-xs text-muted-foreground mb-1">
           {t("chartJsonImportHelp")}
         </p>
@@ -10105,7 +10727,7 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("startNumber")}</Label>
         <Input
           type="number"
           min={0}
@@ -10115,7 +10737,7 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("backgroundColor")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("backgroundColor")}</Label>
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {/* None / transparent */}
@@ -10173,7 +10795,7 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
         </div>
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("borderRadius")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("borderRadius")}</Label>
         <Slider
           min={0}
           max={24}
@@ -10209,6 +10831,8 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     ? {
         title: t("quartettTitle"),
         titlePlaceholder: t("quartettTitlePlaceholder"),
+      subtitle: "",
+      subtitlePlaceholder: "",
         csvImportHelp: t("quartettCsvImportHelp"),
         csvPlaceholder: t("quartettCsvPlaceholder"),
         exportCards: t("quartettExportCards"),
@@ -10225,6 +10849,8 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     : {
         title: t("tabooTitle"),
         titlePlaceholder: t("tabooTitlePlaceholder"),
+      subtitle: t("tabooSubtitle"),
+      subtitlePlaceholder: t("tabooSubtitlePlaceholder"),
         csvImportHelp: t("tabooCsvImportHelp"),
         csvPlaceholder: t("tabooCsvPlaceholder"),
         exportCards: t("tabooExportCards"),
@@ -10572,6 +11198,17 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
         />
       </div>
 
+      {kind === "taboo" ? (
+        <div className="space-y-2">
+          <Input
+            value={(block as TabooBlock).subtitle ?? ""}
+            onChange={(e) => update({ subtitle: e.target.value } as Partial<CardListBlock>)}
+            placeholder={labels.subtitlePlaceholder}
+            className="h-8"
+          />
+        </div>
+      ) : null}
+
       {kind === "quartett" ? (
         <div className="space-y-2">
           <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
@@ -10806,7 +11443,7 @@ function ChecklistProps({ block }: { block: ChecklistBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("checklistCsvImportHelp")}
         </p>
@@ -10882,7 +11519,7 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("startNumber")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("startNumber")}</Label>
         <Input
           type="number"
           min={0}
@@ -10896,7 +11533,7 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("prefix")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("prefix")}</Label>
         <Input
           value={block.prefix}
           placeholder={t("prefixPlaceholder")}
@@ -10909,7 +11546,7 @@ function NumberedLabelProps({ block }: { block: NumberedLabelBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("suffix")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("suffix")}</Label>
         <Input
           value={block.suffix}
           placeholder={t("suffixPlaceholder")}
@@ -11093,13 +11730,49 @@ function FreeFormProps({ block }: { block: FreeFormBlock }) {
 // ─── Cover Images Panel ─────────────────────────────────────
 
 function CoverImagesPanel() {
-  const { state, dispatch } = useEditor();
+  const { state, dispatch, access } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const tt = useTranslations("toolbar");
   const { upload } = useUpload();
   const [uploadingSlot, setUploadingSlot] = React.useState<number | null>(null);
+  const [showBrandSettings, setShowBrandSettings] = React.useState(false);
   const images = state.settings.coverImages ?? [];
+
+  const isDeOverrideMode = state.localeMode === "DE";
+  const titleHasOverride = hasChOverride("_worksheet", "title", state.settings.chOverrides);
+  const titleOverride = state.settings.chOverrides?._worksheet?.title;
+  const displayTitle = isDeOverrideMode && titleOverride !== undefined ? titleOverride : state.title;
+  const canEditTitle = access.features.editTitle;
+  const canEditWorksheetSettings = access.features.editWorksheetSettings;
+
+  const handleTitleChange = (value: string) => {
+    if (isDeOverrideMode) {
+      if (value === state.title) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title", value } });
+      }
+    } else {
+      dispatch({ type: "SET_TITLE", payload: value });
+    }
+  };
+
+  const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
+
+  const updateBrandOverrides = (updates: Partial<BrandOverrides>) => {
+    dispatch({
+      type: "UPDATE_SETTINGS",
+      payload: {
+        brandOverrides: { ...state.settings.brandOverrides, ...updates },
+        brandSettings: {
+          ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
+          ...state.settings.brandSettings,
+          ...updates,
+        },
+      },
+    });
+  };
 
   // Crop dialog state
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
@@ -11176,6 +11849,145 @@ function CoverImagesPanel() {
 
   return (
     <div className="space-y-3">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("title")}</Label>
+        <div className="flex items-center gap-1">
+          <Input
+            value={displayTitle}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            disabled={!canEditTitle}
+            className={`h-8 ${
+              isDeOverrideMode && titleHasOverride ? "bg-amber-50/50 border-l-2 border-l-amber-400" : ""
+            }`}
+            placeholder={tt("titlePlaceholder")}
+          />
+          {isDeOverrideMode && titleHasOverride && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: "_worksheet", fieldPath: "title" } })}
+              disabled={!canEditTitle}
+              className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-amber-500 hover:text-red-500 shrink-0"
+              title={tt("clearChTitle")}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tt("brandSettings")}</Label>
+        <div className="flex items-center gap-1">
+          <Select
+            value={
+              state.settings.subProfileId
+                ? `${state.settings.brand || "edoomio"}::${state.settings.subProfileId}`
+                : state.settings.brand || "edoomio"
+            }
+            disabled={!canEditWorksheetSettings}
+            onValueChange={(value: string) => {
+              const [slug, subId] = value.split("::");
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                payload: {
+                  brand: slug as Brand,
+                  subProfileId: subId || undefined,
+                  brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
+                },
+              });
+            }}
+          >
+            <SelectTrigger size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {state.availableBrands.length > 0
+                ? state.availableBrands.map((bp) => {
+                    const subs = bp.subProfiles ?? [];
+                    if (subs.length === 0) {
+                      return (
+                        <SelectItem key={bp.slug} value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                      );
+                    }
+                    return (
+                      <SelectGroup key={bp.slug}>
+                        <SelectLabel className="text-xs text-muted-foreground">{bp.name}</SelectLabel>
+                        <SelectItem value={bp.slug}>
+                          {bp.name}
+                        </SelectItem>
+                        {subs.map((sp: BrandSubProfile) => (
+                          <SelectItem key={sp.id} value={`${bp.slug}::${sp.id}`}>
+                            {bp.name} / {sp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })
+                : <>
+                    <SelectItem value="edoomio">edoomio</SelectItem>
+                    <SelectItem value="lingostar">lingostar</SelectItem>
+                    <SelectItem value="agi-frauenfeld">AGI Frauenfeld</SelectItem>
+                  </>
+              }
+            </SelectContent>
+          </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={!canEditWorksheetSettings}
+                onClick={() => setShowBrandSettings(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tt("brandSettings")}</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tt("countryContext")}</Label>
+        <div className="flex items-center bg-muted rounded-lg p-0.5">
+          <Button
+            variant={state.localeMode === "DE" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "DE" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "DE" })}
+          >
+            {"🇩🇪"} DE
+          </Button>
+          <Button
+            variant={state.localeMode === "CH" ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2.5 gap-1 text-xs ${state.localeMode === "CH" ? "shadow-sm" : ""}`}
+            onClick={() => dispatch({ type: "SET_LOCALE_MODE", payload: "CH" })}
+          >
+            {"🇨🇭"} CH
+            {countChOverrides(state.settings.chOverrides) > 0 && (
+              <span className="ml-0.5 rounded bg-amber-100 px-1 text-[10px] text-amber-700">
+                {countChOverrides(state.settings.chOverrides)}
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tt("translations")}</Label>
+        {canEditWorksheetSettings ? (
+          <WorksheetTranslationDialog buttonClassName="w-full" />
+        ) : (
+          <Button variant="outline" size="sm" disabled className="w-full">
+            {tt("translations")}
+          </Button>
+        )}
+      </div>
+
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tt("pdfOrientation")}</Label>
         <Select
@@ -11271,7 +12083,7 @@ function CoverImagesPanel() {
         aspect={1}
       />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("settings")}</Label>
         <div className="border-y border-slate-200 bg-white">
           <div className="flex items-center justify-between py-2">
             <Label className="text-sm text-foreground">{t("coverImageBorder")}</Label>
@@ -11296,6 +12108,86 @@ function CoverImagesPanel() {
           className="h-8"
         />
       </div>
+
+      <Dialog open={showBrandSettings} onOpenChange={setShowBrandSettings}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{tt("brandSettings")} - {state.brandProfile.name || state.settings.brand || "edoomio"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium">{tt("brandLogo")}</Label>
+              <Input
+                value={resolvedBrand.logo}
+                onChange={(e) => updateBrandOverrides({ logo: e.target.value })}
+                placeholder="/logo/my-logo.svg"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">{tt("brandLogoHelp")}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("organization")}</Label>
+              <Input
+                value={resolvedBrand.organization}
+                onChange={(e) => updateBrandOverrides({ organization: e.target.value })}
+                placeholder={tt("organizationPlaceholder")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("teacher")}</Label>
+              <Input
+                value={resolvedBrand.teacher}
+                onChange={(e) => updateBrandOverrides({ teacher: e.target.value })}
+                placeholder={tt("teacherPlaceholder")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("headerRight")}</Label>
+              <textarea
+                value={resolvedBrand.headerRight}
+                onChange={(e) => updateBrandOverrides({ headerRight: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="rounded-md bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-1">{tt("availableVariables")}</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {"{current_date}"} · {"{current_year}"} · {"{current_page}"} · {"{no_of_pages}"} · {"{organization}"} · {"{teacher}"} · {"{worksheet_uuid}"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("footerLeft")}</Label>
+              <textarea
+                value={resolvedBrand.footerLeft}
+                onChange={(e) => updateBrandOverrides({ footerLeft: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("footerCenter")}</Label>
+              <textarea
+                value={resolvedBrand.footerCenter}
+                onChange={(e) => updateBrandOverrides({ footerCenter: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tt("footerRight")}</Label>
+              <textarea
+                value={resolvedBrand.footerRight}
+                onChange={(e) => updateBrandOverrides({ footerRight: e.target.value })}
+                placeholder="HTML..."
+                className="mt-1 w-full h-16 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -11349,7 +12241,7 @@ function DosAndDontsProps({ block }: { block: DosAndDontsBlock }) {
     icon: React.ReactNode
   ) => (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md flex items-center gap-2">
+      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
         {icon} {label}
       </Label>
       <ChInput
@@ -11479,7 +12371,7 @@ function TextComparisonProps({ block }: { block: TextComparisonBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("textComment")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("textComment")}</Label>
         <textarea
           value={block.comment || ""}
           onChange={(e) =>
@@ -11507,7 +12399,7 @@ function AiPromptProps({ block }: { block: AiPromptBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptDescription")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiPromptDescription")}</Label>
         <Input
           value={block.description}
           onChange={(e) => update({ description: e.target.value })}
@@ -11516,7 +12408,7 @@ function AiPromptProps({ block }: { block: AiPromptBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptInstructions")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiPromptInstructions")}</Label>
         <textarea
           value={block.instructions}
           onChange={(e) => update({ instructions: e.target.value })}
@@ -11526,7 +12418,7 @@ function AiPromptProps({ block }: { block: AiPromptBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptVariableName")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiPromptVariableName")}</Label>
         <Input
           value={block.variableName}
           onChange={(e) => update({ variableName: e.target.value.replace(/\s/g, "_") })}
@@ -11536,7 +12428,7 @@ function AiPromptProps({ block }: { block: AiPromptBlock }) {
       </div>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("aiPromptTemplate")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("aiPromptTemplate")}</Label>
         <textarea
           value={block.prompt}
           onChange={(e) => update({ prompt: e.target.value })}
@@ -11586,7 +12478,7 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
           {t("aiToolSelect")}
         </Label>
         {loading ? (
@@ -11619,7 +12511,7 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
         <>
           <Separator />
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               {t("aiToolTitleOverride")}
             </Label>
             <Input
@@ -11630,7 +12522,7 @@ function AiToolProps({ block }: { block: AiToolBlock }) {
           </div>
           <Separator />
           <div>
-            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
               {t("aiToolDescriptionOverride")}
             </Label>
             <textarea
@@ -11672,7 +12564,7 @@ function AudioProps({ block }: { block: AudioBlock }) {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("audioFile")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("audioFile")}</Label>
         {block.src ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 text-xs text-slate-600 truncate">
@@ -11708,7 +12600,7 @@ function AudioProps({ block }: { block: AudioBlock }) {
         )}
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("audioTitle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("audioTitle")}</Label>
         <Input
           value={block.title || ""}
           onChange={(e) => dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { title: e.target.value } } })}
@@ -12052,7 +12944,7 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
   return (
     <div className="space-y-3 overflow-hidden">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("websiteBlockTitle")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("websiteBlockTitle")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="title"
@@ -12062,7 +12954,7 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
         />
       </div>
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("level")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("level")}</Label>
         <Select
           value={String(block.level)}
           onValueChange={(value) => update({ level: Number(value) as 1 | 2 | 3 })}
@@ -12103,7 +12995,7 @@ function WebsiteProps({ block }: { block: WebsiteBlock }) {
       </Button>
       <Separator />
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{t("csvImport")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{t("csvImport")}</Label>
         <p className="text-xs text-muted-foreground mb-1">
           {t("websiteCsvImportHelp")}
         </p>
@@ -12284,7 +13176,7 @@ function TableProps({ block }: { block: TableBlock }) {
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("instruction")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("instruction")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="instruction"
@@ -12299,7 +13191,7 @@ function TableProps({ block }: { block: TableBlock }) {
       </div>
 
       <div>
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md block mb-2">{tc("description")}</Label>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">{tc("description")}</Label>
         <ChInput
           blockId={block.id}
           fieldPath="description"
@@ -12317,7 +13209,7 @@ function TableProps({ block }: { block: TableBlock }) {
       <Separator />
 
       <div>
-        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-md mb-2">
+        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px]">
           {t("tableSettings")}
         </div>
 
@@ -12513,7 +13405,7 @@ export function PropertiesPanel() {
 
   if (!selectedBlock) {
     return (
-      <div className="w-80 pt-8 pb-8">
+      <div className="w-80 pt-4 pb-8">
         <div className="space-y-3 rounded-[4px] border border-border bg-white p-4">
           <CoverImagesPanel />
         </div>
@@ -12587,6 +13479,8 @@ export function PropertiesPanel() {
         return <CardPairsProps block={selectedBlock as CardPairsBlock} />;
       case "flashcards":
         return <FlashcardsProps block={selectedBlock as FlashcardsBlock} />;
+      case "aufgabenkarten":
+        return <AufgabenkartenProps block={selectedBlock as AufgabenkartenBlock} />;
       case "syllable-cards":
         return <SyllableCardsProps block={selectedBlock as SyllableCardsBlock} />;
       case "board-game":
@@ -12676,7 +13570,7 @@ export function PropertiesPanel() {
   };
 
   return (
-    <div className="w-80 flex flex-col h-full pt-8 pb-8">
+    <div className="w-80 flex flex-col h-full pt-4 pb-8">
       <div className="flex flex-col h-full bg-white border border-foreground rounded-sm overflow-hidden min-h-0">
       <ScrollArea className="flex-1 overflow-hidden scrollbar-hide">
         <div className="p-4 space-y-4 [&_input]:bg-white [&_input]:shadow-none [&_button[data-slot=select-trigger]]:bg-white [&_button[data-slot=select-trigger]]:shadow-none [&_textarea]:bg-white [&_textarea]:border-0 [&_label.block.mb-2]:rounded-[4px]">

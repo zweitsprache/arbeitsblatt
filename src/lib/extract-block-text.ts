@@ -300,6 +300,18 @@ export function extractBlocksText(
         }
         break;
 
+      case "aufgabenkarten":
+        if (block.title) parts.push(block.title);
+        if (block.subtitle) parts.push(block.subtitle);
+        for (const item of block.items ?? []) {
+          if (item.title) parts.push(item.title);
+          if (item.task || item.text) parts.push(item.task || item.text || "");
+          for (const chunk of item.chunks ?? []) {
+            if (chunk) parts.push(chunk);
+          }
+        }
+        break;
+
       case "website":
         if (block.title) parts.push(block.title);
         for (const item of block.items ?? []) {

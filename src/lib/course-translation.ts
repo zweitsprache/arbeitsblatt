@@ -500,6 +500,33 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "aufgabenkarten": {
+      add("title", () => block.title, (v) => {
+        block.title = v;
+      });
+      add("subtitle", () => block.subtitle, (v) => {
+        block.subtitle = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.title`, () => item.title, (v) => {
+          item.title = v;
+        });
+        add(`items.${item.id}.task`, () => item.task ?? item.text, (v) => {
+          item.task = v;
+          item.text = v;
+        });
+        const chunks = item.chunks ?? [];
+        chunks.forEach((chunk, chunkIndex) => {
+          add(`items.${item.id}.chunks.${chunkIndex}`, () => chunk, (v) => {
+            const nextChunks = [...(item.chunks ?? [])];
+            nextChunks[chunkIndex] = v;
+            item.chunks = nextChunks;
+          });
+        });
+      }
+      break;
+    }
+
     case "table": {
       if (!block.skipTranslation) {
         add("content", () => block.content, (v) => {

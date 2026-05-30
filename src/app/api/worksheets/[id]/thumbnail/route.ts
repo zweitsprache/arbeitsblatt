@@ -152,7 +152,7 @@ async function generateWorksheetThumbnail(
 ): Promise<string | null> {
   const settings = (settingsJson as Record<string, unknown>) || {};
   const blocks = Array.isArray(blocksJson) ? (blocksJson as Array<Record<string, unknown>>) : [];
-  const cardBlocksForceCanva = blocks.some((block) => block?.type === "domino" || block?.type === "flashcards");
+  const cardBlocksForceCanva = blocks.some((block) => block?.type === "domino" || block?.type === "flashcards" || block?.type === "aufgabenkarten");
   const isLandscape = cardBlocksForceCanva || settings.orientation === "landscape" || settings.orientation === "landscape-canva";
   const baseUrl = getBaseUrl();
   const printUrl = `${baseUrl}/de/worksheet/${slug}/print`;

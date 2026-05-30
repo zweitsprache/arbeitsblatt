@@ -91,7 +91,7 @@ export function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded-lg transition-all border border-transparent
+      className={`group relative rounded-[4px] transition-all border border-transparent
         ${isDragging ? "opacity-30 z-50" : ""}
         ${isSelected ? "ring-1 ring-slate-400 bg-slate-50" : "hover:border-border"}
         ${!isVisibleInMode ? "opacity-40" : ""}
@@ -100,7 +100,7 @@ export function SortableBlock({
     >
       {/* Block toolbar */}
       <div
-        className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-md shadow-sm px-1 py-0.5 z-10
+        className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-[4px] shadow-sm px-1 py-0.5 z-10
           ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
           transition-opacity`}
       >
