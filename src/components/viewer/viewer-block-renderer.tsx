@@ -520,7 +520,6 @@ function QuartettView({
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
   const cardTitleColor = headingColor || primaryColor;
   const blockTitle = block.title?.trim() || "";
-  const subtitle = block.subtitle?.trim() || "";
   const cardWidthMm = 58;
   const cardHeightMm = 87;
   const columns = 4;
@@ -1097,14 +1096,33 @@ function SectionGap({ size }: { size: keyof typeof VIEWER_SECTION_GAP }) {
 // Inline <svg> bullet marker for viewer/print lists.
 // CSS background-image markers are unreliable in Chromium PDF output.
 const LI_BULLET_SVG = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:-1.75rem;top:var(--li-icon-top,0.95em);transform:translateY(-50%);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
+// RTL variant: marker on the right side, mirrored 180°.
+const LI_BULLET_SVG_RTL = `<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:-1.75rem;top:var(--li-icon-top,0.95em);transform:translateY(-50%) rotate(180deg);pointer-events:none;"><path d="M3 12L15 12"/><circle cx="18" cy="12" r="3"/></svg>`;
 
-function injectLiIcons(html: string): string {
+function injectLiIcons(html: string, rtl = false): string {
   if (!html.includes("<li")) return html;
+  const bullet = rtl ? LI_BULLET_SVG_RTL : LI_BULLET_SVG;
   const withBullets = html.replace(
     /<li(\b[^>]*)?>/gi,
-    (_, attrs) => `<li${attrs ?? ""}>${LI_BULLET_SVG}<div class="li-content-no-break">`,
+    (_, attrs) => `<li${attrs ?? ""}>${bullet}<div class="li-content-no-break">`,
   );
   return withBullets.replace(/<\/li>/gi, "</div></li>");
+}
+
+// Wrap multi-segment numeric sequences (e.g. "076 621 61 61") with Unicode
+// LRI/PDI isolate characters so they stay in logical order inside RTL paragraphs.
+// LRI (U+2066) forces an LTR isolate; PDI (U+2069) closes it. These are
+// character-level controls so they can't be overridden by CSS.
+function isolateNumberRunsForRtl(html: string): string {
+  const LRI = "\u2066";
+  const PDI = "\u2069";
+  return html.replace(/>([^<]+)</g, (_, text: string) => {
+    const wrapped = text.replace(
+      /(\d[\d\s().+\-/]*\d)/g,
+      (run) => `${LRI}${run}${PDI}`,
+    );
+    return `>${wrapped}<`;
+  });
 }
 
 function normalizeInlineViewerHtml(value: string): string {
@@ -1712,7 +1730,10 @@ function NumberedHeadingView({
   );
 }
 
-function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, isRtl = false, translationScale, primaryColor = "#1a1a1a", instructionIndex, accentColor, brand = "edoomio" }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; instructionIndex?: number; accentColor?: string | null; brand?: Brand }) {
+function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, bodyFontSize, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor = "#1a1a1a", instructionIndex, accentColor, brand = "edoomio" }: { block: TextBlock; originalBlock?: TextBlock; mode: ViewMode; bodyFont?: string; originalBodyFont?: string; bodyFontSize?: string; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; instructionIndex?: number; accentColor?: string | null; brand?: Brand }) {
+  // skipTranslation blocks always render the original (German) content, so they
+  // must stay LTR even when the active worksheet locale is RTL.
+  const isRtl = isLocaleRtl && !block.skipTranslation;
   // Only highlight {{de:…}} markers with accent color when the worksheet is translated
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isExample = block.textStyle === "example";
@@ -1768,10 +1789,14 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const fallbackBrandBodyFont = getBrandFonts(brand).bodyFont;
   const resolvedBodyFont = bodyFont || fallbackBrandBodyFont || "inherit";
   const resolvedOriginalBodyFont = originalBodyFont || resolvedBodyFont;
-  const resolvedContentFont = hasExampleBox ? "var(--worksheet-example-font, inherit)" : resolvedBodyFont;
   const resolvedOriginalContentFont = hasExampleBox
     ? "var(--worksheet-original-example-font, var(--worksheet-example-font, inherit))"
     : resolvedOriginalBodyFont;
+  const resolvedContentFont = block.skipTranslation
+    ? resolvedOriginalContentFont
+    : hasExampleBox
+      ? "var(--worksheet-example-font, inherit)"
+      : resolvedBodyFont;
   const baseTextStyle: React.CSSProperties = {
     ...(resolvedContentFont !== "inherit" ? { fontFamily: resolvedContentFont } : {}),
     ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
@@ -1788,14 +1813,25 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const translatedFontStyle: React.CSSProperties | undefined = isBilingual
     ? { ...baseTextStyle, ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}) }
     : undefined;
-  const translatedDirectionStyle: React.CSSProperties | undefined = isRtl
+  // skipTranslation blocks always render the original (German) content, so they
+  // must stay LTR even when the active worksheet locale is RTL.
+  const applyRtl = isRtl;
+  const translatedDirectionStyle: React.CSSProperties | undefined = applyRtl
     ? { direction: "rtl", textAlign: "right", unicodeBidi: "plaintext" }
     : undefined;
+  // Only apply RTL to the outer wrapper for single-column blocks. In bilingual
+  // mode each column owns its own direction so the wrapper must stay neutral,
+  // otherwise text-align: right cascades into the German column too.
+  const singleColumnTextStyle: React.CSSProperties =
+    translatedDirectionStyle && !isBilingual
+      ? { ...baseTextStyle, ...translatedDirectionStyle }
+      : baseTextStyle;
   const bilingualGrid: React.CSSProperties = {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
     gap: "0 1em",
     position: "relative",
+    direction: "ltr",
   };
   const renderBilingualGrid = (
     left: React.ReactNode,
@@ -1843,11 +1879,15 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   ) : null;
 
   /** Render a single column of tiptap content (used for both original and translated) */
-  const renderContent = (html: string, wrapperStyle?: React.CSSProperties) => {
-    const processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor));
+  const renderContent = (html: string, wrapperStyle?: React.CSSProperties, direction?: "rtl" | "ltr") => {
+    const effectiveDir = direction ?? (isRtl ? "rtl" : undefined);
+    const rtl = effectiveDir === "rtl";
+    let processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor), rtl);
+    if (rtl) processed = isolateNumberRunsForRtl(processed);
     return (
       <div
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
+        dir={effectiveDir}
         style={wrapperStyle}
         dangerouslySetInnerHTML={{ __html: processed }}
       />
@@ -1878,7 +1918,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   /** Wrap content in bilingual 2-column grid if active */
   const wrapBilingual = (translatedHtml: string, originalHtml?: string) => {
-    if (!isBilingual || !originalHtml) return renderContent(translatedHtml, translatedDirectionStyle);
+    if (!isBilingual || !originalHtml) return renderContent(translatedHtml, translatedDirectionStyle, isRtl ? "rtl" : undefined);
 
     // For rows style: render paragraph-by-paragraph aligned rows
     if (isRows) {
@@ -1899,8 +1939,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...translatedDirectionStyle, ...(isRtl ? { padding: `0.375rem ${rowIconTextLane} 0.375rem 0.625rem` } : {}), ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", ...(isRtl ? { right: 0 } : { left: 0 }), top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
+                <div style={{ position: "absolute", ...(isRtl ? { right: 0 } : { left: 0 }), top: "calc(0.375rem + 0.7em)", transform: isRtl ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div className="tiptap max-w-none tiptap-compact" dir={isRtl ? "rtl" : undefined} style={translatedDirectionStyle} dangerouslySetInnerHTML={{ __html: isRtl ? isolateNumberRunsForRtl(translatedParas[i] || "") : (translatedParas[i] || "") }} />
               </div>
             </React.Fragment>
           )),
@@ -1918,7 +1958,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       if (hasListRows) {
         return renderBilingualGrid(
           <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-          <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml)}</div>,
+          <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml, undefined, isRtl ? "rtl" : undefined)}</div>,
           undefined,
           { showDivider: showBilingualDivider },
         );
@@ -1935,7 +1975,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div className="tiptap-compact" style={{ paddingTop: rowPadding, paddingBottom: rowPadding, ...translatedFontStyle, ...translatedDirectionStyle }}>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: translatedParas[i] || "" }} />
+                <div className="tiptap max-w-none tiptap-compact" dir={isRtl ? "rtl" : undefined} style={translatedDirectionStyle} dangerouslySetInnerHTML={{ __html: isRtl ? isolateNumberRunsForRtl(translatedParas[i] || "") : (translatedParas[i] || "") }} />
               </div>
             </React.Fragment>
           )), null, undefined, { showDivider: showBilingualDivider });
@@ -1943,7 +1983,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
     return renderBilingualGrid(
       <div style={originalFontStyle}>{renderContent(originalHtml)}</div>,
-      <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml)}</div>,
+      <div className="tiptap-bilingual-translated" style={{ ...translatedFontStyle, ...translatedDirectionStyle }}>{renderContent(translatedHtml, undefined, isRtl ? "rtl" : undefined)}</div>,
       baseTextStyle,
       { showDivider: showBilingualDivider },
     );
@@ -1990,8 +2030,8 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ marginBottom: "-2rem", ...baseTextStyle, color: primaryColor }}>
-        {renderContent(block.content)}
+      <div className={s.textPlain} style={{ marginBottom: "-2rem", ...singleColumnTextStyle, color: primaryColor }}>
+        {renderContent(block.content, translatedDirectionStyle, isRtl ? "rtl" : undefined)}
       </div>
     );
   }
@@ -2003,13 +2043,14 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
       const iconColor = isHinweis ? "#475569" : "#475569";
       const paras = isHinweis ? [block.content] : splitRowItems(block.content);
       return (
-        <div className={s.textPlain} style={baseTextStyle}>
+        <div className={s.textPlain} style={singleColumnTextStyle}>
           {imageEl}
           {paras.map((para, i) => (
             <div
               key={i}
               style={{
                 display: "flex",
+                flexDirection: isRtl ? "row-reverse" : "row",
                 gap: 0,
                 borderBottom: `1px solid ${borderColor}`,
                 ...(i === 0 ? { borderTop: `1px solid ${borderColor}` } : {}),
@@ -2017,13 +2058,13 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: rowIconSlotGap, display: "flex", alignItems: "center", justifyContent: "flex-start", color: iconColor }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: "center", justifyContent: "flex-start", color: iconColor, transform: isRtl ? "rotate(180deg)" : undefined }}>
                 <HintRowIcon />
               </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.625rem 0.375rem 0" }}>
+              <div style={{ flex: 1, minWidth: 0, padding: isRtl ? "0.375rem 0 0.375rem 0.625rem" : "0.375rem 0.625rem 0.375rem 0" }}>
                 {isHinweis
-                  ? renderContent(para)
-                  : <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />}
+                  ? renderContent(para, translatedDirectionStyle, isRtl ? "rtl" : undefined)
+                  : <div className="tiptap max-w-none tiptap-compact" dir={isRtl ? "rtl" : undefined} style={translatedDirectionStyle} dangerouslySetInnerHTML={{ __html: isRtl ? isolateNumberRunsForRtl(para) : para }} />}
               </div>
             </div>
           ))}
@@ -2036,13 +2077,14 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     if (isRows && !isBilingual) {
       const paras = splitRowItems(block.content);
       return (
-        <div className={s.textPlain} style={baseTextStyle}>
+        <div className={s.textPlain} style={singleColumnTextStyle}>
           {imageEl}
           {paras.map((para, i) => (
             <div
               key={i}
               style={{
                 display: "flex",
+                flexDirection: isRtl ? "row-reverse" : "row",
                 gap: 0,
                 borderBottom: "1px solid #d1d5db",
                 ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}),
@@ -2050,11 +2092,11 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: rowIconSlotGap, display: "flex", alignItems: "center", justifyContent: "flex-start", color: "#475569" }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: "center", justifyContent: "flex-start", color: "#475569", transform: isRtl ? "rotate(180deg)" : undefined }}>
                 <RowsIconSvg />
               </div>
-              <div style={{ flex: 1, minWidth: 0, padding: "0.375rem 0.625rem 0.375rem 0" }}>
-                <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: para }} />
+              <div style={{ flex: 1, minWidth: 0, padding: isRtl ? "0.375rem 0 0.375rem 0.625rem" : "0.375rem 0.625rem 0.375rem 0" }}>
+                <div className="tiptap max-w-none tiptap-compact" dir={isRtl ? "rtl" : undefined} style={translatedDirectionStyle} dangerouslySetInnerHTML={{ __html: isRtl ? isolateNumberRunsForRtl(para) : para }} />
               </div>
             </div>
           ))}
@@ -2063,7 +2105,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     }
 
     return (
-      <div className={s.textPlain} style={baseTextStyle}>
+      <div className={s.textPlain} style={singleColumnTextStyle}>
         {imageEl}
         {wrapBilingual(block.content, originalBlock?.content)}
       </div>
@@ -2261,19 +2303,19 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
           <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
         </div>
 
-      {/* Attachments */}
-      {attachments.length > 0 && (
-        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-2">
-          {attachments.map((att) => (
-            <div key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs text-slate-600">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
-              {att.name}
-            </div>
-          ))}
-        </div>
-      )}
+        {/* Attachments */}
+        {attachments.length > 0 && (
+          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-2">
+            {attachments.map((att) => (
+              <div key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs text-slate-600">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                {att.name}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {isStyled && block.comment && (
         <div className={s.commentBox} style={{ "--block-color": color } as React.CSSProperties}>{renderDeMarkers(block.comment)}</div>
