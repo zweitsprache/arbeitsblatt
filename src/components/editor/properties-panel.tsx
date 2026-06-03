@@ -77,6 +77,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  StartSentencesBlock,
   ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
@@ -8775,6 +8776,196 @@ function CompleteSentencesProps({ block }: { block: CompleteSentencesBlock }) {
   );
 }
 
+function StartSentencesProps({ block }: { block: StartSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    const newSentences = lines.map((line, i) => {
+      const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+      const parts = line.split(sep).map((p) => p.trim());
+      return {
+        id: `ss${Date.now()}-${i}`,
+        beginning: parts[0],
+        ...(parts[1] ? { ending: parts[1] } : {}),
+      };
+    });
+
+    const sentences = csvMode === "append"
+      ? [...block.sentences, ...newSentences]
+      : newSentences;
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences } },
+    });
+    setCsvText("");
+  };
+
+  const updateSentence = (index: number, beginning: string) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], beginning };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const updateEnding = (index: number, ending: string) => {
+    const newSentences = [...block.sentences];
+    newSentences[index] = { ...newSentences[index], ending };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { sentences: newSentences } },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: `ss${Date.now()}`, beginning: "" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (index: number) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((_, i) => i !== index),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("sentences")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("startSentencesHelp")}
+        </p>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="flex items-start gap-1">
+            <div className="flex-1 space-y-1">
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.beginning`}
+                baseValue={item.beginning}
+                onBaseChange={(v) => updateSentence(i, v)}
+                className="h-8 text-xs"
+                placeholder={t("startSentencePlaceholder")}
+              />
+              <ChInput
+                blockId={block.id}
+                fieldPath={`sentences.${i}.ending`}
+                baseValue={item.ending ?? ""}
+                onBaseChange={(v) => updateEnding(i, v)}
+                className="h-8 text-xs"
+                placeholder={t("startSentenceEndingPlaceholder")}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => removeSentence(i)}
+              disabled={block.sentences.length <= 1}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addSentence} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+        </Button>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          {t("csvImportHelpStartSentences")}
+        </p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("csvImportPlaceholderStartSentences")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="flex gap-1 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TransformSentencesProps({ block }: { block: TransformSentencesBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -13512,6 +13703,8 @@ export function PropertiesPanel() {
         return <FixSentencesProps block={selectedBlock} />;
       case "complete-sentences":
         return <CompleteSentencesProps block={selectedBlock} />;
+      case "start-sentences":
+        return <StartSentencesProps block={selectedBlock} />;
       case "reading-comprehension":
         return <ReadingComprehensionProps block={selectedBlock} />;
       case "transform-sentences":

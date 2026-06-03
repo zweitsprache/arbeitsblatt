@@ -198,6 +198,14 @@ export function extractBlocksText(
         }
         break;
 
+      case "start-sentences":
+        if (block.instruction) parts.push(block.instruction);
+        for (const s of block.sentences ?? []) {
+          parts.push(s.beginning);
+          if (s.ending) parts.push(s.ending);
+        }
+        break;
+
       case "reading-comprehension":
         if (block.instruction) parts.push(block.instruction);
         if (block.readingText) parts.push(block.readingText);

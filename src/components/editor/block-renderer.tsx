@@ -50,6 +50,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  StartSentencesBlock,
   ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
@@ -122,6 +123,7 @@ import { BlockVisibility } from "@/types/worksheet";
 import { Button } from "@/components/ui/button";
 import { FreeFormEditorDialog, FreeFormPreview } from "./free-form-editor-dialog";
 import { SyllablesDisplay } from "@/components/worksheet/syllables-display";
+import { CrosswordLayout } from "@/components/worksheet/crossword-layout";
 import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
@@ -4158,8 +4160,6 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
     });
   };
 
-  const numberMap = new Map(block.placements.map((placement) => [`${placement.labelRow},${placement.labelCol}`, placement.clueNumber]));
-
   return (
     <div className="space-y-3">
       {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
@@ -4169,73 +4169,14 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
         </div>
       ) : null}
       {block.grid.length > 0 ? (
-        <div
-          className={isPrint ? "mt-5 grid items-start gap-4" : "mt-5 flex flex-col gap-3 lg:flex-row lg:items-start"}
-          style={isPrint ? { gridTemplateColumns: "auto minmax(0, 1fr)" } : undefined}
-        >
-          <div
-            className={`inline-grid overflow-hidden rounded ${isPrint ? "border border-foreground bg-transparent p-0 shrink-0" : "border border-foreground bg-foreground p-px"}`}
-            style={{ gridTemplateColumns: `repeat(${block.grid[0]?.length ?? 0}, minmax(0, 2.1rem))` }}
-          >
-            {block.grid.flatMap((row, rowIndex) => row.map((cell, colIndex) => {
-              const clueNumber = numberMap.get(`${rowIndex},${colIndex}`);
-              const isGapCell = cell === "-" || cell === " ";
-              const showsGapMarker = cell === "-";
-              const isLetterCell = cell.length > 0 && !isGapCell;
-              const isTop = rowIndex === 0;
-              const isBottom = rowIndex === block.grid.length - 1;
-              const isLeft = colIndex === 0;
-              const isRight = colIndex === row.length - 1;
-              const cornerClass = [
-                isTop && isLeft ? "rounded-tl-[3px]" : "",
-                isTop && isRight ? "rounded-tr-[3px]" : "",
-                isBottom && isLeft ? "rounded-bl-[3px]" : "",
-                isBottom && isRight ? "rounded-br-[3px]" : "",
-              ].filter(Boolean).join(" ");
-              const cellStyle: React.CSSProperties | undefined = isPrint
-                ? {
-                    borderRight: "1px solid var(--color-foreground)",
-                    borderBottom: "1px solid var(--color-foreground)",
-                    ...(rowIndex === 0 ? { borderTop: "1px solid var(--color-foreground)" } : {}),
-                    ...(colIndex === 0 ? { borderLeft: "1px solid var(--color-foreground)" } : {}),
-                  }
-                : undefined;
-              return (
-                <div
-                  key={`${rowIndex}-${colIndex}`}
-                  className={`h-[2.1rem] w-[2.1rem] ${isLetterCell ? "bg-white" : "bg-muted"} ${cornerClass}`}
-                  style={cellStyle}
-                >
-                  {clueNumber ? (
-                    <div className="flex h-full w-full items-center justify-center bg-white">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground bg-white text-center text-xs font-semibold leading-none text-foreground">
-                        {clueNumber}
-                      </span>
-                    </div>
-                  ) : null}
-                  {isLetterCell ? (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <span className="text-sm font-semibold uppercase">{cell}</span>
-                    </div>
-                  ) : isGapCell ? (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <span className="text-sm font-semibold leading-none text-muted-foreground">{showsGapMarker ? "-" : ""}</span>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            }))}
-          </div>
-          <div className={`min-w-0 ${isPrint ? "w-full max-w-none" : "flex-1"} space-y-2`}>
-            {block.placements.map((placement) => (
-              <div key={`${placement.itemId}-${placement.direction}`} className="flex items-start gap-2 text-sm leading-5">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none text-foreground">
-                  {placement.clueNumber}
-                </span>
-                <span className="text-muted-foreground">{placement.hint}</span>
-              </div>
-            ))}
-          </div>
+        <div className="mt-5">
+          <CrosswordLayout
+            grid={block.grid}
+            placements={block.placements}
+            showSolutions
+            cellSize="2.1rem"
+            clueTextClassName="text-muted-foreground"
+          />
         </div>
       ) : null}
       <button
@@ -5018,6 +4959,121 @@ function CompleteSentencesRenderer({ block }: { block: CompleteSentencesBlock })
             >
               {item.beginning}
             </span>
+            <button
+              className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
+                ${block.sentences.length <= 1 ? "invisible" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeSentence(item.id);
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          addSentence();
+        }}
+      >
+        <Plus className="h-3 w-3" /> {t("addSentence")}
+      </button>
+    </div>
+  );
+}
+
+// ─── Start Sentences ────────────────────────────────────────
+function StartSentencesRenderer({ block }: { block: StartSentencesBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const updateSentence = (id: string, beginning: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.map((s) =>
+            s.id === id ? { ...s, beginning } : s
+          ),
+        },
+      },
+    });
+  };
+
+  const addSentence = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: [
+            ...block.sentences,
+            { id: crypto.randomUUID(), beginning: t("newSentenceBeginning") },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeSentence = (id: string) => {
+    if (block.sentences.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          sentences: block.sentences.filter((s) => s.id !== id),
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="font-medium outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {block.instruction}
+      </div>
+
+      <div>
+        {block.sentences.map((item, i) => (
+          <div
+            key={item.id}
+            className="group/item flex items-center gap-3 py-2 border-b last:border-b-0"
+          >
+            <ItemNumberBadge index={i + 1} />
+            <span
+              className="outline-none block flex-1"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || "";
+                localeUpdate(block.id, `sentences.${i}.beginning`, value, () =>
+                  updateSentence(item.id, value)
+                );
+              }}
+            >
+              {item.beginning}
+            </span>
+            {item.ending && (
+              <span className="text-xs text-muted-foreground italic shrink-0">
+                {item.ending}
+              </span>
+            )}
             <button
               className={`opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0
                 ${block.sentences.length <= 1 ? "invisible" : ""}`}
@@ -8859,6 +8915,8 @@ export function BlockRenderer({
       return <FixSentencesRenderer block={block} />;
     case "complete-sentences":
       return <CompleteSentencesRenderer block={block} />;
+    case "start-sentences":
+      return <StartSentencesRenderer block={block} />;
     case "transform-sentences":
       return <TransformSentencesRenderer block={block} />;
     case "reading-comprehension":

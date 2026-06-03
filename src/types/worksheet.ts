@@ -46,6 +46,7 @@ export type BlockType =
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
+  | "start-sentences"
   | "reading-comprehension"
   | "transform-sentences"
   | "verb-table"
@@ -1101,6 +1102,21 @@ export interface CompleteSentencesBlock extends BlockBase {
   sentences: CompleteSentenceItem[];
 }
 
+// ─── Start Sentences block ──────────────────────────────────
+// Variant of complete-sentences where the writing line is rendered above
+// the sentence fragment instead of next to it.
+export interface StartSentenceItem {
+  id: string;
+  beginning: string;
+  ending?: string;
+}
+
+export interface StartSentencesBlock extends BlockBase {
+  type: "start-sentences";
+  instruction: string;
+  sentences: StartSentenceItem[];
+}
+
 export interface TransformSentencesBlock extends BlockBase {
   type: "transform-sentences";
   instruction: string;
@@ -1484,6 +1500,7 @@ export type WorksheetBlock =
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
+  | StartSentencesBlock
   | ReadingComprehensionBlock
   | TransformSentencesBlock
   | VerbTableBlock
@@ -2933,6 +2950,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       sentences: [
         { id: "cs1", beginning: "Ich gehe gerne …" },
         { id: "cs2", beginning: "Am Wochenende …" },
+      ],
+      visibility: "both",
+    },
+  },
+  {
+    type: "start-sentences",
+    label: "Start Sentences",
+    description: "Sentence beginnings with writing line above",
+    labelKey: "startSentences",
+    descriptionKey: "startSentencesDesc",
+    icon: "TextCursorInput",
+    category: "interactive",
+    translations: { de: { label: "Sätze beginnen", description: "Satzanfänge mit Schreiblinie darüber" } },
+    defaultData: {
+      type: "start-sentences",
+      instruction: "Beginne den Satz mit dem vorgegebenen Wort.",
+      sentences: [
+        { id: "ss1", beginning: "… gehe gerne in die Schule." },
+        { id: "ss2", beginning: "… spielen wir Fussball." },
       ],
       visibility: "both",
     },

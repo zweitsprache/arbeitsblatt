@@ -65,7 +65,7 @@ export function AppHeader() {
         </div>
 
         {/* User menu */}
-        <div className="scale-110 origin-center">
+        <div className="scale-110 origin-center [&_[data-slot=avatar-fallback]]:text-[10px] [&_.avatar-fallback]:text-[10px]">
           <UserButton size="icon" />
         </div>
       </div>

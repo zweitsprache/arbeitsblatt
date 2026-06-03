@@ -16,7 +16,7 @@ export default async function AuthPage({
     <main
       className={
         useCustomAuthFlow
-          ? "min-h-screen bg-[#d8d6e1] px-4 py-6 sm:px-6 lg:px-10 lg:py-10"
+          ? "min-h-screen bg-white"
           : "flex min-h-screen flex-col items-center justify-center p-4"
       }
     >

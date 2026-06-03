@@ -55,8 +55,8 @@ interface NavSection {
 }
 
 const topItems: NavItem[] = [
-  { href: "/", labelKey: "dashboard", sectionKey: "dashboard", icon: LayoutDashboard },
-  { href: "/library", labelKey: "library", sectionKey: "library", icon: Store },
+  { href: "/dashboard", labelKey: "dashboard", sectionKey: "dashboard", icon: LayoutDashboard },
+  { href: "/", labelKey: "library", sectionKey: "library", icon: Store },
 ];
 
 const sections: NavSection[] = [
@@ -378,8 +378,8 @@ export function AppSidebar({
               )}
             >
               <NextImage
-                src="/logo/didaktiv_logo_brand.svg"
-                alt="Arbeitsblatt"
+                src="/logo/eduit_logo.svg"
+                alt="eduit"
                 width={collapsed ? 40 : 140}
                 height={collapsed ? 24 : 28}
                 className={cn("w-auto", collapsed ? "h-6" : "h-[22px]")}

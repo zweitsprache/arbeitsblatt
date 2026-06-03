@@ -50,6 +50,7 @@ import {
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
+  StartSentencesBlock,
   ReadingComprehensionBlock,
   TransformSentencesBlock,
   VerbTableBlock,
@@ -99,6 +100,7 @@ import {
   DialogueSpeakerIconGlyph,
 } from "@/lib/dialogue-icons";
 import { SyllablesDisplay } from "@/components/worksheet/syllables-display";
+import { CrosswordLayout } from "@/components/worksheet/crossword-layout";
 import { BingoCardsRenderer } from "@/components/editor/BingoCardsRenderer";
 import s from "./viewer-blocks.module.css";
 
@@ -7332,10 +7334,6 @@ function CrosswordView({
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
   const isOnline = mode === "online";
-  const numberMap = useMemo(
-    () => new Map(block.placements.map((placement) => [`${placement.labelRow},${placement.labelCol}`, placement.clueNumber])),
-    [block.placements],
-  );
 
   if (block.generationError) {
     return (
@@ -7364,73 +7362,8 @@ function CrosswordView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       ) : null}
-      <div
-        className={isPrint ? "mt-5 grid items-start gap-4" : "mt-5 flex flex-col gap-4 lg:flex-row lg:items-start"}
-        style={isPrint ? { gridTemplateColumns: "auto minmax(0, 1fr)" } : undefined}
-      >
-        <div
-          className={`inline-grid overflow-hidden rounded ${isPrint ? "border border-foreground bg-transparent p-0 shrink-0" : "border border-foreground bg-foreground p-px"}`}
-          style={{ gridTemplateColumns: `repeat(${block.grid[0]?.length ?? 0}, minmax(0, 2rem))` }}
-        >
-          {block.grid.flatMap((row, rowIndex) => row.map((cell, colIndex) => {
-            const clueNumber = numberMap.get(`${rowIndex},${colIndex}`);
-            const isGapCell = cell === "-" || cell === " ";
-            const showsGapMarker = cell === "-";
-            const isLetterCell = cell.length > 0 && !isGapCell;
-            const isTop = rowIndex === 0;
-            const isBottom = rowIndex === block.grid.length - 1;
-            const isLeft = colIndex === 0;
-            const isRight = colIndex === row.length - 1;
-            const cornerClass = [
-              isTop && isLeft ? "rounded-tl-[3px]" : "",
-              isTop && isRight ? "rounded-tr-[3px]" : "",
-              isBottom && isLeft ? "rounded-bl-[3px]" : "",
-              isBottom && isRight ? "rounded-br-[3px]" : "",
-            ].filter(Boolean).join(" ");
-            const cellStyle: React.CSSProperties | undefined = isPrint
-              ? {
-                  borderRight: "1px solid var(--color-foreground)",
-                  borderBottom: "1px solid var(--color-foreground)",
-                  ...(rowIndex === 0 ? { borderTop: "1px solid var(--color-foreground)" } : {}),
-                  ...(colIndex === 0 ? { borderLeft: "1px solid var(--color-foreground)" } : {}),
-                }
-              : undefined;
-            return (
-              <div
-                key={`${rowIndex}-${colIndex}`}
-                className={`h-8 w-8 ${isLetterCell ? "bg-white" : "bg-muted"} ${cornerClass}`}
-                style={cellStyle}
-              >
-                {clueNumber ? (
-                  <div className="flex h-full w-full items-center justify-center bg-white">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground bg-white text-center text-xs font-semibold leading-none text-foreground">
-                      {clueNumber}
-                    </span>
-                  </div>
-                ) : null}
-                {isLetterCell ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    {showSolutions ? <span className="text-sm font-semibold uppercase">{cell}</span> : null}
-                  </div>
-                ) : isGapCell ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <span className="text-sm font-semibold leading-none text-muted-foreground">{showsGapMarker ? "-" : ""}</span>
-                  </div>
-                ) : null}
-              </div>
-            );
-          }))}
-        </div>
-        <div className={`min-w-0 ${isPrint ? "w-full max-w-none" : "flex-1"} space-y-2`}>
-          {block.placements.map((placement) => (
-            <div key={`${placement.itemId}-${placement.direction}`} className="flex items-start gap-2 text-sm leading-5">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none text-foreground">
-                {placement.clueNumber}
-              </span>
-              <span className="text-foreground">{placement.hint}</span>
-            </div>
-          ))}
-        </div>
+      <div className="mt-5">
+        <CrosswordLayout grid={block.grid} placements={block.placements} showSolutions={showSolutions} clueTextClassName="text-foreground" />
       </div>
     </div>
   );
@@ -8537,6 +8470,78 @@ function CompleteSentencesView({
             ) : (
               <div className="flex-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
             )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Start Sentences View ─────────────────────────────────────
+// Variant of CompleteSentencesView with the writing line above the fragment.
+function StartSentencesView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  accentColor,
+  interactiveColor,
+  instructionIndex,
+}: {
+  block: StartSentencesBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: unknown;
+  onAnswer: (value: unknown) => void;
+  accentColor?: string | null;
+  interactiveColor?: string;
+  instructionIndex?: number;
+}) {
+  const userAnswers = (answer as Record<string, string> | undefined) || {};
+  const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+  const isOnline = mode === "online";
+  const rowMinHeight = isOnline ? "min-h-[49px]" : "min-h-[32.5px]";
+
+  return (
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <InstructionBadge instructionIndex={instructionIndex} />
+            <p className="min-w-0 flex-1">{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        )
+      )}
+      <div>
+        {block.sentences.map((item, i) => (
+          <div key={item.id} className="flex flex-col gap-1 py-1 border-b last:border-b-0">
+            <div className={`flex items-center gap-3 ${rowMinHeight}`}>
+              <ItemNumberBadge index={i + 1} className="shrink-0" />
+              {interactive ? (
+                <input
+                  type="text"
+                  value={userAnswers[item.id] || ""}
+                  onChange={(e) => onAnswer({ ...userAnswers, [item.id]: e.target.value })}
+                  className="flex-1 h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none transition-colors"
+                  style={{
+                    backgroundColor: colorWithAlpha(resolvedInteractiveColor, 0.10),
+                  }}
+                />
+              ) : (
+                <div className="flex-1 border-b border-dashed border-muted-foreground/30 min-h-[14px]" />
+              )}
+              {item.ending && <span className="shrink-0">{item.ending}</span>}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 w-6" />
+              <span>{item.beginning}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -10958,6 +10963,19 @@ export function ViewerBlockRenderer({
     case "complete-sentences":
       return (
         <CompleteSentencesView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer}
+          onAnswer={onAnswer || noop}
+          accentColor={accentColor}
+          interactiveColor={interactiveColor}
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "start-sentences":
+      return (
+        <StartSentencesView
           block={block}
           mode={mode}
           interactive={interactive}

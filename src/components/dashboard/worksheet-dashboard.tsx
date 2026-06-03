@@ -568,7 +568,7 @@ export function WorksheetDashboard() {
             </Card>
           ) : displayWorksheets.length > 0 ? (
             <section>
-              <h2 className="mb-3 block w-full rounded-[4px] bg-sky-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-sky-700">
+              <h2 className="mb-3 block w-full rounded-[4px] bg-sky-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-sky-800">
                 Dokumente
               </h2>
 
@@ -635,13 +635,13 @@ export function WorksheetDashboard() {
                 {pagedWorksheets.map((ws) => (
                   <div
                     key={ws.id}
-                    className="group flex cursor-pointer items-center gap-3 rounded-[4px] border border-sky-700 p-3 transition-all hover:border-sky-700 hover:shadow-sm"
+                    className="group flex cursor-pointer items-center gap-3 rounded-[4px] border border-sky-800 p-3 transition-all hover:border-sky-800 hover:shadow-sm"
                     onClick={() => router.push(`/editor/${ws.id}`)}
                   >
-                    <FileText className="h-5 w-5 shrink-0 text-sky-700" />
+                    <FileText className="h-5 w-5 shrink-0 text-sky-800" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-sky-700">{ws.title}</p>
+                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-sky-800">{ws.title}</p>
                         <Badge
                           variant="secondary"
                           className={`h-5 shrink-0 px-1.5 text-[10px] leading-none ${ws.published ? "" : "invisible"}`}
@@ -649,7 +649,7 @@ export function WorksheetDashboard() {
                           {tc("published")}
                         </Badge>
                       </div>
-                      <p className="truncate text-xs text-sky-700">
+                      <p className="truncate text-xs text-sky-800">
                         {format.dateTime(new Date(ws.updatedAt), {
                           day: "2-digit",
                           month: "2-digit",

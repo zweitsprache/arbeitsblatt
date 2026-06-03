@@ -1,8 +1,8 @@
-import { LibraryDashboard } from "@/components/dashboard/library-dashboard";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { setRequestLocale } from "next-intl/server";
 
-export default async function LibraryPage({
+export default async function DashboardPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -12,7 +12,7 @@ export default async function LibraryPage({
 
   return (
     <DashboardLayout>
-      <LibraryDashboard />
+      <DashboardOverview />
     </DashboardLayout>
   );
 }

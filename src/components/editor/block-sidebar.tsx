@@ -113,15 +113,15 @@ function DraggableBlockItem({ definition, disabled = false }: { definition: Bloc
       {...listeners}
       {...attributes}
       aria-disabled={disabled}
-      className={`flex cursor-grab items-center gap-3 rounded-[4px] border !border-sky-700 bg-sky-50 p-3
+      className={`flex cursor-grab items-center gap-3 rounded-[4px] border !border-sky-800 bg-sky-50 p-3
         transition-colors hover:bg-sky-100
         ${disabled ? "cursor-not-allowed opacity-50 hover:bg-card" : ""}
         ${isDragging ? "opacity-50 shadow-lg" : ""}`}
     >
-      {Icon && <Icon className="h-4 w-4 shrink-0 text-sky-700" />}
+      {Icon && <Icon className="h-4 w-4 shrink-0 text-sky-800" />}
       <div className="min-w-0">
-        <p className="text-sm font-bold leading-none text-sky-700">{tb(definition.labelKey)}</p>
-        <p className="mt-1 truncate text-xs text-sky-700">
+        <p className="text-sm font-bold leading-none text-sky-800">{tb(definition.labelKey)}</p>
+        <p className="mt-1 truncate text-xs text-sky-800">
           {tb(definition.descriptionKey)}
         </p>
       </div>

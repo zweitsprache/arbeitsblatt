@@ -375,6 +375,21 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "start-sentences": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.sentences) {
+        add(`sentences.${item.id}.beginning`, () => item.beginning, (v) => {
+          item.beginning = v;
+        });
+        add(`sentences.${item.id}.ending`, () => item.ending ?? "", (v) => {
+          item.ending = v;
+        });
+      }
+      break;
+    }
+
     case "reading-comprehension": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;

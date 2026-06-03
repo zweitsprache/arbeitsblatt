@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowUpRight, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
+import { Heart, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ function getNextPath(locale: string, searchParams: URLSearchParams) {
     return redirectTo;
   }
 
-  return `/${locale}/account/settings`;
+  return `/${locale}`;
 }
 
 function buildAuthHref(
@@ -69,10 +69,10 @@ function buildAuthHref(
 }
 
 const authInputClassName =
-  "h-12 rounded-xl border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-none focus-visible:border-[#98a2ff] focus-visible:ring-[#98a2ff]/35";
+  "h-12 rounded-[4px] border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 shadow-none focus-visible:border-[#98a2ff] focus-visible:ring-[#98a2ff]/35";
 
 const authButtonClassName =
-  "h-12 w-full rounded-xl bg-[#4254f4] text-sm font-semibold text-white shadow-[0_18px_36px_rgba(66,84,244,0.28)] hover:bg-[#3649ee]";
+  "h-12 w-full rounded-[4px] bg-[#c8553d] text-sm font-semibold text-white hover:bg-[#b14a34]";
 
 export function SignupVerificationFlow({ locale, path }: SignupVerificationFlowProps) {
   if (path === "sign-in") {
@@ -94,151 +94,94 @@ function AuthShell({
   children,
 }: {
   locale: string;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const t = useTranslations("authFlow");
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)] items-center justify-center">
-      <div className="w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/80 bg-white shadow-[0_30px_90px_rgba(52,57,92,0.18)]">
-        <div className="grid lg:min-h-[720px] lg:grid-cols-[minmax(0,0.88fr)_minmax(420px,1.12fr)]">
-          <section className="flex items-center justify-center px-6 py-8 sm:px-10 lg:px-14 lg:py-12">
-            <div className="flex w-full max-w-[360px] flex-col">
-              <Link
-                className="mb-10 inline-flex w-fit items-center gap-3 text-sm font-semibold text-slate-950"
-                href={`/${locale}`}
-              >
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-slate-950/[0.05] ring-1 ring-slate-200">
-                  <Image
-                    alt="Arbeitsblatt"
-                    height={18}
-                    src="/logo/arbeitsblatt_logo_icon.svg"
-                    width={18}
-                  />
-                </span>
-                <span>Arbeitsblatt</span>
-              </Link>
+    <div className="grid min-h-screen lg:grid-cols-[1fr_2fr]">
+      <section className="flex items-center justify-center px-6 py-8 sm:px-10 lg:px-14 lg:py-12">
+        <div className="flex w-full max-w-[420px] flex-col">
+          <Link
+            className="mb-10 inline-flex w-fit items-center text-sm font-semibold text-slate-950"
+            href={`/${locale}`}
+          >
+            <Image
+              alt="eduit"
+              height={36}
+              src="/logo/eduit_logo.svg"
+              width={157}
+              priority
+            />
+          </Link>
 
-              <div className="mb-8 space-y-3">
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-[2rem]">
+          {title || description ? (
+            <div className="mb-8 space-y-3">
+              {title ? (
+                <h1 className="text-3xl font-semibold text-slate-950 sm:text-[2rem]">
                   {title}
                 </h1>
+              ) : null}
+              {description ? (
                 <p className="text-sm leading-6 text-slate-500">{description}</p>
-              </div>
-
-              {children}
-
-              {footer ? <div className="mt-7 border-t border-slate-100 pt-6">{footer}</div> : null}
-
-              <p className="mt-auto pt-10 text-xs text-slate-400">2026 Arbeitsblatt. All rights reserved.</p>
+              ) : null}
             </div>
-          </section>
+          ) : null}
 
-          <aside className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(160deg,#4b58f4_0%,#4253f2_50%,#2e39c8_100%)] px-8 py-8 text-white lg:flex lg:flex-col lg:px-10 lg:py-10">
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_24%,transparent_74%,rgba(18,24,88,0.18))]" />
+          {children}
 
-            <div className="relative max-w-sm space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-white/80">
-                <ShieldCheck className="size-4" />
-                Secure workspace
-              </div>
-              <h2 className="max-w-xs text-4xl font-semibold leading-tight tracking-[-0.04em]">
-                {t("heroTitle")}
-              </h2>
-              <p className="max-w-sm text-sm leading-6 text-white/80">{t("heroDescription")}</p>
-            </div>
+          {footer ? <div className="mt-7 border-t border-slate-100 pt-6">{footer}</div> : null}
 
-            <div className="relative mt-10 rounded-[28px] border border-white/20 bg-white/96 p-5 text-slate-900 shadow-[0_28px_70px_rgba(17,24,84,0.22)]">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Operations
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">Workspace overview</p>
-                </div>
-                <div className="flex items-center gap-2 rounded-full bg-[#eef1ff] px-3 py-1 text-xs font-medium text-[#4254f4]">
-                  <TrendingUp className="size-3.5" />
-                  Live sync
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs text-slate-500">Completion</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-950">85%</p>
-                    </div>
-                    <div className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                      +12.4%
-                    </div>
-                  </div>
-                  <div className="mt-5 flex h-28 items-end gap-2">
-                    <div className="h-10 flex-1 rounded-t-full bg-[#dbe0ff]" />
-                    <div className="h-14 flex-1 rounded-t-full bg-[#c9d0ff]" />
-                    <div className="h-12 flex-1 rounded-t-full bg-[#afb9ff]" />
-                    <div className="h-20 flex-1 rounded-t-full bg-[#7e8dff]" />
-                    <div className="h-24 flex-1 rounded-t-full bg-[#4254f4]" />
-                    <div className="h-16 flex-1 rounded-t-full bg-[#6474ff]" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>Today</span>
-                      <span>12 tasks</span>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Editing</span>
-                          <span>78%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-slate-100">
-                          <div className="h-2 w-[78%] rounded-full bg-[#4254f4]" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Review</span>
-                          <span>64%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-slate-100">
-                          <div className="h-2 w-[64%] rounded-full bg-[#8f9aff]" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-slate-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">Capacity</p>
-                        <p className="mt-2 text-2xl font-semibold">24.6 h</p>
-                      </div>
-                      <div className="flex size-12 items-center justify-center rounded-2xl bg-white/10">
-                        <ArrowUpRight className="size-5" />
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm text-white/65">Steady output across editors, reviews, and delivery.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative mt-auto flex flex-wrap items-center gap-x-5 gap-y-3 pt-8 text-sm text-white/72">
-              <span>Booking.com</span>
-              <span>Google</span>
-              <span>Spotify</span>
-              <span>Stripe</span>
-            </div>
-          </aside>
+          <p className="mt-10 text-xs text-slate-400">2026 Arbeitsblatt. All rights reserved.</p>
         </div>
-      </div>
+      </section>
+
+      <aside className="relative hidden bg-[#2b2b43] px-12 py-12 text-white lg:flex lg:flex-col lg:px-24 lg:py-20">
+        <div className="relative flex flex-1 flex-col justify-center">
+          <div className="relative w-full overflow-hidden rounded-[4px] border border-white/20 shadow-[0_28px_70px_rgba(17,24,84,0.22)]">
+            <Image
+              alt="Arbeitsblatt"
+              className="h-auto w-full"
+              height={900}
+              src="/key_visuals/arbeitsblatt.png"
+              width={1200}
+            />
+            <div className="absolute inset-x-12 bottom-20 rounded-[4px] bg-white/40 px-8 py-6 backdrop-blur-md">
+              <h2 className="text-5xl font-medium leading-tight text-slate-950 lg:text-6xl">
+                {t.rich("heroTitle", {
+                  br: () => <br />,
+                  strong: (chunks) => (
+                    <span className="font-extrabold text-[#c8553d]">{chunks}</span>
+                  ),
+                })}
+              </h2>
+            </div>
+          </div>
+
+          <div className="mt-8 grid w-full grid-cols-3 gap-3">
+            {[
+              { value: "4", label: "Ausgabeformate" },
+              { value: "43", label: "Inhaltselement" },
+              { value: "XY", label: "Lorem ipsum" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-[4px] border border-white/15 bg-white/5 px-4 py-4 text-center"
+              >
+                <p className="text-3xl font-extrabold text-white">{stat.value}</p>
+                <p className="mt-1 text-xs text-white/70">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative mt-10 inline-flex w-full items-center justify-start gap-2 text-xs font-medium uppercase text-white">
+          Made in Switzerland with <Heart className="size-4 fill-current" />
+        </div>
+      </aside>
     </div>
   );
 }
@@ -325,17 +268,15 @@ function SignInCard({ locale }: { locale: string }) {
 
   return (
     <AuthShell
-      description={t("signInDescription")}
       footer={
         <p className="text-sm text-slate-500">
           {t("noAccountYet")} {" "}
-          <Link className="font-semibold text-[#4254f4] hover:text-[#3649ee]" href={signUpHref}>
+          <Link className="font-semibold text-[#c8553d] hover:text-[#b14a34]" href={signUpHref}>
             {t("createAccount")}
           </Link>
         </p>
       }
       locale={locale}
-      title={t("signInTitle")}
     >
       <form className="grid gap-5" onSubmit={handleSubmit}>
         <div className="grid gap-2">
@@ -358,7 +299,7 @@ function SignInCard({ locale }: { locale: string }) {
             <Label className="text-sm font-medium text-slate-700" htmlFor="sign-in-password">
               {t("password")}
             </Label>
-            <Link className="text-xs font-semibold text-[#4254f4] hover:text-[#3649ee]" href={forgotPasswordHref}>
+            <Link className="text-xs font-semibold text-[#c8553d] hover:text-[#b14a34]" href={forgotPasswordHref}>
               {t("forgotPassword")}
             </Link>
           </div>
@@ -454,7 +395,7 @@ function SignUpCard({ locale }: { locale: string }) {
       footer={
         <p className="text-sm text-slate-500">
           {t("alreadyHaveAccount")} {" "}
-          <Link className="font-semibold text-[#4254f4] hover:text-[#3649ee]" href={signInHref}>
+          <Link className="font-semibold text-[#c8553d] hover:text-[#b14a34]" href={signInHref}>
             {t("backToSignIn")}
           </Link>
         </p>
@@ -617,10 +558,10 @@ function VerifyEmailCodeCard({ locale }: { locale: string }) {
       description={email ? t("verificationDescription", { email }) : t("verificationEmailMissing")}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <Link className="font-semibold text-[#4254f4] hover:text-[#3649ee]" href={changeEmailHref}>
+          <Link className="font-semibold text-[#c8553d] hover:text-[#b14a34]" href={changeEmailHref}>
             {t("changeEmail")}
           </Link>
-          <Link className="font-semibold text-[#4254f4] hover:text-[#3649ee]" href={signInHref}>
+          <Link className="font-semibold text-[#c8553d] hover:text-[#b14a34]" href={signInHref}>
             {t("backToSignIn")}
           </Link>
         </div>
