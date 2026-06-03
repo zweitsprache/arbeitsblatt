@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import dynamic from "next/dynamic";
-import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLocale } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { FilePen, Home } from "lucide-react";
 import { routing } from "@/i18n/routing";
 
 const UserButton = dynamic(
@@ -25,42 +23,32 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations("header");
-  const isEditor = pathname.startsWith("/editor");
+  const isDashboardHome = pathname === "/";
+  const isEditorPage = pathname.startsWith("/editor");
 
   function switchLocale(newLocale: string) {
     router.replace(pathname, { locale: newLocale });
   }
 
   return (
-    <header className="h-14 shadow-[0_2px_8px_rgba(0,0,0,0.08)] bg-background flex items-center px-4 shrink-0 z-30">
-      {/* Logo / brand */}
-      <Link
-        href="/"
-        className="flex items-center hover:opacity-80 transition-opacity"
-      >
-        <Image
-          src="/logo/didaktiv_logo_brand.svg"
-          alt="Arbeitsblatt"
-          width={140}
-          height={28}
-          className="h-[22px] w-auto"
-        />
-      </Link>
+    <header className="h-14 shadow-[0_2px_8px_rgba(0,0,0,0.08)] bg-background flex items-center pl-6 pr-4 shrink-0 z-30">
+      {isDashboardHome && (
+        <div className="flex items-center gap-2 text-foreground">
+          <Home className="h-4 w-4" />
+          <span className="text-base font-semibold tracking-tight">Startseite</span>
+        </div>
+      )}
+      {!isDashboardHome && isEditorPage && (
+        <div className="flex items-center gap-2 text-foreground">
+          <FilePen className="h-4 w-4" />
+          <span className="text-base font-semibold tracking-tight">Editor</span>
+        </div>
+      )}
 
       {/* Right actions */}
-      <div className="ml-auto flex items-center gap-2">
-        {!isEditor && (
-          <Link href="/editor">
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              {t("newWorksheet")}
-            </Button>
-          </Link>
-        )}
-
+      <div className="ml-auto flex items-center gap-4">
         {/* Language switcher */}
-        <div className="flex items-center rounded-md border border-border overflow-hidden text-xs">
+        <div className="flex items-center rounded-[4px] border border-border overflow-hidden text-xs">
           {routing.locales.map((l) => (
             <button
               key={l}
@@ -77,7 +65,9 @@ export function AppHeader() {
         </div>
 
         {/* User menu */}
-        <UserButton size="icon" />
+        <div className="scale-110 origin-center">
+          <UserButton size="icon" />
+        </div>
       </div>
     </header>
   );

@@ -26,6 +26,7 @@ import { WorksheetDocument, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/t
 import { BlockRenderer } from "./block-renderer";
 import { v4 as uuidv4 } from "uuid";
 import { useUserAccess } from "@/lib/user-access-client";
+import { useTranslations } from "next-intl";
 
 function EditorInner({
   initialData,
@@ -35,6 +36,7 @@ function EditorInner({
   editorVersion: "v1" | "v2";
 }) {
   const { state, dispatch, addBlock, canAddBlockType, save } = useEditor();
+  const tb = useTranslations("blocks");
   const dndId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -266,9 +268,13 @@ function EditorInner({
             <BlockRenderer block={activeBlock} mode={state.viewMode} />
           </div>
         ) : activeLibraryDef ? (
-          <div className="bg-white rounded-lg border border-primary/30 shadow-xl px-4 py-3 opacity-90 pointer-events-none">
-            <p className="text-sm font-medium">{activeLibraryDef.label}</p>
-            <p className="text-xs text-muted-foreground">{activeLibraryDef.description}</p>
+          <div className="flex items-center gap-3 p-3 rounded-[4px] border border-border bg-card shadow-lg opacity-95 pointer-events-none min-w-[260px] max-w-[360px]">
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-none">{tb(activeLibraryDef.labelKey)}</p>
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {tb(activeLibraryDef.descriptionKey)}
+              </p>
+            </div>
           </div>
         ) : null}
       </DragOverlay>

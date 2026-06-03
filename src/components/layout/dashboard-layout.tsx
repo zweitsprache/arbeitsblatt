@@ -63,18 +63,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <UserAccessProvider>
-      <div className="flex flex-col h-screen overflow-hidden">
-        <AppHeader />
-        <div className="flex flex-1 overflow-hidden">
-          <AppSidebar
-            collapsed={sidebarCollapsed}
-            onCollapsedChange={setSidebarCollapsed}
-          />
+      <div className="flex h-screen overflow-hidden">
+        <AppSidebar
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+        />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AppHeader />
           <main className="flex-1 min-h-0 overflow-hidden bg-background flex flex-col">
             {children}
           </main>
+          <AppFooter />
         </div>
-        <AppFooter />
       </div>
     </UserAccessProvider>
   );

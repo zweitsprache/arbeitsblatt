@@ -113,14 +113,14 @@ function DraggableBlockItem({ definition, disabled = false }: { definition: Bloc
       {...listeners}
       {...attributes}
       aria-disabled={disabled}
-      className={`flex items-center gap-3 p-3 rounded-[4px] border border-border bg-card cursor-grab
-        hover:bg-accent transition-colors
+      className={`flex items-center gap-3 p-3 rounded-[4px] border !border-[#7d7b77] bg-[#F6FCF7] cursor-grab
+        hover:bg-[#EDF8EE] transition-colors
         ${disabled ? "cursor-not-allowed opacity-50 hover:bg-card" : ""}
         ${isDragging ? "opacity-50 shadow-lg" : ""}`}
     >
       {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
       <div className="min-w-0">
-        <p className="text-sm font-medium leading-none">{tb(definition.labelKey)}</p>
+        <p className="text-sm font-bold leading-none">{tb(definition.labelKey)}</p>
         <p className="text-xs text-muted-foreground mt-1 truncate">
           {tb(definition.descriptionKey)}
         </p>
@@ -363,7 +363,7 @@ export function BlockSidebar({
               {/* AI Tools blocks */}
               {categories.aiTools.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-violet-700 uppercase tracking-wider px-2 py-1.5 bg-violet-100 rounded-[4px] mb-2">
+                  <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] mb-2">
                     {ts("aiToolsCategory", "AI Tools")}
                   </div>
                   <div className="space-y-1.5">

@@ -4,13 +4,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,11 +24,11 @@ import {
 import {
   Plus,
   FileText,
-  Clock,
   Folder,
   FolderPlus,
   FolderOpen,
   ChevronRight,
+  ChevronLeft,
   Search,
   MoreVertical,
   Pencil,
@@ -74,11 +68,6 @@ interface WorksheetItem {
   updatedAt: string;
 }
 
-interface BreadcrumbItem {
-  id: string | null;
-  name: string;
-}
-
 export function WorksheetDashboard() {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
@@ -87,9 +76,6 @@ export function WorksheetDashboard() {
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [worksheets, setWorksheets] = useState<WorksheetItem[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
-    { id: null, name: "__HOME__" },
-  ]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<WorksheetItem[] | null>(
@@ -199,15 +185,8 @@ export function WorksheetDashboard() {
     }
   }, [search]);
 
-  const navigateToFolder = async (folderId: string, folderName: string) => {
+  const navigateToFolder = async (folderId: string) => {
     setCurrentFolderId(folderId);
-    setBreadcrumbs((prev) => [...prev, { id: folderId, name: folderName }]);
-  };
-
-  const navigateToBreadcrumb = (index: number) => {
-    const crumb = breadcrumbs[index];
-    setCurrentFolderId(crumb.id);
-    setBreadcrumbs(breadcrumbs.slice(0, index + 1));
   };
 
   const createFolder = async () => {
@@ -368,21 +347,56 @@ export function WorksheetDashboard() {
 
   const displayWorksheets = searchResults !== null ? searchResults : worksheets;
   const isSearching = searchResults !== null;
+  const worksheetPageSize = 30;
+  const [worksheetPage, setWorksheetPage] = useState(1);
+  const totalWorksheetPages = Math.max(
+    1,
+    Math.ceil(displayWorksheets.length / worksheetPageSize)
+  );
+  const pagedWorksheets = displayWorksheets.slice(
+    (worksheetPage - 1) * worksheetPageSize,
+    worksheetPage * worksheetPageSize
+  );
+
+  useEffect(() => {
+    setWorksheetPage(1);
+  }, [currentFolderId, search]);
+
+  useEffect(() => {
+    setWorksheetPage((current) => Math.min(current, totalWorksheetPages));
+  }, [totalWorksheetPages]);
 
   return (
-    <div className="px-6 py-10 overflow-y-auto flex-1">
+    <div className="px-6 py-10 overflow-y-auto scrollbar-hide flex-1">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="mb-6">
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {search && (
+              <button
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded"
+                onClick={() => setSearch("")}
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          <Link href="/editor" className="w-full">
+            <Button className="w-full gap-2 bg-[#2b2b43] text-white hover:bg-[#2b2b43]/90 font-extrabold">
+              <Plus className="h-4 w-4" />
+              {t("newWorksheet")}
+            </Button>
+          </Link>
           <Button
             variant="outline"
-            className="gap-2"
+            className="w-full gap-2 !border-sky-700 dark:!border-sky-700 bg-[#ECF3F9] text-slate-900 hover:bg-[#DDEAF6] hover:text-slate-900 hover:!border-sky-700 font-extrabold"
             onClick={() => {
               setNewFolderName("");
               setNewFolderOpen(true);
@@ -393,67 +407,14 @@ export function WorksheetDashboard() {
           </Button>
           <Button
             variant="outline"
-            className="gap-2"
+            className="w-full gap-2 font-extrabold"
             onClick={() => setImportCourseOpen(true)}
           >
             <BookOpen className="h-4 w-4" />
             {t("importFromCourse")}
           </Button>
-          <Link href="/editor">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              {t("newWorksheet")}
-            </Button>
-          </Link>
         </div>
       </div>
-
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t("searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 pr-10"
-        />
-        {search && (
-          <button
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded"
-            onClick={() => setSearch("")}
-          >
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        )}
-      </div>
-
-      {/* Breadcrumbs */}
-      {!isSearching && (
-        <nav className="flex items-center gap-1 mb-4 text-sm">
-          {breadcrumbs.map((crumb, i) => (
-            <React.Fragment key={crumb.id ?? "root"}>
-              {i > 0 && (
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              )}
-              <button
-                onClick={() => navigateToBreadcrumb(i)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted transition-colors ${
-                  i === breadcrumbs.length - 1
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {i === 0 ? (
-                  <Home className="h-3.5 w-3.5" />
-                ) : (
-                  <Folder className="h-3.5 w-3.5" />
-                )}
-                {crumb.name === "__HOME__" ? tc("home") : crumb.name}
-              </button>
-            </React.Fragment>
-          ))}
-        </nav>
-      )}
 
       {isSearching && (
         <p className="text-sm text-muted-foreground mb-4">
@@ -471,69 +432,74 @@ export function WorksheetDashboard() {
         <>
           {/* Folders */}
           {!isSearching && folders.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-              {folders.map((folder) => (
-                <div
-                  key={folder.id}
-                  className="group flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer"
-                  onClick={() => navigateToFolder(folder.id, folder.name)}
-                >
-                  <FolderOpen className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {folder.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {folder._count.children > 0 &&
-                        t("folderCount", { count: folder._count.children })}
-                      {folder._count.children > 0 &&
-                        folder._count.worksheets > 0 &&
-                        " · "}
-                      {folder._count.worksheets > 0 &&
-                        t("worksheetCount", { count: folder._count.worksheets })}
-                      {folder._count.children === 0 &&
-                        folder._count.worksheets === 0 &&
-                        tc("empty")}
-                    </p>
+            <section className="mb-6">
+              <h2 className="mb-3 block w-full rounded-[4px] bg-[#ECF3F9] px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Ordner
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {folders.map((folder) => (
+                  <div
+                    key={folder.id}
+                    className="group flex items-center gap-3 p-3 rounded-[4px] border !border-sky-700 hover:!border-sky-700 hover:shadow-sm transition-all cursor-pointer"
+                    onClick={() => navigateToFolder(folder.id)}
+                  >
+                    <FolderOpen className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">
+                        {folder.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {folder._count.children > 0 &&
+                          t("folderCount", { count: folder._count.children })}
+                        {folder._count.children > 0 &&
+                          folder._count.worksheets > 0 &&
+                          " · "}
+                        {folder._count.worksheets > 0 &&
+                          t("worksheetCount", { count: folder._count.worksheets })}
+                        {folder._count.children === 0 &&
+                          folder._count.worksheets === 0 &&
+                          tc("empty")}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenameFolderId(folder.id);
+                            setRenameFolderName(folder.name);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-2" />
+                          {tc("rename")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteFolder(folder.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          {tc("delete")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRenameFolderId(folder.id);
-                          setRenameFolderName(folder.name);
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-2" />
-                        {tc("rename")}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteFolder(folder.id);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        {tc("delete")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* Worksheets */}
@@ -566,114 +532,165 @@ export function WorksheetDashboard() {
               </CardContent>
             </Card>
           ) : displayWorksheets.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {displayWorksheets.map((ws) => (
-                <div key={ws.id} className="group relative">
-                  <Link href={`/editor/${ws.id}`}>
-                    <Card className="hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between">
-                          <CardTitle className="text-base line-clamp-1 pr-8">
-                            {ws.title}
-                          </CardTitle>
-                          {ws.published && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs shrink-0 ml-2"
-                            >
-                              {tc("published")}
-                            </Badge>
-                          )}
-                        </div>
-                        <CardDescription className="flex items-center gap-1 text-xs">
-                          <Clock className="h-3 w-3" />
-                          {format.dateTime(new Date(ws.updatedAt), {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-xs text-muted-foreground">
-                          {Array.isArray(ws.blocks)
-                            ? t("blockCount", { count: ws.blocks.length })
-                            : tc("empty")}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                  {/* Worksheet actions */}
-                  <div className="absolute top-3 right-3 z-10">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/editor/${ws.id}`)}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" />
-                          {tc("edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setRenameWorksheetId(ws.id);
-                            setRenameWorksheetTitle(ws.title);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-2" />
-                          {tc("rename")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => duplicateWorksheet(ws.id)}
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-2" />
-                          {t("duplicateWorksheet")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openMoveDialog(ws.id)}
-                        >
-                          <FolderInput className="h-3.5 w-3.5 mr-2" />
-                          {t("moveToFolder")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            setPdfLocaleDialog({
-                              open: true,
-                              worksheetId: ws.id,
-                              worksheetTitle: ws.title,
-                            })
-                          }
-                          disabled={generatingPdfId === ws.id}
-                        >
-                          {generatingPdfId === ws.id ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                          ) : (
-                            <Printer className="h-3.5 w-3.5 mr-2" />
-                          )}
-                          {t("downloadPdf")}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => deleteWorksheet(ws.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          {tc("delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            <section>
+              <h2 className="mb-3 block w-full rounded-[4px] bg-[#2b2b43]/10 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Arbeitsblätter
+              </h2>
+
+              {totalWorksheetPages > 1 && (
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-xs text-muted-foreground">
+                    Seite {worksheetPage} von {totalWorksheetPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWorksheetPage((page) => Math.max(1, page - 1))}
+                      disabled={worksheetPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      {tc("previous")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setWorksheetPage((page) => Math.min(totalWorksheetPages, page + 1))
+                      }
+                      disabled={worksheetPage === totalWorksheetPages}
+                    >
+                      {tc("next")}
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {pagedWorksheets.map((ws) => (
+                  <div
+                    key={ws.id}
+                    className="group flex items-center gap-3 p-3 rounded-[4px] border !border-[#2b2b43] hover:!border-[#2b2b43] hover:shadow-sm transition-all cursor-pointer"
+                    onClick={() => router.push(`/editor/${ws.id}`)}
+                  >
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-sm truncate">{ws.title}</p>
+                        {ws.published && (
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            {tc("published")}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {format.dateTime(new Date(ws.updatedAt), {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                        {" | "}
+                        {Array.isArray(ws.blocks)
+                          ? t("blockCount", { count: ws.blocks.length })
+                          : tc("empty")}
+                      </p>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/editor/${ws.id}`)}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            {tc("edit")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setRenameWorksheetId(ws.id);
+                              setRenameWorksheetTitle(ws.title);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            {tc("rename")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => duplicateWorksheet(ws.id)}>
+                            <Copy className="h-3.5 w-3.5 mr-2" />
+                            {t("duplicateWorksheet")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openMoveDialog(ws.id)}>
+                            <FolderInput className="h-3.5 w-3.5 mr-2" />
+                            {t("moveToFolder")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setPdfLocaleDialog({
+                                open: true,
+                                worksheetId: ws.id,
+                                worksheetTitle: ws.title,
+                              })
+                            }
+                            disabled={generatingPdfId === ws.id}
+                          >
+                            {generatingPdfId === ws.id ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            ) : (
+                              <Printer className="h-3.5 w-3.5 mr-2" />
+                            )}
+                            {t("downloadPdf")}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => deleteWorksheet(ws.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />
+                            {tc("delete")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {totalWorksheetPages > 1 && (
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <p className="text-xs text-muted-foreground">
+                    Seite {worksheetPage} von {totalWorksheetPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWorksheetPage((page) => Math.max(1, page - 1))}
+                      disabled={worksheetPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      {tc("previous")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setWorksheetPage((page) => Math.min(totalWorksheetPages, page + 1))
+                      }
+                      disabled={worksheetPage === totalWorksheetPages}
+                    >
+                      {tc("next")}
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </section>
           ) : null}
         </>
       )}

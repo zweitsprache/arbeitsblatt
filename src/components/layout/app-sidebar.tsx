@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import {
@@ -205,7 +206,7 @@ function SectionTitle({
   children: React.ReactNode;
 }) {
   return (
-    <Label className="mx-3 text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-slate-100 rounded-[4px] block">
+    <Label className="mx-3 mb-2 text-xs font-semibold text-slate-700 uppercase tracking-wider pl-3 pr-2 py-1.5 bg-slate-100 rounded-[4px] block">
       {children}
     </Label>
   );
@@ -233,13 +234,13 @@ function getNavItemClassName({
     "group relative flex items-center text-sm font-medium leading-normal transition-colors",
     collapsed
       ? "h-11 w-11 justify-center"
-      : "h-8 w-full justify-start gap-2 px-2",
+      : "h-8 w-full justify-start gap-2 pl-3 pr-2",
     disabled && "cursor-not-allowed",
-    collapsed && !disabled && !isActive && "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+    collapsed && !disabled && !isActive && "text-slate-500 hover:text-slate-900",
     collapsed && isActive && "text-slate-900",
     collapsed && disabled && "text-slate-300",
-    !collapsed && !disabled && !isActive && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    !collapsed && isActive && "text-slate-900 font-semibold",
+    !collapsed && !disabled && !isActive && "text-slate-900 hover:text-slate-900",
+    !collapsed && isActive && "text-slate-900 font-bold",
     !collapsed && disabled && "text-slate-300",
   );
 }
@@ -321,7 +322,7 @@ function SidebarSection({
   t: ReturnType<typeof useTranslations<"sidebar">>;
 }) {
   return (
-    <div>
+    <div className={cn(collapsed ? "mt-2" : "mt-3")}> 
       {collapsed ? <CollapsedSectionDivider /> : <SectionTitle>{title}</SectionTitle>}
       <nav className={cn("divide-y divide-slate-200", collapsed ? "px-2" : "px-3")}>
         {items.map((item) => (
@@ -362,7 +363,29 @@ export function AppSidebar({
           collapsed ? "w-[5.25rem]" : "w-[20rem]",
         )}
       >
-        <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-white px-2 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+          <div
+            className={cn(
+              "shrink-0",
+              collapsed ? "px-2 pt-4 pb-2" : "px-3 pt-5 pb-3"
+            )}
+          >
+            <Link
+              href="/"
+              className={cn(
+                "flex items-center transition-opacity hover:opacity-80",
+                collapsed ? "justify-center" : "justify-start"
+              )}
+            >
+              <NextImage
+                src="/logo/didaktiv_logo_brand.svg"
+                alt="Arbeitsblatt"
+                width={collapsed ? 40 : 140}
+                height={collapsed ? 24 : 28}
+                className={cn("w-auto", collapsed ? "h-6" : "h-[22px]")}
+              />
+            </Link>
+          </div>
 
           <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
             <div className={cn(collapsed ? "py-3 space-y-0" : "py-4 space-y-0")}> 
