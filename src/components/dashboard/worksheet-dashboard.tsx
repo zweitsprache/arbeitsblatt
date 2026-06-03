@@ -641,12 +641,13 @@ export function WorksheetDashboard() {
                     <FileText className="h-5 w-5 shrink-0 text-sky-700" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-bold text-sky-700">{ws.title}</p>
-                        {ws.published && (
-                          <Badge variant="secondary" className="text-xs shrink-0">
-                            {tc("published")}
-                          </Badge>
-                        )}
+                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-sky-700">{ws.title}</p>
+                        <Badge
+                          variant="secondary"
+                          className={`h-5 shrink-0 px-1.5 text-[10px] leading-none ${ws.published ? "" : "invisible"}`}
+                        >
+                          {tc("published")}
+                        </Badge>
                       </div>
                       <p className="truncate text-xs text-sky-700">
                         {format.dateTime(new Date(ws.updatedAt), {
