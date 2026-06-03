@@ -353,6 +353,37 @@ export function WorksheetDashboard() {
     1,
     Math.ceil(displayWorksheets.length / worksheetPageSize)
   );
+  const worksheetPaginationItems: Array<number | string> = (() => {
+    if (totalWorksheetPages <= 7) {
+      return Array.from({ length: totalWorksheetPages }, (_, index) => index + 1);
+    }
+
+    const pages = new Set<number>([
+      1,
+      totalWorksheetPages,
+      worksheetPage - 1,
+      worksheetPage,
+      worksheetPage + 1,
+    ]);
+
+    const sortedPages = Array.from(pages)
+      .filter((page) => page >= 1 && page <= totalWorksheetPages)
+      .sort((a, b) => a - b);
+
+    const items: Array<number | string> = [];
+    let previousPage: number | null = null;
+
+    for (const page of sortedPages) {
+      if (previousPage !== null && page - previousPage > 1) {
+        items.push(`ellipsis-${previousPage}-${page}`);
+      }
+      items.push(page);
+      previousPage = page;
+    }
+
+    return items;
+  })();
+
   const pagedWorksheets = displayWorksheets.slice(
     (worksheetPage - 1) * worksheetPageSize,
     worksheetPage * worksheetPageSize
@@ -374,7 +405,7 @@ export function WorksheetDashboard() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={t("searchPlaceholder")}
+              placeholder="Dokument suchen ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 pr-10"
@@ -389,14 +420,14 @@ export function WorksheetDashboard() {
             )}
           </div>
           <Link href="/editor" className="w-full">
-            <Button className="w-full gap-2 bg-[#2b2b43] text-white hover:bg-[#2b2b43]/90 font-extrabold">
+            <Button className="w-full gap-2 !bg-[#c8553d] !text-white hover:!bg-[#b54d38] font-extrabold">
               <Plus className="h-4 w-4" />
-              {t("newWorksheet")}
+              Neues Dokument
             </Button>
           </Link>
           <Button
             variant="outline"
-            className="w-full gap-2 !border-sky-700 dark:!border-sky-700 bg-[#ECF3F9] text-slate-900 hover:bg-[#DDEAF6] hover:text-slate-900 hover:!border-sky-700 font-extrabold"
+            className="w-full gap-2 !border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
             onClick={() => {
               setNewFolderName("");
               setNewFolderOpen(true);
@@ -407,7 +438,7 @@ export function WorksheetDashboard() {
           </Button>
           <Button
             variant="outline"
-            className="w-full gap-2 font-extrabold"
+            className="w-full gap-2 !border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
             onClick={() => setImportCourseOpen(true)}
           >
             <BookOpen className="h-4 w-4" />
@@ -433,22 +464,22 @@ export function WorksheetDashboard() {
           {/* Folders */}
           {!isSearching && folders.length > 0 && (
             <section className="mb-6">
-              <h2 className="mb-3 block w-full rounded-[4px] bg-[#ECF3F9] px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
+              <h2 className="mb-3 block w-full rounded-[4px] bg-slate-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
                 Ordner
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {folders.map((folder) => (
                   <div
                     key={folder.id}
-                    className="group flex items-center gap-3 p-3 rounded-[4px] border !border-sky-700 hover:!border-sky-700 hover:shadow-sm transition-all cursor-pointer"
+                    className="group flex cursor-pointer items-center gap-3 rounded-[4px] border border-slate-700 p-3 transition-all hover:border-slate-700 hover:shadow-sm"
                     onClick={() => navigateToFolder(folder.id)}
                   >
-                    <FolderOpen className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <FolderOpen className="h-5 w-5 shrink-0 text-slate-700" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">
+                      <p className="truncate text-sm font-bold text-slate-700">
                         {folder.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-slate-700">
                         {folder._count.children > 0 &&
                           t("folderCount", { count: folder._count.children })}
                         {folder._count.children > 0 &&
@@ -517,12 +548,16 @@ export function WorksheetDashboard() {
                 </p>
                 {!isSearching && (
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setImportCourseOpen(true)}>
+                    <Button
+                      variant="outline"
+                      className="!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d]"
+                      onClick={() => setImportCourseOpen(true)}
+                    >
                       <BookOpen className="h-4 w-4 mr-2" />
                       {t("importFromCourse")}
                     </Button>
                     <Link href="/editor">
-                      <Button>
+                      <Button className="!bg-[#c8553d] !text-white hover:!bg-[#b54d38]">
                         <Plus className="h-4 w-4 mr-2" />
                         {t("createWorksheet")}
                       </Button>
@@ -533,18 +568,16 @@ export function WorksheetDashboard() {
             </Card>
           ) : displayWorksheets.length > 0 ? (
             <section>
-              <h2 className="mb-3 block w-full rounded-[4px] bg-[#2b2b43]/10 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Arbeitsblätter
+              <h2 className="mb-3 block w-full rounded-[4px] bg-sky-100 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-sky-700">
+                Dokumente
               </h2>
 
               {totalWorksheetPages > 1 && (
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <p className="text-xs text-muted-foreground">
-                    Seite {worksheetPage} von {totalWorksheetPages}
-                  </p>
-                  <div className="flex items-center gap-2">
+                <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <div className="justify-self-start">
                     <Button
                       variant="outline"
+                      className="!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
                       size="sm"
                       onClick={() => setWorksheetPage((page) => Math.max(1, page - 1))}
                       disabled={worksheetPage === 1}
@@ -552,8 +585,39 @@ export function WorksheetDashboard() {
                       <ChevronLeft className="h-4 w-4 mr-1" />
                       {tc("previous")}
                     </Button>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    {worksheetPaginationItems.map((item) =>
+                      typeof item === "number" ? (
+                        <Button
+                          key={item}
+                          variant="outline"
+                          size="sm"
+                          className={
+                            worksheetPage === item
+                                ? "h-8 min-w-8 px-2 !border-[#c8553d] !bg-[#c8553d] !text-white hover:!bg-[#b54d38] font-extrabold"
+                                : "h-8 min-w-8 px-2 !border-[#c8553d] bg-transparent !text-[#c8553d] hover:bg-[#c8553d]/15 hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
+                          }
+                          onClick={() => setWorksheetPage(item)}
+                          aria-label={`Seite ${item}`}
+                        >
+                          {item}
+                        </Button>
+                      ) : (
+                        <span
+                          key={item}
+                          className="px-1 text-sm font-semibold text-[#c8553d]"
+                          aria-hidden="true"
+                        >
+                          ...
+                        </span>
+                      )
+                    )}
+                  </div>
+                  <div className="justify-self-end">
                     <Button
                       variant="outline"
+                      className="!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
                       size="sm"
                       onClick={() =>
                         setWorksheetPage((page) => Math.min(totalWorksheetPages, page + 1))
@@ -571,20 +635,20 @@ export function WorksheetDashboard() {
                 {pagedWorksheets.map((ws) => (
                   <div
                     key={ws.id}
-                    className="group flex items-center gap-3 p-3 rounded-[4px] border !border-[#2b2b43] hover:!border-[#2b2b43] hover:shadow-sm transition-all cursor-pointer"
+                    className="group flex cursor-pointer items-center gap-3 rounded-[4px] border border-sky-700 p-3 transition-all hover:border-sky-700 hover:shadow-sm"
                     onClick={() => router.push(`/editor/${ws.id}`)}
                   >
-                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <FileText className="h-5 w-5 shrink-0 text-sky-700" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-sm truncate">{ws.title}</p>
+                        <p className="truncate text-sm font-bold text-sky-700">{ws.title}</p>
                         {ws.published && (
                           <Badge variant="secondary" className="text-xs shrink-0">
                             {tc("published")}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="truncate text-xs text-sky-700">
                         {format.dateTime(new Date(ws.updatedAt), {
                           day: "2-digit",
                           month: "2-digit",
@@ -662,13 +726,11 @@ export function WorksheetDashboard() {
               </div>
 
               {totalWorksheetPages > 1 && (
-                <div className="flex items-center justify-between gap-3 mt-3">
-                  <p className="text-xs text-muted-foreground">
-                    Seite {worksheetPage} von {totalWorksheetPages}
-                  </p>
-                  <div className="flex items-center gap-2">
+                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <div className="justify-self-start">
                     <Button
                       variant="outline"
+                      className="!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
                       size="sm"
                       onClick={() => setWorksheetPage((page) => Math.max(1, page - 1))}
                       disabled={worksheetPage === 1}
@@ -676,8 +738,39 @@ export function WorksheetDashboard() {
                       <ChevronLeft className="h-4 w-4 mr-1" />
                       {tc("previous")}
                     </Button>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    {worksheetPaginationItems.map((item) =>
+                      typeof item === "number" ? (
+                        <Button
+                          key={`bottom-${item}`}
+                          variant="outline"
+                          size="sm"
+                          className={
+                            worksheetPage === item
+                              ? "h-8 min-w-8 px-2 !border-[#c8553d] !bg-[#c8553d] !text-white hover:!bg-[#b54d38] font-extrabold"
+                              : "h-8 min-w-8 px-2 !border-[#c8553d] bg-transparent !text-[#c8553d] hover:bg-[#c8553d]/15 hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
+                          }
+                          onClick={() => setWorksheetPage(item)}
+                          aria-label={`Seite ${item}`}
+                        >
+                          {item}
+                        </Button>
+                      ) : (
+                        <span
+                          key={`bottom-${item}`}
+                          className="px-1 text-sm font-semibold text-[#c8553d]"
+                          aria-hidden="true"
+                        >
+                          ...
+                        </span>
+                      )
+                    )}
+                  </div>
+                  <div className="justify-self-end">
                     <Button
                       variant="outline"
+                      className="!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold"
                       size="sm"
                       onClick={() =>
                         setWorksheetPage((page) => Math.min(totalWorksheetPages, page + 1))

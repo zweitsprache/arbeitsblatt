@@ -363,7 +363,7 @@ export function AppSidebar({
           collapsed ? "w-[5.25rem]" : "w-[20rem]",
         )}
       >
-        <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-white px-2 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden border-x border-slate-200 bg-slate-50 px-2 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
           <div
             className={cn(
               "shrink-0",

@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
+import { cn } from "@/lib/utils";
 
 export function EditorToolbar({
   editorVersion = "v1",
@@ -330,6 +331,8 @@ export function EditorToolbar({
   // Available translation languages for this worksheet (from settings)
   const worksheetTranslationLangs = state.settings.translationLanguages ?? [];
   const LANG_LABELS: Record<string, string> = { de: "Deutsch", en: "Englisch", uk: "Ukrainisch", fr: "Französisch", es: "Spanisch", it: "Italienisch", pt: "Portugiesisch", tr: "Türkisch", pl: "Polnisch", ar: "Arabisch", ru: "Russisch", hu: "Ungarisch", ps: "Paschtu", fa: "Farsi/Dari", cs: "Tschechisch", ur: "Urdu" };
+  const terracottaOutlineButtonClass = "!border-[#c8553d] !bg-transparent !text-[#c8553d] hover:!bg-transparent hover:!text-[#c8553d] hover:!border-[#c8553d] font-extrabold";
+  const terracottaSolidButtonClass = "!border-[#c8553d] !bg-[#c8553d] !text-white hover:!bg-[#b54d38] hover:!border-[#b54d38] font-extrabold";
 
   return (
     <>
@@ -354,7 +357,7 @@ export function EditorToolbar({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5"
+            className={cn("h-8 gap-1.5", terracottaOutlineButtonClass)}
             onClick={handleSwitchEditorVersion}
           >
             {editorVersion === "v2" ? t("editorSwitchToV1") : t("editorSwitchToV2")}
@@ -368,7 +371,7 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-36 px-2"
+                className={cn("h-8 w-36 px-2", terracottaOutlineButtonClass)}
                 disabled={!canPreviewWorksheet}
                 onClick={() => setShowPrintPreview(true)}
               >
@@ -383,7 +386,7 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-36 px-2"
+                className={cn("h-8 w-36 px-2", terracottaOutlineButtonClass)}
                 disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(false)}
                 aria-label={t("openInNewTab")}
@@ -399,7 +402,7 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-36 px-2"
+                className={cn("h-8 w-36 px-2", terracottaOutlineButtonClass)}
                 disabled={!canPreviewWorksheet || !state.slug}
                 onClick={() => void handleOpenPrintPreviewInNewTab(true)}
                 aria-label={`${t("openInNewTab")} (${t("pdfSolutionsOnly")})`}
@@ -418,7 +421,7 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-36 px-2"
+              className={cn("h-8 w-36 px-2", terracottaOutlineButtonClass)}
               disabled={!canPreviewWorksheet}
               onClick={() => setShowOnlinePreview(true)}
             >
@@ -435,7 +438,7 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5"
+              className={cn("h-8 gap-1.5", terracottaOutlineButtonClass)}
               onClick={save}
               disabled={state.isSaving || !canSaveWorksheet}
             >
@@ -451,7 +454,10 @@ export function EditorToolbar({
             <Button
               variant={state.published ? "default" : "outline"}
               size="sm"
-              className="h-8 gap-1.5"
+              className={cn(
+                "h-8 gap-1.5",
+                state.published ? terracottaSolidButtonClass : terracottaOutlineButtonClass,
+              )}
               onClick={handlePublish}
               disabled={state.isSaving || !canPublishWorksheet}
             >
@@ -472,7 +478,7 @@ export function EditorToolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5"
+                className={cn("h-8 gap-1.5", terracottaOutlineButtonClass)}
                 onClick={handleCopyLink}
               >
                 {copied ? (
@@ -492,7 +498,7 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5"
+              className={cn("h-8 gap-1.5", terracottaOutlineButtonClass)}
               disabled={!canExportWorksheet || isGeneratingCover || !state.worksheetId}
               onClick={() => setPdfLocaleDialog({ open: true, mode: "cover" })}
             >
@@ -512,7 +518,7 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
+              className={cn("h-8", terracottaOutlineButtonClass)}
               disabled={!canExportWorksheet || isGeneratingPreview || isGeneratingPdf}
               onClick={() => setPdfLocaleDialog({ open: true, preview: true, mode: "pdf" })}
             >
@@ -531,7 +537,7 @@ export function EditorToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
+              className={cn("h-8", terracottaOutlineButtonClass)}
               disabled={!canExportWorksheet || isGeneratingPdf || isGeneratingPreview}
               onClick={() => setPdfLocaleDialog({ open: true, preview: false, mode: "pdf" })}
             >

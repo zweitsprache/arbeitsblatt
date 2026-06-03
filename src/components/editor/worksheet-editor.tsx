@@ -268,7 +268,7 @@ function EditorInner({
             <BlockRenderer block={activeBlock} mode={state.viewMode} />
           </div>
         ) : activeLibraryDef ? (
-          <div className="flex items-center gap-3 p-3 rounded-[4px] border border-border bg-card shadow-lg opacity-95 pointer-events-none min-w-[260px] max-w-[360px]">
+          <div className="flex items-center gap-3 p-3 rounded-[4px] border border-sky-700 bg-card shadow-lg opacity-95 pointer-events-none min-w-[260px] max-w-[360px]">
             <div className="min-w-0">
               <p className="text-sm font-bold leading-none">{tb(activeLibraryDef.labelKey)}</p>
               <p className="text-xs text-muted-foreground mt-1 truncate">
