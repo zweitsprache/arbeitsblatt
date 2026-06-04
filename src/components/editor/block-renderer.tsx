@@ -757,8 +757,13 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
     state.brandProfile.accentColor,
   );
   const numberLabel = formatHeadingNumber(sequence, format);
+  const headingWeightKey = (`h${block.level}Weight` as const);
+  const headingNumberWeightKey = (`h${block.level}HeadingNumberWeight` as const);
+  const resolvedHeadingWeight = state.brandProfile[headingWeightKey] ?? state.brandProfile.headlineWeight;
+  const resolvedHeadingNumberWeight = state.brandProfile[headingNumberWeightKey] ?? resolvedHeadingWeight;
   const numberStyle: React.CSSProperties = {
     ...numberSlotStyle,
+    fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
 

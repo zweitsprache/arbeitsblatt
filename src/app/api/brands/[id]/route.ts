@@ -73,6 +73,9 @@ export async function PUT(
         ...(body.exampleTextFont !== undefined && {
           exampleTextFont: body.exampleTextFont,
         }),
+        ...(body.letterSpacing !== undefined && {
+          letterSpacing: body.letterSpacing,
+        }),
         ...(body.googleFontsUrl !== undefined && {
           googleFontsUrl: body.googleFontsUrl,
         }),
@@ -123,6 +126,18 @@ export async function PUT(
         }),
         ...(body.h4HeadingNumberColor !== undefined && {
           h4HeadingNumberColor: body.h4HeadingNumberColor,
+        }),
+        ...(body.h1HeadingNumberWeight !== undefined && {
+          h1HeadingNumberWeight: body.h1HeadingNumberWeight,
+        }),
+        ...(body.h2HeadingNumberWeight !== undefined && {
+          h2HeadingNumberWeight: body.h2HeadingNumberWeight,
+        }),
+        ...(body.h3HeadingNumberWeight !== undefined && {
+          h3HeadingNumberWeight: body.h3HeadingNumberWeight,
+        }),
+        ...(body.h4HeadingNumberWeight !== undefined && {
+          h4HeadingNumberWeight: body.h4HeadingNumberWeight,
         }),
         ...(body.textBaseSize !== undefined && {
           textBaseSize: body.textBaseSize,

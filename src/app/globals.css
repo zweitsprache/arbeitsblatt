@@ -837,6 +837,7 @@
    Use print-skin-final namespace so print CSS remains isolated from non-print surfaces. */
 .print-worksheet-root.print-skin-final {
   font-family: var(--print-body-font);
+  letter-spacing: var(--print-letter-spacing, normal);
   --print-block-gap: 1.5rem;
 }
 

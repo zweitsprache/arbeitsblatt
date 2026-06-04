@@ -224,9 +224,14 @@ model BrandProfile {
   h2HeadingNumberColor     String?
   h3HeadingNumberColor     String?
   h4HeadingNumberColor     String?
+  h1HeadingNumberWeight    Int?
+  h2HeadingNumberWeight    Int?
+  h3HeadingNumberWeight    Int?
+  h4HeadingNumberWeight    Int?
   instructionBadgeStyle    String?           @default("default")
   instructionBadgeColor    String?
   exampleTextFont          String            @default("")
+  letterSpacing            String?
   itemNumberFormat         String?           @default("default")
   subProfiles              BrandSubProfile[]
   clients                  Client[]

@@ -1680,6 +1680,7 @@ function NumberedHeadingView({
   brand,
   headlineFont,
   headingWeights,
+  headingNumberWeights,
   isNonLatin,
   translationScale,
   primaryColor,
@@ -1693,6 +1694,7 @@ function NumberedHeadingView({
   brand?: Brand;
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number };
+  headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   isNonLatin?: boolean;
   translationScale?: number;
   primaryColor?: string;
@@ -1708,6 +1710,8 @@ function NumberedHeadingView({
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight =
     (headingWeights as Record<string, number> | undefined)?.[`h${block.level}`] ?? brandFonts.headlineWeight;
+  const resolvedHeadingNumberWeight =
+    (headingNumberWeights as Record<string, number> | undefined)?.[`h${block.level}`] ?? resolvedHeadingWeight;
   const sequences = allBlocks ? collectNumberedHeadingSequences(allBlocks) : undefined;
   const sequence = sequences?.get(block.id) ?? 1;
   const numberLabel = formatHeadingNumber(sequence, headingNumberFormat);
@@ -1716,6 +1720,7 @@ function NumberedHeadingView({
     minWidth: "1.5rem",
     marginRight: "0.5rem",
     fontVariantNumeric: "tabular-nums",
+    fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
   const style: React.CSSProperties = {
@@ -10536,6 +10541,7 @@ export function ViewerBlockRenderer({
   interactiveColor,
   headlineFont,
   headingWeights,
+  headingNumberWeights,
   allBlocks,
   brand = "edoomio",
   bodyFont,
@@ -10563,6 +10569,7 @@ export function ViewerBlockRenderer({
   interactiveColor?: string;
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number };
+  headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
   bodyFont?: string;
@@ -10613,6 +10620,7 @@ export function ViewerBlockRenderer({
           brand={brand}
           headlineFont={headlineFont}
           headingWeights={headingWeights}
+          headingNumberWeights={headingNumberWeights}
           isNonLatin={isNonLatin}
           translationScale={translationScale}
           primaryColor={primaryColor}

@@ -293,6 +293,7 @@ export function WorksheetViewer({
   const hasTabooBlock = visibleBlocks.some((block) => block.type === "taboo");
   const hasSyllableCardsBlock = visibleBlocks.some((block) => block.type === "syllable-cards");
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
+  const resolvedLetterSpacing = resolvedProfile.letterSpacing?.trim() || "";
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
   const suppressCanvaSideRail = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasAufgabenkartenBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
@@ -307,6 +308,10 @@ export function WorksheetViewer({
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
   const resolvedH3Weight = normalizeWeight(resolvedProfile.h3Weight, resolvedHeadlineWeight);
+  const resolvedH1HeadingNumberWeight = normalizeWeight(resolvedProfile.h1HeadingNumberWeight, resolvedH1Weight);
+  const resolvedH2HeadingNumberWeight = normalizeWeight(resolvedProfile.h2HeadingNumberWeight, resolvedH2Weight);
+  const resolvedH3HeadingNumberWeight = normalizeWeight(resolvedProfile.h3HeadingNumberWeight, resolvedH3Weight);
+  const resolvedH4HeadingNumberWeight = normalizeWeight(resolvedProfile.h4HeadingNumberWeight, resolvedHeadlineWeight);
   const headingNumberFormats = {
     h1: resolvedProfile.h1NumberFormat || "numbers",
     h2: resolvedProfile.h2NumberFormat || "numbers",
@@ -346,6 +351,7 @@ export function WorksheetViewer({
     ["--print-h2-weight" as string]: String(resolvedH2Weight),
     ["--print-h3-weight" as string]: String(resolvedH3Weight),
     ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
+    ["--print-letter-spacing" as string]: resolvedLetterSpacing || "normal",
     ["--print-tfoot-height" as string]: `${printBottomReservePx}px`,
   } as React.CSSProperties) : undefined;
 
@@ -354,6 +360,7 @@ export function WorksheetViewer({
     ...(printCssVars || {}),
     ["--worksheet-example-font" as string]: activeExampleFont,
     ["--worksheet-original-example-font" as string]: originalExampleFont,
+    ["--brand-letter-spacing" as string]: resolvedLetterSpacing || "normal",
   } as React.CSSProperties;
 
   return (
@@ -502,7 +509,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} />
                         </div>
                       ))}
                     </div>
@@ -548,6 +555,7 @@ export function WorksheetViewer({
               style={{
                 fontFamily: activeBodyFont,
                 fontSize: "clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)",
+                letterSpacing: resolvedLetterSpacing || "normal",
                 ["--viewer-interactive-color" as string]: resolvedProfile.interactiveColor || "#0ea5e9",
                 ["--viewer-instruction-badge-color" as string]: resolvedProfile.instructionBadgeColor || resolvedProfile.primaryColor || brandFonts.primaryColor,
               }}
@@ -570,6 +578,7 @@ export function WorksheetViewer({
                     primaryColor={brandFonts.primaryColor}
                     interactiveColor={resolvedProfile.interactiveColor}
                     headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }}
+                    headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }}
                     headingNumberFormats={headingNumberFormats}
                     headingColors={headingColors}
                     headingNumberColors={headingNumberColors}

@@ -1576,6 +1576,7 @@ export interface BrandProfile {
   subHeadlineWeight: number;
   headerFooterFont: string;
   exampleTextFont?: string | null;
+  letterSpacing?: string | null;
   googleFontsUrl: string;
   translationFontOverrides?: TranslationFontOverrides | null;
 
@@ -1599,6 +1600,10 @@ export interface BrandProfile {
   h2HeadingNumberColor?: string | null;
   h3HeadingNumberColor?: string | null;
   h4HeadingNumberColor?: string | null;
+  h1HeadingNumberWeight?: number | null;
+  h2HeadingNumberWeight?: number | null;
+  h3HeadingNumberWeight?: number | null;
+  h4HeadingNumberWeight?: number | null;
   textBaseSize?: string | null;
 
   // Colors

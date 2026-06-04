@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         subHeadlineWeight: body.subHeadlineWeight,
         headerFooterFont: body.headerFooterFont,
         exampleTextFont: body.exampleTextFont,
+        letterSpacing: body.letterSpacing,
         googleFontsUrl: body.googleFontsUrl,
         translationFontOverrides: body.translationFontOverrides,
         itemNumberFormat: body.itemNumberFormat,
@@ -72,6 +73,10 @@ export async function POST(req: NextRequest) {
         footerRight: body.footerRight,
         pdfFontSize: body.pdfFontSize,
         pdfTranslationScale: body.pdfTranslationScale,
+          h1HeadingNumberWeight: body.h1HeadingNumberWeight,
+          h2HeadingNumberWeight: body.h2HeadingNumberWeight,
+          h3HeadingNumberWeight: body.h3HeadingNumberWeight,
+          h4HeadingNumberWeight: body.h4HeadingNumberWeight,
         pageTitle: body.pageTitle,
       },
     });

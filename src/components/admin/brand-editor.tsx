@@ -110,6 +110,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     subHeadlineWeight: 700,
     headerFooterFont: "",
     exampleTextFont: "",
+    letterSpacing: "",
     googleFontsUrl: "",
     h1Size: "",
     h1Weight: "" as string | number,
@@ -130,6 +131,10 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2HeadingNumberColor: "primary",
     h3HeadingNumberColor: "primary",
     h4HeadingNumberColor: "primary",
+    h1HeadingNumberWeight: "" as string | number,
+    h2HeadingNumberWeight: "" as string | number,
+    h3HeadingNumberWeight: "" as string | number,
+    h4HeadingNumberWeight: "" as string | number,
     textBaseSize: "",
     primaryColor: "#1a1a1a",
     accentColor: "",
@@ -169,6 +174,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           subHeadlineWeight: data.subHeadlineWeight,
           headerFooterFont: data.headerFooterFont,
           exampleTextFont: data.exampleTextFont || "",
+          letterSpacing: data.letterSpacing || "",
           googleFontsUrl: data.googleFontsUrl,
           h1Size: stripPx(data.h1Size),
           h1Weight: data.h1Weight ?? "",
@@ -189,6 +195,10 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2HeadingNumberColor: data.h2HeadingNumberColor || "primary",
           h3HeadingNumberColor: data.h3HeadingNumberColor || "primary",
           h4HeadingNumberColor: data.h4HeadingNumberColor || "primary",
+          h1HeadingNumberWeight: data.h1HeadingNumberWeight ?? "",
+          h2HeadingNumberWeight: data.h2HeadingNumberWeight ?? "",
+          h3HeadingNumberWeight: data.h3HeadingNumberWeight ?? "",
+          h4HeadingNumberWeight: data.h4HeadingNumberWeight ?? "",
           textBaseSize: stripPx(data.textBaseSize),
           primaryColor: data.primaryColor,
           accentColor: data.accentColor || "",
@@ -281,6 +291,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
       const payload = {
         ...form,
         exampleTextFont: form.exampleTextFont.trim(),
+        letterSpacing: form.letterSpacing.trim() || null,
         googleFontsUrl: cleanedFontsUrl,
         translationFontOverrides: translationFontOverrideMapFromRows(
           translationFontRows,
@@ -307,6 +318,14 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2HeadingNumberColor: form.h2HeadingNumberColor,
         h3HeadingNumberColor: form.h3HeadingNumberColor,
         h4HeadingNumberColor: form.h4HeadingNumberColor,
+        h1HeadingNumberWeight:
+          form.h1HeadingNumberWeight !== "" ? Number(form.h1HeadingNumberWeight) : null,
+        h2HeadingNumberWeight:
+          form.h2HeadingNumberWeight !== "" ? Number(form.h2HeadingNumberWeight) : null,
+        h3HeadingNumberWeight:
+          form.h3HeadingNumberWeight !== "" ? Number(form.h3HeadingNumberWeight) : null,
+        h4HeadingNumberWeight:
+          form.h4HeadingNumberWeight !== "" ? Number(form.h4HeadingNumberWeight) : null,
         textBaseSize: ensurePx(String(form.textBaseSize)),
         pdfTranslationScale:
           form.pdfTranslationScale !== ""
@@ -631,6 +650,15 @@ export function BrandEditor({ brandId }: { brandId: string }) {
               className="mt-1"
             />
           </div>
+          <div>
+            <Label>{t("letterSpacing")}</Label>
+            <Input
+              value={form.letterSpacing}
+              onChange={(e) => update("letterSpacing", e.target.value)}
+              placeholder="0.02em"
+              className="mt-1"
+            />
+          </div>
 
           <div className="pt-2 border-t space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -934,6 +962,48 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   <option value="primary">{t("headingColorOptionPrimary")}</option>
                   <option value="accent">{t("headingColorOptionAccent")}</option>
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              <div>
+                <Label>{t("h1HeadingNumberWeight")}</Label>
+                <Input
+                  type="number"
+                  value={form.h1HeadingNumberWeight}
+                  onChange={(e) => update("h1HeadingNumberWeight", e.target.value ? Number(e.target.value) : "")}
+                  placeholder="700"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h2HeadingNumberWeight")}</Label>
+                <Input
+                  type="number"
+                  value={form.h2HeadingNumberWeight}
+                  onChange={(e) => update("h2HeadingNumberWeight", e.target.value ? Number(e.target.value) : "")}
+                  placeholder="700"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h3HeadingNumberWeight")}</Label>
+                <Input
+                  type="number"
+                  value={form.h3HeadingNumberWeight}
+                  onChange={(e) => update("h3HeadingNumberWeight", e.target.value ? Number(e.target.value) : "")}
+                  placeholder="800"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h4HeadingNumberWeight")}</Label>
+                <Input
+                  type="number"
+                  value={form.h4HeadingNumberWeight}
+                  onChange={(e) => update("h4HeadingNumberWeight", e.target.value ? Number(e.target.value) : "")}
+                  placeholder="700"
+                  className="mt-1"
+                />
               </div>
             </div>
           </div>
