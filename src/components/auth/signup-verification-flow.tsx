@@ -112,7 +112,7 @@ function AuthShell({
             <Image
               alt="eduit"
               height={36}
-              src="/logo/eduit_logo.svg"
+              src="/logo/eduitr_logo.svg"
               width={157}
               priority
             />

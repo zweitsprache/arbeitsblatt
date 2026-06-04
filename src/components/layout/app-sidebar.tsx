@@ -378,7 +378,7 @@ export function AppSidebar({
               )}
             >
               <NextImage
-                src="/logo/eduit_logo.svg"
+                src="/logo/eduitr_logo.svg"
                 alt="eduit"
                 width={collapsed ? 40 : 140}
                 height={collapsed ? 24 : 28}
