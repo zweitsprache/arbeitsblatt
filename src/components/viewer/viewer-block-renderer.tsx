@@ -4911,11 +4911,12 @@ function GridView({
   );
 }
 
-function BoardGameView({ block }: { block: BoardGameBlock }) {
+function BoardGameView({ block, mode = "online" }: { block: BoardGameBlock; mode?: ViewMode }) {
   const totalCells = Math.max(1, block.rows * block.cols);
-  const cellWidthMm = 35;
-  const cellHeightMm = 25;
-  const cellGapPx = 8;
+  const isPrintMode = mode === "print";
+  const cellWidthMm = isPrintMode ? 31.5 : 35;
+  const cellHeightMm = isPrintMode ? 22.5 : 25;
+  const cellGapPx = isPrintMode ? 6 : 8;
   const mmToPx = 96 / 25.4;
   const cellWidthPx = cellWidthMm * mmToPx;
   const cellHeightPx = cellHeightMm * mmToPx;
@@ -4996,10 +4997,9 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
       className="grid relative"
       style={{
         gridTemplateColumns: `repeat(${block.cols}, ${cellWidthMm}mm)`,
-        gap: "8px",
+        gap: `${cellGapPx}px`,
         width: "fit-content",
         margin: "0 auto",
-        marginLeft: "-8.5mm",
       }}
     >
       <svg
@@ -5027,8 +5027,9 @@ function BoardGameView({ block }: { block: BoardGameBlock }) {
           key={cell.id || index}
           className={`relative z-10 rounded-sm border border-border p-2 bg-background flex flex-col ${isSpecial ? "items-center justify-center" : "space-y-2 relative"}`}
           style={{
-            width: "35mm",
-            height: "25mm",
+            width: `${cellWidthMm}mm`,
+            height: `${cellHeightMm}mm`,
+            boxSizing: "border-box",
             ...(cell.imageUrl && !isSpecial
               ? {
                   backgroundImage: `url(${cell.imageUrl})`,
@@ -11089,7 +11090,7 @@ export function ViewerBlockRenderer({
         />
       );
     case "board-game":
-      return <BoardGameView block={block as BoardGameBlock} />;
+      return <BoardGameView block={block as BoardGameBlock} mode={mode} />;
     case "domino":
       return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "card-pairs":

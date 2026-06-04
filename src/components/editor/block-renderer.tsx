@@ -757,10 +757,19 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
     state.brandProfile.accentColor,
   );
   const numberLabel = formatHeadingNumber(sequence, format);
-  const headingWeightKey = (`h${block.level}Weight` as const);
-  const headingNumberWeightKey = (`h${block.level}HeadingNumberWeight` as const);
-  const resolvedHeadingWeight = state.brandProfile[headingWeightKey] ?? state.brandProfile.headlineWeight;
-  const resolvedHeadingNumberWeight = state.brandProfile[headingNumberWeightKey] ?? resolvedHeadingWeight;
+  const resolvedHeadingWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
+    1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
+    2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
+    3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
+    4: state.brandProfile.headlineWeight,
+  };
+  const resolvedHeadingNumberWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
+    1: state.brandProfile.h1HeadingNumberWeight ?? resolvedHeadingWeightByLevel[1],
+    2: state.brandProfile.h2HeadingNumberWeight ?? resolvedHeadingWeightByLevel[2],
+    3: state.brandProfile.h3HeadingNumberWeight ?? resolvedHeadingWeightByLevel[3],
+    4: state.brandProfile.h4HeadingNumberWeight ?? resolvedHeadingWeightByLevel[4],
+  };
+  const resolvedHeadingNumberWeight = resolvedHeadingNumberWeightByLevel[block.level];
   const numberStyle: React.CSSProperties = {
     ...numberSlotStyle,
     fontWeight: resolvedHeadingNumberWeight,
@@ -6293,7 +6302,6 @@ function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
         gap: "8px",
         width: "fit-content",
         margin: "0 auto",
-        marginLeft: "-8.5mm",
       }}
     >
       <svg
@@ -6326,6 +6334,7 @@ function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
           style={{
             width: "35mm",
             height: "25mm",
+            boxSizing: "border-box",
             ...(cell.imageUrl && !isSpecial
               ? {
                   backgroundImage: `url(${cell.imageUrl})`,
