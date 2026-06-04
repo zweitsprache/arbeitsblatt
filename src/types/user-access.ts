@@ -175,12 +175,26 @@ export function normalizeRoleAccessSettings(role: AppRole, raw: unknown): RoleAc
     }
   }
 
+  const normalizedAllowedBlockTypes = (() => {
+    const base = Array.from(new Set(allowedBlockTypes ?? defaults.worksheetEditor.allowedBlockTypes));
+
+    // Backward compatibility: when new block types are added in code,
+    // older persisted role settings should automatically pick them up.
+    for (const blockType of defaults.worksheetEditor.allowedBlockTypes) {
+      if (!base.includes(blockType)) {
+        base.push(blockType);
+      }
+    }
+
+    return base;
+  })();
+
   return {
     sidebarSections: Array.from(
       new Set((sidebarSections ?? defaults.sidebarSections).filter((section) => section !== "admin")),
     ),
     worksheetEditor: {
-      allowedBlockTypes: Array.from(new Set(allowedBlockTypes ?? defaults.worksheetEditor.allowedBlockTypes)),
+      allowedBlockTypes: normalizedAllowedBlockTypes,
       features,
     },
   };

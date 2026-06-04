@@ -43,6 +43,7 @@ export type BlockType =
   | "correct-spelling"
   | "correct-numbers"
   | "missing-letters"
+  | "letter-code"
   | "unscramble-words"
   | "fix-sentences"
   | "complete-sentences"
@@ -841,6 +842,7 @@ export interface MCQMatrixOption {
 export interface MCQMatrixStatement {
   id: string;
   text: string;
+  afterOptionsText?: string;
   correctOptionIds: string[];
 }
 
@@ -850,6 +852,7 @@ export interface MCQMatrixBlock extends BlockBase {
   statementColumnHeader?: string;
   showPill?: boolean;
   showFirstAsExample?: boolean;
+  wordBank?: string[];
   options: MCQMatrixOption[];
   statements: MCQMatrixStatement[];
   statementOrder?: string[];
@@ -1074,6 +1077,20 @@ export interface MissingLettersBlock extends BlockBase {
   keepLastLetter?: boolean;
   showFirstAsExample?: boolean;
   itemOrder?: string[];
+}
+
+export interface LetterCodeItem {
+  id: string;
+  clue: string;
+  word: string;
+}
+
+export interface LetterCodeBlock extends BlockBase {
+  type: "letter-code";
+  instruction?: string;
+  items: LetterCodeItem[];
+  letterOrder?: string[];
+  helperLetters?: string[];
 }
 
 // ─── Fix Sentences block ────────────────────────────────────
@@ -1497,6 +1514,7 @@ export type WorksheetBlock =
   | CorrectSpellingBlock
   | CorrectNumbersBlock
   | MissingLettersBlock
+  | LetterCodeBlock
   | UnscrambleWordsBlock
   | FixSentencesBlock
   | CompleteSentencesBlock
@@ -2656,6 +2674,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "mcq-matrix",
       instruction: "Mark the correct options for each statement.",
       showFirstAsExample: false,
+      wordBank: [],
       options: [
         { id: "o1", text: "Option 1" },
         { id: "o2", text: "Option 2" },
@@ -2894,6 +2913,27 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       keepRightCharacters: 0,
       showFirstAsExample: false,
       itemOrder: undefined,
+      visibility: "both",
+    },
+  },
+  {
+    type: "letter-code",
+    label: "Letter Code",
+    description: "Two-row numbered code grid with square cells",
+    labelKey: "letterCode",
+    descriptionKey: "letterCodeDesc",
+    icon: "Grid3X3",
+    category: "spelling",
+    translations: { de: { label: "Buchstabencode", description: "Zweizeiliges nummeriertes Code-Raster mit quadratischen Feldern" } },
+    defaultData: {
+      type: "letter-code",
+      instruction: "",
+      items: [
+        { id: "lc1", clue: "Gebaeude zum Wohnen", word: "HA[U]S" },
+        { id: "lc2", clue: "Ort zum Lernen", word: "SCH[U]LE" },
+      ],
+      letterOrder: undefined,
+      helperLetters: [],
       visibility: "both",
     },
   },

@@ -125,12 +125,16 @@ export function extractBlocksText(
 
       case "mcq-matrix":
         if (block.instruction) parts.push(block.instruction);
+        for (const word of block.wordBank ?? []) {
+          if (word) parts.push(word);
+        }
         for (const stmt of block.statements ?? []) {
           const correctOptions = (block.options ?? [])
             .filter((option) => stmt.correctOptionIds?.includes(option.id))
             .map((option) => option.text)
             .join(", ");
-          parts.push(`${stmt.text} (${correctOptions})`);
+          const trailing = stmt.afterOptionsText ? ` ${stmt.afterOptionsText}` : "";
+          parts.push(`${stmt.text} (${correctOptions})${trailing}`);
         }
         break;
 
@@ -181,6 +185,14 @@ export function extractBlocksText(
         if (block.instruction) parts.push(block.instruction);
         for (const w of block.words ?? []) {
           parts.push(w.word);
+        }
+        break;
+
+      case "letter-code":
+        if (block.instruction) parts.push(block.instruction);
+        for (const item of block.items ?? []) {
+          if (item.clue) parts.push(item.clue);
+          if (item.word) parts.push(item.word);
         }
         break;
 

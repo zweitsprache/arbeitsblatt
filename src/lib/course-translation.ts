@@ -351,6 +351,21 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "letter-code": {
+      add("instruction", () => block.instruction || "", (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items || []) {
+        add(`items.${item.id}.clue`, () => item.clue, (v) => {
+          item.clue = v;
+        });
+        add(`items.${item.id}.word`, () => item.word, (v) => {
+          item.word = v;
+        });
+      }
+      break;
+    }
+
     case "fix-sentences": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;

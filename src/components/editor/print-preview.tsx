@@ -52,7 +52,7 @@ export function PrintPreview({
   const t = useTranslations("printPreview");
   const locale = useLocale();
   const isDevelopment = process.env.NODE_ENV === "development";
-  const [zoom, setZoom] = useState(140);
+  const [zoom, setZoom] = useState(100);
   const [loading, setLoading] = useState(true);
   const [iframeSrc, setIframeSrc] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,6 +61,12 @@ export function PrintPreview({
   const [showSolutions, setShowSolutions] = useState(false);
   const [enablePagedMode, setEnablePagedMode] = useState(false);
   const [pagedReady, setPagedReady] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setZoom(100);
+    }
+  }, [open]);
 
   // Refs so the load effect doesn't re-fire when isDirty/save change mid-save
   const isDirtyRef = useRef(state.isDirty);
@@ -147,7 +153,7 @@ export function PrintPreview({
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 10, 150));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 10, 30));
-  const handleResetZoom = () => setZoom(140);
+  const handleResetZoom = () => setZoom(100);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(5000);
 

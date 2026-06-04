@@ -74,6 +74,7 @@ import {
   CorrectSpellingBlock,
   CorrectNumbersBlock,
   MissingLettersBlock,
+  LetterCodeBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -6315,6 +6316,11 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [wordBankText, setWordBankText] = React.useState((block.wordBank ?? []).join("\n"));
+
+  React.useEffect(() => {
+    setWordBankText((block.wordBank ?? []).join("\n"));
+  }, [block.wordBank]);
 
   const updateStatements = (statements: MCQMatrixBlock["statements"]) => {
     dispatch({
@@ -6332,6 +6338,20 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
       payload: {
         id: block.id,
         updates: { options, statements },
+      },
+    });
+  };
+
+  const commitWordBankRows = (value: string) => {
+    const wordBank = value
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { wordBank },
       },
     });
   };
@@ -6414,6 +6434,18 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
             <Plus className="h-3.5 w-3.5 mr-1" /> {t("addOption")} ({block.options.length}/5)
           </Button>
         </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("wordBankItems")}</Label>
+        <p className="text-xs text-muted-foreground mb-1">{t("wordBankItemsHelp")}</p>
+        <textarea
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[96px] resize-y"
+          placeholder={t("wordBankItemsPlaceholder")}
+          value={wordBankText}
+          onChange={(e) => setWordBankText(e.target.value)}
+          onBlur={(e) => commitWordBankRows(e.target.value)}
+        />
       </div>
       <Separator />
       <div>
@@ -11918,6 +11950,134 @@ function FreeFormProps({ block }: { block: FreeFormBlock }) {
   );
 }
 
+function LetterCodeProps({ block }: { block: LetterCodeBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const items = Array.isArray(block.items) ? block.items : [];
+  const helperLettersText = (block.helperLetters ?? []).join(", ");
+
+  const parseHelperLetters = (value: string) => {
+    const allowed = new Set(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "\u00c4", "\u00d6", "\u00dc"]);
+    const letters = value
+      .toUpperCase()
+      .split(/[^A-Z\u00c4\u00d6\u00dc]+/)
+      .join("")
+      .split("")
+      .filter((char) => allowed.has(char));
+    return Array.from(new Set(letters));
+  };
+
+  const updateItem = (index: number, updates: Partial<LetterCodeBlock["items"][number]>) => {
+    const nextItems = items.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...updates } : item
+    );
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
+  const addItem = () => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...items,
+            { id: crypto.randomUUID(), clue: "", word: "" },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length <= 1) return;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: { items: items.filter((_, itemIndex) => itemIndex !== index) },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: value } },
+            })
+          }
+        />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("letterCodeHelperLetters")}</Label>
+        <Input
+          value={helperLettersText}
+          onChange={(e) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { helperLetters: parseHelperLetters(e.target.value) } },
+            })
+          }
+          className="h-8 text-xs"
+          placeholder={t("letterCodeHelperLettersPlaceholder")}
+        />
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("items")}</Label>
+        {items.map((item, index) => (
+          <div key={item.id} className="space-y-1 rounded border p-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => removeItem(index)}
+                disabled={items.length <= 1}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <ChInput
+              blockId={block.id}
+              fieldPath={`items.${index}.clue`}
+              baseValue={item.clue}
+              onBaseChange={(value) => updateItem(index, { clue: value })}
+              className="h-8 text-xs"
+              placeholder="Clue"
+            />
+            <ChInput
+              blockId={block.id}
+              fieldPath={`items.${index}.word`}
+              baseValue={item.word}
+              onBaseChange={(value) => updateItem(index, { word: value })}
+              className="h-8 text-xs"
+              placeholder="Word pattern (e.g. HA[U]S)"
+            />
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" className="w-full" onClick={addItem}>
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Cover Images Panel ─────────────────────────────────────
 
 function CoverImagesPanel() {
@@ -13697,6 +13857,8 @@ export function PropertiesPanel() {
         return <CorrectSpellingProps block={selectedBlock} />;
       case "missing-letters":
         return <CorrectSpellingProps block={selectedBlock} />;
+      case "letter-code":
+        return <LetterCodeProps block={selectedBlock as LetterCodeBlock} />;
       case "unscramble-words":
         return <UnscrambleWordsProps block={selectedBlock} />;
       case "fix-sentences":

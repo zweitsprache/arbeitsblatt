@@ -47,6 +47,7 @@ import {
   CorrectSpellingBlock,
   CorrectNumbersBlock,
   MissingLettersBlock,
+  LetterCodeBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -666,6 +667,11 @@ function formatHeadingNumber(index: number, format: string | null | undefined): 
 function formatItemNumberLabel(index: number, format: string | null | undefined): string {
   if (format === "numbers-with-period") return `${index}.`;
   return String(index).padStart(2, "0");
+}
+
+function formatMatchingRightLabel(index: number, format: string | null | undefined): string {
+  const letter = toAlphabeticLabel(index, false);
+  return format === "numbers-with-period" ? `${letter}.` : letter;
 }
 
 function ItemNumberBadge({ index, className = "" }: { index: number; className?: string }) {
@@ -1532,7 +1538,7 @@ function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
                     }}
                   >
                     {block.showImageNumberBadge !== false && (
-                      <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md bg-background/85 text-[10px] font-semibold leading-none text-foreground shadow-sm backdrop-blur-[1px]">
+                      <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md border-r border-b border-border bg-background text-[10px] font-semibold leading-none text-foreground">
                         {originalIndex + 1}
                       </span>
                     )}
@@ -1880,6 +1886,177 @@ function WritingRowsRenderer({ block }: { block: WritingRowsBlock }) {
           <div className="flex-1" style={{ height: 24, borderBottom: '1px dashed var(--color-muted-foreground)', opacity: 1.0 }} />
         </div>
       ))}
+    </div>
+  );
+}
+
+const LETTER_CODE_ALPHABET = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", "\u00c4", "\u00d6", "\u00dc"];
+
+function isValidLetterCodeOrder(order: string[] | undefined): order is string[] {
+  if (!Array.isArray(order) || order.length !== LETTER_CODE_ALPHABET.length) return false;
+  const set = new Set(order);
+  return LETTER_CODE_ALPHABET.every((letter) => set.has(letter));
+}
+
+function normalizeLetterCodeChar(char: string): string | null {
+  const normalized = char.toUpperCase();
+  return LETTER_CODE_ALPHABET.includes(normalized) ? normalized : null;
+}
+
+function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean }> {
+  const tokens: Array<{ char: string; prefilled: boolean }> = [];
+  let index = 0;
+
+  while (index < pattern.length) {
+    if (pattern[index] === "[") {
+      const closingIndex = pattern.indexOf("]", index + 1);
+      const endIndex = closingIndex === -1 ? pattern.length : closingIndex;
+      const inner = pattern.slice(index + 1, endIndex);
+      for (const char of inner) {
+        const normalized = normalizeLetterCodeChar(char);
+        if (normalized) tokens.push({ char: normalized, prefilled: true });
+      }
+      index = closingIndex === -1 ? pattern.length : closingIndex + 1;
+      continue;
+    }
+
+    const normalized = normalizeLetterCodeChar(pattern[index]);
+    if (normalized) tokens.push({ char: normalized, prefilled: false });
+    index += 1;
+  }
+
+  return tokens;
+}
+
+function buildLetterCodeNumberMap(order: string[] | undefined): Map<string, number> {
+  const effectiveOrder = isValidLetterCodeOrder(order) ? order : LETTER_CODE_ALPHABET;
+  return new Map(effectiveOrder.map((letter, index) => [letter, index + 1]));
+}
+
+function buildLetterCodeHelperSet(helperLetters: string[] | undefined): Set<string> {
+  const set = new Set<string>();
+  for (const rawLetter of helperLetters ?? []) {
+    const normalized = normalizeLetterCodeChar(rawLetter);
+    if (normalized) set.add(normalized);
+  }
+  return set;
+}
+
+function formatLetterCodeNumber(number: number): string {
+  return String(number).padStart(2, "0");
+}
+
+function LetterCodeRenderer({ block }: { block: LetterCodeBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const instructionText = (block.instruction || "").trim() || "Write the matching letter code in each box.";
+  const bankGapPx = 4;
+  const cellSizePx = 38;
+  const numberMap = React.useMemo(() => buildLetterCodeNumberMap(block.letterOrder), [block.letterOrder]);
+  const helperLetters = React.useMemo(() => buildLetterCodeHelperSet(block.helperLetters), [block.helperLetters]);
+  const letterByNumber = React.useMemo(() => {
+    const map = new Map<number, string>();
+    for (const [letter, number] of numberMap.entries()) {
+      map.set(number, letter);
+    }
+    return map;
+  }, [numberMap]);
+  const parsedItems = React.useMemo(
+    () => (block.items ?? []).map((item) => ({ ...item, tokens: parseLetterCodeWord(item.word || "") })),
+    [block.items],
+  );
+  const rows = [
+    Array.from({ length: 15 }, (_, index) => index + 1),
+    [...Array.from({ length: 14 }, (_, index) => index + 16), null],
+  ] as const;
+
+  React.useEffect(() => {
+    if (isValidLetterCodeOrder(block.letterOrder)) return;
+
+    const randomized = [...LETTER_CODE_ALPHABET]
+      .map((letter) => ({ letter, sortKey: Math.random() }))
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .map((entry) => entry.letter);
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { letterOrder: randomized } },
+    });
+  }, [block.id, block.letterOrder, dispatch]);
+
+  return (
+    <div className="space-y-3">
+      <p
+        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(block.id, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instructionText}
+      </p>
+      <div>
+        <div className="grid" style={{ gridTemplateColumns: `repeat(15, ${cellSizePx}px)`, justifyContent: "space-between", columnGap: 0, rowGap: `${bankGapPx}px` }}>
+          {rows.flatMap((row, rowIndex) =>
+            row.map((number, colIndex) => {
+              if (number === null) {
+                return <div key={`letter-code-empty-${rowIndex}-${colIndex}`} aria-hidden="true" />;
+              }
+
+              return (
+                <div
+                  key={`letter-code-cell-${rowIndex}-${colIndex}`}
+                  className="relative border border-border"
+                  style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                >
+                  <span className="absolute left-0.5 top-0 text-[10px] text-muted-foreground">{formatLetterCodeNumber(number)}</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ transform: "translateY(3px)" }}>
+                    {(() => {
+                      const letter = letterByNumber.get(number);
+                      return letter && helperLetters.has(letter) ? letter : "";
+                    })()}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+      <div>
+        <div className="space-y-2">
+          {parsedItems.map((item, itemIndex) => (
+            <div key={item.id || itemIndex} className="flex items-start gap-3 rounded border border-border/70 px-3 py-2">
+              <ItemNumberBadge index={itemIndex + 1} />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex min-h-[20px] items-center">
+                  <p className="text-foreground">{item.clue || "-"}</p>
+                </div>
+                <div className="flex flex-wrap" style={{ gap: `${bankGapPx}px` }}>
+                  {item.tokens.map((token, tokenIndex) => {
+                    const number = numberMap.get(token.char);
+                    return (
+                      <div
+                        key={`${item.id}-${tokenIndex}`}
+                        className="relative shrink-0 border border-border"
+                        style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                      >
+                        <span className="absolute left-0.5 top-0 text-[10px] text-muted-foreground">{typeof number === "number" ? formatLetterCodeNumber(number) : "?"}</span>
+                        <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ transform: "translateY(3px)" }}>
+                          {token.prefilled || helperLetters.has(token.char) ? token.char : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2379,6 +2556,9 @@ function FillInBlankItemsRenderer({
 
 // ─── Matching ────────────────────────────────────────────────
 function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock }) {
+  const { state } = useEditor();
+  const itemNumberFormat = state.brandProfile.itemNumberFormat || "default";
+  const usePlainTextRightLabels = itemNumberFormat === "numbers-with-period";
   const isPronunciation = block.type === "pronunciation";
   const rowClass = isPronunciation
     ? `flex min-h-[32.5px] items-center gap-3 border-b ${block.extendedRows ? "py-1" : "py-2"}`
@@ -2553,8 +2733,12 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
               >
                 {pair.right}
               </span>
-              <span className="text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0">
-                {String.fromCharCode(97 + i)}
+              <span
+                className={usePlainTextRightLabels
+                  ? "shrink-0 bg-transparent text-[1em] font-medium leading-none text-muted-foreground tabular-nums"
+                  : "text-xs font-bold text-muted-foreground bg-muted w-6 h-6 rounded flex items-center justify-center shrink-0"}
+              >
+                {formatMatchingRightLabel(i + 1, itemNumberFormat)}
               </span>
             </div>
           ))}
@@ -3002,6 +3186,7 @@ function MCQMatrixRenderer({
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const instructionText = (block.instruction || "").trim() || "Mark the correct options for each statement.";
+  const wordBankItems = (block.wordBank ?? []).map((item) => item.trim()).filter(Boolean);
 
   const updateStatements = (statements: MCQMatrixBlock["statements"]) => {
     dispatch({
@@ -3025,7 +3210,7 @@ function MCQMatrixRenderer({
 
   const updateStatement = (
     id: string,
-    updates: Partial<Pick<MCQMatrixBlock["statements"][number], "text" | "correctOptionIds">>
+    updates: Partial<Pick<MCQMatrixBlock["statements"][number], "text" | "afterOptionsText" | "correctOptionIds">>
   ) => {
     updateStatements(block.statements.map((statement) => (statement.id === id ? { ...statement, ...updates } : statement)));
   };
@@ -3033,7 +3218,7 @@ function MCQMatrixRenderer({
   const addStatement = () => {
     updateStatements([
       ...block.statements,
-      { id: crypto.randomUUID(), text: t("newStatement"), correctOptionIds: [] },
+      { id: crypto.randomUUID(), text: t("newStatement"), afterOptionsText: "", correctOptionIds: [] },
     ]);
   };
 
@@ -3084,11 +3269,12 @@ function MCQMatrixRenderer({
     const remainingStatements = block.statements.filter((statement) => statement.id !== exampleStatementId);
     return exampleStatement ? [exampleStatement, ...remainingStatements] : remainingStatements;
   })();
+  const showAfterOptionsColumn = !interactive || orderedStatements.some((statement) => (statement.afterOptionsText || "").trim().length > 0);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
+        className="text-base text-muted-foreground outline-none"
         contentEditable={!interactive}
         suppressContentEditableWarning
         onBlur={(e) => {
@@ -3101,13 +3287,22 @@ function MCQMatrixRenderer({
       >
         {instructionText}
       </p>
+      {wordBankItems.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 py-1">
+          {wordBankItems.map((item, index) => (
+            <span key={`${item}-${index}`} className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground" style={undefined}>
+              {item}
+            </span>
+          ))}
+        </div>
+      )}
       <div>
-        <div className="flex items-center gap-3 py-2 border-b">
+        <div className="flex items-center gap-3 py-2 border-y">
           <div className="flex-1" />
           {block.options.map((option, optionIndex) => (
             <div key={option.id} className="w-24 flex items-center justify-center gap-1">
               <span
-                className="outline-none block text-center font-medium text-muted-foreground text-xs flex-1"
+                className="outline-none block text-center font-semibold text-foreground text-xs flex-1"
                 contentEditable={!interactive}
                 suppressContentEditableWarning
                 onBlur={(e) => {
@@ -3134,6 +3329,7 @@ function MCQMatrixRenderer({
               )}
             </div>
           ))}
+          {showAfterOptionsColumn && <div className="w-40" />}
           <div className="w-8" />
         </div>
         <div>
@@ -3172,6 +3368,22 @@ function MCQMatrixRenderer({
                   </div>
                 );
               })}
+              {showAfterOptionsColumn && (
+                <div className="w-40">
+                  <InlineHtmlEditable
+                    value={statement.afterOptionsText || ""}
+                    editable={!interactive}
+                    className="outline-none block text-sm"
+                    onCommit={(value) => {
+                      if (interactive) return;
+                      const statementPosition = block.statements.findIndex((item) => item.id === statement.id);
+                      localeUpdate(block.id, `statements.${statementPosition}.afterOptionsText`, value, () =>
+                        updateStatement(statement.id, { afterOptionsText: value })
+                      );
+                    }}
+                  />
+                </div>
+              )}
               <div className="w-8 flex items-center justify-center">
                 <button
                   type="button"
@@ -8923,6 +9135,8 @@ export function BlockRenderer({
     case "correct-numbers":
     case "missing-letters":
       return <CorrectSpellingRenderer block={block} />;
+    case "letter-code":
+      return <LetterCodeRenderer block={block} />;
     case "unscramble-words":
       return <UnscrambleWordsRenderer block={block} />;
     case "fix-sentences":

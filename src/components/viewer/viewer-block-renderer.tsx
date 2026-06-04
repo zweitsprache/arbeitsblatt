@@ -47,6 +47,7 @@ import {
   CorrectSpellingBlock,
   CorrectNumbersBlock,
   MissingLettersBlock,
+  LetterCodeBlock,
   UnscrambleWordsBlock,
   FixSentencesBlock,
   CompleteSentencesBlock,
@@ -996,6 +997,7 @@ const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "mcq-rows",
 const NUMBER_BADGE_LAYOUT_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] shrink-0 leading-none tabular-nums`;
 const NUMBER_BADGE_CLASS = `${NUMBER_BADGE_LAYOUT_CLASS} bg-transparent text-slate-700 ring-1 ring-inset ring-slate-700 font-normal pl-px text-[10.5px]`;
 const NUMBER_TEXT_PLACEHOLDER_CLASS = `${NUMBER_BADGE_LAYOUT_CLASS} justify-start bg-transparent text-slate-700 ring-0 font-medium text-[1em]`;
+const MATCHING_RIGHT_TEXT_LABEL_CLASS = "shrink-0 bg-transparent text-slate-700 ring-0 font-medium text-[1em] leading-none tabular-nums";
 const INSTRUCTION_BADGE_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] bg-slate-700 text-white ring-1 ring-inset ring-slate-700 font-bold leading-none text-cv-micro`;
 const CONTROL_BOX_CLASS = `inline-flex items-center justify-center shrink-0 ${s.controlBox}`;
 const CONTROL_BOX_FILLED_CLASS = `${CONTROL_BOX_CLASS} ${s.controlBoxFilled}`;
@@ -1074,6 +1076,11 @@ function formatInstructionBadgeLabel(index?: number): string {
 function formatItemNumberLabel(index: number, format: string | null | undefined): string {
   if (format === "numbers-with-period") return `${index}.`;
   return String(index).padStart(2, "0");
+}
+
+function formatMatchingRightLabel(index: number, format: string | null | undefined): string {
+  const letter = toAlphabeticLabel(index, false);
+  return format === "numbers-with-period" ? `${letter}.` : letter;
 }
 
 function ItemNumberBadge({ index, className = "" }: { index: number; className?: string }) {
@@ -2662,7 +2669,7 @@ function ImageTextTableView({ block, accentColor, mode, instructionIndex, showSo
                   }}
                 >
                   {block.showImageNumberBadge !== false && (
-                    <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md bg-background/85 text-[10px] font-semibold leading-none text-foreground shadow-sm backdrop-blur-[1px]">
+                    <span className="absolute left-0 top-0 z-10 grid h-5 w-5 place-items-center rounded-none rounded-br-md border-r border-b border-border bg-background text-[10px] font-semibold leading-none text-foreground">
                       {originalIndex + 1}
                     </span>
                   )}
@@ -3420,6 +3427,8 @@ function FillInBlankItemsView({
   instructionIndex?: number;
 })  {
   const t = useTranslations("viewer");
+  const itemNumberFormat = React.useContext(ItemNumberFormatContext);
+  const usePlainTextRightLabels = itemNumberFormat === "numbers-with-period";
   const isOnline = mode === "online";
   const isPronunciation = block.type === "pronunciation";
   const headerRowClass = `${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} font-semibold text-foreground`;
@@ -3670,7 +3679,13 @@ function FillInBlankItemsView({
             <div className={headerRowClass}>
               <span className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />
               <span className="flex-1">{block.rightHeader ?? ""}</span>
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`} style={{ visibility: "hidden" }} aria-hidden="true">a</span>
+              <span
+                className={`${usePlainTextRightLabels ? MATCHING_RIGHT_TEXT_LABEL_CLASS : NUMBER_BADGE_CLASS} shrink-0`}
+                style={{ visibility: "hidden" }}
+                aria-hidden="true"
+              >
+                {formatMatchingRightLabel(1, itemNumberFormat)}
+              </span>
             </div>
           </div>
         )}
@@ -3707,8 +3722,8 @@ function FillInBlankItemsView({
                   } : undefined}
                 />
                 <span className="flex-1" style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}>{pair.right}</span>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String.fromCharCode(97 + i)}
+                <span className={`${usePlainTextRightLabels ? MATCHING_RIGHT_TEXT_LABEL_CLASS : NUMBER_BADGE_CLASS} shrink-0`}>
+                  {formatMatchingRightLabel(i + 1, itemNumberFormat)}
                 </span>
               </div>
             ))}
@@ -3771,7 +3786,13 @@ function FillInBlankItemsView({
             <div className={headerRowClass}>
               {!isOnline && <div className={CONTROL_BOX_CLASS} style={{ visibility: "hidden" }} aria-hidden="true" />}
               <span className="flex-1 text-left">{block.rightHeader ?? ""}</span>
-              <span className={`${NUMBER_BADGE_CLASS} shrink-0`} style={{ visibility: "hidden" }} aria-hidden="true">a</span>
+              <span
+                className={`${usePlainTextRightLabels ? MATCHING_RIGHT_TEXT_LABEL_CLASS : NUMBER_BADGE_CLASS} shrink-0`}
+                style={{ visibility: "hidden" }}
+                aria-hidden="true"
+              >
+                {formatMatchingRightLabel(1, itemNumberFormat)}
+              </span>
             </div>
           </>
         )}
@@ -3849,8 +3870,8 @@ function FillInBlankItemsView({
                 >
                   {pair.right}
                 </button>
-                <span className={`${NUMBER_BADGE_CLASS} shrink-0`}>
-                  {String.fromCharCode(97 + i)}
+                <span className={`${usePlainTextRightLabels ? MATCHING_RIGHT_TEXT_LABEL_CLASS : NUMBER_BADGE_CLASS} shrink-0`}>
+                  {formatMatchingRightLabel(i + 1, itemNumberFormat)}
                 </span>
               </div>
             );
@@ -4534,6 +4555,7 @@ function MCQMatrixView({
   const fontFamily = bodyFont || "inherit";
   const isOnline = mode === "online";
   const exampleStatementId = block.showFirstAsExample ? block.statements[0]?.id : undefined;
+  const wordBankItems = (block.wordBank ?? []).map((item) => item.trim()).filter(Boolean);
 
   const handleSelect = (statementId: string, optionId: string) => {
     if (!interactive || showResults) return;
@@ -4559,42 +4581,57 @@ function MCQMatrixView({
 
     return exampleStatement ? [exampleStatement, ...orderedRemainingStatements] : orderedRemainingStatements;
   })();
+  const showAfterOptionsColumn = orderedStatements.some((statement) => (statement.afterOptionsText || "").trim().length > 0);
 
   return (
     <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       <div>
         {block.instruction && (
-          isOnline ? (
-            <div
-              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
-              style={{ color: accentColor || "var(--color-primary)" }}
-            >
-              <InstructionBadge instructionIndex={instructionIndex} />
-              <div className="flex w-full min-w-0 items-center gap-3 flex-1">
+          <>
+            {isOnline ? (
+              <div
+                className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+                style={{ color: accentColor || "var(--color-primary)" }}
+              >
+                <InstructionBadge instructionIndex={instructionIndex} />
                 <p className="min-w-0 flex-1">{block.instruction}</p>
-                {block.options.map((option) => (
-                  <div key={option.id} className="w-20" aria-hidden="true" />
-                ))}
               </div>
-            </div>
-          ) : (
-            <InstructionRow
-              instruction={block.instruction}
-              accentColor={accentColor}
-              mode={mode}
-              instructionIndex={instructionIndex}
-            />
-          )
+            ) : (
+              <InstructionRow
+                instruction={block.instruction}
+                accentColor={accentColor}
+                mode={mode}
+                instructionIndex={instructionIndex}
+              />
+            )}
+            {(block.options.length > 0 || orderedStatements.length > 0 || wordBankItems.length > 0) && <SectionGap size="large" />}
+          </>
         )}
-        {(block.options.length > 0 || orderedStatements.length > 0) && <SectionGap size="small" />}
-        <div className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+        {wordBankItems.length > 0 && (
+          <>
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
+              {wordBankItems.map((item, index) => (
+                <span
+                  key={`${item}-${index}`}
+                  className="rounded border px-2 py-0.5"
+                  style={undefined}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+            {(block.options.length > 0 || orderedStatements.length > 0) && <SectionGap size="medium" />}
+          </>
+        )}
+        <div className={`${isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} border-t`}>
           <span className="w-6 shrink-0" aria-hidden="true" />
           <div className="flex-1" aria-hidden="true" />
           {block.options.map((option) => (
-            <div key={option.id} className="w-20 text-center font-medium text-muted-foreground text-[14px]">
+            <div key={option.id} className="w-20 text-center font-semibold text-foreground text-[14px]">
               {option.text}
             </div>
           ))}
+          {showAfterOptionsColumn && <div className="w-36" aria-hidden="true" />}
         </div>
         <div>
           {orderedStatements.map((statement, statementIndex) => {
@@ -4647,6 +4684,12 @@ function MCQMatrixView({
                     </div>
                   );
                 })}
+                {showAfterOptionsColumn && (
+                  <span
+                    className="w-36 text-sm"
+                    dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.afterOptionsText || "") }}
+                  />
+                )}
               </div>
             );
           })}
@@ -4907,6 +4950,187 @@ function GridView({
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+const LETTER_CODE_ALPHABET = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", "\u00c4", "\u00d6", "\u00dc"];
+
+function isValidLetterCodeOrder(order: string[] | undefined): order is string[] {
+  if (!Array.isArray(order) || order.length !== LETTER_CODE_ALPHABET.length) return false;
+  const set = new Set(order);
+  return LETTER_CODE_ALPHABET.every((letter) => set.has(letter));
+}
+
+function normalizeLetterCodeChar(char: string): string | null {
+  const normalized = char.toUpperCase();
+  return LETTER_CODE_ALPHABET.includes(normalized) ? normalized : null;
+}
+
+function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean }> {
+  const tokens: Array<{ char: string; prefilled: boolean }> = [];
+  let index = 0;
+
+  while (index < pattern.length) {
+    if (pattern[index] === "[") {
+      const closingIndex = pattern.indexOf("]", index + 1);
+      const endIndex = closingIndex === -1 ? pattern.length : closingIndex;
+      const inner = pattern.slice(index + 1, endIndex);
+      for (const char of inner) {
+        const normalized = normalizeLetterCodeChar(char);
+        if (normalized) tokens.push({ char: normalized, prefilled: true });
+      }
+      index = closingIndex === -1 ? pattern.length : closingIndex + 1;
+      continue;
+    }
+
+    const normalized = normalizeLetterCodeChar(pattern[index]);
+    if (normalized) tokens.push({ char: normalized, prefilled: false });
+    index += 1;
+  }
+
+  return tokens;
+}
+
+function buildLetterCodeNumberMap(order: string[] | undefined): Map<string, number> {
+  const effectiveOrder = isValidLetterCodeOrder(order) ? order : LETTER_CODE_ALPHABET;
+  return new Map(effectiveOrder.map((letter, index) => [letter, index + 1]));
+}
+
+function buildLetterCodeHelperSet(helperLetters: string[] | undefined): Set<string> {
+  const set = new Set<string>();
+  for (const rawLetter of helperLetters ?? []) {
+    const normalized = normalizeLetterCodeChar(rawLetter);
+    if (normalized) set.add(normalized);
+  }
+  return set;
+}
+
+function formatLetterCodeNumber(number: number): string {
+  return String(number).padStart(2, "0");
+}
+
+function LetterCodeView({
+  block,
+  mode,
+  showSolutions = false,
+  accentColor,
+  instructionIndex,
+}: {
+  block: LetterCodeBlock;
+  mode: ViewMode;
+  showSolutions?: boolean;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const rows = [
+    Array.from({ length: 15 }, (_, index) => index + 1),
+    [...Array.from({ length: 14 }, (_, index) => index + 16), null],
+  ] as const;
+  const isOnline = mode === "online";
+  const bankGapPx = 4;
+  const cellSizePx = 38;
+  const numberMap = useMemo(() => buildLetterCodeNumberMap(block.letterOrder), [block.letterOrder]);
+  const helperLetters = useMemo(() => buildLetterCodeHelperSet(block.helperLetters), [block.helperLetters]);
+  const letterByNumber = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const [letter, number] of numberMap.entries()) {
+      map.set(number, letter);
+    }
+    return map;
+  }, [numberMap]);
+  const parsedItems = useMemo(
+    () => (block.items ?? []).map((item) => ({ ...item, tokens: parseLetterCodeWord(item.word || "") })),
+    [block.items],
+  );
+  const usedLetters = useMemo(() => {
+    const letters = new Set<string>();
+    for (const item of parsedItems) {
+      for (const token of item.tokens) {
+        letters.add(token.char);
+      }
+    }
+    return letters;
+  }, [parsedItems]);
+
+  return (
+    <div>
+      {block.instruction && (
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <p className="min-w-0 flex-1">{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          )}
+          <SectionGap size="large" />
+        </>
+      )}
+      <div>
+        <div className="grid" style={{ gridTemplateColumns: `repeat(15, ${cellSizePx}px)`, justifyContent: "space-between", columnGap: 0, rowGap: `${bankGapPx}px` }}>
+          {rows.flatMap((row, rowIndex) =>
+            row.map((number, colIndex) => {
+              if (number === null) {
+                return <div key={`letter-code-empty-${rowIndex}-${colIndex}`} aria-hidden="true" />;
+              }
+
+              return (
+                <div
+                  key={`letter-code-cell-${rowIndex}-${colIndex}`}
+                  className="relative border border-border"
+                  style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                >
+                  <span className="absolute left-0.5 top-0 text-[10px] text-muted-foreground">{formatLetterCodeNumber(number)}</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ transform: "translateY(3px)" }}>
+                    {(() => {
+                      const letter = letterByNumber.get(number);
+                      if (!letter) return "";
+                      if (helperLetters.has(letter)) return letter;
+                      if (showSolutions && usedLetters.has(letter)) return letter;
+                      return "";
+                    })()}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+      {parsedItems.length > 0 ? <SectionGap size="medium" /> : null}
+      <div className="space-y-2">
+        {parsedItems.map((item, itemIndex) => (
+          <div key={item.id || itemIndex} className="flex items-start gap-3 rounded border border-border/70 px-3 py-2">
+            <ItemNumberBadge index={itemIndex + 1} />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex min-h-[20px] items-center">
+                <p className="text-foreground">{item.clue || "-"}</p>
+              </div>
+              <div className="flex flex-wrap" style={{ gap: `${bankGapPx}px` }}>
+                {item.tokens.map((token, tokenIndex) => {
+                  const number = numberMap.get(token.char);
+                  return (
+                    <div
+                      key={`${item.id}-${tokenIndex}`}
+                      className="relative shrink-0 border border-border"
+                      style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                    >
+                      <span className="absolute left-0.5 top-0 text-[10px] text-muted-foreground">{typeof number === "number" ? formatLetterCodeNumber(number) : "?"}</span>
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ transform: "translateY(3px)" }}>
+                        {token.prefilled || helperLetters.has(token.char) || showSolutions ? token.char : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -10934,6 +11158,16 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           bodyFont={bodyFont}
           bodyFontSize={bodyFontSize}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+        />
+      );
+    case "letter-code":
+      return (
+        <LetterCodeView
+          block={block as LetterCodeBlock}
+          mode={mode}
+          showSolutions={showSolutions}
           accentColor={accentColor}
           instructionIndex={instructionIndex}
         />
