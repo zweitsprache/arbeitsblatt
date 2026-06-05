@@ -4808,6 +4808,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
   const keepLeftCharacters = block.keepLeftCharacters ?? legacyKeepLeftCharacters;
   const keepRightCharacters = block.keepRightCharacters ?? legacyKeepRightCharacters;
   const exampleWordId = block.showFirstAsExample ? block.words[0]?.id : undefined;
+  const useEqualItemWidth = block.type === "correct-numbers" && !!block.equalItemWidth;
 
   const orderedWords = React.useMemo(() => {
     const exampleWord = exampleWordId ? block.words.find((word) => word.id === exampleWordId) : undefined;
@@ -4823,7 +4824,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
   }, [block.itemOrder, block.words, exampleWordId]);
 
   const equalItemWidthCh = React.useMemo(() => {
-    if (block.type !== "correct-numbers" || !block.equalItemWidth) return 0;
+    if (!useEqualItemWidth) return 0;
 
     let maxChars = 0;
     for (const item of orderedWords) {
@@ -4844,7 +4845,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
   }, [
     block.id,
     block.type,
-    block.equalItemWidth,
+    useEqualItemWidth,
     orderedWords,
     legacyDisplayCount,
     keepLeftCharacters,
