@@ -253,5 +253,13 @@ export function isBlockTypeAllowed(
   access: EffectiveWorksheetEditorAccess,
   blockType: BlockType,
 ): boolean {
+  if (blockType === "lueckenzeilen" && !access.allowedBlockTypes.includes("lueckenzeilen")) {
+    return access.allowedBlockTypes.includes("dialogue");
+  }
+
+  if (blockType === "table-cloud" && !access.allowedBlockTypes.includes("table-cloud")) {
+    return access.allowedBlockTypes.includes("table");
+  }
+
   return access.allowedBlockTypes.includes(blockType);
 }

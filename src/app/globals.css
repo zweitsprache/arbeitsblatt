@@ -889,7 +889,7 @@
   font-weight: var(--print-h1-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: var(--print-block-gap, 1.5rem);
+  margin-bottom: var(--print-h1-bottom-margin, var(--print-block-gap, 1.5rem));
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h2 {
@@ -897,7 +897,7 @@
   font-weight: var(--print-h2-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: var(--print-block-gap, 1.5rem);
+  margin-bottom: var(--print-h2-bottom-margin, var(--print-block-gap, 1.5rem));
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h3 {
@@ -905,7 +905,13 @@
   font-weight: var(--print-h3-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
-  margin-bottom: var(--print-block-gap, 1.5rem);
+  margin-bottom: var(--print-h3-bottom-margin, var(--print-block-gap, 1.5rem));
+}
+
+.print-worksheet-root.print-skin-final .print-body-content .tiptap h4 {
+  font-family: var(--print-headline-font) !important;
+  color: var(--print-primary-color, inherit) !important;
+  margin-bottom: var(--print-h4-bottom-margin, var(--print-block-gap, 1.5rem));
 }
 
 /* Keep inter-block spacing in screen print-preview aligned with PDF output */
@@ -1147,7 +1153,7 @@
     font-weight: var(--print-h1-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: var(--print-block-gap, 1.5rem);
+    margin-bottom: var(--print-h1-bottom-margin, var(--print-block-gap, 1.5rem));
   }
 
   .print-body-content .tiptap h2 {
@@ -1155,7 +1161,7 @@
     font-weight: var(--print-h2-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: var(--print-block-gap, 1.5rem);
+    margin-bottom: var(--print-h2-bottom-margin, var(--print-block-gap, 1.5rem));
   }
 
   .print-body-content .tiptap h3 {
@@ -1163,7 +1169,13 @@
     font-weight: var(--print-h3-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
-    margin-bottom: var(--print-block-gap, 1.5rem);
+    margin-bottom: var(--print-h3-bottom-margin, var(--print-block-gap, 1.5rem));
+  }
+
+  .print-body-content .tiptap h4 {
+    font-family: var(--print-headline-font) !important;
+    color: var(--print-primary-color, inherit) !important;
+    margin-bottom: var(--print-h4-bottom-margin, var(--print-block-gap, 1.5rem));
   }
 
   .worksheet-block-page-break {
@@ -1425,7 +1437,7 @@
   border: 1px solid #e5e7eb;
   border-right: 0;
   border-bottom: 0;
-  padding: 6px 10px;
+  padding: 4px 10px;
   vertical-align: middle;
   position: relative;
   min-width: 60px;
@@ -1451,19 +1463,19 @@
   text-align: left;
 }
 
-.table-block thead tr:first-child th:first-child {
+.table-block table tr:first-child > *:first-child {
   border-top-left-radius: 4px;
 }
 
-.table-block thead tr:first-child th:last-child {
+.table-block table tr:first-child > *:last-child {
   border-top-right-radius: 4px;
 }
 
-.table-block tbody tr:last-child td:first-child {
+.table-block table tr:last-child > *:first-child {
   border-bottom-left-radius: 4px;
 }
 
-.table-block tbody tr:last-child td:last-child {
+.table-block table tr:last-child > *:last-child {
   border-bottom-right-radius: 4px;
 }
 
@@ -1474,9 +1486,11 @@
 
 .table-block [data-table-blank="true"] {
   position: relative;
-  display: inline-grid;
-  place-items: center;
-  min-height: 1.25rem;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
   padding: 0 0.5rem;
   background-color: #f3f4f6;
   border-radius: 3px;
@@ -1542,7 +1556,7 @@
   text-align: center;
 }
 
-.table-block.table-first-row-example tr[data-table-example-row="true"] [data-table-example-blank="true"][data-answer]::after {
+.table-block.table-first-row-example [data-table-example-blank="true"][data-answer]::after {
   content: attr(data-answer);
   position: absolute;
   inset: 0;

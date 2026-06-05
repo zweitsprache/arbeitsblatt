@@ -208,6 +208,10 @@ model BrandProfile {
   h2Weight                 Int?
   h3Size                   String?
   h3Weight                 Int?
+  h1BottomMargin           String?
+  h2BottomMargin           String?
+  h3BottomMargin           String?
+  h4BottomMargin           String?
   textBaseSize             String?
   translationFontOverrides Json              @default("{}")
   gameSettings             Json              @default("{}")

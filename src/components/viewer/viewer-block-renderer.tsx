@@ -59,6 +59,7 @@ import {
   NumberedLabelBlock,
   DialogueBlock,
   DialogueSpeakerIcon,
+  LueckenzeilenBlock,
   PageBreakBlock,
   WritingLinesBlock,
   WritingRowsBlock,
@@ -79,6 +80,7 @@ import {
   ScheduleBlock,
   WebsiteBlock,
   TableBlock,
+  TableCloudBlock,
   SegmentationBlock,
   BRAND_ICON_LOGOS,
   BRAND_FONTS,
@@ -1661,8 +1663,12 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
+  const headingBottomMargin =
+    block.level === 1
+      ? "var(--print-h1-bottom-margin, -4px)"
+      : `var(--print-h${block.level}-bottom-margin)`;
   const style: React.CSSProperties = {
-    ...(block.level === 1 ? { marginBottom: -4 } : {}),
+    marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
@@ -1730,8 +1736,12 @@ function NumberedHeadingView({
     fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
+  const headingBottomMargin =
+    block.level === 1
+      ? "var(--print-h1-bottom-margin, -4px)"
+      : `var(--print-h${block.level}-bottom-margin)`;
   const style: React.CSSProperties = {
-    ...(block.level === 1 ? { marginBottom: -4 } : {}),
+    marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
@@ -2682,7 +2692,15 @@ function ImageTextTableView({ block, accentColor, mode, instructionIndex, showSo
                 </div>
               )}
               <div className="p-1 text-center">
-                {item.text && <span>{item.text}</span>}
+                {item.text && (
+                  item.id === exampleItemId ? (
+                    <span style={{ color: "#0097dc" }}>
+                      <RoughExampleStrike>{item.text}</RoughExampleStrike>
+                    </span>
+                  ) : (
+                    <span>{item.text}</span>
+                  )
+                )}
               </div>
             </div>
           );
@@ -7371,7 +7389,8 @@ function renderTextWithSup(text: string): React.ReactNode[] {
   );
 
   React.useLayoutEffect(() => {
-    if (interactive || !showSolutions) {
+    const needsHighlightMeasurement = !interactive && (!!examplePlacement || showSolutions);
+    if (!needsHighlightMeasurement) {
       setGridSize((current) => (current.width === 0 && current.height === 0 ? current : { width: 0, height: 0 }));
       return;
     }
@@ -7395,7 +7414,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
       resizeObserver.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [interactive, showSolutions, block.grid]);
+  }, [interactive, showSolutions, block.grid, examplePlacement]);
 
   const solutionHighlights = useMemo(() => {
     if (interactive || gridSize.width <= 0 || gridSize.height <= 0 || block.grid.length === 0) {
@@ -7564,6 +7583,7 @@ function CrosswordView({
   const t = useTranslations("viewer");
   const isPrint = mode === "print";
   const isOnline = mode === "online";
+  const itemNumberFormat = React.useContext(ItemNumberFormatContext);
 
   if (block.generationError) {
     return (
@@ -7593,7 +7613,16 @@ function CrosswordView({
         )
       ) : null}
       <div className="mt-5">
-        <CrosswordLayout grid={block.grid} placements={block.placements} showSolutions={showSolutions} clueTextClassName="text-foreground" />
+        <CrosswordLayout
+          grid={block.grid}
+          placements={block.placements}
+          showSolutions={showSolutions}
+          cellSize="30px"
+          fixedCellSize
+          clueTextClassName="text-foreground"
+          clueNumberFormat={itemNumberFormat}
+          renderClueNumber={(clueNumber) => <ItemNumberBadge index={clueNumber} />}
+        />
       </div>
     </div>
   );
@@ -8302,6 +8331,36 @@ function CorrectSpellingView({
     return exampleWord ? [exampleWord, ...orderedRemainingWords] : orderedRemainingWords;
   }, [block.itemOrder, block.words, exampleWordId]);
 
+  const equalItemWidthCh = React.useMemo(() => {
+    if (block.type !== "correct-numbers" || !block.equalItemWidth) return 0;
+
+    let maxChars = 0;
+    for (const item of orderedWords) {
+      const displayCount = item.displayCount ?? legacyDisplayCount;
+      const variants = buildRow(
+        item.word,
+        keepLeftCharacters,
+        keepRightCharacters,
+        `${block.id}:${item.id}`,
+        displayCount,
+      );
+      for (const variant of variants) {
+        maxChars = Math.max(maxChars, variant.text.length + 1);
+      }
+    }
+
+    return Math.max(6, maxChars);
+  }, [
+    block.id,
+    block.type,
+    block.equalItemWidth,
+    orderedWords,
+    legacyDisplayCount,
+    keepLeftCharacters,
+    keepRightCharacters,
+    buildRow,
+  ]);
+
   return (
     <div className="text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
       {block.instruction && (
@@ -8333,6 +8392,7 @@ function CorrectSpellingView({
         {orderedWords.map((item, i) => {
           const displayCount = item.displayCount ?? legacyDisplayCount;
           const isExampleRow = item.id === exampleWordId;
+          const useEqualItemWidth = equalItemWidthCh > 0;
           const variants = buildRow(
             item.word,
             keepLeftCharacters,
@@ -8385,7 +8445,8 @@ function CorrectSpellingView({
                     return (
                       <span
                         key={`${item.id}-${variantIndex}`}
-                        className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${shouldHighlightVariant ? highlightClass : "bg-background"}`}
+                        className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} ${shouldHighlightVariant ? highlightClass : "bg-background"} ${useEqualItemWidth ? "inline-flex justify-center" : ""}`}
+                        style={useEqualItemWidth ? { width: `${equalItemWidthCh}ch` } : undefined}
                       >
                         {block.type === "missing-letters"
                           ? renderMissingLetterText(variant.text, showExampleGap, showSolutions && !variant.isOriginal)
@@ -8938,6 +8999,7 @@ function ReadingComprehensionView({
   accentColor,
   interactiveColor,
   instructionIndex,
+  allBlocks,
 }: {
   block: ReadingComprehensionBlock;
   mode: ViewMode;
@@ -8949,6 +9011,7 @@ function ReadingComprehensionView({
   accentColor?: string | null;
   interactiveColor?: string;
   instructionIndex?: number;
+  allBlocks?: WorksheetBlock[];
 }) {
   const userAnswers = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
@@ -8957,12 +9020,60 @@ function ReadingComprehensionView({
     ? "flex min-h-[49px] items-center gap-3"
     : "flex min-h-[32.5px] items-center gap-3";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const useLetterItemNumbering = !!block.letterItemNumbering;
   const isTrueFalseLayout = block.layoutType === "true-false";
   const isPrefilledFormLayout = block.layoutType === "prefilled-form";
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
   const formFieldLabels = block.formFieldLabels && block.formFieldLabels.length > 0 ? block.formFieldLabels : [""];
   const formColumns = Math.max(1, Math.min(4, block.formColumns ?? 2));
   const tc = useTranslations("common");
+
+  const numberingOffsets = React.useMemo(() => {
+    if (!useLetterItemNumbering || !block.continueNumbering || !allBlocks) {
+      return { sentenceOffset: 0, readingTextOffset: 0 };
+    }
+
+    const currentIndex = allBlocks.findIndex((candidate) => candidate.id === block.id);
+    if (currentIndex <= 0) {
+      return { sentenceOffset: 0, readingTextOffset: 0 };
+    }
+
+    let sentenceOffset = 0;
+    let readingTextOffset = 0;
+    for (let index = currentIndex - 1; index >= 0; index -= 1) {
+      const previousBlock = allBlocks[index];
+      if (previousBlock.type !== "reading-comprehension") {
+        break;
+      }
+
+      if (!previousBlock.letterItemNumbering) {
+        break;
+      }
+
+      sentenceOffset += previousBlock.sentences.length;
+      if (previousBlock.layoutType === "true-false" && (previousBlock.readingText || "").trim().length > 0) {
+        readingTextOffset += 1;
+      }
+    }
+
+    return { sentenceOffset, readingTextOffset };
+  }, [allBlocks, block.continueNumbering, block.id, useLetterItemNumbering]);
+
+  const readingTextNumber = isTrueFalseLayout && (block.readingText || "").trim().length > 0
+    ? numberingOffsets.readingTextOffset + 1
+    : undefined;
+
+  const renderSentenceIndex = (index: number) => {
+    if (!useLetterItemNumbering) {
+      return <ItemNumberBadge index={index} className="shrink-0" />;
+    }
+
+    return (
+      <span className="w-6 min-w-6 shrink-0 bg-transparent text-slate-700 ring-0 font-medium text-[1em] leading-none tabular-nums">
+        {`${toAlphabeticLabel(numberingOffsets.sentenceOffset + index, false)}.`}
+      </span>
+    );
+  };
 
   if (isTrueFalseLayout) {
     const tfAnswers = (answer as Record<string, boolean | undefined> | undefined) || {};
@@ -9015,15 +9126,20 @@ function ReadingComprehensionView({
             )
           )}
           {(block.readingText || "").trim() ? (
-            <div className="whitespace-pre-wrap py-2 leading-6 text-foreground">
-              {block.readingText}
+            <div className="flex items-baseline gap-2 py-2">
+              {useLetterItemNumbering ? (
+                <span className="w-6 min-w-6 shrink-0 bg-transparent text-slate-700 ring-0 font-medium text-[1em] leading-none tabular-nums">
+                  {`${readingTextNumber ?? numberingOffsets.readingTextOffset + 1}.`}
+                </span>
+              ) : null}
+              <div className="flex-1 whitespace-pre-wrap leading-5 text-foreground">{block.readingText}</div>
             </div>
           ) : null}
           <div className={ROW_CLASS}>
             <span className="w-6 shrink-0" aria-hidden="true" />
             <div className="flex-1 font-bold text-foreground" />
-            <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
-            <div className="shrink-0 text-center font-medium text-muted-foreground text-[14px]" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
+            <div className="shrink-0 text-center font-semibold text-foreground text-[14px]" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+            <div className="shrink-0 text-center font-semibold text-foreground text-[14px]" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
           </div>
           <div>
             {block.sentences.map((item, i) => {
@@ -9044,8 +9160,8 @@ function ReadingComprehensionView({
                       />
                     </div>
                   ) : null}
-                  <div className="flex items-center gap-3 py-2">
-                    <ItemNumberBadge index={i + 1} className="shrink-0" />
+                  <div className="flex items-center gap-2 py-2">
+                    {renderSentenceIndex(i + 1)}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium">{item.question}</p>
                     </div>
@@ -9124,7 +9240,7 @@ function ReadingComprehensionView({
                 </div>
               ) : null}
               <div className={`${isFormLayout ? FOLLOWUP_ROW_CLASS : ROW_CLASS} items-start ${isFormLayout ? 'pt-2 pb-0' : 'py-2'}`}>
-                <ItemNumberBadge index={i + 1} className="shrink-0" />
+                {renderSentenceIndex(i + 1)}
                 <div className="flex-1">
                   <p className="font-medium">{item.question}</p>
                   {!isFormLayout && item.beginning && <p className="text-sm text-muted-foreground">{item.beginning}</p>}
@@ -9784,6 +9900,260 @@ function DialogueView({
           </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function LueckenzeilenView({
+  block,
+  mode,
+  interactive,
+  answer,
+  onAnswer,
+  showResults,
+  accentColor,
+  showSolutions = false,
+  instructionIndex,
+}: {
+  block: LueckenzeilenBlock;
+  mode: ViewMode;
+  interactive: boolean;
+  answer: Record<string, string>;
+  onAnswer: (a: Record<string, string>) => void;
+  showResults: boolean;
+  showSolutions?: boolean;
+  accentColor?: string | null;
+  instructionIndex?: number;
+}) {
+  const isOnline = mode === "online";
+  const originalLeftColWidth = Math.max(
+    20,
+    Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)),
+  );
+  const originalColumnsStyle: React.CSSProperties = {
+    gridTemplateColumns: `minmax(0, ${originalLeftColWidth}fr) minmax(0, ${100 - originalLeftColWidth}fr)`,
+  };
+
+  const gapAnswers: string[] = [];
+  for (const item of block.items) {
+    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
+    for (const m of matches) {
+      const raw = m[1];
+      const text = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (text) gapAnswers.push(text);
+    }
+  }
+
+  const exampleAnswers = React.useMemo(() => {
+    const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
+      const raw = match[1] || "";
+      const text = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (text) answers.add(text);
+    }
+    return answers;
+  }, [block.items, block.showFirstAsExample]);
+
+  const shuffledGapAnswers = React.useMemo(
+    () => deterministicShuffle(gapAnswers, `lueckenzeilen:${block.id}:word-bank`),
+    [block.id, gapAnswers]
+  );
+
+  let globalGapIdx = 0;
+  const renderLineText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
+    if (variant === "original") {
+      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
+        const { answer } = parseBlankContent(raw);
+        return answer;
+      });
+    }
+
+    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
+      for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
+        if (parts[cursor] !== "") return parts[cursor];
+      }
+      return "";
+    };
+    let exampleShown = false;
+    return parts.map((part, i) => {
+      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+      if (match) {
+        const noSpace = match[1] === '*';
+        const raw = match[2] || "";
+        const { answer: correctAnswer, width } = parseBlankContent(raw);
+        const idx = globalGapIdx++;
+        const key = `gap-${idx}`;
+        const userVal = answer?.[key] ?? "";
+        const hasAnswer = correctAnswer !== "";
+        const isCorrect = hasAnswer && userVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        const widthStyle = getBlankWidthStyle(width, false);
+        const previousPart = findAdjacentToken(i, -1);
+        const nextPart = findAdjacentToken(i, 1);
+        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
+        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const halfInnerGap = "0.125rem";
+        const outerGap = "0.25rem";
+        const isAtStart = parts.slice(0, i).every(p => !p.trim());
+        const spacingStyle = noSpace
+          ? undefined
+          : {
+              ...(isAtStart
+                ? {}
+                : previousIsBlank
+                  ? { marginLeft: halfInnerGap }
+                  : { marginLeft: outerGap }),
+              ...(nextIsBlank ? { marginRight: "0" } : { marginRight: outerGap }),
+            };
+
+        const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        const shouldRenderSolutionOverlay = variant === "solution" || (variant === "default" && showSolutions && hasAnswer);
+        if (shouldRenderExample) {
+          exampleShown = true;
+          return (
+            <span
+              key={i}
+              className="relative inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
+              style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{correctAnswer || "\u00A0"}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
+                  fontWeight: 400,
+                  fontSize: '18px',
+                  color: '#0097dc',
+                  lineHeight: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {correctAnswer}
+              </span>
+            </span>
+          );
+        }
+
+        if (interactive) {
+          return (
+          <span key={i} className="inline-block" style={spacingStyle}>
+            <input
+              type="text"
+              value={userVal}
+              onChange={(e) => onAnswer({ ...answer, [key]: e.target.value })}
+              placeholder="…"
+              className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 focus:outline-none inline ${
+                showResults
+                  ? isCorrect
+                    ? "text-green-700"
+                    : hasAnswer
+                      ? "text-red-700"
+                      : "text-muted-foreground"
+                  : "focus:ring-1 focus:ring-primary/50"
+              }`}
+              style={getBlankWidthStyle(width, true)}
+            />
+          </span>
+          );
+        }
+
+        if (shouldRenderSolutionOverlay) {
+          return (
+            <span
+              key={i}
+              className="relative inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
+              style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{correctAnswer || "\u00A0"}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#15803d",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {correctAnswer}
+              </span>
+            </span>
+          );
+        }
+
+        return (
+          <span
+            key={i}
+            className="inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5"
+            style={{ minHeight: "1.25rem", ...widthStyle, ...spacingStyle }}
+          >
+            {"\u00A0"}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  return (
+    <div>
+      {block.instruction && (
+        isOnline ? (
+          <div
+            className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+            style={{ color: accentColor || "var(--color-primary)" }}
+          >
+            <InstructionBadge instructionIndex={instructionIndex} />
+            <p className="min-w-0 flex-1">{block.instruction}</p>
+          </div>
+        ) : (
+          <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+        )
+      )}
+      {((block.showWordBank && gapAnswers.length > 0) || block.items.length > 0) && <SectionGap size="medium" />}
+      {block.showWordBank && gapAnswers.length > 0 && (
+        <div className="flex min-h-[49px] flex-wrap items-center gap-2">
+          <div className="flex flex-1 flex-wrap gap-2">
+            {shuffledGapAnswers.map((text, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-background rounded border"
+                  style={exampleAnswers.has(text) ? { color: "#0097dc" } : undefined}
+                >
+                  {exampleAnswers.has(text) ? <RoughExampleStrike>{text}</RoughExampleStrike> : text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div>
+        {block.items.map((item, i) => (
+          <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+            <ItemNumberBadge index={i + 1} className="shrink-0" />
+            {block.showOriginal ? (
+              <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
+                <div className="min-w-0 flex flex-wrap items-center">
+                  {renderLineText(
+                    item.text,
+                    showSolutions ? "solution" : "default",
+                    !!block.showFirstAsExample && i === 0,
+                  )}
+                </div>
+                <div className="min-w-0 flex flex-wrap items-center">
+                  {renderLineText(item.text, "original")}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-wrap items-center leading-5">
+                {renderLineText(item.text, "default", !!block.showFirstAsExample && i === 0)}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -10684,13 +11054,42 @@ function TableView({
   accentColor,
   instructionIndex,
 }: {
-  block: TableBlock;
-  originalBlock?: TableBlock;
+  block: TableBlock | TableCloudBlock;
+  originalBlock?: TableBlock | TableCloudBlock;
   mode: ViewMode;
   showSolutions?: boolean;
   accentColor?: string | null;
   instructionIndex?: number;
 }) {
+  const cloudRows = useMemo(
+    () => ("cloudRows" in block ? (block.cloudRows || "") : "")
+      .split(/\r?\n/)
+      .map((row) => row.trim())
+      .filter((row) => row.length > 0)
+      .map((row, index) => {
+        const marked = row.startsWith("*");
+        const text = marked ? row.slice(1).trim() : row;
+        return { index, text, marked };
+      })
+      .filter((entry) => entry.text.length > 0),
+    [block],
+  );
+
+  const exampleCloudRow = useMemo(() => {
+    if (!block.firstRowAsExample || cloudRows.length === 0) return null;
+    return cloudRows.find((entry) => entry.marked) ?? null;
+  }, [block.firstRowAsExample, cloudRows]);
+
+  const remainingCloudRows = useMemo(
+    () => cloudRows.filter((entry) => entry.index !== exampleCloudRow?.index),
+    [cloudRows, exampleCloudRow],
+  );
+
+  const randomizedCloudRows = useMemo(
+    () => deterministicShuffle(remainingCloudRows, `table-cloud:${block.id}:rows`),
+    [block.id, remainingCloudRows],
+  );
+
   let html = stripTablePixelWidths(prepareTiptapHtml(block.content));
 
   // Inject <colgroup> for column widths if defined on the block
@@ -10722,13 +11121,35 @@ function TableView({
   return (
     <div>
       {block.instruction && (
-        <InstructionRow
-          instruction={block.instruction}
-          accentColor={accentColor}
-          mode={mode}
-          instructionIndex={instructionIndex}
-        />
+        <>
+          <InstructionRow
+            instruction={block.instruction}
+            accentColor={accentColor}
+            mode={mode}
+            instructionIndex={instructionIndex}
+          />
+          <SectionGap size="large" />
+        </>
       )}
+      {block.type === "table-cloud" && randomizedCloudRows.length > 0 ? (
+        <>
+          <div className={CONSISTENT_ITEM_BANK_CLASS}>
+            <div className="flex flex-1 flex-wrap gap-2">
+              {exampleCloudRow ? (
+                <span className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`} style={{ color: "#0097dc" }}>
+                  <RoughExampleStrike>{exampleCloudRow.text}</RoughExampleStrike>
+                </span>
+              ) : null}
+              {randomizedCloudRows.map((entry) => (
+                <span key={`${entry.text}-${entry.index}`} className={`${CONSISTENT_ITEM_BANK_CHIP_CLASS} bg-background`}>
+                  {entry.text}
+                </span>
+              ))}
+            </div>
+          </div>
+          <SectionGap size="medium" />
+        </>
+      ) : null}
       {block.description && (
         <p className="mt-2 mb-2">{block.description}</p>
       )}
@@ -11087,7 +11508,8 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           mode={mode}
-         
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "crossword":
@@ -11257,6 +11679,7 @@ export function ViewerBlockRenderer({
           accentColor={accentColor}
           interactiveColor={interactiveColor}
           instructionIndex={instructionIndex}
+          allBlocks={allBlocks}
         />
       );
     case "verb-table":
@@ -11289,6 +11712,20 @@ export function ViewerBlockRenderer({
           accentColor={accentColor}
           instructionIndex={instructionIndex}
           brand={brand}
+        />
+      );
+    case "lueckenzeilen":
+      return (
+        <LueckenzeilenView
+          block={block}
+          mode={mode}
+          interactive={interactive}
+          answer={answer as Record<string, string>}
+          onAnswer={onAnswer || noop}
+          showResults={showResults}
+          showSolutions={showSolutions}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
         />
       );
     case "numbered-label":
@@ -11377,6 +11814,8 @@ export function ViewerBlockRenderer({
       return <AiToolView block={block as AiToolBlock} />;
     case "table":
       return <TableView block={block as TableBlock} originalBlock={originalBlock as TableBlock | undefined} mode={mode} showSolutions={showSolutions} accentColor={accentColor} instructionIndex={instructionIndex} />;
+    case "table-cloud":
+      return <TableView block={block as TableCloudBlock} originalBlock={originalBlock as TableCloudBlock | undefined} mode={mode} showSolutions={showSolutions} accentColor={accentColor} instructionIndex={instructionIndex} />;
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
     case "schedule":

@@ -62,6 +62,7 @@ import {
   NumberedLabelBlock,
   DialogueBlock,
   DialogueSpeakerIcon,
+  LueckenzeilenBlock,
   PageBreakBlock,
   WritingLinesBlock,
   WritingRowsBlock,
@@ -87,6 +88,7 @@ import {
   ScheduleItem,
   WebsiteBlock,
   TableBlock,
+  TableCloudBlock,
   SegmentationBlock,
   FreeFormBlock,
   BRAND_ICON_LOGOS,
@@ -1600,7 +1602,8 @@ function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
                     type="text"
                     value={item.text}
                     onChange={(e) => updateItemText(originalIndex, e.target.value)}
-                    className="w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1"
+                    className={`w-full text-center text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary rounded px-1 ${item.id === exampleItemId ? "text-[#0097dc]" : ""}`}
+                    style={item.id === exampleItemId ? { fontFamily: EXAMPLE_HANDWRITING_FONT, fontSize: "18px" } : undefined}
                     placeholder={t("caption")}
                   />
                 </div>
@@ -4365,7 +4368,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
 }
 
 function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewMode }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("blockRenderer");
   const isPrint = mode === "print";
 
@@ -4400,7 +4403,10 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
             grid={block.grid}
             placements={block.placements}
             showSolutions
-            cellSize="2.1rem"
+            cellSize="30px"
+            fixedCellSize
+            clueNumberFormat={state.brandProfile.itemNumberFormat || "default"}
+            renderClueNumber={(clueNumber) => <ItemNumberBadge index={clueNumber} />}
             clueTextClassName="text-muted-foreground"
           />
         </div>
@@ -4816,6 +4822,36 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
     return exampleWord ? [exampleWord, ...orderedRemainingWords] : orderedRemainingWords;
   }, [block.itemOrder, block.words, exampleWordId]);
 
+  const equalItemWidthCh = React.useMemo(() => {
+    if (block.type !== "correct-numbers" || !block.equalItemWidth) return 0;
+
+    let maxChars = 0;
+    for (const item of orderedWords) {
+      const displayCount = item.displayCount ?? legacyDisplayCount;
+      const variants = buildRow(
+        item.word,
+        keepLeftCharacters,
+        keepRightCharacters,
+        `${block.id}:${item.id}`,
+        displayCount,
+      );
+      for (const variant of variants) {
+        maxChars = Math.max(maxChars, variant.text.length + 1);
+      }
+    }
+
+    return Math.max(6, maxChars);
+  }, [
+    block.id,
+    block.type,
+    block.equalItemWidth,
+    orderedWords,
+    legacyDisplayCount,
+    keepLeftCharacters,
+    keepRightCharacters,
+    buildRow,
+  ]);
+
   const updateWord = (id: string, word: string) => {
     dispatch({
       type: "UPDATE_BLOCK",
@@ -4878,6 +4914,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
         {orderedWords.map((item, i) => {
           const displayCount = item.displayCount ?? legacyDisplayCount;
           const isExampleRow = item.id === exampleWordId;
+          const useEqualItemWidth = equalItemWidthCh > 0;
           const variants = buildRow(
             item.word,
             keepLeftCharacters,
@@ -4926,7 +4963,8 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
                     return (
                       <span
                         key={`${item.id}-${variantIndex}`}
-                        className={`rounded border px-2 py-0.5 text-xs ${shouldHighlightVariant ? highlightClass : "border-border text-muted-foreground"}`}
+                        className={`rounded border px-2 py-0.5 text-xs ${shouldHighlightVariant ? highlightClass : "border-border text-muted-foreground"} ${useEqualItemWidth ? "inline-flex justify-center" : ""}`}
+                        style={useEqualItemWidth ? { width: `${equalItemWidthCh}ch` } : undefined}
                       >
                         {block.type === "missing-letters"
                           ? renderMissingLetterText(variant.text, showExampleGap)
@@ -5463,11 +5501,12 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
 }
 
 function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const tc = useTranslations("common");
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const useLetterItemNumbering = !!block.letterItemNumbering;
   const isTrueFalseLayout = block.layoutType === "true-false";
   const isPrefilledFormLayout = block.layoutType === "prefilled-form";
   const isFormLayout = block.layoutType === "form" || isPrefilledFormLayout;
@@ -5476,6 +5515,53 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
   const trueLabelText = block.trueLabel || tc("true");
   const falseLabelText = block.falseLabel || tc("false");
   const optionColumnWidth = `${Math.max(64, Math.min(160, Math.max(trueLabelText.length, falseLabelText.length) * 8 + 24))}px`;
+
+  const numberingOffsets = React.useMemo(() => {
+    if (!useLetterItemNumbering || !block.continueNumbering) {
+      return { sentenceOffset: 0, readingTextOffset: 0 };
+    }
+
+    const currentIndex = state.blocks.findIndex((candidate) => candidate.id === block.id);
+    if (currentIndex <= 0) {
+      return { sentenceOffset: 0, readingTextOffset: 0 };
+    }
+
+    let sentenceOffset = 0;
+    let readingTextOffset = 0;
+    for (let index = currentIndex - 1; index >= 0; index -= 1) {
+      const previousBlock = state.blocks[index];
+      if (previousBlock.type !== "reading-comprehension") {
+        break;
+      }
+
+      if (!previousBlock.letterItemNumbering) {
+        break;
+      }
+
+      sentenceOffset += previousBlock.sentences.length;
+      if (previousBlock.layoutType === "true-false" && (previousBlock.readingText || "").trim().length > 0) {
+        readingTextOffset += 1;
+      }
+    }
+
+    return { sentenceOffset, readingTextOffset };
+  }, [block.continueNumbering, block.id, state.blocks, useLetterItemNumbering]);
+
+  const readingTextNumber = isTrueFalseLayout && (block.readingText || "").trim().length > 0
+    ? numberingOffsets.readingTextOffset + 1
+    : undefined;
+
+  const renderSentenceIndex = (index: number) => {
+    if (!useLetterItemNumbering) {
+      return <ItemNumberBadge index={index} />;
+    }
+
+    return (
+      <span className="w-6 min-w-6 shrink-0 text-[1em] font-medium leading-none text-muted-foreground tabular-nums">
+        {`${toAlphabeticLabel(numberingOffsets.sentenceOffset + index, false)}.`}
+      </span>
+    );
+  };
 
   const updateSentence = (id: string, updates: Partial<{ question: string; beginning: string; correctAnswer: boolean }>) => {
     dispatch({
@@ -5535,33 +5621,28 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
         {block.instruction}
       </div>
 
-      {isTrueFalseLayout && (block.readingText || "").trim() ? (
-        <div
-          className="outline-none whitespace-pre-wrap text-sm leading-6 text-foreground"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) => {
-            const value = e.currentTarget.textContent || "";
-            localeUpdate(block.id, "readingText", value, () =>
-              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { readingText: value } } })
-            );
-          }}
-        >
-          {block.readingText}
-        </div>
-      ) : isTrueFalseLayout ? (
-        <div
-          className="outline-none whitespace-pre-wrap text-sm leading-6 text-muted-foreground"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) => {
-            const value = e.currentTarget.textContent || "";
-            localeUpdate(block.id, "readingText", value, () =>
-              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { readingText: value } } })
-            );
-          }}
-        >
-          {t("readingComprehensionReadingTextPlaceholder")}
+      {isTrueFalseLayout ? (
+        <div className="flex items-baseline gap-2 py-1">
+          {useLetterItemNumbering ? (
+            <span className="w-6 min-w-6 shrink-0 text-[1em] font-medium leading-none text-muted-foreground tabular-nums">
+              {`${readingTextNumber ?? numberingOffsets.readingTextOffset + 1}.`}
+            </span>
+          ) : null}
+          <div
+            className={`outline-none whitespace-pre-wrap text-sm leading-5 ${
+              (block.readingText || "").trim() ? "text-foreground" : "text-muted-foreground"
+            } ${useLetterItemNumbering ? "flex-1" : ""}`}
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => {
+              const value = e.currentTarget.textContent || "";
+              localeUpdate(block.id, "readingText", value, () =>
+                dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { readingText: value } } })
+              );
+            }}
+          >
+            {(block.readingText || "").trim() ? block.readingText : t("readingComprehensionReadingTextPlaceholder")}
+          </div>
         </div>
       ) : null}
 
@@ -5570,8 +5651,8 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
           <div>
             <div className="flex items-center gap-3 py-2 border-b">
               <div className="flex-1 font-bold text-foreground" />
-              <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
-              <div className="shrink-0 text-center font-medium text-muted-foreground" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
+              <div className="shrink-0 text-center font-semibold text-foreground" style={{ width: optionColumnWidth }}>{trueLabelText}</div>
+              <div className="shrink-0 text-center font-semibold text-foreground" style={{ width: optionColumnWidth }}>{falseLabelText}</div>
               <div className="w-8" />
             </div>
             {block.sentences.map((item, i) => (
@@ -5589,8 +5670,8 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
                     />
                   </div>
                 ) : null}
-                <div className="flex items-start gap-3 py-2">
-                  <ItemNumberBadge index={i + 1} />
+                <div className="flex items-start gap-2 py-2">
+                  {renderSentenceIndex(i + 1)}
                   <div className="flex-1">
                     <div
                       className="font-medium outline-none"
@@ -5665,7 +5746,7 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
               </div>
             ) : null}
             <div className={`flex items-start gap-3 ${isFormLayout ? "pt-2 pb-0" : "py-2"}`}>
-              <ItemNumberBadge index={i + 1} />
+              {renderSentenceIndex(i + 1)}
               <div className="flex-1 space-y-1">
                 <div
                   className="font-medium outline-none"
@@ -7410,6 +7491,227 @@ function DialogueRenderer({
   );
 }
 
+function LueckenzeilenRenderer({
+  block,
+  interactive,
+}: {
+  block: LueckenzeilenBlock;
+  interactive: boolean;
+}) {
+  const originalLeftColWidth = Math.max(
+    20,
+    Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)),
+  );
+  const originalColumnsStyle: React.CSSProperties = {
+    gridTemplateColumns: `minmax(0, ${originalLeftColWidth}fr) minmax(0, ${100 - originalLeftColWidth}fr)`,
+  };
+
+  const gapAnswers: string[] = [];
+  for (const item of block.items) {
+    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
+    for (const m of matches) {
+      const raw = m[1];
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (answer) gapAnswers.push(answer);
+    }
+  }
+  const exampleAnswers = React.useMemo(() => {
+    const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
+    if (!exampleItem) return new Set<string>();
+    const answers = new Set<string>();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
+      const raw = match[1] || "";
+      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      if (answer) answers.add(answer);
+    }
+    return answers;
+  }, [block.items, block.showFirstAsExample]);
+
+  const renderLineText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
+    if (variant === "original") {
+      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
+        const { answer } = parseBlankContent(raw);
+        return answer;
+      });
+    }
+
+    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
+      for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
+        if (parts[cursor] !== "") return parts[cursor];
+      }
+      return "";
+    };
+    let exampleShown = false;
+    return parts.map((part, i) => {
+      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
+      if (match) {
+        const noSpace = match[1] === '*';
+        const raw = match[2] || "";
+        const { answer, width } = parseBlankContent(raw);
+        const widthStyle = getBlankWidthStyle(width, false);
+        const previousPart = findAdjacentToken(i, -1);
+        const nextPart = findAdjacentToken(i, 1);
+        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
+        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const halfInnerGap = "0.125rem";
+        const isAtStart = parts.slice(0, i).every(p => !p.trim());
+        const spacing = getBlankSpacing(width, noSpace, nextPart);
+        let adjustedSpacing = isAtStart && spacing.style
+          ? { ...spacing, style: { ...spacing.style, marginLeft: "0" } }
+          : spacing;
+        if (previousIsBlank || nextIsBlank) {
+          const styleFromClass = adjustedSpacing.className === "mx-1"
+            ? { marginLeft: "0.25rem", marginRight: "0.25rem" }
+            : adjustedSpacing.className === "mr-1"
+              ? { marginRight: "0.25rem" }
+              : {};
+          adjustedSpacing = {
+            ...adjustedSpacing,
+            className: "",
+            style: adjustedSpacing.style
+              ? {
+                  ...styleFromClass,
+                  ...adjustedSpacing.style,
+                  ...(previousIsBlank ? { marginLeft: halfInnerGap } : null),
+                  ...(nextIsBlank ? { marginRight: "0" } : null),
+                }
+              : {
+                  ...styleFromClass,
+                  ...(previousIsBlank ? { marginLeft: halfInnerGap } : null),
+                  ...(nextIsBlank ? { marginRight: "0" } : null),
+                },
+          };
+        }
+        const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
+        const shouldRenderSolutionOverlay = variant === "solution";
+        if (shouldRenderExample) {
+          exampleShown = true;
+          return (
+            <span
+              key={i}
+              className={`relative inline-block rounded-[3px] bg-gray-100 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+              style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || '\u00A0'}</span>
+              <span
+                className="flex flex-1 min-w-0 flex-wrap items-center gap-y-1"
+                style={{
+                  fontFamily: "var(--font-handwriting)",
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#0097dc",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {answer}
+              </span>
+            </span>
+          );
+        }
+        if (interactive) {
+          return (
+          <input
+            key={i}
+            type="text"
+            placeholder="…"
+            className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${adjustedSpacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
+          />
+          );
+        }
+
+        if (shouldRenderSolutionOverlay) {
+          return (
+            <span
+              key={i}
+              className={`relative inline-block rounded-[3px] bg-gray-100 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+              style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
+            >
+              <span aria-hidden="true" style={{ visibility: "hidden" }}>{answer || '\u00A0'}</span>
+              <span
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{
+                  fontFamily: "var(--font-handwriting)",
+                  fontWeight: 400,
+                  fontSize: "18px",
+                  color: "#15803d",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {answer}
+              </span>
+            </span>
+          );
+        }
+
+        return (
+          <span
+            key={i}
+            className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
+            style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
+          >
+            {variant === "default" ? (answer || '\u00A0') : '\u00A0'}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  return (
+    <div>
+      {block.instruction && (
+        <div className="flex min-h-[37px] items-center gap-3 border-b py-2 font-semibold text-[var(--color-primary)]">
+          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">A</span>
+          <p>{block.instruction}</p>
+        </div>
+      )}
+      {block.showWordBank && gapAnswers.length > 0 && (
+        <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+          <div className="flex flex-1 flex-wrap gap-2">
+            {getDeterministicPreviewOrder(
+              gapAnswers,
+              (text, index) => `${text}:${index}`
+            )
+              .map((text, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-background rounded border text-[10px]"
+                  style={undefined}
+                >
+                  {exampleAnswers.has(text) ? <RoughExampleStrike>{text}</RoughExampleStrike> : text}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
+            <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
+            {block.showOriginal ? (
+              <div className="grid flex-1 gap-8 leading-5" style={originalColumnsStyle}>
+                <div className="min-w-0">
+                  {renderLineText(item.text, "default", !!block.showFirstAsExample && i === 0)}
+                </div>
+                <div className="min-w-0">
+                  {renderLineText(item.text, "original")}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-wrap items-center leading-5">
+                {renderLineText(item.text, "default", !!block.showFirstAsExample && i === 0)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Chart ───────────────────────────────────────────────────
 const ChartContent = dynamic(
   () => import("@/components/chart/chart-view").then((m) => m.ChartContent),
@@ -8979,6 +9281,87 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
   );
 }
 
+function TableCloudBlockRenderer({ block }: { block: TableCloudBlock }) {
+  const { dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const t = useTranslations("blockRenderer");
+
+  const cloudRows = React.useMemo(
+    () => (block.cloudRows || "")
+      .split(/\r?\n/)
+      .map((row) => row.trim())
+      .filter((row) => row.length > 0)
+      .map((row, index) => {
+        const marked = row.startsWith("*");
+        const text = marked ? row.slice(1).trim() : row;
+        return { index, text, marked };
+      })
+      .filter((entry) => entry.text.length > 0),
+    [block.cloudRows],
+  );
+
+  const exampleCloudRow = React.useMemo(() => {
+    if (!block.firstRowAsExample || cloudRows.length === 0) return null;
+    return cloudRows.find((entry) => entry.marked) ?? null;
+  }, [block.firstRowAsExample, cloudRows]);
+
+  const remainingCloudRows = React.useMemo(
+    () => cloudRows.filter((entry) => entry.index !== exampleCloudRow?.index),
+    [cloudRows, exampleCloudRow],
+  );
+
+  const randomizedCloudRows = React.useMemo(
+    () => getDeterministicPreviewOrder(remainingCloudRows, (entry) => `${block.id}:${entry.text}:${entry.index}`),
+    [block.id, remainingCloudRows],
+  );
+
+  return (
+    <div
+      className={`table-block table-style-${block.tableStyle ?? "default"} ${
+        block.firstRowAsExample ? "table-first-row-example" : ""
+      }`}
+    >
+      {block.instruction && (
+        <p className="text-sm text-slate-600 mb-2">{block.instruction}</p>
+      )}
+      {randomizedCloudRows.length > 0 || exampleCloudRow ? (
+        <div className="mb-2">
+          <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
+            <div className="flex flex-1 flex-wrap gap-2">
+              {exampleCloudRow ? (
+                <span className="px-3 py-0.5 rounded border border-border text-cv-sm" style={{ color: "#0097dc" }}>
+                  <RoughExampleStrike>{exampleCloudRow.text}</RoughExampleStrike>
+                </span>
+              ) : null}
+              {randomizedCloudRows.map((entry) => (
+                <span key={`${entry.text}-${entry.index}`} className="px-3 py-0.5 rounded border border-border text-cv-sm">
+                  {entry.text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {block.description && (
+        <p className="mt-2 mb-2">{block.description}</p>
+      )}
+      <TableEditor
+        content={block.content}
+        columnWidths={block.columnWidths}
+        hideHeader={block.hideHeader}
+        onChange={(html) =>
+          localeUpdate(block.id, "content", html, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { content: html } } })
+          )
+        }
+      />
+      {block.caption && (
+        <p className="text-xs text-muted-foreground text-center mt-1 italic">{block.caption}</p>
+      )}
+    </div>
+  );
+}
+
 function FreeFormRenderer({ block }: { block: FreeFormBlock }) {
   const { state, dispatch } = useEditor();
   const t = useTranslations("blockRenderer");
@@ -9155,6 +9538,8 @@ export function BlockRenderer({
       return <ChartRenderer block={block} />;
     case "dialogue":
       return <DialogueRenderer block={block} interactive={interactive} />;
+    case "lueckenzeilen":
+      return <LueckenzeilenRenderer block={block} interactive={interactive} />;
     case "numbered-label":
       return <NumberedLabelRenderer block={block} />;
     case "columns":
@@ -9203,6 +9588,8 @@ export function BlockRenderer({
       return <AiToolRenderer block={block as AiToolBlock} />;
     case "table":
       return <TableBlockRenderer block={block as TableBlock} />;
+    case "table-cloud":
+      return <TableCloudBlockRenderer block={block as TableCloudBlock} />;
     case "audio":
       return <AudioRenderer block={block as AudioBlock} />;
     case "schedule":

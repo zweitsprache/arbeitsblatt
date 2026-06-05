@@ -58,6 +58,7 @@ export type BlockType =
   | "numbered-label"
   | "two-column-fill"
   | "dialogue"
+  | "lueckenzeilen"
   | "fill-in-blank-items"
   | "page-break"
   | "writing-lines"
@@ -74,6 +75,7 @@ export type BlockType =
   | "ai-prompt"
   | "ai-tool"
   | "table"
+  | "table-cloud"
   | "text-comparison"
   | "accordion"
   | "audio"
@@ -588,6 +590,21 @@ export interface TableBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
+export interface TableCloudBlock extends BlockBase {
+  type: "table-cloud";
+  content: string;
+  instruction?: string;
+  description?: string;
+  tableStyle?: TableStyle;
+  caption?: string;
+  columnWidths?: number[];
+  bilingual?: boolean;
+  firstRowAsExample?: boolean;
+  hideHeader?: boolean;
+  skipTranslation?: boolean;
+  cloudRows?: string;
+}
+
 const BRAND_ICON_LOGOS_BASE: Record<string, string> = {
   edoomio: "/logo/arbeitsblatt_logo_icon.svg",
   lingostar: "/logo/lingostar_logo_icon_flat.svg",
@@ -1062,6 +1079,7 @@ export interface CorrectNumbersBlock extends BlockBase {
   displayCount?: number;
   keepLeftCharacters: number;
   keepRightCharacters: number;
+  equalItemWidth?: boolean;
   showFirstAsExample?: boolean;
   itemOrder?: string[];
 }
@@ -1152,6 +1170,8 @@ export interface ReadingComprehensionBlock extends BlockBase {
   type: "reading-comprehension";
   instruction: string;
   readingText?: string;
+  letterItemNumbering?: boolean;
+  continueNumbering?: boolean;
   trueLabel?: string;
   falseLabel?: string;
   sentences: ReadingComprehensionItem[];
@@ -1212,6 +1232,22 @@ export interface DialogueBlock extends BlockBase {
   instruction: string;
   items: DialogueItem[];
   showSpeakers?: boolean;
+  showWordBank: boolean;
+  showOriginal?: boolean;
+  originalColumnRatio?: "1:1" | "3:2";
+  originalLeftColWidth?: number;
+  showFirstAsExample?: boolean;
+}
+
+export interface LueckenzeilenItem {
+  id: string;
+  text: string; // supports {{blank:answer}} gap syntax
+}
+
+export interface LueckenzeilenBlock extends BlockBase {
+  type: "lueckenzeilen";
+  instruction: string;
+  items: LueckenzeilenItem[];
   showWordBank: boolean;
   showOriginal?: boolean;
   originalColumnRatio?: "1:1" | "3:2";
@@ -1528,6 +1564,7 @@ export type WorksheetBlock =
   | NumberedLabelBlock
   | TwoColumnFillBlock
   | DialogueBlock
+  | LueckenzeilenBlock
   | FillInBlankItemsBlock
   | PageBreakBlock
   | WritingLinesBlock
@@ -1556,6 +1593,7 @@ export type WorksheetBlock =
   | AiPromptBlock
   | AiToolBlock
   | TableBlock
+  | TableCloudBlock
   | GridBlock
   | SegmentationBlock
   | FreeFormBlock
@@ -1605,6 +1643,10 @@ export interface BrandProfile {
   h2Weight?: number | null;
   h3Size?: string | null;
   h3Weight?: number | null;
+  h1BottomMargin?: string | null;
+  h2BottomMargin?: string | null;
+  h3BottomMargin?: string | null;
+  h4BottomMargin?: string | null;
   h1NumberFormat?: string | null;
   h2NumberFormat?: string | null;
   h3NumberFormat?: string | null;
@@ -2863,6 +2905,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       ],
       keepLeftCharacters: 0,
       keepRightCharacters: 0,
+      equalItemWidth: false,
       showFirstAsExample: false,
       itemOrder: undefined,
       visibility: "both",
@@ -3031,6 +3074,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "reading-comprehension",
       instruction: "Beantworte die Fragen zum Text.",
       readingText: "",
+      letterItemNumbering: false,
+      continueNumbering: false,
       trueLabel: "",
       falseLabel: "",
       layoutType: "default",
@@ -3175,6 +3220,30 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         { id: "dl2", speaker: "Peter", icon: "circle", text: "I am fine, thank you!" },
       ],
       showSpeakers: true,
+      showWordBank: false,
+      showOriginal: false,
+      originalColumnRatio: "1:1",
+      originalLeftColWidth: 50,
+      showFirstAsExample: false,
+      visibility: "both",
+    },
+  },
+  {
+    type: "lueckenzeilen",
+    label: "Lückenzeilen",
+    description: "Gap lines without speaker icons",
+    labelKey: "lueckenzeilen",
+    descriptionKey: "lueckenzeilenDesc",
+    icon: "MessageSquareText",
+    category: "interactive",
+    translations: { de: { label: "Lückenzeilen", description: "Lückenzeilen ohne Sprecher und Symbole" } },
+    defaultData: {
+      type: "lueckenzeilen",
+      instruction: "Complete the gaps.",
+      items: [
+        { id: "lz1", text: "Hello, {{blank:how}} are you?" },
+        { id: "lz2", text: "I am {{blank:fine}}." },
+      ],
       showWordBank: false,
       showOriginal: false,
       originalColumnRatio: "1:1",
@@ -3505,6 +3574,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     description: "",
     tableStyle: "default",
     hideHeader: false,
+    visibility: "both",
+  },
+},
+{
+  type: "table-cloud",
+  label: "Table Cloud",
+  description: "Table with randomized word-bank rows above",
+  labelKey: "tableCloud",
+  descriptionKey: "tableCloudDesc",
+  icon: "Table",
+  category: "content",
+  translations: { de: { label: "Tabelle Wolke", description: "Tabelle mit zufälliger Wortbank darüber" } },
+  defaultData: {
+    type: "table-cloud",
+    content: '<table><tbody><tr><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr><tr><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr></tbody></table>',
+    description: "",
+    tableStyle: "default",
+    hideHeader: false,
+    cloudRows: "",
     visibility: "both",
   },
 },

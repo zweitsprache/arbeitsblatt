@@ -92,6 +92,7 @@ import {
   DialogueBlock,
   DialogueItem,
   DialogueSpeakerIcon,
+  LueckenzeilenBlock,
   WorksheetBlock,
   WritingLinesBlock,
   WritingRowsBlock,
@@ -112,6 +113,7 @@ import {
   ScheduleItem,
   WebsiteBlock,
   TableBlock,
+  TableCloudBlock,
   TableStyle,
   FreeFormBlock,
   BlockDisplayOn,
@@ -7638,6 +7640,19 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   return (
     <div className="space-y-3">
       <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("csvImport")}</Label>
@@ -7680,20 +7695,6 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
             {t("csvImportButton")}
           </Button>
         </div>
-      </div>
-      <Separator />
-        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
-        <ChInput
-          blockId={block.id}
-          fieldPath="instruction"
-          baseValue={block.instruction}
-          onBaseChange={(v) =>
-            dispatch({
-              type: "UPDATE_BLOCK",
-              payload: { id: block.id, updates: { instruction: v } },
-            })
-          }
-        />
       </div>
       <Separator />
       {block.categories.map((cat, catIndex) => {
@@ -8430,6 +8431,20 @@ function CorrectSpellingProps({ block }: { block: CorrectSpellingBlock | Correct
           }
         />
       </div>
+      {isNumberBlock ? (
+        <div className="flex items-center justify-between">
+          <Label className="text-sm">{t("equalItemWidth")}</Label>
+          <Switch
+            checked={!!block.equalItemWidth}
+            onCheckedChange={(checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { equalItemWidth: checked } },
+              })
+            }
+          />
+        </div>
+      ) : null}
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("csvImport")}</Label>
@@ -9635,6 +9650,32 @@ function ReadingComprehensionProps({ block }: { block: ReadingComprehensionBlock
           </SelectContent>
         </Select>
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("readingComprehensionLetterItemNumbering")}</Label>
+        <Switch
+          checked={!!block.letterItemNumbering}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { letterItemNumbering: checked } },
+            })
+          }
+        />
+      </div>
+      {block.letterItemNumbering ? (
+        <div className="flex items-center justify-between">
+          <Label className="text-sm">{t("continueNumbering")}</Label>
+          <Switch
+            checked={!!block.continueNumbering}
+            onCheckedChange={(checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { continueNumbering: checked } },
+              })
+            }
+          />
+        </div>
+      ) : null}
       {isTrueFalseLayout && (
         <>
           <div>
@@ -10368,6 +10409,208 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
               dispatch({
                 type: "UPDATE_BLOCK",
                 payload: { id: block.id, updates: { showSpeakers: checked } },
+              })
+          )}
+          {renderSwitchRow(
+            t("showFirstAsExample"),
+            block.showFirstAsExample ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showFirstAsExample: checked } },
+              }),
+            { withBottomBorder: false }
+          )}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-sky-800 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("notes")}</Label>
+        <p className="text-sm text-muted-foreground">
+          {t("dialogueGapHelp")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LueckenzeilenProps({ block }: { block: LueckenzeilenBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const renderSwitchRow = (
+    label: string,
+    checked: boolean,
+    onCheckedChange: (checked: boolean) => void,
+    options?: { withTopDivider?: boolean; withBottomBorder?: boolean }
+  ) => (
+    <>
+      {options?.withTopDivider ? <Separator /> : null}
+      <div
+        className={`flex h-8 items-center justify-between ${options?.withBottomBorder === false ? "" : "border-b border-border"}`}
+      >
+        <Label className="text-sm">{label}</Label>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </div>
+    </>
+  );
+
+  const updateItem = (index: number, updates: Partial<LueckenzeilenBlock["items"][number]>) => {
+    const newItems = [...block.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      {
+        id: `lz${Date.now()}`,
+        text: "",
+      },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newItems = [...block.items];
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newItems.length) return;
+    [newItems[index], newItems[swapIndex]] = [newItems[swapIndex], newItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      {block.showOriginal && (
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("colRatio")}</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("colRatio")}</Label>
+            <span className="text-xs text-muted-foreground">
+              {Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}% / {100 - Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))}%
+            </span>
+          </div>
+          <Slider
+            value={[Math.max(20, Math.min(80, block.originalLeftColWidth ?? (block.originalColumnRatio === "3:2" ? 60 : 50)))]}
+            min={20}
+            max={80}
+            step={5}
+            onValueChange={([value]) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: {
+                  id: block.id,
+                  updates: {
+                    originalLeftColWidth: value,
+                    originalColumnRatio: undefined,
+                  },
+                },
+              })
+            }
+          />
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("lueckenzeilenItems")}</Label>
+        {block.items.map((item, i) => (
+          <div key={item.id} className="space-y-1.5 border-b border-border pb-2 last:border-b-0 last:pb-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+              <div className="min-w-0 flex-1">
+                <ChInput
+                  blockId={block.id}
+                  fieldPath={`items.${i}.text`}
+                  baseValue={item.text}
+                  onBaseChange={(v) => updateItem(i, { text: v })}
+                  className="h-8 w-full text-xs"
+                  placeholder={t("dialogueTextPlaceholder")}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <div className="flex flex-col">
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "up")}
+                    disabled={i === 0}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                  </button>
+                  <button
+                    className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => moveItem(i, "down")}
+                    disabled={i === block.items.length - 1}
+                  >
+                    <ArrowUpDown className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => removeItem(i)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("settings")}</Label>
+        <div>
+          {renderSwitchRow(
+            t("showWordBank"),
+            block.showWordBank ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showWordBank: checked } },
+              }),
+            { withTopDivider: true }
+          )}
+          {renderSwitchRow(
+            t("showOriginal"),
+            block.showOriginal ?? false,
+            (checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { showOriginal: checked } },
               })
           )}
           {renderSwitchRow(
@@ -13473,7 +13716,7 @@ function ColWidthInput({
   );
 }
 
-function TableProps({ block }: { block: TableBlock }) {
+function TableProps({ block }: { block: TableBlock | TableCloudBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
@@ -13552,6 +13795,26 @@ function TableProps({ block }: { block: TableBlock }) {
           multiline
         />
       </div>
+
+      {block.type === "table-cloud" ? (
+        <div>
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("tableCloudRows")}</Label>
+          <ChInput
+            blockId={block.id}
+            fieldPath="cloudRows"
+            baseValue={block.cloudRows ?? ""}
+            onBaseChange={(v) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { cloudRows: v } },
+              })
+            }
+            multiline
+            placeholder={t("tableCloudRowsPlaceholder")}
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">{t("tableCloudRowsHelp")}</p>
+        </div>
+      ) : null}
 
       <Separator />
 
@@ -13877,6 +14140,8 @@ export function PropertiesPanel() {
         return <ChartProps block={selectedBlock} />;
       case "dialogue":
         return <DialogueProps block={selectedBlock} />;
+      case "lueckenzeilen":
+        return <LueckenzeilenProps block={selectedBlock} />;
       case "email-skeleton":
         return <EmailSkeletonProps block={selectedBlock} />;
       case "text-snippet":
@@ -13903,6 +14168,8 @@ export function PropertiesPanel() {
         return <AiToolProps block={selectedBlock as AiToolBlock} />;
       case "table":
         return <TableProps block={selectedBlock as TableBlock} />;
+      case "table-cloud":
+        return <TableProps block={selectedBlock as TableCloudBlock} />;
       case "audio":
         return <AudioProps block={selectedBlock as AudioBlock} />;
       case "schedule":

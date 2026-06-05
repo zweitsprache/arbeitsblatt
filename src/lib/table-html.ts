@@ -1,4 +1,4 @@
-import { getBlankWidthStyle, parseBlankContent } from "@/lib/fill-in-blank";
+import { parseBlankContent } from "@/lib/fill-in-blank";
 
 function escapeHtml(text: string): string {
   return text
@@ -23,17 +23,17 @@ export function hideTableHeaderHtml(html: string): string {
 }
 
 export function markFirstExampleRowHtml(html: string): string {
-  return html.replace(/<tr\b([^>]*)>([\s\S]*?)<\/tr>/i, (match, attrs, inner) => {
-    if (!/<td\b/i.test(inner)) {
+  let marked = false;
+
+  return html.replace(/<span data-table-blank="true"([^>]*)>/gi, (match, attrs) => {
+    if (marked) return match;
+    marked = true;
+
+    if (/\bdata-table-example-blank="true"\b/i.test(attrs)) {
       return match;
     }
 
-    const markedInner = inner.replace(
-      /<span data-table-blank="true"([^>]*)data-answer="([^"]+)"([^>]*)>/i,
-      '<span data-table-blank="true"$1data-answer="$2" data-table-example-blank="true"$3>',
-    );
-
-    return `<tr${attrs} data-table-example-row="true">${markedInner}</tr>`;
+    return `<span data-table-blank="true"${attrs} data-table-example-blank="true">`;
   });
 }
 
@@ -45,14 +45,12 @@ function styleObjectToCss(style: Record<string, string | number | undefined>): s
 }
 
 function renderBlankToken(raw: string, noSpace: boolean): string {
-  const { answer, width } = parseBlankContent(raw);
-  const widthStyle = getBlankWidthStyle(width, false);
+  const { answer } = parseBlankContent(raw);
   const style = styleObjectToCss({
     verticalAlign: "middle",
     boxSizing: "border-box",
-    marginLeft: noSpace ? undefined : "0.25rem",
-    marginRight: noSpace ? undefined : "0.25rem",
-    ...widthStyle,
+    marginLeft: noSpace ? undefined : "0",
+    marginRight: noSpace ? undefined : "0",
   });
 
   const safeAnswer = escapeHtml(answer);

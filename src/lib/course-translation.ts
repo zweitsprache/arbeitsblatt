@@ -431,6 +431,10 @@ function forEachBlockTranslationField(
       // Dialogue blocks contain German learning exercises — never translated
       break;
 
+    case "lueckenzeilen":
+      // Lueckenzeilen blocks contain German learning exercises — never translated
+      break;
+
     case "article-training": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;
@@ -564,6 +568,21 @@ function forEachBlockTranslationField(
         });
         add("caption", () => block.caption, (v) => {
           if (block.caption !== undefined) block.caption = v;
+        });
+      }
+      break;
+    }
+
+    case "table-cloud": {
+      if (!block.skipTranslation) {
+        add("content", () => block.content, (v) => {
+          block.content = v;
+        });
+        add("caption", () => block.caption, (v) => {
+          if (block.caption !== undefined) block.caption = v;
+        });
+        add("cloudRows", () => block.cloudRows, (v) => {
+          block.cloudRows = v;
         });
       }
       break;

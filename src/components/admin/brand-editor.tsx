@@ -118,6 +118,10 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2Weight: "" as string | number,
     h3Size: "",
     h3Weight: "" as string | number,
+    h1BottomMargin: "",
+    h2BottomMargin: "",
+    h3BottomMargin: "",
+    h4BottomMargin: "",
     h1NumberFormat: "numbers",
     h2NumberFormat: "numbers",
     h3NumberFormat: "numbers",
@@ -182,6 +186,10 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2Weight: data.h2Weight ?? "",
           h3Size: stripPx(data.h3Size),
           h3Weight: data.h3Weight ?? "",
+          h1BottomMargin: stripPx(data.h1BottomMargin),
+          h2BottomMargin: stripPx(data.h2BottomMargin),
+          h3BottomMargin: stripPx(data.h3BottomMargin),
+          h4BottomMargin: stripPx(data.h4BottomMargin),
           h1NumberFormat: data.h1NumberFormat || "numbers",
           h2NumberFormat: data.h2NumberFormat || "numbers",
           h3NumberFormat: data.h3NumberFormat || "numbers",
@@ -305,6 +313,10 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2Weight: form.h2Weight !== "" ? Number(form.h2Weight) : null,
         h3Size: ensurePx(String(form.h3Size)),
         h3Weight: form.h3Weight !== "" ? Number(form.h3Weight) : null,
+        h1BottomMargin: ensurePx(String(form.h1BottomMargin)),
+        h2BottomMargin: ensurePx(String(form.h2BottomMargin)),
+        h3BottomMargin: ensurePx(String(form.h3BottomMargin)),
+        h4BottomMargin: ensurePx(String(form.h4BottomMargin)),
         h1NumberFormat: form.h1NumberFormat,
         h2NumberFormat: form.h2NumberFormat,
         h3NumberFormat: form.h3NumberFormat,
@@ -785,6 +797,48 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   value={form.h3Weight}
                   onChange={(e) => update("h3Weight", e.target.value ? Number(e.target.value) : "")}
                   placeholder="800"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h1BottomMargin")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.h1BottomMargin}
+                  onChange={(e) => update("h1BottomMargin", e.target.value)}
+                  placeholder="24"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h2BottomMargin")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.h2BottomMargin}
+                  onChange={(e) => update("h2BottomMargin", e.target.value)}
+                  placeholder="24"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-3">
+              <div>
+                <Label>{t("h3BottomMargin")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.h3BottomMargin}
+                  onChange={(e) => update("h3BottomMargin", e.target.value)}
+                  placeholder="24"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h4BottomMargin")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.h4BottomMargin}
+                  onChange={(e) => update("h4BottomMargin", e.target.value)}
+                  placeholder="24"
                   className="mt-1"
                 />
               </div>

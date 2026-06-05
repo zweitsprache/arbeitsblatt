@@ -9,8 +9,16 @@ type CrosswordLayoutProps = {
   showSolutions?: boolean;
   clueTextClassName?: string;
   cellSize?: string;
+  fixedCellSize?: boolean;
+  clueNumberFormat?: string;
+  renderClueNumber?: (clueNumber: number) => React.ReactNode;
   clueListClassName?: string;
 };
+
+function formatClueNumberLabel(index: number, format: string | null | undefined): string {
+  if (format === "numbers-with-period") return `${index}.`;
+  return String(index).padStart(2, "0");
+}
 
 export function CrosswordLayout({
   grid,
@@ -18,7 +26,10 @@ export function CrosswordLayout({
   showSolutions = false,
   clueTextClassName = "text-foreground",
   cellSize = "2rem",
-  clueListClassName = "space-y-2",
+  fixedCellSize = false,
+  clueNumberFormat = "default",
+  renderClueNumber,
+  clueListClassName = "",
 }: CrosswordLayoutProps) {
   const normalized = React.useMemo(() => {
     if (grid.length === 0 || grid[0]?.length === 0) {
@@ -72,13 +83,21 @@ export function CrosswordLayout({
   if (normalized.grid.length === 0) return null;
 
   const columnCount = normalized.grid[0]?.length ?? 0;
-  const effectiveCellSize = `min(${cellSize}, calc((100% - 1px) / ${columnCount}))`;
+  const effectiveCellSize = fixedCellSize
+    ? cellSize
+    : `min(${cellSize}, calc((100% - 1px) / ${columnCount}))`;
+  const fixedTableWidth = `calc(${cellSize} * ${columnCount})`;
 
   return (
     <div className="flex flex-col gap-4">
       <table
         className="border-collapse bg-transparent"
-        style={{ borderSpacing: 0, tableLayout: "fixed", maxWidth: "100%" }}
+        style={{
+          borderSpacing: 0,
+          tableLayout: "fixed",
+          maxWidth: "100%",
+          width: fixedCellSize ? fixedTableWidth : undefined,
+        }}
       >
         <colgroup>
           {Array.from({ length: columnCount }).map((_, index) => (
@@ -130,12 +149,25 @@ export function CrosswordLayout({
           ))}
         </tbody>
       </table>
-      <div className={`min-w-0 ${clueListClassName}`}>
-        {normalized.placements.map((placement) => (
-          <div key={`${placement.itemId}-${placement.direction}`} className="flex items-start gap-2 text-sm leading-5">
-            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none text-foreground">
-              {placement.clueNumber}
-            </span>
+      <div className={`min-w-0 pt-3 ${clueListClassName}`}>
+        {normalized.placements.map((placement, index) => (
+          <div
+            key={`${placement.itemId}-${placement.direction}`}
+            className={`flex items-start gap-2 leading-5 py-2 ${index > 0 ? "border-t border-border" : "pt-0"}`}
+          >
+            {renderClueNumber ? (
+              renderClueNumber(placement.clueNumber)
+            ) : (
+              clueNumberFormat === "numbers-with-period" ? (
+                <span className="w-6 shrink-0 font-medium leading-none tabular-nums text-foreground">
+                  {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
+                </span>
+              ) : (
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none tabular-nums text-foreground">
+                  {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
+                </span>
+              )
+            )}
             <span className={clueTextClassName}>{placement.hint}</span>
           </div>
         ))}

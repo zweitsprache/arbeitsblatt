@@ -242,6 +242,13 @@ export function extractBlocksText(
         }
         break;
 
+      case "lueckenzeilen":
+        if (block.instruction) parts.push(block.instruction);
+        for (const item of block.items ?? []) {
+          parts.push(expandBlanks(item.text));
+        }
+        break;
+
       case "article-training":
         if (block.instruction) parts.push(block.instruction);
         for (const item of block.items ?? []) {
