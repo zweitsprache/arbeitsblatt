@@ -5125,8 +5125,8 @@ function normalizeLetterCodeChar(char: string): string | null {
   return LETTER_CODE_ALPHABET.includes(normalized) ? normalized : null;
 }
 
-function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean }> {
-  const tokens: Array<{ char: string; prefilled: boolean }> = [];
+function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean; space?: boolean }> {
+  const tokens: Array<{ char: string; prefilled: boolean; space?: boolean }> = [];
   let index = 0;
 
   while (index < pattern.length) {
@@ -5142,9 +5142,22 @@ function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: 
       continue;
     }
 
+    if (/\s/.test(pattern[index])) {
+      const last = tokens[tokens.length - 1];
+      if (tokens.length > 0 && !last?.space) {
+        tokens.push({ char: " ", prefilled: false, space: true });
+      }
+      index += 1;
+      continue;
+    }
+
     const normalized = normalizeLetterCodeChar(pattern[index]);
     if (normalized) tokens.push({ char: normalized, prefilled: false });
     index += 1;
+  }
+
+  while (tokens.length > 0 && tokens[tokens.length - 1].space) {
+    tokens.pop();
   }
 
   return tokens;
@@ -5205,6 +5218,7 @@ function LetterCodeView({
     const letters = new Set<string>();
     for (const item of parsedItems) {
       for (const token of item.tokens) {
+        if (token.space) continue;
         letters.add(token.char);
       }
     }
@@ -5262,7 +5276,11 @@ function LetterCodeView({
       {parsedItems.length > 0 ? <SectionGap size="medium" /> : null}
       <div className="space-y-2">
         {parsedItems.map((item, itemIndex) => (
-          <div key={item.id || itemIndex} className="flex items-start gap-3 rounded border border-border/70 px-3 py-2">
+          <div
+            key={item.id || itemIndex}
+            className="flex items-start gap-3 rounded border border-border/70 px-3 py-2"
+            style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
+          >
             <ItemNumberBadge index={itemIndex + 1} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex min-h-[20px] items-center">
@@ -5270,6 +5288,16 @@ function LetterCodeView({
               </div>
               <div className="flex flex-wrap" style={{ gap: `${bankGapPx}px` }}>
                 {item.tokens.map((token, tokenIndex) => {
+                  if (token.space) {
+                    return (
+                      <div
+                        key={`${item.id}-${tokenIndex}`}
+                        className="shrink-0 border border-border bg-muted"
+                        style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                        aria-hidden="true"
+                      />
+                    );
+                  }
                   const number = numberMap.get(token.char);
                   return (
                     <div

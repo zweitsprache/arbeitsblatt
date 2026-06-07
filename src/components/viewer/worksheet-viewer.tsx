@@ -97,7 +97,8 @@ export function WorksheetViewer({
     for (const block of visibleBlocks) {
       if (
         (block.type === "heading" && block.level === 3) ||
-        (block.type === "numbered-heading" && block.level === 3)
+        (block.type === "numbered-heading" && block.level === 3) ||
+        (block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering)
       ) {
         instructionCount = 0;
         continue;
@@ -195,7 +196,10 @@ export function WorksheetViewer({
   // print-page defaults like pagination placeholders), then resolved profile, then empty
   const legacyBrandSettings = settings.brandSettings;
   const brandSettings = {
-    logo: legacyBrandSettings?.logo || resolvedProfile.logo,
+    // Logo is owned by the brand profile (with per-worksheet brandOverrides applied).
+    // Prefer it over the persisted brandSettings.logo, which is only a denormalized copy
+    // of a brand default and can go stale (e.g. an edoomio fallback saved for another brand).
+    logo: resolvedProfile.logo || legacyBrandSettings?.logo,
     organization: legacyBrandSettings?.organization || resolvedProfile.organization,
     teacher: legacyBrandSettings?.teacher || resolvedProfile.teacher,
     headerLeft: "",

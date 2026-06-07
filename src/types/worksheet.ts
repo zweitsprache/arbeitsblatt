@@ -1807,6 +1807,15 @@ const DEFAULT_BRAND_SETTINGS_BASE: Record<string, BrandSettings> = {
     footerCenter: "",
     footerRight: "",
   },
+  "theresia-banz": {
+    logo: "/logo/theresia_banz.svg",
+    organization: "",
+    teacher: "",
+    headerRight: "",
+    footerLeft: "",
+    footerCenter: "",
+    footerRight: "",
+  },
 };
 
 export const DEFAULT_BRAND_SETTINGS: Record<string, BrandSettings> = new Proxy(DEFAULT_BRAND_SETTINGS_BASE, {
@@ -2052,7 +2061,7 @@ export interface WorksheetDocument {
 export const DEFAULT_SETTINGS: WorksheetSettings = {
   pageSize: "a4",
   orientation: "portrait",
-  margins: { top: 20, right: 20, bottom: 113, left: 20 },
+  margins: { top: 20, right: 20, bottom: 95, left: 20 },
   showHeader: true,
   showFooter: true,
   headerText: "",

@@ -1902,8 +1902,8 @@ function normalizeLetterCodeChar(char: string): string | null {
   return LETTER_CODE_ALPHABET.includes(normalized) ? normalized : null;
 }
 
-function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean }> {
-  const tokens: Array<{ char: string; prefilled: boolean }> = [];
+function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: boolean; space?: boolean }> {
+  const tokens: Array<{ char: string; prefilled: boolean; space?: boolean }> = [];
   let index = 0;
 
   while (index < pattern.length) {
@@ -1919,9 +1919,22 @@ function parseLetterCodeWord(pattern: string): Array<{ char: string; prefilled: 
       continue;
     }
 
+    if (/\s/.test(pattern[index])) {
+      const last = tokens[tokens.length - 1];
+      if (tokens.length > 0 && !last?.space) {
+        tokens.push({ char: " ", prefilled: false, space: true });
+      }
+      index += 1;
+      continue;
+    }
+
     const normalized = normalizeLetterCodeChar(pattern[index]);
     if (normalized) tokens.push({ char: normalized, prefilled: false });
     index += 1;
+  }
+
+  while (tokens.length > 0 && tokens[tokens.length - 1].space) {
+    tokens.pop();
   }
 
   return tokens;
@@ -2036,6 +2049,16 @@ function LetterCodeRenderer({ block }: { block: LetterCodeBlock }) {
                 </div>
                 <div className="flex flex-wrap" style={{ gap: `${bankGapPx}px` }}>
                   {item.tokens.map((token, tokenIndex) => {
+                    if (token.space) {
+                      return (
+                        <div
+                          key={`${item.id}-${tokenIndex}`}
+                          className="shrink-0 border border-border bg-muted"
+                          style={{ width: `${cellSizePx}px`, aspectRatio: "1 / 1" }}
+                          aria-hidden="true"
+                        />
+                      );
+                    }
                     const number = numberMap.get(token.char);
                     return (
                       <div
