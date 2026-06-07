@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { FilePen, Home } from "lucide-react";
+import { FilePen, Home, Store } from "lucide-react";
 import { routing } from "@/i18n/routing";
 
 const UserButton = dynamic(
@@ -25,6 +25,7 @@ export function AppHeader() {
   const locale = useLocale();
   const isDashboardHome = pathname === "/";
   const isEditorPage = pathname.startsWith("/editor");
+  const isPublicLibraryPage = pathname.startsWith("/library/");
 
   function switchLocale(newLocale: string) {
     router.replace(pathname, { locale: newLocale });
@@ -42,6 +43,12 @@ export function AppHeader() {
         <div className="flex items-center gap-2 text-foreground">
           <FilePen className="h-4 w-4" />
           <span className="text-base font-semibold tracking-tight">Editor</span>
+        </div>
+      )}
+      {!isDashboardHome && !isEditorPage && isPublicLibraryPage && (
+        <div className="flex items-center gap-2 text-foreground">
+          <Store className="h-4 w-4" />
+          <span className="text-base font-semibold tracking-tight">PDF Library</span>
         </div>
       )}
 
