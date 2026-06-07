@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   serverExternalPackages: [
     "@resvg/resvg-js",
+    "@napi-rs/canvas",
     "@sparticuz/chromium-min",
     "puppeteer-core",
     "@remotion/bundler",

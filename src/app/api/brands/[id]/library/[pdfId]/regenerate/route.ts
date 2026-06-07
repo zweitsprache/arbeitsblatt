@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { generatePDFPreview } from "@/lib/pdf-preview";
 
 export async function POST(
   req: NextRequest,
@@ -50,6 +51,13 @@ export async function POST(
       { access: "public" }
     );
 
+    let previewImagePath: string | null = null;
+    try {
+      previewImagePath = await generatePDFPreview(pdfBlob, brandId, pdf.title);
+    } catch (previewError) {
+      console.error("[library/regenerate] Preview generation failed:", previewError);
+    }
+
     // Delete old blob if it exists
     try {
       const { del } = await import("@vercel/blob");
@@ -63,6 +71,7 @@ export async function POST(
       where: { id: pdfId },
       data: {
         blobPath: blobResponse.url,
+        previewImagePath: previewImagePath || pdf.previewImagePath,
         pdfGeneratedAt: new Date(),
         worksheetUpdatedAt: new Date(),
       },

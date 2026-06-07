@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { put } from "@vercel/blob";
+import path from "node:path";
 
 export async function generatePDFPreview(
   pdfBlob: Blob,
@@ -7,36 +8,8 @@ export async function generatePDFPreview(
   title: string
 ): Promise<string | null> {
   try {
-    // Create a simple preview image with title
-    // In production, you can integrate with a service like pdf2pic or use a Lambda function
-    const width = 400;
-    const height = 600;
+    const pngBuffer = await renderFirstPDFPage(pdfBlob);
 
-    const svg = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#f3f4f6;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#e5e7eb;stop-opacity:1" />
-          </linearGradient>
-        </defs>
-        <rect width="${width}" height="${height}" fill="url(#grad)"/>
-        <rect width="${width}" height="120" fill="#3b82f6"/>
-        <image href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='12' y1='19' x2='12' y2='5'/%3E%3C/svg%3E" x="160" y="20" width="80" height="80"/>
-        <text x="${width / 2}" y="320" font-size="24" font-weight="bold" text-anchor="middle" fill="#1f2937" font-family="Arial">
-          ${escapeXml(title.substring(0, 30))}
-        </text>
-        <text x="${width / 2}" y="550" font-size="12" text-anchor="middle" fill="#6b7280" font-family="Arial">
-          PDF Document
-        </text>
-      </svg>
-    `;
-
-    const pngBuffer = await sharp(Buffer.from(svg))
-      .png()
-      .toBuffer();
-
-    // Upload to Vercel Blob
     const previewBlob = await put(
       `library/${brandId}/preview_${Date.now()}.png`,
       pngBuffer,
@@ -45,9 +18,79 @@ export async function generatePDFPreview(
 
     return previewBlob.url;
   } catch (error) {
-    console.error("Error generating PDF preview:", error);
+    console.error("[generatePDFPreview] Failed:", error);
+    return uploadFallbackPreview(brandId, title);
+  }
+}
+
+async function renderFirstPDFPage(pdfBlob: Blob): Promise<Buffer> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const runtimeRequire = eval("require") as NodeRequire;
+  const { createCanvas } = runtimeRequire("@napi-rs/canvas") as typeof import("@napi-rs/canvas");
+
+  pdfjs.GlobalWorkerOptions.workerSrc = runtimeRequire.resolve(
+    "pdfjs-dist/legacy/build/pdf.worker.mjs"
+  );
+
+  const data = new Uint8Array(await pdfBlob.arrayBuffer());
+  const wasmUrl =
+    path.dirname(runtimeRequire.resolve("pdfjs-dist/wasm/openjpeg.wasm")) +
+    path.sep;
+  const document = await pdfjs.getDocument({ data, wasmUrl }).promise;
+  const page = await document.getPage(1);
+  const viewport = page.getViewport({ scale: 1 });
+  const scale = 800 / viewport.width;
+  const scaledViewport = page.getViewport({ scale });
+  const canvas = createCanvas(
+    Math.ceil(scaledViewport.width),
+    Math.ceil(scaledViewport.height)
+  );
+  const canvasContext = canvas.getContext("2d");
+
+  await page.render({
+    canvas: canvas as never,
+    canvasContext: canvasContext as never,
+    viewport: scaledViewport,
+  }).promise;
+
+  page.cleanup();
+  await document.cleanup();
+
+  return canvas.toBuffer("image/png");
+}
+
+async function uploadFallbackPreview(
+  brandId: string,
+  title: string
+): Promise<string | null> {
+  try {
+    const pngBuffer = await createFallbackPreview(title);
+    const previewBlob = await put(
+      `library/${brandId}/preview_${Date.now()}.png`,
+      pngBuffer,
+      { access: "public", contentType: "image/png" }
+    );
+    return previewBlob.url;
+  } catch (error) {
+    console.error("[generatePDFPreview] Fallback failed:", error);
     return null;
   }
+}
+
+async function createFallbackPreview(title: string): Promise<Buffer> {
+  const width = 400;
+  const height = 600;
+  const safeTitle = escapeXml(title.substring(0, 40));
+
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${width}" height="${height}" fill="#f3f4f6"/>
+  <rect width="${width}" height="120" fill="#3b82f6"/>
+  <text x="${width / 2}" y="75" font-size="48" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial, sans-serif">PDF</text>
+  <text x="${width / 2}" y="320" font-size="22" font-weight="bold" text-anchor="middle" fill="#1f2937" font-family="Arial, sans-serif">${safeTitle}</text>
+  <text x="${width / 2}" y="560" font-size="12" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif">PDF Document</text>
+</svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 function escapeXml(str: string): string {
@@ -58,4 +101,3 @@ function escapeXml(str: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
-

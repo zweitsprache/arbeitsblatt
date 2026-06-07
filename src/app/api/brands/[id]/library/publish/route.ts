@@ -104,8 +104,13 @@ export async function POST(
       contentType: "application/pdf",
     });
 
-    // Generate preview image
-    const previewImagePath = await generatePDFPreview(file, brandId, title);
+    // Generate preview image (non-fatal if it fails)
+    let previewImagePath: string | null = null;
+    try {
+      previewImagePath = await generatePDFPreview(file, brandId, title);
+    } catch (previewErr) {
+      console.error("[library/publish] Preview generation threw:", previewErr);
+    }
 
     const pdfEntry = await prisma.brandLibraryPDF.create({
       data: {
@@ -139,8 +144,9 @@ export async function POST(
     return NextResponse.json(pdfEntry, { status: 201 });
   } catch (error) {
     console.error("[library/publish] Error:", error);
+    const message = error instanceof Error ? error.message : "Failed to publish PDF";
     return NextResponse.json(
-      { error: "Failed to publish PDF" },
+      { error: message },
       { status: 500 }
     );
   }
