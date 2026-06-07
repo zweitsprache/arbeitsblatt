@@ -10256,6 +10256,36 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
     });
   };
 
+  const addBlankItem = () => {
+    const newItems = [
+      ...block.items,
+      {
+        id: `dl${Date.now()}`,
+        speaker: "",
+        icon: "circle" as DialogueSpeakerIcon,
+        text: "",
+      },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const insertBlankItem = (index: number) => {
+    const newItems = [...block.items];
+    newItems.splice(index + 1, 0, {
+      id: `dl${Date.now()}`,
+      speaker: "",
+      icon: "circle" as DialogueSpeakerIcon,
+      text: "",
+    });
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div className="space-y-2">
@@ -10375,6 +10405,15 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => insertBlankItem(i)}
+                  title={t("insertBlankItem")}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -10392,6 +10431,9 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
         ))}
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+        <Button variant="outline" size="sm" onClick={addBlankItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addBlankItem")}
         </Button>
       </div>
       <div className="space-y-2">
