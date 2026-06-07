@@ -375,7 +375,7 @@ async function renderInlineHtml(html: string, isLandscape: boolean): Promise<str
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: viewportW, height: viewportH, deviceScaleFactor: 2 });
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 15000 });
+    await page.setContent(html, { waitUntil: "networkidle0" as any, timeout: 15000 });
     await page.evaluateHandle("document.fonts.ready");
 
     // Wait for images to load

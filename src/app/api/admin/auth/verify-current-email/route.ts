@@ -38,7 +38,7 @@ export async function POST() {
     return NextResponse.json({ error: "Authenticated user mismatch." }, { status: 403 });
   }
 
-  const updateResult = await auth.admin.updateUser({
+  const updateResult = await (auth as any).admin.updateUser({
     userId: sessionUser.id,
     data: {
       emailVerified: true,
