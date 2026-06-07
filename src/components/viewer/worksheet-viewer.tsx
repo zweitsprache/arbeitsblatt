@@ -525,33 +525,43 @@ export function WorksheetViewer({
         </>
       ) : (
         /* Online mode */
-        <div
-          className="mx-auto py-8 px-10 md:px-16 lg:px-24"
-          style={{ maxWidth: onlinePageWidth }}
-        >
-          <div className="bg-background rounded-xl shadow-sm border py-8 px-12 md:px-20 lg:px-24 mb-4">
-            <div className="flex items-center gap-3 mb-1">
-              <Image
-                src="/logo/arbeitsblatt_logo_icon.svg"
-                alt="Arbeitsblatt"
-                width={28}
-                height={28}
-              />
-              <h1 className="font-bold" style={{ fontSize: 18 }}>{title}</h1>
-              <div className="ml-auto">
-                <WorksheetLanguageSwitcher
-                  contentLocale={contentLocale}
-                  availableLocales={availableLocales}
-                  setContentLocale={setContentLocale}
-                />
+        <div className="flex flex-col min-h-screen">
+          {/* Mobile header */}
+          <div className="sticky top-0 z-50 bg-background border-b md:border-0 md:bg-transparent md:relative md:z-auto">
+            <div className="mx-auto px-4 py-2 md:px-16 lg:px-24 md:py-0" style={{ maxWidth: onlinePageWidth }}>
+              <div className="flex items-center gap-3">
+                {brandSettings.logo && (
+                  <Image
+                    src={brandSettings.logo}
+                    alt="Brand"
+                    width={20}
+                    height={20}
+                  />
+                )}
+                <h1 className="font-normal" style={{ fontSize: 12 }}>{title}</h1>
+                <div className="ml-auto">
+                  <WorksheetLanguageSwitcher
+                    contentLocale={contentLocale}
+                    availableLocales={availableLocales}
+                    setContentLocale={setContentLocale}
+                  />
+                </div>
               </div>
             </div>
-            {settings.showHeader && settings.headerText && (
-              <p className="text-sm text-muted-foreground mt-2">{settings.headerText}</p>
-            )}
           </div>
 
-          <div className="bg-background rounded-xl shadow-sm border py-8 px-12 md:px-20 lg:px-24">
+          {/* Content area */}
+          <div
+            className="flex-1 mx-auto w-full py-6 px-4 md:px-16 lg:px-24 sm:py-8"
+            style={{ maxWidth: onlinePageWidth }}
+          >
+            {settings.showHeader && settings.headerText && (
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground">{settings.headerText}</p>
+              </div>
+            )}
+
+            <div>
             {/* Blocks */}
             <div
               className="worksheet-blocks-container flex flex-col gap-5"
@@ -611,23 +621,24 @@ export function WorksheetViewer({
                 {settings.footerText}
               </div>
             )}
-          </div>
-
-          {hasInteractiveBlocks && (
-            <div className="flex items-center justify-center gap-3 mt-6 mb-8">
-              {!showResults ? (
-                <Button size="lg" onClick={handleCheckAnswers} className="gap-2">
-                  <CheckCircle2 className="h-5 w-5" />
-                  {t("checkAnswers")}
-                </Button>
-              ) : (
-                <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
-                  <RotateCcw className="h-5 w-5" />
-                  {t("tryAgain")}
-                </Button>
-              )}
             </div>
-          )}
+
+            {hasInteractiveBlocks && (
+              <div className="flex items-center justify-center gap-3 mt-6 mb-8">
+                {!showResults ? (
+                  <Button size="lg" onClick={handleCheckAnswers} className="gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                    {t("checkAnswers")}
+                  </Button>
+                ) : (
+                  <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
+                    <RotateCcw className="h-5 w-5" />
+                    {t("tryAgain")}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

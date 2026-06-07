@@ -1829,12 +1829,12 @@ const BRAND_FONTS_BASE: Record<string, BrandFonts> = {
   },
   lingostar: {
     bodyFont: "Encode Sans, sans-serif",
-    headlineFont: "Merriweather, serif",
-    headlineWeight: 400,
+    headlineFont: "Encode Sans, sans-serif",
+    headlineWeight: 600,
     subHeadlineFont: "Encode Sans, sans-serif",
     subHeadlineWeight: 600,
     headerFooterFont: "Encode Sans, sans-serif",
-    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap",
+    googleFontsUrl: "https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600&display=swap",
     primaryColor: "#3a4f40",
   },
   "agi-frauenfeld": {

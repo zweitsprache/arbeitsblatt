@@ -2880,6 +2880,7 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
   showResults,
   accentColor,
   showSolutions = false,
+  interactiveColor,
   instructionIndex,
 }: {
   block: MultipleChoiceBlock;
@@ -2890,15 +2891,18 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
   showResults: boolean;
   showSolutions?: boolean;
   accentColor?: string | null;
+  interactiveColor?: string;
   instructionIndex?: number;
 })  {
   const t = useTranslations("viewer");
   const selected = (answer as string[] | undefined) || [];
   const instructionText = (block.instruction || "").trim() || (block.allowMultiple ? "Choose the correct answers." : "Choose the correct answer.");
   const isOnline = mode === "online";
+  const isMCQAnswered = isOnline && selected.length > 0;
+  const effectiveShowResults = showResults || isMCQAnswered;
 
   const handleSelect = (optId: string) => {
-    if (!interactive || showResults) return;
+    if (!interactive) return;
     if (block.allowMultiple) {
       const next = selected.includes(optId)
         ? selected.filter((id) => id !== optId)
@@ -2922,17 +2926,17 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
       ) : (
         <InstructionRow instruction={instructionText} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
       )}
-      <div className="flex min-h-[49px] items-center border-b font-medium text-foreground">
+      <div className="flex min-h-[49px] items-center font-medium text-foreground">
         {block.question}
       </div>
-      <div>
+      <div className="flex flex-col gap-2">
         {block.options.map((opt, i) => {
           const isSelected = selected.includes(opt.id);
           const isCorrect = opt.isCorrect;
 
           let rowClass = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
 
-          if (showResults) {
+          if (effectiveShowResults) {
             if (isCorrect) {
               rowClass += " bg-green-50";
             } else if (isSelected && !isCorrect) {
@@ -2942,19 +2946,39 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
 
           const indicatorClass = !isSelected
             ? CONTROL_BOX_CLASS
-            : showResults && !isCorrect
+            : effectiveShowResults && !isCorrect
               ? `${CONTROL_BOX_CLASS} border-red-500 bg-red-500 text-white`
-              : interactive && !showResults
+              : interactive && !effectiveShowResults
                 ? `${CONTROL_BOX_CLASS} ${s.controlBoxActive}`
                 : CONTROL_BOX_FILLED_CLASS;
+
+          const isMobileButton = isOnline;
+          const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+          let bgColor = isOnline ? `${resolvedInteractiveColor}15` : undefined;
+
+          if (effectiveShowResults && isOnline) {
+            if (isCorrect) {
+              bgColor = "#dcfce7";
+            } else if (isSelected && !isCorrect) {
+              bgColor = "#fee2e2";
+            }
+          }
+
+          const containerClass = isMobileButton
+            ? `flex min-h-auto flex-row items-center gap-3 px-4 py-2 rounded-sm`
+            : `${rowClass} ${interactive && !effectiveShowResults ? "cursor-pointer" : ""}`.trim();
+          const containerStyle = isMobileButton && isOnline
+            ? { backgroundColor: bgColor }
+            : undefined;
 
           return (
             <div
               key={opt.id}
-              className={`${rowClass} ${interactive && !showResults ? "cursor-pointer" : ""}`.trim()}
+              className={containerClass}
+              style={containerStyle}
               onClick={() => handleSelect(opt.id)}
               role={interactive ? "button" : undefined}
-              tabIndex={interactive && !showResults ? 0 : undefined}
+              tabIndex={interactive && !effectiveShowResults ? 0 : undefined}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -2962,19 +2986,17 @@ function WritingRowsView({ block }: { block: WritingRowsBlock }) {
                 }
               }}
             >
-              <ItemNumberBadge index={i + 1} className="shrink-0" />
-              {showSolutions && isCorrect && !interactive ? (
-                <div className={CONTROL_BOX_FILLED_CLASS} />
-              ) : (
-                <div className={indicatorClass} />
+              <span className="hidden md:block">
+                <ItemNumberBadge index={i + 1} className="shrink-0" />
+              </span>
+              {!isOnline && (
+                showSolutions && isCorrect && !interactive ? (
+                  <div className={CONTROL_BOX_FILLED_CLASS} />
+                ) : (
+                  <div className={indicatorClass} />
+                )
               )}
               <span className={`flex-1${showSolutions && isCorrect ? ' text-green-800 font-semibold' : ''}`}>{opt.text}</span>
-              {showResults && isCorrect && (
-                <span className="text-cv-xs font-medium text-green-600">{t("correctResult")}</span>
-              )}
-              {showResults && isSelected && !isCorrect && (
-                <span className="text-cv-xs font-medium text-red-600">{t("incorrectResult")}</span>
-              )}
             </div>
           );
         })}
@@ -4550,6 +4572,7 @@ function MCQMatrixView({
   isNonLatin = false,
   showResults = false,
   accentColor,
+  interactiveColor,
   instructionIndex,
 }: {
   block: MCQMatrixBlock;
@@ -4567,8 +4590,10 @@ function MCQMatrixView({
   bodyFontSize?: string;
   isNonLatin?: boolean;
   accentColor?: string | null;
+  interactiveColor?: string;
   instructionIndex?: number;
 }) {
+  const [currentStatementIndex, setCurrentStatementIndex] = React.useState(0);
   const answers = (answer as Record<string, string[]> | undefined) || {};
   const fontFamily = bodyFont || "inherit";
   const isOnline = mode === "online";
@@ -4576,7 +4601,7 @@ function MCQMatrixView({
   const wordBankItems = (block.wordBank ?? []).map((item) => item.trim()).filter(Boolean);
 
   const handleSelect = (statementId: string, optionId: string) => {
-    if (!interactive || showResults) return;
+    if (!interactive) return;
     if (statementId === exampleStatementId) return;
     const selected = answers[statementId] || [];
     const next = selected.includes(optionId)
@@ -4599,12 +4624,113 @@ function MCQMatrixView({
 
     return exampleStatement ? [exampleStatement, ...orderedRemainingStatements] : orderedRemainingStatements;
   })();
+
+  const currentStatement = orderedStatements[currentStatementIndex];
+  const t = useTranslations("viewer");
   const showAfterOptionsColumn = orderedStatements.some((statement) => (statement.afterOptionsText || "").trim().length > 0);
 
   return (
-    <div className="space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
-      <div>
-        {block.instruction && (
+    <div>
+      {/* Mobile wizard view */}
+      <div className="md:hidden">
+        <div>
+          {block.instruction && (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <p className="min-w-0 flex-1">{block.instruction}</p>
+            </div>
+          )}
+        </div>
+
+        {currentStatement && (
+          <div className="mt-4">
+            {/* Statement */}
+            <div className="flex items-center font-medium text-foreground">
+              <span dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(currentStatement.text) }} />
+            </div>
+
+            {/* Options as buttons */}
+            <div className="flex flex-col gap-2 mt-2">
+              {block.options.map((option) => {
+                const isSelected = (answers[currentStatement.id] || []).includes(option.id);
+                const isCorrect = currentStatement.correctOptionIds.includes(option.id);
+                const effectiveShowResults = showResults || isSelected;
+                const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+
+                let bgColor = `${resolvedInteractiveColor}15`;
+                if (effectiveShowResults && isOnline) {
+                  if (isCorrect) {
+                    bgColor = "#dcfce7";
+                  } else if (isSelected && !isCorrect) {
+                    bgColor = "#fee2e2";
+                  }
+                }
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className="flex items-center gap-3 px-4 h-9 rounded-sm text-left w-full"
+                    style={{ backgroundColor: bgColor }}
+                    onClick={() => handleSelect(currentStatement.id, option.id)}
+                    disabled={!interactive}
+                  >
+                    <span className="flex-1">{option.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Navigation buttons with progress dots */}
+            <div className="flex gap-2 justify-between items-center mt-6">
+              <button
+                type="button"
+                onClick={() => setCurrentStatementIndex(Math.max(0, currentStatementIndex - 1))}
+                disabled={currentStatementIndex === 0}
+                className="p-0 flex items-center justify-center border bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ width: "48px", height: "24px", lineHeight: "1", padding: "0", borderRadius: "2px" }}
+              >
+                ←
+              </button>
+
+              {/* Progress dots */}
+              <div className="flex gap-1">
+                {orderedStatements.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setCurrentStatementIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentStatementIndex
+                        ? "bg-primary"
+                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    }`}
+                    aria-label={`Go to statement ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentStatementIndex(Math.min(orderedStatements.length - 1, currentStatementIndex + 1))}
+                disabled={currentStatementIndex === orderedStatements.length - 1}
+                className="p-0 flex items-center justify-center border bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ width: "48px", height: "24px", lineHeight: "1", padding: "0", borderRadius: "2px" }}
+              >
+                →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block space-y-2 text-cv-sm" style={{ fontFamily, ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}>
+        <div>
+          {block.instruction && (
           <>
             {isOnline ? (
               <div
@@ -4712,6 +4838,7 @@ function MCQMatrixView({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -7200,6 +7327,7 @@ function MCQRowsView({
   showSolutions = false,
   mode = "online",
   accentColor,
+  interactiveColor,
   instructionIndex,
 }: {
   block: MCQRowsBlock;
@@ -7210,8 +7338,10 @@ function MCQRowsView({
   showSolutions?: boolean;
   mode?: ViewMode;
   accentColor?: string | null;
+  interactiveColor?: string;
   instructionIndex?: number;
 }) {
+  const [currentItemIndex, setCurrentItemIndex] = React.useState(0);
   const selections = (answer as Record<string, string> | undefined) || {};
   const isOnline = mode === "online";
   const exampleItemId = block.showFirstAsExample ? block.items[0]?.id : undefined;
@@ -7224,11 +7354,14 @@ function MCQRowsView({
     return value.length > 0 ? value : String.fromCharCode(65 + index);
   };
 
+  const currentItem = block.items[currentItemIndex];
+
   return (
     <div>
-      {block.instruction && (
-        <>
-          {isOnline ? (
+      {/* Mobile wizard view */}
+      <div className="md:hidden">
+        <div>
+          {block.instruction && (
             <div
               className={CONSISTENT_INSTRUCTION_ROW_CLASS}
               style={{ color: accentColor || "var(--color-primary)" }}
@@ -7236,16 +7369,122 @@ function MCQRowsView({
               <InstructionBadge instructionIndex={instructionIndex} />
               <p className="min-w-0 flex-1">{block.instruction}</p>
             </div>
-          ) : (
-            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
           )}
-          {block.items.length > 0 && <SectionGap size="small" />}
-        </>
-      )}
+        </div>
 
-      {block.items.map((item, index) => {
-        const selectedChoiceId = selections[item.id] || "";
-        const isExampleRow = item.id === exampleItemId;
+        {currentItem && (
+          <div className="mt-4">
+            {/* Item text */}
+            <div className="flex items-center font-medium text-foreground">
+              <span dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(currentItem.text) }} />
+            </div>
+
+            {/* Choices as buttons */}
+            <div className="flex flex-col gap-2 mt-2">
+              {currentItem.choices.map((choice, choiceIndex) => {
+                const isSelected = selections[currentItem.id] === choice.id;
+                const isCorrect = currentItem.correctChoiceId === choice.id;
+                const effectiveShowResults = showResults || isSelected;
+                const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
+                const choiceLabel = getChoiceLabel(choice.label, choiceIndex);
+
+                let bgColor = `${resolvedInteractiveColor}15`;
+                if (effectiveShowResults && isOnline) {
+                  if (isCorrect) {
+                    bgColor = "#dcfce7";
+                  } else if (isSelected && !isCorrect) {
+                    bgColor = "#fee2e2";
+                  }
+                }
+
+                return (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    className="flex items-center gap-3 px-4 py-2 rounded-sm text-left w-full"
+                    style={{ backgroundColor: bgColor }}
+                    onClick={() => {
+                      if (!interactive) return;
+                      onAnswer({ ...selections, [currentItem.id]: choice.id });
+                    }}
+                    disabled={!interactive}
+                  >
+                    <span className="text-xs font-bold uppercase text-muted-foreground shrink-0">
+                      {choiceLabel}
+                    </span>
+                    <span className="flex-1">{choice.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Navigation buttons with progress dots */}
+            <div className="flex gap-2 justify-between items-center mt-6">
+              <button
+                type="button"
+                onClick={() => setCurrentItemIndex(Math.max(0, currentItemIndex - 1))}
+                disabled={currentItemIndex === 0}
+                className="p-0 flex items-center justify-center border bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ width: "48px", height: "24px", lineHeight: "1", padding: "0", borderRadius: "2px" }}
+              >
+                ←
+              </button>
+
+              {/* Progress dots */}
+              <div className="flex gap-1">
+                {block.items.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setCurrentItemIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentItemIndex
+                        ? "bg-primary"
+                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    }`}
+                    aria-label={`Go to item ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentItemIndex(Math.min(block.items.length - 1, currentItemIndex + 1))}
+                disabled={currentItemIndex === block.items.length - 1}
+                className="p-0 flex items-center justify-center border bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ width: "48px", height: "24px", lineHeight: "1", padding: "0", borderRadius: "2px" }}
+              >
+                →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block">
+        <div>
+          {block.instruction && (
+            <>
+              {isOnline ? (
+                <div
+                  className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+                  style={{ color: accentColor || "var(--color-primary)" }}
+                >
+                  <InstructionBadge instructionIndex={instructionIndex} />
+                  <p className="min-w-0 flex-1">{block.instruction}</p>
+                </div>
+              ) : (
+                <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+              )}
+              {block.items.length > 0 && <SectionGap size="small" />}
+            </>
+          )}
+        </div>
+
+        {block.items.map((item, index) => {
+          const selectedChoiceId = selections[item.id] || "";
+          const isExampleRow = item.id === exampleItemId;
         return (
           <div
             key={item.id}
@@ -7325,6 +7564,7 @@ function MCQRowsView({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -11314,6 +11554,7 @@ export function ViewerBlockRenderer({
           showResults={showResults}
           showSolutions={showSolutions}
           accentColor={accentColor}
+          interactiveColor={interactiveColor}
           instructionIndex={instructionIndex}
         />
       );
