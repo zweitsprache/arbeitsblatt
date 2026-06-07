@@ -7455,17 +7455,22 @@ function DialogueRenderer({
         {block.items.map((item, i) => {
           const prevItem = i > 0 ? block.items[i - 1] : null;
           const isBlankItem = !item.speaker && !item.text;
-          const isSameSpeaker = prevItem && prevItem.icon === item.icon;
+          const prevIsBlank = !!prevItem && !prevItem.speaker && !prevItem.text;
+          const isSameSpeaker = prevItem && !prevIsBlank && prevItem.icon === item.icon;
+          // Blank items keep the same row height but carry no number, so real
+          // speaker rows stay continuously numbered across the gap.
+          const displayNumber =
+            block.items.slice(0, i + 1).filter((it) => it.speaker || it.text).length;
 
           if (isBlankItem) {
             return (
-              <div key={item.id} className="h-4 border-b" />
+              <div key={item.id} className="min-h-[37px] border-b py-2" />
             );
           }
 
           return (
           <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
-            <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
+            <ItemNumberBadge index={displayNumber} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
             {isSameSpeaker ? (
               <span className="h-5 w-5 min-w-5 shrink-0" />
             ) : (

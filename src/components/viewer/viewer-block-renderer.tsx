@@ -10121,10 +10121,23 @@ function DialogueView({
       <div>
         {block.items.map((item, i) => {
           const prevItem = i > 0 ? block.items[i - 1] : null;
-          const isSameSpeaker = prevItem && prevItem.icon === item.icon;
+          const isBlankItem = !item.speaker && !item.text;
+          const prevIsBlank = !!prevItem && !prevItem.speaker && !prevItem.text;
+          const isSameSpeaker = prevItem && !prevIsBlank && prevItem.icon === item.icon;
+          // Blank items keep the same row height but carry no number, so real
+          // speaker rows stay continuously numbered across the gap.
+          const displayNumber =
+            block.items.slice(0, i + 1).filter((it) => it.speaker || it.text).length;
+
+          if (isBlankItem) {
+            return (
+              <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT} />
+            );
+          }
+
           return (
           <div key={item.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
-            <ItemNumberBadge index={i + 1} className="shrink-0" />
+            <ItemNumberBadge index={displayNumber} className="shrink-0" />
             {isSameSpeaker ? (
               <span className="h-5 w-5 min-w-5 shrink-0" />
             ) : (

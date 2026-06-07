@@ -1640,6 +1640,7 @@
     "dialogueItems": "Dialogue lines",
     "addBlankItem": "Add blank row",
     "insertBlankItem": "Insert blank row",
+    "blankRow": "Blank row",
     "lueckenzeilenItems": "Lückenzeilen lines",
     "dialogueSpeaker": "Speaker",
     "falseLabelProp": "False column",

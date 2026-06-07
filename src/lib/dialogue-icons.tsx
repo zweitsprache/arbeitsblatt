@@ -79,8 +79,21 @@ export function DialogueSpeakerIconGlyph({
     return dialogueIconAvailability.get(assetPath) === false;
   });
 
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
+
   React.useEffect(() => {
     if (!assetPath) {
+      setHasAssetError(true);
+      return;
+    }
+
+    // The image may have already finished loading (or failed) before React
+    // hydrated and attached the onError handler — e.g. a 404 on the brand
+    // asset during the initial server-rendered HTML. In that case the error
+    // event is missed, so detect a failed load directly from the element.
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth === 0) {
+      dialogueIconAvailability.set(assetPath, false);
       setHasAssetError(true);
       return;
     }
@@ -94,6 +107,7 @@ export function DialogueSpeakerIconGlyph({
 
   return (
     <img
+      ref={imgRef}
       src={assetPath}
       alt=""
       aria-hidden="true"

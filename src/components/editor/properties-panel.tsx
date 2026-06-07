@@ -10333,7 +10333,56 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
       )}
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("dialogueItems")}</Label>
-        {block.items.map((item, i) => (
+        {block.items.map((item, i) => {
+          const isBlankItem = !item.speaker && !item.text;
+
+          if (isBlankItem) {
+            return (
+              <div key={item.id} className="space-y-1.5 border-b border-border pb-2 last:border-b-0 last:pb-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="min-w-0 flex-1 text-xs italic text-muted-foreground">{t("blankRow")}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex flex-col">
+                      <button
+                        className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => moveItem(i, "up")}
+                        disabled={i === 0}
+                      >
+                        <ArrowUpDown className="h-2.5 w-2.5 rotate-180" />
+                      </button>
+                      <button
+                        className="p-0 h-3 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        onClick={() => moveItem(i, "down")}
+                        disabled={i === block.items.length - 1}
+                      >
+                        <ArrowUpDown className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => removeItem(i)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => insertBlankItem(i)}
+                      title={t("insertBlankItem")}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
           <div key={item.id} className="space-y-1.5 border-b border-border pb-2 last:border-b-0 last:pb-0">
             <div className="flex items-center gap-1.5">
               <span className="w-6 shrink-0 text-left text-xs tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
@@ -10428,7 +10477,8 @@ function DialogueProps({ block }: { block: DialogueBlock }) {
               />
             </div>
           </div>
-        ))}
+          );
+        })}
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
         </Button>

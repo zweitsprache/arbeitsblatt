@@ -1640,6 +1640,7 @@
     "dialogueItems": "Dialogzeilen",
     "addBlankItem": "Leere Zeile hinzufügen",
     "insertBlankItem": "Leere Zeile einfügen",
+    "blankRow": "Leere Zeile",
     "lueckenzeilenItems": "Lückenzeilen",
     "dialogueSpeaker": "Sprecher",
     "falseLabelProp": "Falsch-Spalte",
