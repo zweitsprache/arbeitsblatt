@@ -4632,7 +4632,7 @@ function MCQMatrixView({
   return (
     <div>
       {/* Mobile wizard view */}
-      <div className="md:hidden">
+      <div className="md:hidden overflow-x-hidden">
         <div>
           {block.instruction && (
             <div
@@ -7359,7 +7359,7 @@ function MCQRowsView({
   return (
     <div>
       {/* Mobile wizard view */}
-      <div className="md:hidden">
+      <div className="md:hidden overflow-x-hidden">
         <div>
           {block.instruction && (
             <div

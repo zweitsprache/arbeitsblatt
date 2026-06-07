@@ -552,7 +552,7 @@ export function WorksheetViewer({
 
           {/* Content area */}
           <div
-            className="flex-1 mx-auto w-full py-6 px-4 md:px-16 lg:px-24 sm:py-8"
+            className="flex-1 mx-auto w-full py-6 px-4 md:px-16 lg:px-24 sm:py-8 overflow-x-hidden"
             style={{ maxWidth: onlinePageWidth }}
           >
             {settings.showHeader && settings.headerText && (
