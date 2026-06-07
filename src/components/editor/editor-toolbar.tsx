@@ -59,6 +59,8 @@ import {
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
 import { cn } from "@/lib/utils";
+import { PublishModal } from "@/components/library/publish-modal";
+import { Upload } from "lucide-react";
 
 export function EditorToolbar({
   editorVersion = "v1",
@@ -78,6 +80,7 @@ export function EditorToolbar({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   // CH is base title; DE is override mode
   const isDeOverrideMode = state.localeMode === "DE";
@@ -550,6 +553,21 @@ export function EditorToolbar({
           </TooltipTrigger>
           <TooltipContent>{isGeneratingPdf ? t("generatingPdf") : t("downloadPdf")}</TooltipContent>
         </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("h-8", terracottaOutlineButtonClass)}
+              disabled={!state.worksheetId}
+              onClick={() => setShowPublishModal(true)}
+            >
+              <Upload className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Publish to Library</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Print Preview Dialog */}
@@ -706,6 +724,19 @@ export function EditorToolbar({
         </DialogContent>
       </Dialog>
 
+      {/* Publish to Library Modal */}
+      {state.brandProfile?.id && (
+        <PublishModal
+          open={showPublishModal}
+          onOpenChange={setShowPublishModal}
+          worksheetId={state.worksheetId || ""}
+          worksheetUpdatedAt={new Date().toISOString()}
+          brandId={state.brandProfile.id}
+          onSuccess={() => {
+            // Could refresh data or show success toast here
+          }}
+        />
+      )}
     </>
   );
 }

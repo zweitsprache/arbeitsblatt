@@ -239,6 +239,10 @@ model BrandProfile {
   itemNumberFormat         String?           @default("default")
   subProfiles              BrandSubProfile[]
   clients                  Client[]
+  libraryFolders           BrandLibraryFolder[] @relation("BrandLibraryFolders")
+  libraryCategories        BrandLibraryCategory[] @relation("BrandLibraryCategories")
+  libraryTags              BrandLibraryTag[] @relation("BrandLibraryTags")
+  libraryPDFs              BrandLibraryPDF[] @relation("BrandLibraryPDFs")
 
   @@index([slug])
 }
@@ -260,6 +264,91 @@ model BrandSubProfile {
   brandProfile   BrandProfile @relation(fields: [brandProfileId], references: [id], onDelete: Cascade)
 
   @@index([brandProfileId])
+}
+
+model BrandLibraryFolder {
+  id             String      @id @default(cuid())
+  brandProfileId String
+  parentId       String?
+  name           String
+  slug           String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  brandProfile   BrandProfile @relation("BrandLibraryFolders", fields: [brandProfileId], references: [id], onDelete: Cascade)
+  parent         BrandLibraryFolder? @relation("BrandLibraryFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children       BrandLibraryFolder[] @relation("BrandLibraryFolderTree")
+  pdfs           BrandLibraryPDF[]
+
+  @@unique([brandProfileId, slug])
+  @@index([brandProfileId])
+  @@index([parentId])
+}
+
+model BrandLibraryCategory {
+  id             String      @id @default(cuid())
+  brandProfileId String
+  name           String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  brandProfile   BrandProfile @relation("BrandLibraryCategories", fields: [brandProfileId], references: [id], onDelete: Cascade)
+  pdfs           BrandLibraryPDF[]
+
+  @@unique([brandProfileId, name])
+  @@index([brandProfileId])
+}
+
+model BrandLibraryTag {
+  id             String      @id @default(cuid())
+  brandProfileId String
+  name           String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  brandProfile   BrandProfile @relation("BrandLibraryTags", fields: [brandProfileId], references: [id], onDelete: Cascade)
+  pdfs           BrandLibraryPDFTag[]
+
+  @@unique([brandProfileId, name])
+  @@index([brandProfileId])
+}
+
+model BrandLibraryPDF {
+  id                 String       @id @default(cuid())
+  brandProfileId     String
+  folderId           String
+  categoryId         String?
+  worksheetId        String?
+  worksheetUpdatedAt DateTime?
+  blobPath           String
+  title              String
+  description        String?
+  status             String       @default("pending_approval") // "pending_approval" | "approved" | "rejected"
+  createdBy          String
+  approvedBy         String?
+  approvedAt         DateTime?
+  rejectionReason    String?
+  pdfGeneratedAt     DateTime     @default(now())
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  brandProfile       BrandProfile @relation("BrandLibraryPDFs", fields: [brandProfileId], references: [id], onDelete: Cascade)
+  folder             BrandLibraryFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  category           BrandLibraryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags               BrandLibraryPDFTag[]
+
+  @@index([brandProfileId])
+  @@index([folderId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BrandLibraryPDFTag {
+  pdfId String
+  tagId String
+  pdf   BrandLibraryPDF @relation(fields: [pdfId], references: [id], onDelete: Cascade)
+  tag   BrandLibraryTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pdfId, tagId])
+  @@index([pdfId])
+  @@index([tagId])
 }
 
 model Client {

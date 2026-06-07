@@ -7454,7 +7454,15 @@ function DialogueRenderer({
       <div>
         {block.items.map((item, i) => {
           const prevItem = i > 0 ? block.items[i - 1] : null;
+          const isBlankItem = !item.speaker && !item.text;
           const isSameSpeaker = prevItem && prevItem.icon === item.icon;
+
+          if (isBlankItem) {
+            return (
+              <div key={item.id} className="h-4 border-b" />
+            );
+          }
+
           return (
           <div key={item.id} className="flex min-h-[37px] items-center gap-3 border-b py-2">
             <ItemNumberBadge index={i + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
