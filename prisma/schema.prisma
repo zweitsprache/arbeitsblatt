@@ -318,6 +318,7 @@ model BrandLibraryPDF {
   worksheetId        String?
   worksheetUpdatedAt DateTime?
   blobPath           String
+  previewImagePath   String?
   title              String
   description        String?
   status             String       @default("pending_approval") // "pending_approval" | "approved" | "rejected"

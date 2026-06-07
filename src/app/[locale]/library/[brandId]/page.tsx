@@ -18,6 +18,7 @@ interface PDFItem {
   id: string;
   title: string;
   description?: string;
+  previewImagePath?: string;
   folder: {
     id: string;
     name: string;
@@ -290,9 +291,36 @@ export default function PublicLibraryPage() {
             {pdfs.map((pdf) => (
               <div
                 key={pdf.id}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden flex flex-col"
               >
-                <div className="p-6">
+                {/* Preview Image */}
+                {pdf.previewImagePath ? (
+                  <div className="relative w-full h-48 bg-gray-100">
+                    <img
+                      src={pdf.previewImagePath}
+                      alt={pdf.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                    <svg
+                      className="w-16 h-16 text-blue-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                <div className="p-6 flex flex-col flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                     {pdf.title}
                   </h3>
@@ -330,7 +358,7 @@ export default function PublicLibraryPage() {
                   <Button
                     onClick={() => handleDownload(pdf)}
                     disabled={downloading === pdf.id}
-                    className="w-full gap-2"
+                    className="w-full gap-2 mt-auto"
                   >
                     {downloading === pdf.id ? (
                       <>

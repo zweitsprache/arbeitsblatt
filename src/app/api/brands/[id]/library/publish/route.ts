@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { v4 as uuidv4 } from "uuid";
+import { generatePDFPreview } from "@/lib/pdf-preview";
 
 export async function POST(
   req: NextRequest,
@@ -103,6 +104,9 @@ export async function POST(
       contentType: "application/pdf",
     });
 
+    // Generate preview image
+    const previewImagePath = await generatePDFPreview(file, brandId, title);
+
     const pdfEntry = await prisma.brandLibraryPDF.create({
       data: {
         brandProfileId: brandId,
@@ -111,6 +115,7 @@ export async function POST(
         worksheetId: worksheetId || undefined,
         worksheetUpdatedAt: worksheetUpdatedAt ? new Date(worksheetUpdatedAt) : undefined,
         blobPath: blob.pathname,
+        previewImagePath: previewImagePath || undefined,
         title,
         description: description || undefined,
         status: "pending_approval",
