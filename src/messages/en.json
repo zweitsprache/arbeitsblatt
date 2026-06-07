@@ -589,7 +589,7 @@
     "bingoCards": "Bingo Cards",
     "bingoCardsDesc": "Bingo cards with customizable grid and modes",
     "accordion": "Accordion",
-    "accordionDesc": "Collapsible sections with nested blocks",
+    "accordionDesc": "Collapsible sections",
     "aiPrompt": "AI Prompt",
     "aiPromptDesc": "Text input with AI processing",
     "aiTool": "AI Tool",

@@ -1354,13 +1354,11 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
                       <span className="text-xs text-muted-foreground">{t("uploading")}</span>
                     ) : dragOverIndex === index ? (
                       <>
-                        <Upload className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-primary font-medium">{t("dropImage")}</span>
+                        <Upload className="h-8 w-8 text-primary" />
                       </>
                     ) : (
                       <>
-                        <Upload className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <span className="text-xs text-muted-foreground">{t("dragOrClick")}</span>
+                        <Upload className="h-8 w-8 text-muted-foreground/50" />
                       </>
                     )}
                   </div>
@@ -1585,13 +1583,11 @@ function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
                         <span className="text-xs text-muted-foreground">{t("uploading")}</span>
                       ) : dragOverIndex === originalIndex ? (
                         <>
-                          <Upload className="h-8 w-8 text-primary mb-2" />
-                          <span className="text-xs text-primary font-medium">{t("dropImage")}</span>
+                          <Upload className="h-8 w-8 text-primary" />
                         </>
                       ) : (
                         <>
-                          <Upload className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                          <span className="text-xs text-muted-foreground">{t("dragOrClick")}</span>
+                          <Upload className="h-8 w-8 text-muted-foreground/50" />
                         </>
                       )}
                     </div>

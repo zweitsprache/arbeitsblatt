@@ -3486,12 +3486,12 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
 {
   type: "accordion",
   label: "Accordion",
-  description: "Collapsible sections with nested blocks",
+  description: "Collapsible sections",
   labelKey: "accordion",
   descriptionKey: "accordionDesc",
   icon: "ChevronDown",
   category: "content",
-  translations: { de: { label: "Akkordeon", description: "Aufklappbare Abschnitte mit verschachtelten Blöcken" } },
+  translations: { de: { label: "Akkordeon", description: "Aufklappbare Abschnitte" } },
   defaultData: {
     type: "accordion",
     items: [
