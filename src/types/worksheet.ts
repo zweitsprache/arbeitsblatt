@@ -485,6 +485,7 @@ export interface TextBlock extends BlockBase {
 export interface SyllablesBlock extends BlockBase {
   type: "syllables";
   content: string;
+  instruction?: string;
 }
 
 // ─── Image block ─────────────────────────────────────────────

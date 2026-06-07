@@ -174,7 +174,7 @@ function jumbleSingleWord(
   const middle = chars.slice(startIndex, endIndex);
 
   if (middle.length <= 1) {
-    return buildSingleWordTypo(word, startIndex, endIndex, seedKey);
+    return word;
   }
 
   const rand = mulberry32(hashString(seedKey));
@@ -196,7 +196,7 @@ function jumbleSingleWord(
   ].join("");
   if (fallback !== word) return fallback;
 
-  return buildSingleWordTypo(word, startIndex, endIndex, seedKey);
+  return word;
 }
 
 function applyWordOrder(
@@ -240,26 +240,19 @@ function jumbleWord(
   );
 
   const originalOrderCandidate = applyWordOrder(segments, jumbledWords);
-  const rand = mulberry32(hashString(`${seedKey}:order`));
-  const shuffledOrder = deterministicShuffle(
-    Array.from({ length: jumbledWords.length }, (_, index) => index),
-    rand,
-  );
-  const reorderedCandidate = applyWordOrder(
-    segments,
-    shuffledOrder.map((index) => jumbledWords[index]),
-  );
-
-  if (reorderedCandidate !== word && reorderedCandidate !== originalOrderCandidate) {
-    return reorderedCandidate;
-  }
 
   if (originalOrderCandidate !== word) {
     return originalOrderCandidate;
   }
 
-  const rotatedCandidate = applyWordOrder(segments, [...jumbledWords.slice(1), jumbledWords[0]]);
-  return rotatedCandidate === word ? word : rotatedCandidate;
+  // If no change from shuffling letters, try rotating word order as last resort
+  const rotatedWords = [...wordSegments.slice(1), wordSegments[0]];
+  const rotatedCandidate = applyWordOrder(
+    segments,
+    rotatedWords.map((w, i) => jumbledWords[wordSegments.indexOf(w)]),
+  );
+
+  return rotatedCandidate !== word ? rotatedCandidate : word;
 }
 
 export function buildCorrectSpellingRow(
@@ -285,8 +278,14 @@ export function buildCorrectSpellingRow(
     }
   }
 
+  // Check if word can be shuffled meaningfully
+  const chars = word.split("");
+  const startIndex = Math.max(0, Math.min(chars.length, keepLeftCharacters));
+  const endIndex = Math.max(startIndex, chars.length - Math.max(0, Math.min(chars.length - startIndex, keepRightCharacters)));
+  const canShuffle = (endIndex - startIndex) > 1;
+
   return Array.from({ length: safeSlotCount }, (_, index) => {
-    if (originalPositions.has(index)) {
+    if (originalPositions.has(index) || !canShuffle) {
       return { text: word, isOriginal: true };
     }
 

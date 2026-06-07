@@ -6087,6 +6087,20 @@ function SyllablesProps({ block }: { block: SyllablesBlock }) {
         <Scissors className="h-4 w-4 mr-2" />
         {t("syllabify")}
       </Button>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction ?? ""}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
     </div>
   );
 }

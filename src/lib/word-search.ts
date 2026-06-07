@@ -18,7 +18,7 @@ export const ALL_WORD_SEARCH_DIRECTIONS = Object.keys(
 export const DEFAULT_WORD_SEARCH_DIRECTIONS: WordSearchDirection[] = ["leftToRight", "upToDown"];
 
 export function normalizeWordSearchWord(word: string): string {
-  return word.toUpperCase().replace(/\s+/g, "");
+  return word.toUpperCase();
 }
 
 export function resolveWordSearchDirections(
@@ -84,7 +84,29 @@ export function generateWordSearchGrid(
     }
   }
 
+  const hasMultiWordItems = upperWords.some((word) => word.includes(" "));
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const emptyCells: Array<[number, number]> = [];
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (grid[row][col] === "") {
+        emptyCells.push([row, col]);
+      }
+    }
+  }
+
+  // Add 3 fake blank cells if we have multi-word items
+  if (hasMultiWordItems && emptyCells.length > 0) {
+    const fakeBlankCount = Math.min(3, emptyCells.length);
+    for (let i = 0; i < fakeBlankCount; i++) {
+      const randomIndex = Math.floor(Math.random() * emptyCells.length);
+      const [row, col] = emptyCells[randomIndex];
+      grid[row][col] = " ";
+      emptyCells.splice(randomIndex, 1);
+    }
+  }
+
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       if (grid[row][col] === "") {

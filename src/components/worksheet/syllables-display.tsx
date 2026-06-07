@@ -251,31 +251,33 @@ export function SyllablesDisplay({
           paddingBottom: svgMetrics.paddingBottom,
         }}
       >
-        {tokens.map((token, index) => {
-          if (token.type === "space") {
-            return <span key={`space-${index}`}>{token.value}</span>;
-          }
+        <div style={{ lineHeight: 2 }}>
+          {tokens.map((token, index) => {
+            if (token.type === "space") {
+              return <span key={`space-${index}`}>{token.value}</span>;
+            }
 
-          if (token.type === "text") {
-            return <span key={`text-${index}`}>{token.value}</span>;
-          }
+            if (token.type === "text") {
+              return <span key={`text-${index}`}>{token.value}</span>;
+            }
 
-          return (
-            <span key={token.key} ref={(element) => setSyllableRef(token.key, element)}>
-              <span ref={(element) => setFirstLetterRef(token.key, element)}>{token.value.slice(0, 1)}</span>
-              {token.value.length > 2 ? token.value.slice(1, -1) : null}
-              {token.value.length > 1 ? (
-                <span ref={(element) => setLastLetterRef(token.key, element)}>{token.value.slice(-1)}</span>
-              ) : (
-                <span
-                  ref={(element) => setLastLetterRef(token.key, element)}
-                  aria-hidden="true"
-                  style={{ display: "inline-block", width: 0, overflow: "hidden" }}
-                />
-              )}
-            </span>
-          );
-        })}
+            return (
+              <span key={token.key} ref={(element) => setSyllableRef(token.key, element)}>
+                <span ref={(element) => setFirstLetterRef(token.key, element)}>{token.value.slice(0, 1)}</span>
+                {token.value.length > 2 ? token.value.slice(1, -1) : null}
+                {token.value.length > 1 ? (
+                  <span ref={(element) => setLastLetterRef(token.key, element)}>{token.value.slice(-1)}</span>
+                ) : (
+                  <span
+                    ref={(element) => setLastLetterRef(token.key, element)}
+                    aria-hidden="true"
+                    style={{ display: "inline-block", width: 0, overflow: "hidden" }}
+                  />
+                )}
+              </span>
+            );
+          })}
+        </div>
 
         {arcs.length > 0 && svgMetrics.width > 0 && svgMetrics.height > 0 ? (
           <svg

@@ -2278,10 +2278,23 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   );
 }
 
-function SyllablesView({ block }: { block: SyllablesBlock }) {
+function SyllablesView({ block, mode, instructionIndex, accentColor }: { block: SyllablesBlock; mode?: ViewMode; instructionIndex?: number; accentColor?: string | null }) {
   return (
-    <div className="text-center text-[2rem] font-semibold leading-none text-slate-900">
-      <SyllablesDisplay content={block.content} textClassName="text-inherit" />
+    <div>
+      {block.instruction && (
+        <>
+          <InstructionRow
+            instruction={block.instruction}
+            accentColor={accentColor}
+            mode={mode}
+            instructionIndex={instructionIndex}
+          />
+          {block.content && <SectionGap size="small" />}
+        </>
+      )}
+      <div className="text-left text-slate-900">
+        <SyllablesDisplay content={block.content} textClassName="text-inherit" />
+      </div>
     </div>
   );
 }
@@ -7762,6 +7775,7 @@ function renderTextWithSup(text: string): React.ReactNode[] {
               <tr key={ri}>
                 {row.map((cell, ci) => {
                   const key = `${ri}-${ci}`;
+                  const isSpaceCell = cell === " ";
                   const isSelected = selectedCells.includes(key);
                   const isTop = ri === 0;
                   const isLeft = ci === 0;
@@ -7770,6 +7784,9 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                   const isBottomLeft = ri === block.grid.length - 1 && isLeft;
                   const isBottomRight = ri === block.grid.length - 1 && ci === row.length - 1;
                   const cellStyle: React.CSSProperties = {
+                    ...(isSpaceCell ? {
+                      backgroundColor: "transparent",
+                    } : {}),
                     borderRight: '1px solid var(--color-border)',
                     borderBottom: '1px solid var(--color-border)',
                     ...(isTop ? { borderTop: '1px solid var(--color-border)' } : {}),
@@ -7784,16 +7801,16 @@ function renderTextWithSup(text: string): React.ReactNode[] {
                     <td
                       key={ci}
                       className={`p-0 text-center font-mono select-none transition-colors ${isPrint ? '' : 'font-medium'}
-                        ${interactive ? "cursor-pointer hover:bg-primary/10" : ""}
-                        ${isSelected ? "bg-primary/20 text-primary" : ""}`}
+                        ${!isSpaceCell && interactive ? "cursor-pointer hover:bg-primary/10" : ""}
+                        ${isSelected && !isSpaceCell ? "bg-primary/20 text-primary" : ""}`}
                       style={{
                         ...cellStyle,
                         height: `${rowHeight}rem`,
                       }}
-                      onClick={() => toggleCell(key)}
+                      onClick={() => !isSpaceCell && toggleCell(key)}
                     >
                       <div className="flex h-full items-center justify-center leading-none">
-                        {cell}
+                        {!isSpaceCell && cell}
                       </div>
                     </td>
                   );
@@ -8022,7 +8039,7 @@ function CrosswordView({
                   ? {
                       backgroundColor: itemTheme.itemBg,
                       borderColor: itemTheme.itemBg,
-                      color: itemTheme.itemText,
+                      color: isExampleItem ? itemTheme.itemText : undefined,
                     }
                   : undefined}
               >
@@ -11522,7 +11539,7 @@ export function ViewerBlockRenderer({
     case "text":
       return <TextView block={block} originalBlock={originalBlock as TextBlock | undefined} mode={mode} bodyFont={bodyFont} originalBodyFont={originalBodyFont} bodyFontSize={bodyFontSize} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} instructionIndex={instructionIndex} brand={brand}/>;
     case "syllables":
-      return <SyllablesView block={block} />;
+      return <SyllablesView block={block} mode={mode} instructionIndex={instructionIndex} accentColor={accentColor} />;
     case "image":
       return <ImageView block={block} />;
     case "image-cards":

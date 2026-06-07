@@ -939,7 +939,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
 
 function SyllablesRenderer({ block }: { block: SyllablesBlock }) {
   return (
-    <div className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-3 text-center text-2xl font-semibold tracking-[0.01em] text-slate-900">
+    <div className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-3 text-left text-slate-900">
       <SyllablesDisplay content={block.content} textClassName="text-inherit" />
     </div>
   );
@@ -4310,6 +4310,7 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
               {block.grid.map((row, ri) => (
                 <tr key={ri}>
                   {row.map((cell, ci) => {
+                    const isSpaceCell = cell === " ";
                     let cornerClass = "";
                     if (ri === 0 && ci === 0) cornerClass = "rounded-tl-sm";
                     if (ri === 0 && ci === row.length - 1) cornerClass = "rounded-tr-lg";
@@ -4319,10 +4320,13 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
                       <td
                         key={ci}
                         className={`p-0 text-center font-mono font-semibold select-none border border-border ${cornerClass}`}
-                        style={{ height: `${rowHeight}rem` }}
+                        style={{
+                          height: `${rowHeight}rem`,
+                          backgroundColor: isSpaceCell ? "transparent" : undefined,
+                        }}
                       >
                         <div className="flex h-full items-center justify-center leading-none">
-                          {cell}
+                          {!isSpaceCell && cell}
                         </div>
                       </td>
                     );
