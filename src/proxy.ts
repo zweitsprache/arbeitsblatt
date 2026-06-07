@@ -15,7 +15,28 @@ export default function proxy(req: NextRequest) {
   const isLocalBaseDomain =
     baseWithoutPort === "localhost" || baseWithoutPort === "127.0.0.1";
 
-  // Detect subdomain: everything before the base domain
+  // If the path is not already under a locale, prefix with default
+  const pathParts = req.nextUrl.pathname.split("/").filter(Boolean);
+  const locales = routing.locales as readonly string[];
+  const hasLocale = pathParts.length > 0 && locales.includes(pathParts[0]);
+  const locale = hasLocale ? pathParts[0] : routing.defaultLocale;
+  const restPath = hasLocale ? "/" + pathParts.slice(1).join("/") : req.nextUrl.pathname;
+
+  // Check for library subdomain pattern first (e.g., library.lingostar.ch)
+  const isLibrarySubdomain = hostWithoutPort.startsWith("library.");
+  if (isLibrarySubdomain && !isLocalBaseDomain) {
+    // Extract brand slug from library.{brand}.{tld}
+    // e.g., library.lingostar.ch → lingostar
+    const parts = hostWithoutPort.split(".");
+    if (parts.length >= 2) {
+      const brandSlug = parts[1]; // library -> lingostar -> ch
+      const url = req.nextUrl.clone();
+      url.pathname = `/${locale}/library/${brandSlug}${restPath === "/" ? "" : restPath}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // Detect subdomain on main domain (e.g., something.app.arbeitsblatt.ch)
   let subdomain: string | null = null;
   if (
     hostWithoutPort !== baseWithoutPort &&
@@ -25,38 +46,16 @@ export default function proxy(req: NextRequest) {
   }
 
   // If subdomain detected (and not www), inject client slug header
-  // and rewrite to appropriate routes
+  // and rewrite to project-viewer routes
   const RESERVED_SUBDOMAINS = ["www"];
   // Local development should not rewrite based on subdomain heuristics.
   // This avoids local-only 404s when opening non-standard localhost hosts.
   if (!isLocalBaseDomain && subdomain && !RESERVED_SUBDOMAINS.includes(subdomain)) {
     const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-client-slug", subdomain);
+
     const url = req.nextUrl.clone();
 
-    // If the path is not already under a locale, prefix with default
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const locales = routing.locales as readonly string[];
-    const hasLocale = pathParts.length > 0 && locales.includes(pathParts[0]);
-    const locale = hasLocale ? pathParts[0] : routing.defaultLocale;
-    const restPath = hasLocale ? "/" + pathParts.slice(1).join("/") : url.pathname;
-
-    // Check if this is a library subdomain (e.g., library.lingostar.ch)
-    if (subdomain === "library") {
-      // Extract brand slug from the main hostname
-      // For library.lingostar.ch, we get lingostar
-      const domainParts = hostWithoutPort.split(".");
-      // Remove 'library' from the start
-      const brandSlug = domainParts.slice(1).join(".");
-
-      if (brandSlug && brandSlug !== baseWithoutPort) {
-        // Rewrite to library route with brand slug in params
-        url.pathname = `/${locale}/library/${brandSlug}${restPath === "/" ? "" : restPath}`;
-        return NextResponse.rewrite(url);
-      }
-    }
-
-    // Default: inject client slug and rewrite to project-viewer
-    requestHeaders.set("x-client-slug", subdomain);
     // Rewrite to project-viewer route group
     url.pathname = `/${locale}/project-viewer${restPath === "/" ? "" : restPath}`;
 
