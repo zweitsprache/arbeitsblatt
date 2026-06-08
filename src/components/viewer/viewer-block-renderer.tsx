@@ -7873,7 +7873,11 @@ function CrosswordView({
   if (block.generationError) {
     return (
       <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        {t("generationFailed")}
+        {block.generationError === "word-too-long"
+          ? t("crosswordWordTooLong")
+          : block.generationError === "no-layout"
+            ? t("crosswordNoLayout")
+            : t("generationFailed")}
       </div>
     );
   }

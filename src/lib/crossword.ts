@@ -5,6 +5,10 @@ import type {
   CrosswordPlacement,
 } from "@/types/worksheet";
 
+export const MAX_GRID_COLS = 21;
+const SEARCH_NODE_BUDGET = 60_000;
+const SEARCH_TIME_BUDGET_MS = 300;
+
 type NormalizedCrosswordItem = CrosswordItem & {
   normalizedAnswer: string;
   cells: Array<{ kind: "letter"; value: string } | { kind: "gap"; value: string }>;
@@ -18,6 +22,10 @@ type BoardCell = {
 
 type BoardState = {
   cells: Map<string, BoardCell>;
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
 };
 
 type WorkingPlacement = {
@@ -28,10 +36,43 @@ type WorkingPlacement = {
   intersections: number;
 };
 
+type SearchContext = {
+  best: {
+    board: BoardState;
+    placements: WorkingPlacement[];
+    unplacedIds: string[];
+    cost: number;
+  } | null;
+  expansions: number;
+  deadline: number;
+  rng: () => number;
+  exhausted: boolean;
+};
+
 const CROSSWORD_DIRECTIONS: Record<CrosswordDirection, [number, number]> = {
   across: [0, 1],
   down: [1, 0],
 };
+
+// Mulberry32 — small, fast, seeded PRNG.
+function createRng(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleInPlace<T>(array: T[], rng: () => number): T[] {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
 
 function toCellKey(row: number, col: number): string {
   return `${row},${col}`;
@@ -50,6 +91,16 @@ function isOccupied(board: BoardState, row: number, col: number): boolean {
   return board.cells.has(toCellKey(row, col));
 }
 
+function emptyBoard(): BoardState {
+  return {
+    cells: new Map(),
+    minRow: Number.POSITIVE_INFINITY,
+    maxRow: Number.NEGATIVE_INFINITY,
+    minCol: Number.POSITIVE_INFINITY,
+    maxCol: Number.NEGATIVE_INFINITY,
+  };
+}
+
 function cloneBoard(board: BoardState): BoardState {
   return {
     cells: new Map(
@@ -62,33 +113,54 @@ function cloneBoard(board: BoardState): BoardState {
         },
       ]),
     ),
+    minRow: board.minRow,
+    maxRow: board.maxRow,
+    minCol: board.minCol,
+    maxCol: board.maxCol,
   };
 }
 
-function getBoardBounds(board: BoardState) {
-  if (board.cells.size === 0) {
-    return { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 };
-  }
-
-  let minRow = Number.POSITIVE_INFINITY;
-  let maxRow = Number.NEGATIVE_INFINITY;
-  let minCol = Number.POSITIVE_INFINITY;
-  let maxCol = Number.NEGATIVE_INFINITY;
-
-  for (const key of board.cells.keys()) {
-    const [row, col] = fromCellKey(key);
-    minRow = Math.min(minRow, row);
-    maxRow = Math.max(maxRow, row);
-    minCol = Math.min(minCol, col);
-    maxCol = Math.max(maxCol, col);
-  }
-
-  return { minRow, maxRow, minCol, maxCol };
+function boardWidth(board: BoardState): number {
+  if (board.cells.size === 0) return 0;
+  return board.maxCol - board.minCol + 1;
 }
 
-function getBoundingArea(board: BoardState): number {
-  const bounds = getBoardBounds(board);
-  return (bounds.maxRow - bounds.minRow + 1) * (bounds.maxCol - bounds.minCol + 1);
+function boardHeight(board: BoardState): number {
+  if (board.cells.size === 0) return 0;
+  return board.maxRow - board.minRow + 1;
+}
+
+function boardArea(board: BoardState): number {
+  return boardWidth(board) * boardHeight(board);
+}
+
+function boardCost(board: BoardState): number {
+  if (board.cells.size === 0) return 0;
+  const w = boardWidth(board);
+  const h = boardHeight(board);
+  const area = w * h;
+  const filled = board.cells.size;
+  // primary: height (save vertical space on A4 portrait)
+  // secondary: area (don't waste the page horizontally either)
+  // tertiary: density
+  return h * 10_000 + area * 100 + (area - filled) * 10;
+}
+
+// Massive weight so that placing one extra word always wins over any
+// height/area difference (max boardCost on a 21×21 grid is well under 1e6).
+const UNPLACED_PENALTY = 100_000_000;
+
+// Cost for a (possibly partial) placement: more placed words always wins.
+function partialBoardCost(board: BoardState, unplacedCount: number): number {
+  return unplacedCount * UNPLACED_PENALTY + boardCost(board);
+}
+
+// Sound lower bound on `boardCost` for any descendant state: descendants can
+// only grow the bounding box, so current height/area are minimums for the
+// future cost. Density term is omitted (it can only improve as cells fill in).
+function boardCostLowerBound(board: BoardState): number {
+  if (board.cells.size === 0) return 0;
+  return boardHeight(board) * 10_000 + boardArea(board) * 100;
 }
 
 export function normalizeCrosswordAnswer(answer: string): string {
@@ -227,15 +299,44 @@ function placeWord(
         directions: new Set([direction]),
       });
     }
+
+    if (cellRow < nextBoard.minRow) nextBoard.minRow = cellRow;
+    if (cellRow > nextBoard.maxRow) nextBoard.maxRow = cellRow;
+    if (cellCol < nextBoard.minCol) nextBoard.minCol = cellCol;
+    if (cellCol > nextBoard.maxCol) nextBoard.maxCol = cellCol;
   }
 
   return nextBoard;
 }
 
+function dimensionsIfPlaced(
+  board: BoardState,
+  candidate: WorkingPlacement,
+): { width: number; height: number } | null {
+  const [dRow, dCol] = CROSSWORD_DIRECTIONS[candidate.direction];
+  const endRow = candidate.row + dRow * (candidate.item.cells.length - 1);
+  const endCol = candidate.col + dCol * (candidate.item.cells.length - 1);
+
+  const currentMinRow = board.cells.size === 0 ? candidate.row : board.minRow;
+  const currentMaxRow = board.cells.size === 0 ? candidate.row : board.maxRow;
+  const currentMinCol = board.cells.size === 0 ? candidate.col : board.minCol;
+  const currentMaxCol = board.cells.size === 0 ? candidate.col : board.maxCol;
+
+  const newMinRow = Math.min(currentMinRow, candidate.row, endRow);
+  const newMaxRow = Math.max(currentMaxRow, candidate.row, endRow);
+  const newMinCol = Math.min(currentMinCol, candidate.col, endCol);
+  const newMaxCol = Math.max(currentMaxCol, candidate.col, endCol);
+
+  const width = newMaxCol - newMinCol + 1;
+  const height = newMaxRow - newMinRow + 1;
+
+  if (width > MAX_GRID_COLS) return null;
+  return { width, height };
+}
+
 function buildCandidates(board: BoardState, item: NormalizedCrosswordItem): WorkingPlacement[] {
-  if (board.cells.size === 0) {
-    return [{ item, row: 0, col: 0, direction: "across", intersections: 0 }];
-  }
+  // Empty board is handled separately by `seedSearch`.
+  if (board.cells.size === 0) return [];
 
   const placements = new Map<string, WorkingPlacement>();
 
@@ -254,64 +355,148 @@ function buildCandidates(board: BoardState, item: NormalizedCrosswordItem): Work
         const intersections = canPlaceWord(board, item.cells, startRow, startCol, direction);
         if (intersections === null) continue;
 
-        placements.set(`${startRow}:${startCol}:${direction}`, {
+        const candidate: WorkingPlacement = {
           item,
           row: startRow,
           col: startCol,
           direction,
           intersections,
-        });
+        };
+        // Hard prune: would the placement exceed the page width?
+        if (!dimensionsIfPlaced(board, candidate)) continue;
+
+        placements.set(`${startRow}:${startCol}:${direction}`, candidate);
       }
     }
   }
 
-  return Array.from(placements.values()).sort((left, right) => {
-    if (right.intersections !== left.intersections) {
-      return right.intersections - left.intersections;
-    }
-
-    const leftArea = getBoundingArea(placeWord(board, left.item, left.row, left.col, left.direction));
-    const rightArea = getBoundingArea(placeWord(board, right.item, right.row, right.col, right.direction));
-    if (leftArea !== rightArea) {
-      return leftArea - rightArea;
-    }
-
-    if (left.row !== right.row) return left.row - right.row;
-    if (left.col !== right.col) return left.col - right.col;
-    return left.direction.localeCompare(right.direction);
-  });
+  return Array.from(placements.values());
 }
 
-function solveCrossword(
+function searchCrossword(
   board: BoardState,
-  remainingItems: NormalizedCrosswordItem[],
+  remaining: NormalizedCrosswordItem[],
   placements: WorkingPlacement[],
-): { board: BoardState; placements: WorkingPlacement[] } | null {
-  if (remainingItems.length === 0) {
-    return { board, placements };
+  ctx: SearchContext,
+): void {
+  if (ctx.expansions >= SEARCH_NODE_BUDGET) {
+    ctx.exhausted = true;
+    return;
+  }
+  if (performance.now() > ctx.deadline) {
+    ctx.exhausted = true;
+    return;
+  }
+  ctx.expansions += 1;
+
+  // Always consider the current state as a candidate solution. If we can't
+  // place every word, we still want the best partial layout (most words
+  // placed, then smallest height/area).
+  const currentCost = partialBoardCost(board, remaining.length);
+  if (!ctx.best || currentCost < ctx.best.cost) {
+    ctx.best = {
+      board,
+      placements,
+      unplacedIds: remaining.map((it) => it.id),
+      cost: currentCost,
+    };
   }
 
-  const itemCandidates = remainingItems
-    .map((item) => ({ item, candidates: buildCandidates(board, item) }))
-    .filter((entry) => entry.candidates.length > 0)
-    .sort((left, right) => {
-      if (left.candidates.length !== right.candidates.length) {
-        return left.candidates.length - right.candidates.length;
-      }
-      return right.item.normalizedAnswer.length - left.item.normalizedAnswer.length;
+  // Sound lower-bound prune: descendants can only grow the bounding rectangle
+  // (and at best place every remaining word), so their cost is at least
+  // boardCostLowerBound(board). Compare against the cost of the current best.
+  if (ctx.best && boardCostLowerBound(board) >= ctx.best.cost) return;
+
+  if (remaining.length === 0) return;
+
+  // Score every remaining item that CAN be placed from here. Items with no
+  // candidates *right now* are not a dead end — adding other words may
+  // introduce intersection letters later. We just don't branch on them.
+  type ScoredCandidate = {
+    candidate: WorkingPlacement;
+    height: number;
+    area: number;
+    lowerBound: number;
+  };
+  type Entry = {
+    item: NormalizedCrosswordItem;
+    candidates: ScoredCandidate[];
+    bestLowerBound: number;
+  };
+
+  const entries: Entry[] = [];
+
+  for (const item of remaining) {
+    const rawCandidates = buildCandidates(board, item);
+    if (rawCandidates.length === 0) continue;
+
+    let bestLowerBound = Number.POSITIVE_INFINITY;
+    const scored: ScoredCandidate[] = rawCandidates.map((candidate) => {
+      const dims = dimensionsIfPlaced(board, candidate);
+      const height = dims ? dims.height : Number.POSITIVE_INFINITY;
+      const area = dims ? dims.width * dims.height : Number.POSITIVE_INFINITY;
+      const lowerBound = dims ? height * 10_000 + area * 100 : Number.POSITIVE_INFINITY;
+      if (lowerBound < bestLowerBound) bestLowerBound = lowerBound;
+      return { candidate, height, area, lowerBound };
     });
 
-  for (const entry of itemCandidates) {
-    const nextRemainingItems = remainingItems.filter((item) => item.id !== entry.item.id);
+    scored.sort((left, right) => {
+      if (left.height !== right.height) return left.height - right.height;
+      if (left.area !== right.area) return left.area - right.area;
+      return right.candidate.intersections - left.candidate.intersections;
+    });
 
-    for (const candidate of entry.candidates) {
-      const nextBoard = placeWord(board, candidate.item, candidate.row, candidate.col, candidate.direction);
-      const result = solveCrossword(nextBoard, nextRemainingItems, [...placements, candidate]);
-      if (result) return result;
-    }
+    entries.push({ item, candidates: scored, bestLowerBound });
   }
 
-  return null;
+  // No remaining item is placeable from this state — the current partial
+  // layout is final for this branch.
+  if (entries.length === 0) return;
+
+  entries.sort((left, right) => {
+    if (left.bestLowerBound !== right.bestLowerBound) return left.bestLowerBound - right.bestLowerBound;
+    return left.candidates.length - right.candidates.length;
+  });
+
+  for (const entry of entries) {
+    const nextRemaining = remaining.filter((it) => it.id !== entry.item.id);
+
+    for (const { candidate, lowerBound } of entry.candidates) {
+      if (ctx.best && lowerBound >= ctx.best.cost) continue;
+      const nextBoard = placeWord(board, candidate.item, candidate.row, candidate.col, candidate.direction);
+      searchCrossword(nextBoard, nextRemaining, [...placements, candidate], ctx);
+    }
+  }
+}
+
+function seedSearch(items: NormalizedCrosswordItem[], ctx: SearchContext): void {
+  // Try ALL items as potential seeds (in randomized order), not just the longest.
+  // The original top-3 cap left many word sets unsolvable when none of the
+  // longest words could anchor a valid grid. The global node/time budget caps
+  // total work either way.
+  const orderedSeeds = shuffleInPlace([...items], ctx.rng);
+
+  for (const seed of orderedSeeds) {
+    if (ctx.expansions >= SEARCH_NODE_BUDGET) break;
+    if (performance.now() > ctx.deadline) break;
+
+    const directions = shuffleInPlace<CrosswordDirection>(["across", "down"], ctx.rng);
+    for (const direction of directions) {
+      // Words longer than MAX_GRID_COLS placed `across` can't fit at all.
+      if (direction === "across" && seed.cells.length > MAX_GRID_COLS) continue;
+
+      const board = placeWord(emptyBoard(), seed, 0, 0, direction);
+      const remaining = items.filter((it) => it.id !== seed.id);
+      const placement: WorkingPlacement = {
+        item: seed,
+        row: 0,
+        col: 0,
+        direction,
+        intersections: 0,
+      };
+      searchCrossword(board, remaining, [placement], ctx);
+    }
+  }
 }
 
 function numberPlacements(
@@ -361,6 +546,7 @@ function numberPlacements(
 
 export function generateCrosswordLayout(
   items: CrosswordItem[],
+  seed: number = Date.now(),
 ): Pick<CrosswordBlock, "grid" | "placements" | "generationError"> {
   const normalizedItems = items
     .map((item) => ({
@@ -388,37 +574,40 @@ export function generateCrosswordLayout(
     seenAnswers.add(item.normalizedAnswer);
   }
 
-  const solved = solveCrossword({ cells: new Map() }, normalizedItems, []);
-  if (!solved) {
-    return { grid: [], placements: [], generationError: "unplaced-items" };
+  // Pre-validate: any single word longer than the page width is unplaceable.
+  if (normalizedItems.some((item) => item.cells.length > MAX_GRID_COLS)) {
+    return { grid: [], placements: [], generationError: "word-too-long" };
   }
 
-  const bounds = getBoardBounds(solved.board);
-  let minRow = bounds.minRow;
-  let maxRow = bounds.maxRow;
-  let minCol = bounds.minCol;
-  let maxCol = bounds.maxCol;
+  const ctx: SearchContext = {
+    best: null,
+    expansions: 0,
+    deadline: performance.now() + SEARCH_TIME_BUDGET_MS,
+    rng: createRng(seed || 1),
+    exhausted: false,
+  };
 
-  for (const placement of solved.placements) {
-    const [dRow, dCol] = CROSSWORD_DIRECTIONS[placement.direction];
-    minRow = Math.min(minRow, placement.row - dRow);
-    maxRow = Math.max(maxRow, placement.row - dRow);
-    minCol = Math.min(minCol, placement.col - dCol);
-    maxCol = Math.max(maxCol, placement.col - dCol);
+  seedSearch(normalizedItems, ctx);
+
+  if (!ctx.best) {
+    // Defensive fallback: should be unreachable because every non-empty input
+    // can place at least its first seed word.
+    return { grid: [], placements: [], generationError: "no-layout" };
   }
 
-  const rowCount = maxRow - minRow + 1;
-  const colCount = maxCol - minCol + 1;
+  const { board, placements } = ctx.best;
+  const rowCount = board.maxRow - board.minRow + 1;
+  const colCount = board.maxCol - board.minCol + 1;
   const grid = Array.from({ length: rowCount }, () => Array.from({ length: colCount }, () => ""));
 
-  for (const [key, cell] of solved.board.cells.entries()) {
+  for (const [key, cell] of board.cells.entries()) {
     const [row, col] = fromCellKey(key);
-    grid[row - minRow][col - minCol] = cell.letter;
+    grid[row - board.minRow][col - board.minCol] = cell.letter;
   }
 
   return {
     grid,
-    placements: numberPlacements(solved.placements, -minRow, -minCol),
+    placements: numberPlacements(placements, -board.minRow, -board.minCol),
     generationError: null,
   };
 }

@@ -4408,16 +4408,31 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
   const regenerate = () => {
     dispatch({
       type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: generateCrosswordLayout(block.items) },
+      payload: {
+        id: block.id,
+        updates: generateCrosswordLayout(block.items, Date.now() ^ Math.floor(Math.random() * 0xffffffff)),
+      },
     });
   };
+
+  const placedIds = new Set(block.placements.map((p) => p.itemId));
+  const unplacedItems = block.items.filter((it) => it.answer.trim().length > 0 && !placedIds.has(it.id));
 
   return (
     <div className="space-y-3">
       {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
       {block.generationError ? (
         <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          {t("generationFailed")}
+          {block.generationError === "word-too-long"
+            ? t("crosswordWordTooLong")
+            : block.generationError === "no-layout"
+              ? t("crosswordNoLayout")
+              : t("generationFailed")}
+        </div>
+      ) : null}
+      {!block.generationError && block.placements.length > 0 && unplacedItems.length > 0 ? (
+        <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {t("crosswordUnplaced", { answers: unplacedItems.map((it) => it.answer).join(", ") })}
         </div>
       ) : null}
       {block.grid.length > 0 ? (

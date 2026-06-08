@@ -8248,9 +8248,24 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
       </Dialog>
       {block.generationError ? (
         <div className="rounded-[4px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          {t("generationFailed")}
+          {block.generationError === "word-too-long"
+            ? t("crosswordWordTooLong")
+            : block.generationError === "no-layout"
+              ? t("crosswordNoLayout")
+              : t("generationFailed")}
         </div>
       ) : null}
+      {(() => {
+        if (block.generationError || block.placements.length === 0) return null;
+        const placedIds = new Set(block.placements.map((p) => p.itemId));
+        const unplaced = block.items.filter((it) => it.answer.trim().length > 0 && !placedIds.has(it.id));
+        if (unplaced.length === 0) return null;
+        return (
+          <div className="rounded-[4px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {t("crosswordUnplaced", { answers: unplaced.map((it) => it.answer).join(", ") })}
+          </div>
+        );
+      })()}
       <div className="flex items-center justify-between">
         <Label className="text-xs">{t("crosswordTwoColumnClues")}</Label>
         <Switch
