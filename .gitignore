@@ -46,3 +46,7 @@ output.log
 next-env.d.ts
 
 /src/generated/prisma
+
+# Runtime SSR render outputs (user-generated, not source code)
+/public/rendered-videos/
+/tmp/render-state/

@@ -12,9 +12,40 @@ const nextConfig: NextConfig = {
     "puppeteer-core",
     "@remotion/bundler",
     "@remotion/renderer",
-    "@remotion/lambda",
     "esbuild",
   ],
+  // Vercel's Lambda runtime is glibc/x64 — exclude everything else that the
+  // tracer would otherwise drag into every serverless function bundle.
+  outputFileTracingExcludes: {
+    "*": [
+      // musl variants (Vercel uses glibc)
+      "node_modules/@rspack/binding-linux-x64-musl/**",
+      "node_modules/@rspack/binding-linux-arm64-musl/**",
+      "node_modules/@swc/core-linux-x64-musl/**",
+      "node_modules/@swc/core-linux-arm64-musl/**",
+      "node_modules/@esbuild/linux-x64-musl/**",
+      "node_modules/@esbuild/linux-arm64-musl/**",
+      // non-linux platform binaries
+      "node_modules/@rspack/binding-darwin-*/**",
+      "node_modules/@rspack/binding-win32-*/**",
+      "node_modules/@swc/core-darwin-*/**",
+      "node_modules/@swc/core-win32-*/**",
+      "node_modules/@esbuild/darwin-*/**",
+      "node_modules/@esbuild/win32-*/**",
+      "node_modules/@esbuild/freebsd-*/**",
+      "node_modules/@esbuild/openbsd-*/**",
+      "node_modules/@esbuild/netbsd-*/**",
+      "node_modules/@esbuild/sunos-*/**",
+      "node_modules/@esbuild/android-*/**",
+      "node_modules/@esbuild/aix-*/**",
+      // dev-only Remotion tooling never executed at runtime
+      "node_modules/@remotion/studio/**",
+      "node_modules/@remotion/cli/**",
+      // user-generated MP4 outputs of the SSR render endpoint — not needed in
+      // any function bundle, even if accidentally committed
+      "public/rendered-videos/**",
+    ],
+  },
   webpack: (config, { isServer }) => {
     config.resolve = {
       ...config.resolve,
