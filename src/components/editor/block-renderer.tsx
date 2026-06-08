@@ -4431,6 +4431,7 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
             clueNumberFormat={state.brandProfile.itemNumberFormat || "default"}
             renderClueNumber={(clueNumber) => <ItemNumberBadge index={clueNumber} />}
             clueTextClassName="text-muted-foreground"
+            twoColumnClues={!!block.twoColumnClues}
           />
         </div>
       ) : null}

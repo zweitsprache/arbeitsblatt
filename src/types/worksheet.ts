@@ -971,6 +971,7 @@ export interface CrosswordBlock extends BlockBase {
   grid: string[][];
   placements: CrosswordPlacement[];
   generationError?: string | null;
+  twoColumnClues?: boolean;
 }
 
 /**
@@ -2839,6 +2840,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       grid: [],
       placements: [],
       generationError: null,
+      twoColumnClues: false,
       visibility: "both",
     },
   },

@@ -7907,6 +7907,7 @@ function CrosswordView({
           clueTextClassName="text-foreground"
           clueNumberFormat={itemNumberFormat}
           renderClueNumber={(clueNumber) => <ItemNumberBadge index={clueNumber} />}
+          twoColumnClues={!!block.twoColumnClues}
         />
       </div>
     </div>

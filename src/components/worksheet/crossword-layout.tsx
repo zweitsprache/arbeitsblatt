@@ -13,6 +13,7 @@ type CrosswordLayoutProps = {
   clueNumberFormat?: string;
   renderClueNumber?: (clueNumber: number) => React.ReactNode;
   clueListClassName?: string;
+  twoColumnClues?: boolean;
 };
 
 function formatClueNumberLabel(index: number, format: string | null | undefined): string {
@@ -30,6 +31,7 @@ export function CrosswordLayout({
   clueNumberFormat = "default",
   renderClueNumber,
   clueListClassName = "",
+  twoColumnClues = false,
 }: CrosswordLayoutProps) {
   const normalized = React.useMemo(() => {
     if (grid.length === 0 || grid[0]?.length === 0) {
@@ -88,8 +90,28 @@ export function CrosswordLayout({
     : `min(${cellSize}, calc((100% - 1px) / ${columnCount}))`;
   const fixedTableWidth = `calc(${cellSize} * ${columnCount})`;
 
+  const renderClueRow = (placement: CrosswordPlacement, extraClassName: string) => (
+    <div
+      key={`${placement.itemId}-${placement.direction}`}
+      className={`flex items-start gap-2 leading-5 py-2 ${extraClassName}`}
+    >
+      {renderClueNumber ? (
+        renderClueNumber(placement.clueNumber)
+      ) : clueNumberFormat === "numbers-with-period" ? (
+        <span className="w-6 shrink-0 font-medium leading-none tabular-nums text-foreground">
+          {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
+        </span>
+      ) : (
+        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none tabular-nums text-foreground">
+          {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
+        </span>
+      )}
+      <span className={clueTextClassName}>{placement.hint}</span>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-7">
       <table
         className="border-collapse bg-transparent"
         style={{
@@ -149,29 +171,29 @@ export function CrosswordLayout({
           ))}
         </tbody>
       </table>
-      <div className={`min-w-0 pt-3 ${clueListClassName}`}>
-        {normalized.placements.map((placement, index) => (
-          <div
-            key={`${placement.itemId}-${placement.direction}`}
-            className={`flex items-start gap-2 leading-5 py-2 ${index > 0 ? "border-t border-border" : "pt-0"}`}
-          >
-            {renderClueNumber ? (
-              renderClueNumber(placement.clueNumber)
-            ) : (
-              clueNumberFormat === "numbers-with-period" ? (
-                <span className="w-6 shrink-0 font-medium leading-none tabular-nums text-foreground">
-                  {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
-                </span>
-              ) : (
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-foreground bg-white text-[11px] font-semibold leading-none tabular-nums text-foreground">
-                  {formatClueNumberLabel(placement.clueNumber, clueNumberFormat)}
-                </span>
-              )
-            )}
-            <span className={clueTextClassName}>{placement.hint}</span>
-          </div>
-        ))}
-      </div>
+      {twoColumnClues ? (
+        <div className={`grid grid-cols-2 items-start gap-x-8 ${clueListClassName}`}>
+          {(() => {
+            const placements = normalized.placements;
+            const mid = Math.ceil(placements.length / 2);
+            return [placements.slice(0, mid), placements.slice(mid)]
+              .filter((column) => column.length > 0)
+              .map((column, columnIndex) => (
+                <div key={columnIndex} className="min-w-0 border-y border-border">
+                  {column.map((placement, index) =>
+                    renderClueRow(placement, index > 0 ? "border-t border-border" : ""),
+                  )}
+                </div>
+              ));
+          })()}
+        </div>
+      ) : (
+        <div className={`min-w-0 pt-3 ${clueListClassName}`}>
+          {normalized.placements.map((placement, index) =>
+            renderClueRow(placement, index > 0 ? "border-t border-border" : "pt-0"),
+          )}
+        </div>
+      )}
     </div>
   );
 }

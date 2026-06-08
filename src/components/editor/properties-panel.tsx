@@ -68,6 +68,7 @@ import {
   InlineChoiceItem,
   migrateInlineChoicesBlock,
   CrosswordBlock,
+  CrosswordItem,
   WordSearchBlock,
   SortingCategoriesBlock,
   SortingCategory,
@@ -130,7 +131,7 @@ import {
 import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
 import { formatCrosswordItemsText, parseCrosswordItemsText } from "@/lib/crossword";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw, Settings } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw, Settings, Table2 } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -8068,10 +8069,26 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const [itemsText, setItemsText] = React.useState(() => formatCrosswordItemsText(block.items));
+  const [tableOpen, setTableOpen] = React.useState(false);
 
   React.useEffect(() => {
     setItemsText(formatCrosswordItemsText(block.items));
   }, [block.items]);
+
+  const commitItemsArray = React.useCallback((items: CrosswordItem[]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items,
+          grid: [],
+          placements: [],
+          generationError: null,
+        },
+      },
+    });
+  }, [block.id, dispatch]);
 
   const commitItems = React.useCallback((value: string) => {
     const parsedItems = parseCrosswordItemsText(value).map((item, index) => ({
@@ -8080,19 +8097,39 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
       hint: item.hint,
     }));
 
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: {
-          items: parsedItems,
-          grid: [],
-          placements: [],
-          generationError: null,
-        },
-      },
-    });
-  }, [block.id, block.items, dispatch]);
+    commitItemsArray(parsedItems);
+  }, [block.items, commitItemsArray]);
+
+  const updateItemField = React.useCallback(
+    (index: number, field: "answer" | "hint", value: string) => {
+      commitItemsArray(
+        block.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+      );
+    },
+    [block.items, commitItemsArray],
+  );
+
+  const addItem = React.useCallback(() => {
+    commitItemsArray([...block.items, { id: crypto.randomUUID(), answer: "", hint: "" }]);
+  }, [block.items, commitItemsArray]);
+
+  const removeItem = React.useCallback(
+    (index: number) => {
+      commitItemsArray(block.items.filter((_, i) => i !== index));
+    },
+    [block.items, commitItemsArray],
+  );
+
+  const moveItem = React.useCallback(
+    (index: number, direction: -1 | 1) => {
+      const target = index + direction;
+      if (target < 0 || target >= block.items.length) return;
+      const next = [...block.items];
+      [next[index], next[target]] = [next[target], next[index]];
+      commitItemsArray(next);
+    },
+    [block.items, commitItemsArray],
+  );
 
   return (
     <div className="space-y-3">
@@ -8118,12 +8155,114 @@ function CrosswordProps({ block }: { block: CrosswordBlock }) {
           className="min-h-40 w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs shadow-none outline-none"
           placeholder={t("crosswordItemsPlaceholder")}
         />
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setTableOpen(true)}
+        >
+          <Table2 className="mr-2 h-3.5 w-3.5" /> {t("crosswordEditTable")}
+        </Button>
       </div>
+      <Dialog open={tableOpen} onOpenChange={setTableOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("crosswordTableTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {block.items.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">{t("crosswordTableEmpty")}</p>
+            ) : (
+              <table className="w-full border-separate border-spacing-y-1.5 text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="w-8" />
+                    <th className="px-2 pb-1">{t("crosswordAnswer")}</th>
+                    <th className="px-2 pb-1">{t("crosswordHint")}</th>
+                    <th className="w-20" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.items.map((item, index) => (
+                    <tr key={item.id} className="align-top">
+                      <td className="pt-1.5 text-center text-xs text-slate-400">{index + 1}</td>
+                      <td className="px-1">
+                        <Input
+                          value={item.answer}
+                          onChange={(event) => updateItemField(index, "answer", event.target.value)}
+                          className="h-8 text-sm"
+                        />
+                      </td>
+                      <td className="px-1">
+                        <Input
+                          value={item.hint}
+                          onChange={(event) => updateItemField(index, "hint", event.target.value)}
+                          className="h-8 text-sm"
+                        />
+                      </td>
+                      <td className="px-1">
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={index === 0}
+                            onClick={() => moveItem(index, -1)}
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={index === block.items.length - 1}
+                            onClick={() => moveItem(index, 1)}
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-500 hover:text-red-600"
+                            onClick={() => removeItem(index)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <Button variant="outline" size="sm" className="w-full" onClick={addItem}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> {t("addWord")}
+          </Button>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setTableOpen(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {block.generationError ? (
         <div className="rounded-[4px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {t("generationFailed")}
         </div>
       ) : null}
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">{t("crosswordTwoColumnClues")}</Label>
+        <Switch
+          checked={!!block.twoColumnClues}
+          onCheckedChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { twoColumnClues: v } },
+            })
+          }
+        />
+      </div>
       <Button
         variant="outline"
         size="sm"
@@ -12308,6 +12447,7 @@ function LetterCodeProps({ block }: { block: LetterCodeBlock }) {
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
+  const [tableOpen, setTableOpen] = React.useState(false);
 
   const handleCsvImport = () => {
     setCsvError(null);
@@ -12395,6 +12535,17 @@ function LetterCodeProps({ block }: { block: LetterCodeBlock }) {
     });
   };
 
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const nextItems = [...items];
+    [nextItems[index], nextItems[target]] = [nextItems[target], nextItems[index]];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div>
@@ -12464,7 +12615,100 @@ function LetterCodeProps({ block }: { block: LetterCodeBlock }) {
         <Button type="button" variant="outline" size="sm" className="w-full" onClick={addItem}>
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setTableOpen(true)}
+        >
+          <Table2 className="mr-2 h-3.5 w-3.5" /> {t("crosswordEditTable")}
+        </Button>
       </div>
+      <Dialog open={tableOpen} onOpenChange={setTableOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("letterCodeTableTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {items.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">{t("crosswordTableEmpty")}</p>
+            ) : (
+              <table className="w-full border-separate border-spacing-y-1.5 text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="w-8" />
+                    <th className="px-2 pb-1">{t("letterCodeWord")}</th>
+                    <th className="px-2 pb-1">{t("letterCodeClue")}</th>
+                    <th className="w-20" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr key={item.id} className="align-top">
+                      <td className="pt-1.5 text-center text-xs text-slate-400">{index + 1}</td>
+                      <td className="px-1">
+                        <Input
+                          value={item.word}
+                          onChange={(event) => updateItem(index, { word: event.target.value })}
+                          className="h-8 text-sm"
+                          placeholder="HA[U]S"
+                        />
+                      </td>
+                      <td className="px-1">
+                        <Input
+                          value={item.clue}
+                          onChange={(event) => updateItem(index, { clue: event.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </td>
+                      <td className="px-1">
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={index === 0}
+                            onClick={() => moveItem(index, -1)}
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={index === items.length - 1}
+                            onClick={() => moveItem(index, 1)}
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-500 hover:text-red-600"
+                            disabled={items.length <= 1}
+                            onClick={() => removeItem(index)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <Button variant="outline" size="sm" className="w-full" onClick={addItem}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> {t("addItem")}
+          </Button>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setTableOpen(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("csvImport")}</Label>
