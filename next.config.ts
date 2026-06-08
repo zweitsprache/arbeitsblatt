@@ -16,20 +16,29 @@ const nextConfig: NextConfig = {
   ],
   // Vercel's Lambda runtime is glibc/x64 — exclude everything else that the
   // tracer would otherwise drag into every serverless function bundle.
+  // Build uses `next build --webpack`, so @rspack and @swc/core are
+  // build-time only and not needed in any function.
   outputFileTracingExcludes: {
     "*": [
-      // musl variants (Vercel uses glibc)
-      "node_modules/@rspack/binding-linux-x64-musl/**",
-      "node_modules/@rspack/binding-linux-arm64-musl/**",
-      "node_modules/@swc/core-linux-x64-musl/**",
-      "node_modules/@swc/core-linux-arm64-musl/**",
-      "node_modules/@esbuild/linux-x64-musl/**",
-      "node_modules/@esbuild/linux-arm64-musl/**",
-      // non-linux platform binaries
-      "node_modules/@rspack/binding-darwin-*/**",
-      "node_modules/@rspack/binding-win32-*/**",
+      // @rspack — not used; build runs with webpack
+      "node_modules/@rspack/**",
+      // @swc/core platform binaries — build-time transform, not used at runtime
+      "node_modules/@swc/core-linux-*/**",
       "node_modules/@swc/core-darwin-*/**",
       "node_modules/@swc/core-win32-*/**",
+      "node_modules/@swc/core-freebsd-*/**",
+      // esbuild — already in serverExternalPackages; drop non-glibc/non-x64
+      // variants we'll never load on Vercel's Lambda runtime
+      "node_modules/@esbuild/linux-x64-musl/**",
+      "node_modules/@esbuild/linux-arm64-musl/**",
+      "node_modules/@esbuild/linux-arm64/**",
+      "node_modules/@esbuild/linux-arm/**",
+      "node_modules/@esbuild/linux-ia32/**",
+      "node_modules/@esbuild/linux-ppc64/**",
+      "node_modules/@esbuild/linux-s390x/**",
+      "node_modules/@esbuild/linux-mips64el/**",
+      "node_modules/@esbuild/linux-riscv64/**",
+      "node_modules/@esbuild/linux-loong64/**",
       "node_modules/@esbuild/darwin-*/**",
       "node_modules/@esbuild/win32-*/**",
       "node_modules/@esbuild/freebsd-*/**",
@@ -38,11 +47,13 @@ const nextConfig: NextConfig = {
       "node_modules/@esbuild/sunos-*/**",
       "node_modules/@esbuild/android-*/**",
       "node_modules/@esbuild/aix-*/**",
-      // dev-only Remotion tooling never executed at runtime
+      // Build-time only
+      "node_modules/typescript/**",
+      "node_modules/terser/**",
+      // Dev-only Remotion tooling never executed at runtime
       "node_modules/@remotion/studio/**",
       "node_modules/@remotion/cli/**",
-      // user-generated MP4 outputs of the SSR render endpoint — not needed in
-      // any function bundle, even if accidentally committed
+      // User-generated MP4 outputs of the SSR render endpoint
       "public/rendered-videos/**",
     ],
   },
