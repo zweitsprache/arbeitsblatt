@@ -806,7 +806,12 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
 
 // ─── Text ────────────────────────────────────────────────────
 function stripTrailingEmptyParagraphs(html: string): string {
-  return html.replace(/(?:\s*<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\u00a0)?\s*<\/p>\s*)+$/gi, "");
+  let result = html
+    .replace(/(?:\s*<li(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\u00a0)?\s*<\/li>\s*)+$/gi, "")
+    .replace(/(?:\s*<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\u00a0)?\s*<\/p>\s*)+$/gi, "");
+  // Clean up orphaned empty <ul> after removing all <li>
+  result = result.replace(/<ul[^>]*>\s*<\/ul>\s*$/gi, "");
+  return result;
 }
 
 function TextRenderer({ block }: { block: TextBlock }) {
