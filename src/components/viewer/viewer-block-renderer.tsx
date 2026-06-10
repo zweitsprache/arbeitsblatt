@@ -5445,10 +5445,18 @@ function BoardGameView({ block, mode = "online" }: { block: BoardGameBlock; mode
         const displayText = index === 0 ? "ZIEL" : index === 35 ? "START" : cell.text;
         const isSpecial = displayText === "ZIEL" || displayText === "START";
         const snakeNumber = getSnakeNumber(index);
+        const cellTextLength = (displayText ?? "").length;
+        const cellTextSizeClass = isSpecial
+          ? "text-3xl"
+          : cellTextLength > 60
+            ? "text-[10px]"
+            : cellTextLength > 30
+              ? "text-[11px]"
+              : "text-xs";
         return (
         <div
           key={cell.id || index}
-          className={`relative z-10 rounded-sm border border-border p-2 bg-background flex flex-col ${isSpecial ? "items-center justify-center" : "space-y-2 relative"}`}
+          className={`relative z-10 rounded-sm border border-border p-2 bg-background flex flex-col overflow-hidden ${isSpecial ? "items-center justify-center" : "space-y-2 relative"}`}
           style={{
             width: `${cellWidthMm}mm`,
             height: `${cellHeightMm}mm`,
@@ -5464,13 +5472,12 @@ function BoardGameView({ block, mode = "online" }: { block: BoardGameBlock; mode
           }}
         >
           {isSpecial ? (
-            <p className="font-bold text-3xl text-center leading-none">{displayText}</p>
+            <p className={`font-bold ${cellTextSizeClass} text-center leading-none`}>{displayText}</p>
           ) : (
             <>
               {snakeNumber && <div className="absolute top-1 right-1 text-[9px] text-muted-foreground font-semibold">{snakeNumber}</div>}
-              {!cell.imageUrl ? <div className="flex-1 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
               {displayText?.trim() ? (
-                <p className="flex-1 flex items-center justify-center text-center text-xs leading-snug whitespace-pre-wrap break-words overflow-hidden rounded-sm bg-background/70 px-1">{displayText}</p>
+                <p className={`flex-1 flex items-center justify-center text-center ${cellTextSizeClass} leading-tight whitespace-pre-wrap break-words overflow-hidden rounded-sm bg-background/70 px-1`} style={{ wordBreak: 'break-word' }}>{displayText}</p>
               ) : null}
             </>
           )}

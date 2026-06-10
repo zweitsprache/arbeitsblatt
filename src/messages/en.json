@@ -1606,6 +1606,8 @@
     "csvImportPlaceholderInlineChoices": "She {{choice:*goes|go|going}} to school.\nHe {{choice:*has|have|had}} a dog.",
     "csvNoData": "No data found",
     "csvReplace": "Replace existing",
+    "boardGameCsvHelp": "One line per cell, in play order (from START to ZIEL).",
+    "boardGameCsvPlaceholder": "Question 1\nQuestion 2\nQuestion 3\n…",
     "quartettCsvImportHelp": "CSV import: one column fills subitems in random order across QUARTETT items. Two columns use title,content and group rows with the same title.",
     "quartettCsvPlaceholder": "Apple\nTrain\nHouse\nBlue\n\nAnimals;cat\nAnimals;dog\nAnimals;horse\nAnimals;mouse\nColors;red\nColors;green",
     "quartettExportCards": "Export cards",

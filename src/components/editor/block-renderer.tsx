@@ -6663,12 +6663,20 @@ function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
         const isSpecial = displayText === "ZIEL" || displayText === "START";
         const snakeNumber = getSnakeNumber(cellIndex);
         const isSelected = selectedCellIndex === cellIndex;
+        const cellTextLength = (displayText ?? "").length;
+        const cellTextSizeClass = isSpecial
+          ? "text-3xl"
+          : cellTextLength > 60
+            ? "text-[10px]"
+            : cellTextLength > 30
+              ? "text-[11px]"
+              : "text-xs";
         return (
         <button
           key={cell.id || cellIndex}
           type="button"
           onClick={() => dispatch({ type: "SET_ACTIVE_ITEM", payload: cellIndex })}
-          className={`relative z-10 rounded-sm border p-2 bg-background flex flex-col text-left transition-colors ${isSpecial ? "items-center justify-center" : "space-y-2 relative"} ${isSelected ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}
+          className={`relative z-10 rounded-sm border p-2 bg-background flex flex-col text-left transition-colors overflow-hidden ${isSpecial ? "items-center justify-center" : "space-y-2 relative"} ${isSelected ? "border-primary ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}
           style={{
             width: "35mm",
             height: "25mm",
@@ -6684,15 +6692,12 @@ function BoardGameRenderer({ block }: { block: BoardGameBlock }) {
           }}
         >
           {isSpecial ? (
-            <div className="font-bold text-3xl text-center leading-none">{displayText}</div>
+            <div className={`font-bold ${cellTextSizeClass} text-center leading-none`}>{displayText}</div>
           ) : (
             <>
               {snakeNumber && <div className="absolute top-1 right-1 text-[9px] text-muted-foreground font-semibold">{snakeNumber}</div>}
-              {!cell.imageUrl ? (
-                <div className="flex-1 rounded-sm border border-dashed border-border/80 bg-muted/20" />
-              ) : null}
               {displayText?.trim() ? (
-                <p className="flex items-center justify-center text-center text-xs leading-snug whitespace-pre-wrap break-words rounded-sm bg-background/70 px-1 py-1" style={{ minHeight: "1.25rem", maxHeight: '100%', wordBreak: 'break-word' }}>
+                <p className={`flex-1 flex items-center justify-center text-center ${cellTextSizeClass} leading-tight whitespace-pre-wrap break-words rounded-sm bg-background/70 px-1 py-1 overflow-hidden`} style={{ wordBreak: 'break-word' }}>
                   {displayText}
                 </p>
               ) : null}

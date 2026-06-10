@@ -1606,6 +1606,8 @@
     "csvImportPlaceholderInlineChoices": "Sie {{choice:*geht|gehen|ging}} zur Schule.\nEr {{choice:*hat|haben|hatte}} einen Hund.",
     "csvNoData": "Keine Daten gefunden",
     "csvReplace": "Bestehende ersetzen",
+    "boardGameCsvHelp": "Eine Zeile pro Feld, in Spielreihenfolge (vom START bis zum ZIEL).",
+    "boardGameCsvPlaceholder": "Frage 1\nFrage 2\nFrage 3\n…",
     "quartettCsvImportHelp": "CSV-Import: Eine Spalte verteilt Einträge in zufälliger Reihenfolge auf QUARTETT-Elemente. Zwei Spalten verwenden Titel,Inhalt und gruppieren Zeilen mit gleichem Titel.",
     "quartettCsvPlaceholder": "Apfel\nZug\nHaus\nBlau\n\nTiere;Katze\nTiere;Hund\nTiere;Pferd\nTiere;Maus\nFarben;Rot\nFarben;Grün",
     "quartettExportCards": "Karten exportieren",

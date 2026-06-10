@@ -3307,6 +3307,9 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
   const [cropOpen, setCropOpen] = React.useState(false);
   const [browserOpen, setBrowserOpen] = React.useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = React.useState(false);
+  const [csvText, setCsvText] = React.useState("");
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
 
   const totalCells = Math.max(1, block.rows * block.cols);
   const cells = Array.from({ length: totalCells }, (_, index) => {
@@ -3318,6 +3321,23 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
   const selectedDisplayText =
     selectedCellIndex === 0 ? "ZIEL" : selectedCellIndex === 35 ? "START" : selectedCell?.text || "";
   const isSpecialCell = selectedCellIndex === 0 || selectedCellIndex === 35;
+
+  const snakePathIndices = React.useMemo(() => {
+    const indices: number[] = [];
+    for (let r = block.rows - 1; r >= 0; r--) {
+      const isLeftToRight = (block.rows - 1 - r) % 2 === 0;
+      const range = isLeftToRight
+        ? Array.from({ length: block.cols }, (_, c) => c)
+        : Array.from({ length: block.cols }, (_, c) => block.cols - 1 - c);
+      for (const c of range) {
+        const idx = r * block.cols + c;
+        if (idx !== 35 && idx !== 0 && idx < totalCells) {
+          indices.push(idx);
+        }
+      }
+    }
+    return indices;
+  }, [block.rows, block.cols, totalCells]);
 
   const updateCell = (index: number, updates: Partial<BoardGameBlock["cells"][number]>) => {
     const nextCells = cells.map((cell, cellIndex) => (cellIndex === index ? { ...cell, ...updates } : cell));
@@ -3366,6 +3386,83 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
       type: "UPDATE_BLOCK",
       payload: { id: block.id, updates: { cells: nextCells } },
     });
+  };
+
+  const shuffleCells = () => {
+    const contents = snakePathIndices.map((idx) => ({
+      text: cells[idx]?.text ?? "",
+      imageUrl: cells[idx]?.imageUrl ?? "",
+    }));
+    for (let i = contents.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [contents[i], contents[j]] = [contents[j], contents[i]];
+    }
+    const contentByIndex = new Map<number, { text: string; imageUrl: string }>();
+    snakePathIndices.forEach((cellIndex, i) => {
+      contentByIndex.set(cellIndex, contents[i]);
+    });
+    const nextCells = cells.map((cell, index) => {
+      const shuffled = contentByIndex.get(index);
+      if (!shuffled) return cell;
+      return { ...cell, text: shuffled.text, imageUrl: shuffled.imageUrl };
+    });
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { cells: nextCells } },
+    });
+  };
+
+  const handleCsvImport = () => {
+    setCsvError(null);
+    const text = csvText.trim();
+    if (!text) return;
+
+    const parsed = text
+      .split(/\r?\n|\t/)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (parsed.length === 0) {
+      setCsvError(t("csvNoData"));
+      return;
+    }
+
+    // Map parsed lines to snake-path positions. Replace overwrites every numbered cell;
+    // append only fills cells that are currently empty (in play order).
+    const assignments = new Map<number, string>();
+    if (csvMode === "replace") {
+      parsed.forEach((value, i) => {
+        const cellIndex = snakePathIndices[i];
+        if (cellIndex !== undefined) assignments.set(cellIndex, value);
+      });
+    } else {
+      let cursor = 0;
+      for (const cellIndex of snakePathIndices) {
+        if (cursor >= parsed.length) break;
+        const existing = (cells[cellIndex]?.text ?? "").trim();
+        if (existing) continue;
+        assignments.set(cellIndex, parsed[cursor]);
+        cursor += 1;
+      }
+    }
+
+    const nextCells = cells.map((cell, index) => {
+      if (index === 0) return { ...cell, text: "ZIEL" };
+      if (index === 35) return { ...cell, text: "START" };
+      if (csvMode === "replace") {
+        return { ...cell, text: assignments.get(index) ?? "" };
+      }
+      if (assignments.has(index)) {
+        return { ...cell, text: assignments.get(index) ?? "" };
+      }
+      return cell;
+    });
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { cells: nextCells } },
+    });
+    setCsvText("");
   };
 
   return (
@@ -3496,6 +3593,56 @@ function BoardGameProps({ block }: { block: BoardGameBlock }) {
           />
         </div>
       ) : null}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("csvImport")}</Label>
+        <p className="text-xs text-muted-foreground">{t("boardGameCsvHelp")}</p>
+        <textarea
+          className="w-full rounded-[4px] !border border-input bg-white px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+          placeholder={t("boardGameCsvPlaceholder")}
+          value={csvText}
+          onChange={(e) => {
+            setCsvText(e.target.value);
+            setCsvError(null);
+          }}
+        />
+        {csvError && (
+          <p className="text-xs text-destructive mt-1">{csvError}</p>
+        )}
+        <div className="space-y-2 mt-1">
+          <Select
+            value={csvMode}
+            onValueChange={(v) => setCsvMode(v as "replace" | "append")}
+          >
+            <SelectTrigger size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="replace">{t("csvReplace")}</SelectItem>
+              <SelectItem value="append">{t("csvAppend")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleCsvImport}
+            disabled={!csvText.trim()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {t("csvImportButton")}
+          </Button>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={shuffleCells}
+      >
+        <Shuffle className="h-4 w-4 mr-2" />
+        {t("shuffleItems")}
+      </Button>
       <Button
         type="button"
         variant="outline"
