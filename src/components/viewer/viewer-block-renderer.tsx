@@ -1926,18 +1926,31 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   };
 
   /** Split rows content into row fragments, treating both <p> and <li> as rows.
-   *  Normalises <li> fragments into <p> snippets so each list item becomes one row. */
+   *  Normalises <li> fragments into <p> snippets so each list item becomes one row.
+   *  Filters out empty rows (containing only <br>, &nbsp;, or whitespace). */
   const splitRowItems = (html: string): string[] => {
     const prepared = prepareTiptapHtml(html, deMarkerColor);
     const rows = Array.from(prepared.matchAll(/<li\b[^>]*>[\s\S]*?<\/li>|<p\b[^>]*>[\s\S]*?<\/p>/gi), (m) => m[0]);
     if (rows.length === 0) return [prepared];
 
-    return rows.map((row) => {
-      if (!/^<li\b/i.test(row)) return row;
-      const liInner = row.replace(/^<li\b[^>]*>/i, "").replace(/<\/li>$/i, "").trim();
-      if (/^<p\b/i.test(liInner)) return liInner;
-      return `<p>${liInner}</p>`;
-    });
+    const isEmptyRow = (row: string): boolean => {
+      const inner = row.replace(/^<(?:li|p)\b[^>]*>/i, "").replace(/<\/(?:li|p)>$/i, "");
+      const stripped = inner
+        .replace(/<br\s*\/?>/gi, "")
+        .replace(/&nbsp;|\u00a0/g, "")
+        .replace(/<[^>]+>/g, "")
+        .trim();
+      return stripped === "";
+    };
+
+    return rows
+      .filter((row) => !isEmptyRow(row))
+      .map((row) => {
+        if (!/^<li\b/i.test(row)) return row;
+        const liInner = row.replace(/^<li\b[^>]*>/i, "").replace(/<\/li>$/i, "").trim();
+        if (/^<p\b/i.test(liInner)) return liInner;
+        return `<p>${liInner}</p>`;
+      });
   };
 
   /** Wrap content in bilingual 2-column grid if active */
