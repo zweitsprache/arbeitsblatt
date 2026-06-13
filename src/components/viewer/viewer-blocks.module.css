@@ -368,6 +368,11 @@
   line-height: 1.35;
 }
 
+/* Don't apply blockGap to paragraphs in numbered items */
+.numberedItemContent :global(p) {
+  margin-bottom: 0 !important;
+}
+
 .checklistRows {
   display: grid;
   gap: 0.6rem;
