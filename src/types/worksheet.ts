@@ -1385,10 +1385,20 @@ export interface DosAndDontsBlock extends BlockBase {
 }
 
 // ─── Numbered Items block ─────────────────────────────────────
-export interface NumberedItem {
+export interface NumberedSubItem {
   id: string;
   content: string; // HTML string for WYSIWYG
 }
+
+export interface NumberedItem {
+  id: string;
+  content: string; // HTML string for WYSIWYG
+  subItems?: NumberedSubItem[];
+}
+
+// Marker style for sub-items: "decimal" → 1.1, 1.2; "letter" → a, b, c;
+// "bullet" → •; "plain" → indented with no marker.
+export type NumberedSubItemStyle = "decimal" | "letter" | "bullet" | "plain";
 
 export interface NumberedItemsBlock extends BlockBase {
   type: "numbered-items";
@@ -1396,6 +1406,7 @@ export interface NumberedItemsBlock extends BlockBase {
   startNumber: number;
   bgColor?: string;
   borderRadius?: number;
+  subItemStyle?: NumberedSubItemStyle;
   bilingual?: boolean;
   skipTranslation?: boolean;
 }

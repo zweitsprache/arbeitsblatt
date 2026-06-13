@@ -75,6 +75,7 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
+  NumberedSubItemStyle,
   SubjectBlock,
   BoxBlock,
   QuartettBlock,
@@ -8063,6 +8064,21 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
+// Marker shown for a sub-item given the configured style.
+function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLabel: string, subIndex: number): string {
+  switch (style) {
+    case "letter":
+      return `${String.fromCharCode(97 + (subIndex % 26))})`;
+    case "bullet":
+      return "•";
+    case "plain":
+      return "";
+    case "decimal":
+    default:
+      return `${parentLabel}.${subIndex + 1}`;
+  }
+}
+
 function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
@@ -8099,6 +8115,79 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
     });
   };
 
+  // ── sub-items ──────────────────────────────────────────────
+  const updateSubItem = (parentIndex: number, subIndex: number, content: string) => {
+    localeUpdate(block.id, `items.${parentIndex}.subItems.${subIndex}.content`, content, () => {
+      const newItems = block.items.map((it) => ({ ...it, subItems: it.subItems ? [...it.subItems] : it.subItems }));
+      const subs = [...(newItems[parentIndex].subItems ?? [])];
+      subs[subIndex] = { ...subs[subIndex], content };
+      newItems[parentIndex] = { ...newItems[parentIndex], subItems: subs };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addSubItem = (parentIndex: number) => {
+    const newItems = block.items.map((it) => ({ ...it }));
+    newItems[parentIndex] = {
+      ...newItems[parentIndex],
+      subItems: [...(newItems[parentIndex].subItems ?? []), { id: crypto.randomUUID(), content: "" }],
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeSubItem = (parentIndex: number, subIndex: number) => {
+    const newItems = block.items.map((it) => ({ ...it }));
+    newItems[parentIndex] = {
+      ...newItems[parentIndex],
+      subItems: (newItems[parentIndex].subItems ?? []).filter((_, i) => i !== subIndex),
+    };
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  // Move a sub-item up/down. At a parent boundary it flows into the
+  // adjacent parent item (so sub-items can be moved between items).
+  const moveSubItem = (parentIndex: number, subIndex: number, direction: "up" | "down") => {
+    const newItems = block.items.map((it) => ({ ...it, subItems: [...(it.subItems ?? [])] }));
+    const subs = newItems[parentIndex].subItems!;
+    if (direction === "up") {
+      if (subIndex > 0) {
+        [subs[subIndex - 1], subs[subIndex]] = [subs[subIndex], subs[subIndex - 1]];
+      } else if (parentIndex > 0) {
+        const [moved] = subs.splice(subIndex, 1);
+        newItems[parentIndex - 1].subItems!.push(moved);
+      } else {
+        return;
+      }
+    } else {
+      if (subIndex < subs.length - 1) {
+        [subs[subIndex + 1], subs[subIndex]] = [subs[subIndex], subs[subIndex + 1]];
+      } else if (parentIndex < newItems.length - 1) {
+        const [moved] = subs.splice(subIndex, 1);
+        newItems[parentIndex + 1].subItems!.unshift(moved);
+      } else {
+        return;
+      }
+    }
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const isFirstSub = (parentIndex: number, subIndex: number) => parentIndex === 0 && subIndex === 0;
+  const isLastSub = (parentIndex: number, subIndex: number) =>
+    parentIndex === block.items.length - 1 &&
+    subIndex === (block.items[parentIndex].subItems?.length ?? 0) - 1;
+
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
@@ -8106,42 +8195,110 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
 
   return (
     <div className="space-y-2">
-      {block.items.map((item, i) => (
-        <div key={item.id} className="relative group">
-          <div
-            className="flex gap-0"
-            style={hasBg ? {
-              backgroundColor: surfaceBg,
-              borderRadius: `${radius}px`,
-            } : undefined}
-          >
+      {block.items.map((item, i) => {
+        const parentLabel = String(block.startNumber + i).padStart(2, '0');
+        return (
+        <div key={item.id} className="space-y-1">
+          <div className="relative group">
             <div
-              className={`shrink-0 w-[30px] flex items-center justify-center font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
-              style={{
-                ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : '#000' } : {}),
-                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
-                ...(textBaseSize ? { fontSize: textBaseSize } : {}),
-              }}
+              className="flex gap-0"
+              style={hasBg ? {
+                backgroundColor: surfaceBg,
+                borderRadius: `${radius}px`,
+              } : undefined}
             >
-              {String(block.startNumber + i).padStart(2, '0')}
+              <div
+                className={`shrink-0 w-[30px] flex items-center justify-center font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+                style={{
+                  ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : '#000' } : {}),
+                  borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+                  ...(textBaseSize ? { fontSize: textBaseSize } : {}),
+                }}
+              >
+                {parentLabel}
+              </div>
+              <div className="numbered-items-richtext flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+                <RichTextEditor
+                  content={item.content}
+                  onChange={(html) => updateItem(i, html)}
+                  placeholder="…"
+                  editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
+                />
+              </div>
             </div>
-            <div className="numbered-items-richtext flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-              <RichTextEditor
-                content={item.content}
-                onChange={(html) => updateItem(i, html)}
-                placeholder="…"
-                editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
-              />
+            <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => addSubItem(i)}
+                title="Add sub-item"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => removeItem(i)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={() => removeItem(i)}
-            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {/* sub-items */}
+          {(item.subItems?.length ?? 0) > 0 && (
+            <div className="space-y-1.5 pb-1">
+              {item.subItems!.map((sub, si) => {
+                const marker = numberedSubItemMarker(block.subItemStyle, parentLabel, si);
+                return (
+                  <div
+                    key={sub.id}
+                    className="relative group flex items-start gap-2 bg-white border border-border px-2.5 py-1.5"
+                    style={{ borderRadius: `${radius}px` }}
+                  >
+                    {marker && (
+                      <span
+                        className="shrink-0 text-muted-foreground font-medium pt-1 tabular-nums"
+                        style={textBaseSize ? { fontSize: textBaseSize } : undefined}
+                      >
+                        {marker}
+                      </span>
+                    )}
+                    <div className="numbered-items-richtext flex-1 min-w-0 text-foreground font-normal">
+                      <RichTextEditor
+                        content={sub.content}
+                        onChange={(html) => updateSubItem(i, si, html)}
+                        placeholder="…"
+                        editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-0.5">
+                      <button
+                        onClick={() => moveSubItem(i, si, "up")}
+                        disabled={isFirstSub(i, si)}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => moveSubItem(i, si, "down")}
+                        disabled={isLastSub(i, si)}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => removeSubItem(i, si)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
       <button
         onClick={addItem}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-11"

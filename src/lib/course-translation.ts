@@ -513,6 +513,11 @@ function forEachBlockTranslationField(
           add(`items.${item.id}.content`, () => item.content, (v) => {
             item.content = v;
           });
+          for (const sub of item.subItems ?? []) {
+            add(`items.${item.id}.subItems.${sub.id}.content`, () => sub.content, (v) => {
+              sub.content = v;
+            });
+          }
         }
       }
       break;

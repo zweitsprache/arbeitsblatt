@@ -70,6 +70,7 @@ import {
   DosAndDontsBlock,
   TextComparisonBlock,
   NumberedItemsBlock,
+  NumberedSubItemStyle,
   SubjectBlock,
   BoxBlock,
   QuartettBlock,
@@ -10658,6 +10659,21 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
+// Marker shown for a sub-item given the configured style.
+function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLabel: string, subIndex: number): string {
+  switch (style) {
+    case "letter":
+      return `${String.fromCharCode(97 + (subIndex % 26))})`;
+    case "bullet":
+      return "•";
+    case "plain":
+      return "";
+    case "decimal":
+    default:
+      return `${parentLabel}.${subIndex + 1}`;
+  }
+}
+
 function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
@@ -10693,21 +10709,58 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
     </div>
   );
 
+  const renderSubItems = (item: NumberedItemsBlock["items"][number], originalItem: NumberedItemsBlock["items"][number] | undefined, parentLabel: string) => {
+    if (!item.subItems || item.subItems.length === 0) return null;
+    return (
+      <div style={{ marginTop: "0.4rem", marginBottom: "0.3rem", display: "grid", gap: "0.4rem" }}>
+        {item.subItems.map((sub, si) => {
+          const marker = numberedSubItemMarker(block.subItemStyle, parentLabel, si);
+          const originalSub = originalItem?.subItems?.[si];
+          const showBilingual = isBilingual && !!originalSub && originalSub.content !== sub.content;
+          return (
+            <div
+              key={sub.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: marker ? "auto 1fr" : "1fr",
+                gap: "0.5rem",
+                alignItems: "start",
+                backgroundColor: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: `${radius}px`,
+                padding: "0.4rem 0.65rem",
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+              }}
+            >
+              {marker && <span style={{ color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>{marker}</span>}
+              {showBilingual
+                ? renderBilingualColumns(originalSub.content, sub.content)
+                : renderNumberedItemContent(sub.content)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (!hasBg) {
     return (
       <div className={s.numberedItemsRows}>
         {block.items.map((item, i) => {
           const originalItem = originalBlock?.items[i];
+          const parentLabel = String(block.startNumber + i).padStart(2, "0");
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
           return (
             <div key={item.id} className={s.numberedItemRow}>
-              <span className={s.accentBadge}>{String(block.startNumber + i).padStart(2, "0")}</span>
+              <span className={s.accentBadge}>{parentLabel}</span>
               <div className={s.numberedItemContent}>
                 {showBilingual ? (
                   renderBilingualColumns(originalItem.content, item.content)
                 ) : (
                   renderNumberedItemContent(item.content)
                 )}
+                {renderSubItems(item, originalItem, parentLabel)}
               </div>
             </div>
           );
@@ -10720,6 +10773,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
     <div className="space-y-3">
       {block.items.map((item, i) => {
         const originalItem = originalBlock?.items[i];
+        const parentLabel = String(block.startNumber + i).padStart(2, '0');
         const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
         return (
           <div
@@ -10738,19 +10792,17 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
                 backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
                 color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
                 borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+                alignSelf: (item.subItems?.length ?? 0) > 0 ? "stretch" : undefined,
               }}
             >
-              {String(block.startNumber + i).padStart(2, '0')}
+              {parentLabel}
             </div>
-            {showBilingual ? (
-              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-                {renderBilingualColumns(originalItem.content, item.content)}
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
-                {renderNumberedItemContent(item.content)}
-              </div>
-            )}
+            <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+              {showBilingual
+                ? renderBilingualColumns(originalItem.content, item.content)
+                : renderNumberedItemContent(item.content)}
+              {renderSubItems(item, originalItem, parentLabel)}
+            </div>
           </div>
         );
       })}

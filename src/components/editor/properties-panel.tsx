@@ -86,6 +86,7 @@ import {
   ChartBlock,
   ChartDataPoint,
   NumberedItemsBlock,
+  NumberedSubItemStyle,
   BoxBlock,
   QuartettBlock,
   TabooBlock,
@@ -11609,6 +11610,24 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
           value={block.startNumber}
           onChange={(e) => update({ startNumber: Number(e.target.value) })}
         />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block mb-1.5">{t("subItemStyle")}</Label>
+        <Select
+          value={block.subItemStyle ?? "decimal"}
+          onValueChange={(v) => update({ subItemStyle: v as NumberedSubItemStyle })}
+        >
+          <SelectTrigger size="sm" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="decimal">{t("subItemStyleDecimal")}</SelectItem>
+            <SelectItem value="letter">{t("subItemStyleLetter")}</SelectItem>
+            <SelectItem value="bullet">{t("subItemStyleBullet")}</SelectItem>
+            <SelectItem value="plain">{t("subItemStylePlain")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Separator />
       <div>
