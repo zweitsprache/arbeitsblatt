@@ -148,11 +148,6 @@
   padding: 0.5rem 0.75rem 0.5rem 0.5rem;
 }
 
-/* Don't apply blockGap to paragraphs in hint boxes */
-.hintBody :global(p) {
-  margin-bottom: 0 !important;
-}
-
 .exampleBox {
   border: 1px dashed var(--block-color);
   border-radius: var(--example-radius, 4px);
@@ -371,11 +366,6 @@
 .numberedItemContent {
   display: block;
   line-height: 1.35;
-}
-
-/* Don't apply blockGap to paragraphs in numbered items */
-.numberedItemContent :global(p) {
-  margin-bottom: 0 !important;
 }
 
 .checklistRows {
