@@ -13,6 +13,7 @@ import {
   ImageTextTableBlock,
   TextCardsBlock,
   SpacerBlock,
+  GapSpacerBlock,
   DividerBlock,
   MultipleChoiceBlock,
   FillInBlankBlock,
@@ -2876,6 +2877,10 @@ function TextCardsView({ block }: { block: TextCardsBlock }) {
 
 function SpacerView({ block }: { block: SpacerBlock }) {
   return <div style={{ height: block.height }} />;
+}
+
+function GapSpacerView({ blockGap }: { blockGap?: string | null }) {
+  return <div style={{ height: blockGap || "1.5rem" }} />;
 }
 
 function DividerView({ block }: { block: DividerBlock }) {
@@ -11655,6 +11660,8 @@ export function ViewerBlockRenderer({
       return <TextCardsView block={block} />;
     case "spacer":
       return <SpacerView block={block} />;
+    case "gap-spacer":
+      return <GapSpacerView blockGap={blockGap} />;
     case "divider":
       return <DividerView block={block} />;
     case "logo-divider":

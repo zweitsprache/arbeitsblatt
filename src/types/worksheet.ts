@@ -563,6 +563,11 @@ export interface SpacerBlock extends BlockBase {
   height: number; // px
 }
 
+// ─── Gap Spacer block ────────────────────────────────────────
+export interface GapSpacerBlock extends BlockBase {
+  type: "gap-spacer";
+}
+
 // ─── Divider block ───────────────────────────────────────────
 export interface DividerBlock extends BlockBase {
   type: "divider";
@@ -1532,6 +1537,7 @@ export type WorksheetBlock =
   | ImageTextTableBlock
   | TextCardsBlock
   | SpacerBlock
+  | GapSpacerBlock
   | DividerBlock
   | MultipleChoiceBlock
   | FillInBlankBlock
