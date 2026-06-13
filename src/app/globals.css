@@ -191,12 +191,12 @@
 .tiptap p,
 .course-content p {
   margin-top: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
 .tiptap p:last-child,
 .course-content p:last-child {
-  margin-bottom: 0;
+  margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
 .aufgabenkarten-card-content h3,
