@@ -199,6 +199,10 @@
   margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
+.tiptap.max-w-none {
+  margin-bottom: var(--print-block-gap, 1.5rem);
+}
+
 .aufgabenkarten-card-content h3,
 .aufgabenkarten-card-content p {
   margin-top: 0;
