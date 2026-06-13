@@ -1826,6 +1826,16 @@ function SpacerRenderer({ block }: { block: SpacerBlock }) {
   );
 }
 
+function GapSpacerRenderer() {
+  return (
+    <div className="relative bg-muted/30 border border-dashed border-muted-foreground/20 rounded" style={{ height: 40 }}>
+      <span className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+        Gap Spacer
+      </span>
+    </div>
+  );
+}
+
 // ─── Divider ─────────────────────────────────────────────────
 function DividerRenderer({ block }: { block: DividerBlock }) {
   return (
@@ -9527,7 +9537,7 @@ export function BlockRenderer({
     case "spacer":
       return <SpacerRenderer block={block} />;
     case "gap-spacer":
-      return <SpacerRenderer block={{ ...block, type: "spacer", height: 40 } as SpacerBlock} />;
+      return <GapSpacerRenderer />;
     case "divider":
       return <DividerRenderer block={block} />;
     case "logo-divider":
