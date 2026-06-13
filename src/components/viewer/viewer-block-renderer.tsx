@@ -1670,8 +1670,8 @@ function calculateHeadingMargin(level: number, blockGap: string | null | undefin
   if (!config) return blockGap;
   const gapPx = parseFloat(blockGap);
   if (isNaN(gapPx)) return blockGap;
-  const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize / 2;
-  const marginPx = Math.max(0, gapPx - lineHeightExtraSpace);
+  const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
+  const marginPx = gapPx - lineHeightExtraSpace;
   return `${marginPx.toFixed(2)}px`;
 }
 
