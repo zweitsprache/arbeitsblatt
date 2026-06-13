@@ -1679,7 +1679,7 @@ function calculateHeadingMargin(level: number, blockGap: string | null | undefin
 
 function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
@@ -11115,7 +11115,7 @@ function WebsiteView({
   primaryColor?: string;
 }) {
   const HeadingTag = (`h${block.level}` as keyof React.JSX.IntrinsicElements);
-  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;

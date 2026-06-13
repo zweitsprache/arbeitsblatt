@@ -451,7 +451,7 @@ export interface BlockBase {
 export interface HeadingBlock extends BlockBase {
   type: "heading";
   content: string;
-  level: 1 | 2 | 3;
+  level: 1 | 2 | 3 | 4;
   bilingual?: boolean;
   skipTranslation?: boolean;
 }
@@ -1662,6 +1662,8 @@ export interface BrandProfile {
   h2Weight?: number | null;
   h3Size?: string | null;
   h3Weight?: number | null;
+  h4Size?: string | null;
+  h4Weight?: number | null;
   h1BottomMargin?: string | null;
   h2BottomMargin?: string | null;
   h3BottomMargin?: string | null;
