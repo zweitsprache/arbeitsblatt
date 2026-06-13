@@ -709,7 +709,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl" };
+  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
   const colorKey = `h${block.level}HeadingColor` as const;
   const headingColor = resolveHeadingOverrideColor(
     state.brandProfile[colorKey],
