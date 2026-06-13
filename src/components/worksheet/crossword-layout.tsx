@@ -133,13 +133,20 @@ export function CrosswordLayout({
                 const clueNumber = numberMap.get(`${rowIndex},${colIndex}`);
                 const isGapCell = cell === "-" || cell === " ";
                 const showsGapMarker = cell === "-";
+                const isSpaceCell = cell === " ";
                 const isOccupiedCell = occupiedGrid[rowIndex][colIndex];
                 const isLetterCell = isOccupiedCell && !isGapCell;
+
+                const cellBackground = !isOccupiedCell
+                  ? "bg-transparent"
+                  : isSpaceCell
+                    ? "bg-muted"
+                    : "bg-white";
 
                 return (
                   <td
                     key={`${rowIndex}-${colIndex}`}
-                    className={`p-0 ${isOccupiedCell ? "bg-white" : "bg-transparent"}`}
+                    className={`p-0 ${cellBackground}`}
                     style={{
                       border: isOccupiedCell ? "1px solid var(--color-foreground)" : "none",
                     }}
