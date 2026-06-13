@@ -199,8 +199,23 @@
   margin-bottom: var(--print-block-gap, 1.5rem);
 }
 
+/* Custom text styles override blockGap with their own values */
+.tiptap-compact .tiptap p,
+.tiptap-compact.tiptap p,
+.tiptap-rows .tiptap p,
+.tiptap-rows.tiptap p,
+.tiptap-rows .ProseMirror p {
+  margin-bottom: 0 !important;
+}
+
 .tiptap.max-w-none {
   margin-bottom: var(--print-block-gap, 1.5rem);
+}
+
+/* Custom text styles override blockGap */
+.tiptap-compact .tiptap.max-w-none,
+.tiptap-rows .tiptap.max-w-none {
+  margin-bottom: 0;
 }
 
 .aufgabenkarten-card-content h3,
