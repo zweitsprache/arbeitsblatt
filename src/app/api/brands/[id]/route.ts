@@ -100,6 +100,9 @@ export async function PUT(
         ...(body.h4BottomMargin !== undefined && {
           h4BottomMargin: body.h4BottomMargin,
         }),
+        ...(body.blockGap !== undefined && {
+          blockGap: body.blockGap,
+        }),
         ...(body.h1NumberFormat !== undefined && {
           h1NumberFormat: body.h1NumberFormat,
         }),
