@@ -13,6 +13,7 @@ import {
   ImageTextTableBlock,
   TextCardsBlock,
   SpacerBlock,
+  GapSpacerBlock,
   DividerBlock,
   MultipleChoiceBlock,
   FillInBlankBlock,
@@ -9525,6 +9526,8 @@ export function BlockRenderer({
       return <TextCardsRenderer block={block} />;
     case "spacer":
       return <SpacerRenderer block={block} />;
+    case "gap-spacer":
+      return <SpacerRenderer block={{ ...block, type: "spacer", height: 40 } as SpacerBlock} />;
     case "divider":
       return <DividerRenderer block={block} />;
     case "logo-divider":
