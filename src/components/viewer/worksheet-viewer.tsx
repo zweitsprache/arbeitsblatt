@@ -518,7 +518,7 @@ export function WorksheetViewer({
                           {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} blockGap={resolvedProfile.blockGap} />
                         </div>
                       ))}
                     </div>
@@ -569,12 +569,13 @@ export function WorksheetViewer({
             <div>
             {/* Blocks */}
             <div
-              className="worksheet-blocks-container flex flex-col gap-5"
+              className="worksheet-blocks-container flex flex-col"
               data-instruction-badge-style={resolvedProfile.instructionBadgeStyle || "default"}
               style={{
                 fontFamily: activeBodyFont,
                 fontSize: "clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)",
                 letterSpacing: resolvedLetterSpacing || "normal",
+                gap: "var(--print-block-gap, 1.25rem)",
                 ["--viewer-interactive-color" as string]: resolvedProfile.interactiveColor || "#0ea5e9",
                 ["--viewer-instruction-badge-color" as string]: resolvedProfile.instructionBadgeColor || resolvedProfile.primaryColor || brandFonts.primaryColor,
               }}
@@ -612,6 +613,7 @@ export function WorksheetViewer({
                     isRtl={isRtl}
                     translationScale={resolvedProfile.pdfTranslationScale ?? undefined}
                     instructionIndex={instructionIndexByBlockId.get(block.id)}
+                    blockGap={resolvedProfile.blockGap}
                   />
                   {worksheetId && mode === "online" && (
                     <BlockScreenshotButton worksheetId={worksheetId} blockId={block.id} />

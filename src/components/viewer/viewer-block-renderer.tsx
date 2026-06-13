@@ -1657,20 +1657,31 @@ function collectNumberedHeadingSequences(blocks: WorksheetBlock[]): Map<string, 
   return sequences;
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string }) {
+const HEADING_CONFIG: Record<number, { fontSize: number; lineHeight: number }> = {
+  1: { fontSize: 28, lineHeight: 1.2 },
+  2: { fontSize: 24, lineHeight: 1.25 },
+  3: { fontSize: 21, lineHeight: 1.3 },
+  4: { fontSize: 19, lineHeight: 1.5 },
+};
+
+function calculateHeadingMargin(level: number, blockGap: string | null | undefined): string {
+  if (!blockGap) return level === 1 ? "-4px" : "1.5rem";
+  const config = HEADING_CONFIG[level];
+  if (!config) return blockGap;
+  const gapPx = parseFloat(blockGap);
+  if (isNaN(gapPx)) return blockGap;
+  const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize / 2;
+  const marginPx = Math.max(0, gapPx - lineHeightExtraSpace);
+  return `${marginPx.toFixed(2)}px`;
+}
+
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
-  const headingBottomMargin =
-    block.level === 1
-      ? "var(--print-h1-bottom-margin, -4px)"
-      : block.level === 2
-        ? "var(--print-h2-bottom-margin, 1.5rem)"
-        : block.level === 3
-          ? "var(--print-h3-bottom-margin, 1.5rem)"
-          : "var(--print-h4-bottom-margin, 1.5rem)";
+  const headingBottomMargin = calculateHeadingMargin(block.level, blockGap);
   const style: React.CSSProperties = {
     marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
@@ -1706,6 +1717,7 @@ function NumberedHeadingView({
   headingNumberColor,
   headingNumberFormat,
   allBlocks,
+  blockGap,
 }: {
   block: NumberedHeadingBlock;
   brand?: Brand;
@@ -1720,6 +1732,7 @@ function NumberedHeadingView({
   headingNumberColor?: string;
   headingNumberFormat?: string | null;
   allBlocks?: WorksheetBlock[];
+  blockGap?: string | null;
 }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes: Record<number, string> = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
@@ -1740,14 +1753,7 @@ function NumberedHeadingView({
     fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
-  const headingBottomMargin =
-    block.level === 1
-      ? "var(--print-h1-bottom-margin, -4px)"
-      : block.level === 2
-        ? "var(--print-h2-bottom-margin, 1.5rem)"
-        : block.level === 3
-          ? "var(--print-h3-bottom-margin, 1.5rem)"
-          : "var(--print-h4-bottom-margin, 1.5rem)";
+  const headingBottomMargin = calculateHeadingMargin(block.level, blockGap);
   const style: React.CSSProperties = {
     marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
@@ -11535,6 +11541,7 @@ export function ViewerBlockRenderer({
   headingNumberColors,
   itemNumberFormat,
   translationScale,
+  blockGap,
 }: {
   block: WorksheetBlock;
   mode: ViewMode;
@@ -11563,6 +11570,7 @@ export function ViewerBlockRenderer({
   isNonLatin?: boolean;
   isRtl?: boolean;
   translationScale?: number;
+  blockGap?: string | null;
 }) {
   const inheritedItemNumberFormat = React.useContext(ItemNumberFormatContext);
   const resolvedItemNumberFormat = itemNumberFormat || inheritedItemNumberFormat || "default";
@@ -11588,7 +11596,7 @@ export function ViewerBlockRenderer({
   const renderedBlock = (() => {
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)}/>;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap}/>;
     case "numbered-heading": {
       const nbBlock = block as NumberedHeadingBlock;
       const levelKey = `h${nbBlock.level}` as keyof typeof headingColors;
@@ -11607,6 +11615,7 @@ export function ViewerBlockRenderer({
           headingNumberColor={resolveHeadingColor(headingNumberColors?.[levelKey], primaryColor, accentColor)}
           headingNumberFormat={headingNumberFormats?.[levelKey]}
           allBlocks={allBlocks}
+          blockGap={blockGap}
         />
       );
     }
