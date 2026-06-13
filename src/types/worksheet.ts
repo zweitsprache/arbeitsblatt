@@ -2327,6 +2327,20 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "gap-spacer",
+    label: "Gap Spacer",
+    description: "Add spacing based on brand blockGap setting",
+    labelKey: "gapSpacer",
+    descriptionKey: "gapSpacerDesc",
+    icon: "Space",
+    category: "layout",
+    translations: { de: { label: "Block-Abstand", description: "Abstand basierend auf den Markeneinstellungen hinzufügen" } },
+    defaultData: {
+      type: "gap-spacer",
+      visibility: "both",
+    },
+  },
+  {
     type: "divider",
     label: "Divider",
     description: "Horizontal line separator",

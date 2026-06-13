@@ -699,6 +699,8 @@
     "sortingCategoriesDesc": "Begriffe in Kategorien einordnen",
     "spacer": "Abstand",
     "spacerDesc": "Vertikalen Abstand hinzufügen",
+    "gapSpacer": "Block-Abstand",
+    "gapSpacerDesc": "Abstand basierend auf den Markeneinstellungen hinzufügen",
     "syllables": "Silben",
     "syllablesDesc": "Text mit Silbenbögen",
     "taboo": "Taboo",

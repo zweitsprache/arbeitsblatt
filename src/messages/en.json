@@ -699,6 +699,8 @@
     "sortingCategoriesDesc": "Categorize terms",
     "spacer": "Spacing",
     "spacerDesc": "Add vertical spacing",
+    "gapSpacer": "Gap Spacer",
+    "gapSpacerDesc": "Add spacing based on brand blockGap setting",
     "syllables": "Sylables",
     "syllablesDesc": "Text with syllable arches",
     "taboo": "Taboo",
