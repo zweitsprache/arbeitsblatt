@@ -1697,9 +1697,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
-      const config = HEADING_CONFIG[block.level];
-      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
-      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      const marginPx = 2 * gapPx;
       topMargin = `${marginPx.toFixed(2)}px`;
     }
   }
@@ -1789,9 +1787,7 @@ function NumberedHeadingView({
   } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
-      const config = HEADING_CONFIG[block.level];
-      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
-      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      const marginPx = 2 * gapPx;
       topMargin = `${marginPx.toFixed(2)}px`;
     }
   }
