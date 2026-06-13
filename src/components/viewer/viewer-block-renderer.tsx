@@ -1681,9 +1681,10 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
-  const headingBottomMargin = calculateHeadingMargin(block.level, blockGap);
+  const headingMargin = calculateHeadingMargin(block.level, blockGap);
   const style: React.CSSProperties = {
-    marginBottom: headingBottomMargin,
+    marginTop: headingMargin,
+    marginBottom: headingMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
@@ -1753,9 +1754,10 @@ function NumberedHeadingView({
     fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
-  const headingBottomMargin = calculateHeadingMargin(block.level, blockGap);
+  const headingMargin = calculateHeadingMargin(block.level, blockGap);
   const style: React.CSSProperties = {
-    marginBottom: headingBottomMargin,
+    marginTop: headingMargin,
+    marginBottom: headingMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
