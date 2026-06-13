@@ -468,7 +468,7 @@ export interface NumberedHeadingBlock extends BlockBase {
 }
 
 // ─── Text / Rich-text block ─────────────────────────────────
-export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "example-primary" | "example-secondary" | "frame" | "frame-primary" | "frame-secondary" | "fragen" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "redemittel" | "metadaten" | "rows";
+export type TextBlockStyle = "standard" | "example" | "example-standard" | "example-improved" | "example-primary" | "example-secondary" | "frame" | "frame-primary" | "frame-secondary" | "fragen" | "hinweis" | "hinweis-wichtig" | "hinweis-alarm" | "lernziel" | "kompetenzziele" | "handlungsziele" | "redemittel" | "literatur" | "metadaten" | "rows";
 
 export interface TextBlock extends BlockBase {
   type: "text";

@@ -23,6 +23,7 @@ const TEXT_STYLE_OPTIONS: { value: TextBlockStyle; label: string }[] = [
   { value: "kompetenzziele", label: "Kompetenzziele" },
   { value: "handlungsziele", label: "Handlungsziele" },
   { value: "redemittel", label: "Redemittel" },
+  { value: "literatur", label: "Literatur" },
 ];
 
 function stripHtml(html: string): string {
@@ -82,6 +83,7 @@ function resolveTextStyles(style: TextBlockStyle) {
     kompetenzziele: { color: "#1a1a1a", backgroundColor: "transparent" },
     handlungsziele: { color: "#1a1a1a", backgroundColor: "transparent" },
     redemittel: { color: "#1a1a1a", backgroundColor: "transparent" },
+    literatur: { color: "#1a1a1a", backgroundColor: "transparent" },
     metadaten: { color: "#1a1a1a", backgroundColor: "transparent" },
     rows: { color: "#1a1a1a", backgroundColor: "transparent" },
   };

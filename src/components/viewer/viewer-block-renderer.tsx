@@ -1831,10 +1831,24 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
+  const isLiteratur = block.textStyle === "literatur";
   const hasHinweisBox = isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const isMetadaten = block.textStyle === "metadaten";
   const isStandard = block.textStyle === "standard" || !block.textStyle;
+  const textScale = isLiteratur ? 0.9 : 1;
+
+  const getScaledFontSize = (multiplier?: number): string | undefined => {
+    if (bodyFontSize) {
+      return multiplier && multiplier !== 1
+        ? `calc(${bodyFontSize} * ${multiplier})`
+        : bodyFontSize;
+    }
+    if (multiplier && multiplier !== 1) {
+      return `${multiplier}em`;
+    }
+    return undefined;
+  };
 
   const HintRowIcon = () => {
     const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -1873,21 +1887,24 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     : hasExampleBox
       ? "var(--worksheet-example-font, inherit)"
       : resolvedBodyFont;
+  const baseFontSize = getScaledFontSize(textScale);
   const baseTextStyle: React.CSSProperties = {
     ...(resolvedContentFont !== "inherit" ? { fontFamily: resolvedContentFont } : {}),
-    ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+    ...(baseFontSize ? { fontSize: baseFontSize } : {}),
   };
   // Font override for the original (German) column in bilingual mode — ensures brand font for Latin text
   const originalFontStyle: React.CSSProperties | undefined = isBilingual
     ? {
         ...(resolvedOriginalContentFont !== "inherit" ? { fontFamily: resolvedOriginalContentFont } : {}),
-        ...(bodyFontSize ? { fontSize: bodyFontSize } : {}),
+        ...(baseFontSize ? { fontSize: baseFontSize } : {}),
       }
     : undefined;
   // Reduce font size for non-Latin translated text (e.g. Cyrillic renders visually larger at same pt size)
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const translatedScale = effectiveScale ? textScale * effectiveScale : textScale;
+  const translatedFontSize = getScaledFontSize(translatedScale === 1 ? undefined : translatedScale);
   const translatedFontStyle: React.CSSProperties | undefined = isBilingual
-    ? { ...baseTextStyle, ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}) }
+    ? { ...baseTextStyle, ...(translatedFontSize ? { fontSize: translatedFontSize } : {}) }
     : undefined;
   // skipTranslation blocks always render the original (German) content, so they
   // must stay LTR even when the active worksheet locale is RTL.

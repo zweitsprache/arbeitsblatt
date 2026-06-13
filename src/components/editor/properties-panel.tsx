@@ -375,7 +375,7 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
             <SelectItem value="1">{t("heading1")}</SelectItem>
             <SelectItem value="2">{t("heading2")}</SelectItem>
             <SelectItem value="3">{t("heading3")}</SelectItem>
-            {isNumberedHeading && <SelectItem value="4">{t("heading4")}</SelectItem>}
+            <SelectItem value="4">{t("heading4")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -6001,6 +6001,7 @@ function TextProps({ block }: { block: TextBlock }) {
             <SelectItem value="kompetenzziele">{t("textStyleKompetenzziele")}</SelectItem>
             <SelectItem value="handlungsziele">{t("textStyleHandlungsziele")}</SelectItem>
             <SelectItem value="redemittel">{t("textStyleRedemittel")}</SelectItem>
+            <SelectItem value="literatur">{t("textStyleLiteratur")}</SelectItem>
             <SelectItem value="metadaten">{t("textStyleMetadaten")}</SelectItem>
             <SelectItem value="rows">{t("textStyleRows")}</SelectItem>
           </SelectContent>

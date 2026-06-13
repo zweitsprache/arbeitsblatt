@@ -830,6 +830,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const isHandlungsziele = block.textStyle === "handlungsziele";
   const isFragen = block.textStyle === "fragen";
   const isRedemittel = block.textStyle === "redemittel";
+  const isLiteratur = block.textStyle === "literatur";
   const hasHinweisBox = isHinweis || isHinweisWichtig || isHinweisAlarm || isLernziel;
   const isRows = block.textStyle === "rows" || isKompetenzziele || isHandlungsziele || isRedemittel || isFragen;
   const rowsClass = isKompetenzziele
@@ -884,7 +885,9 @@ function TextRenderer({ block }: { block: TextBlock }) {
       editorClassName={
         isRows
           ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] py-2"
-          : undefined
+          : isLiteratur
+            ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2 text-[0.9em]"
+            : undefined
       }
     />
   );

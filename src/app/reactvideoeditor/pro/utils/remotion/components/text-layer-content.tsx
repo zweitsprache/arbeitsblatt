@@ -118,6 +118,7 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
     rows: "#1a1a1a",
     fragen: "#1a1a1a",
     redemittel: "#1a1a1a",
+    literatur: "#1a1a1a",
     kompetenzziele: "#1a1a1a",
     handlungsziele: "#1a1a1a",
     lernziel: "#1a1a1a",
@@ -309,6 +310,14 @@ export const TextLayerContent: React.FC<TextLayerContentProps> = ({
     ...textStyle,
     padding: 0,
     color: worksheetResolvedTextColor,
+    ...(worksheetTextStyle === "literatur"
+      ? {
+          fontSize:
+            typeof textStyle.fontSize === "string"
+              ? `calc(${textStyle.fontSize} * 0.9)`
+              : textStyle.fontSize,
+        }
+      : {}),
     backgroundColor: "transparent",
     overflow: "visible",
     textOverflow: "clip",
