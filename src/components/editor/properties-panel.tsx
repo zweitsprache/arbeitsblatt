@@ -86,6 +86,7 @@ import {
   ChartBlock,
   ChartDataPoint,
   NumberedItemsBlock,
+  BoxBlock,
   QuartettBlock,
   TabooBlock,
   ChecklistBlock,
@@ -11683,6 +11684,62 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+function BoxProps({ block }: { block: BoxBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const update = (updates: Partial<BoxBlock>) =>
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("title")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="title"
+          baseValue={block.title || ""}
+          onBaseChange={(v) => update({ title: v })}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("bilingual")}</Label>
+        <Switch
+          checked={block.bilingual ?? false}
+          onCheckedChange={(checked) => update({ bilingual: checked })}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("skipTranslation")}</Label>
+        <Switch
+          checked={block.skipTranslation ?? false}
+          onCheckedChange={(checked) => update({ skipTranslation: checked })}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("boxAddTopGap")}</Label>
+        <Switch
+          checked={block.addTopBlockGap ?? false}
+          onCheckedChange={(checked) => update({ addTopBlockGap: checked })}
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("borderRadius")}</Label>
+        <Slider
+          min={0}
+          max={24}
+          step={1}
+          value={[block.borderRadius ?? 6]}
+          onValueChange={([v]) => update({ borderRadius: v })}
+        />
+        <span className="text-xs text-muted-foreground">{block.borderRadius ?? 6}px</span>
+      </div>
+    </div>
+  );
+}
+
 function QuartettProps({ block }: { block: QuartettBlock }) {
   return <CardListProps block={block} kind="quartett" />;
 }
@@ -14752,6 +14809,8 @@ export function PropertiesPanel() {
         return <TextComparisonProps block={selectedBlock as TextComparisonBlock} />;
       case "numbered-items":
         return <NumberedItemsProps block={selectedBlock as NumberedItemsBlock} />;
+      case "box":
+        return <BoxProps block={selectedBlock as BoxBlock} />;
       case "quartett":
         return <QuartettProps block={selectedBlock as QuartettBlock} />;
       case "taboo":

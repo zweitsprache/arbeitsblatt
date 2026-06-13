@@ -71,6 +71,7 @@ export type BlockType =
   | "dos-and-donts"
   | "numbered-items"
   | "subject"
+  | "box"
   | "quartett"
   | "taboo"
   | "logo-divider"
@@ -1409,6 +1410,17 @@ export interface SubjectBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
+// ─── Box block ──────────────────────────────────────────────
+export interface BoxBlock extends BlockBase {
+  type: "box";
+  title?: string;
+  items: NumberedItem[];
+  addTopBlockGap?: boolean;
+  borderRadius?: number;
+  bilingual?: boolean;
+  skipTranslation?: boolean;
+}
+
 // ─── Quartett block ─────────────────────────────────────────
 export interface QuartettSubItem {
   id: string;
@@ -1597,6 +1609,7 @@ export type WorksheetBlock =
   | DosAndDontsBlock
   | NumberedItemsBlock
   | SubjectBlock
+  | BoxBlock
   | QuartettBlock
   | TabooBlock
   | ChecklistBlock
@@ -3493,6 +3506,26 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       { id: crypto.randomUUID(), content: "" },
     ],
     bgColor: "",
+    borderRadius: 6,
+    visibility: "both",
+  },
+},
+{
+  type: "box",
+  label: "Box",
+  description: "Legend-style bordered text group",
+  labelKey: "box",
+  descriptionKey: "boxDesc",
+  icon: "Square",
+  category: "layout",
+  translations: { de: { label: "Box", description: "Gerahmte Textgruppe mit Titel" } },
+  defaultData: {
+    type: "box",
+    title: "",
+    items: [
+      { id: crypto.randomUUID(), content: "" },
+    ],
+    addTopBlockGap: false,
     borderRadius: 6,
     visibility: "both",
   },

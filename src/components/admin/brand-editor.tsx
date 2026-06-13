@@ -118,6 +118,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2Weight: "" as string | number,
     h3Size: "",
     h3Weight: "" as string | number,
+    h4Size: "",
+    h4Weight: "" as string | number,
     h1BottomMargin: "",
     h2BottomMargin: "",
     h3BottomMargin: "",
@@ -187,6 +189,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2Weight: data.h2Weight ?? "",
           h3Size: stripPx(data.h3Size),
           h3Weight: data.h3Weight ?? "",
+          h4Size: stripPx(data.h4Size),
+          h4Weight: data.h4Weight ?? "",
           h1BottomMargin: stripPx(data.h1BottomMargin),
           h2BottomMargin: stripPx(data.h2BottomMargin),
           h3BottomMargin: stripPx(data.h3BottomMargin),
@@ -315,6 +319,8 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2Weight: form.h2Weight !== "" ? Number(form.h2Weight) : null,
         h3Size: ensurePx(String(form.h3Size)),
         h3Weight: form.h3Weight !== "" ? Number(form.h3Weight) : null,
+        h4Size: ensurePx(String(form.h4Size)),
+        h4Weight: form.h4Weight !== "" ? Number(form.h4Weight) : null,
         h1BottomMargin: ensurePx(String(form.h1BottomMargin)),
         h2BottomMargin: ensurePx(String(form.h2BottomMargin)),
         h3BottomMargin: ensurePx(String(form.h3BottomMargin)),
@@ -803,6 +809,28 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   className="mt-1"
                 />
               </div>
+              <div>
+                <Label>{t("h4Size")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.h4Size}
+                  onChange={(e) => update("h4Size", e.target.value)}
+                  placeholder="19"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("h4Weight")}</Label>
+                <Input
+                  type="number"
+                  value={form.h4Weight}
+                  onChange={(e) => update("h4Weight", e.target.value ? Number(e.target.value) : "")}
+                  placeholder="700"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-3">
               <div>
                 <Label>{t("h1BottomMargin")} <span className="text-muted-foreground font-normal">px</span></Label>
                 <Input

@@ -88,6 +88,8 @@ export async function PUT(
         ...(body.h2Weight !== undefined && { h2Weight: body.h2Weight }),
         ...(body.h3Size !== undefined && { h3Size: body.h3Size }),
         ...(body.h3Weight !== undefined && { h3Weight: body.h3Weight }),
+        ...(body.h4Size !== undefined && { h4Size: body.h4Size }),
+        ...(body.h4Weight !== undefined && { h4Weight: body.h4Weight }),
         ...(body.h1BottomMargin !== undefined && {
           h1BottomMargin: body.h1BottomMargin,
         }),

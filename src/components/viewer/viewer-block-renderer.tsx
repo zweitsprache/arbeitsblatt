@@ -71,6 +71,7 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   SubjectBlock,
+  BoxBlock,
   QuartettBlock,
   TabooBlock,
   ChecklistBlock,
@@ -1677,12 +1678,12 @@ function calculateHeadingMargin(level: number, blockGap: string | null | undefin
   return `${marginPx.toFixed(2)}px`;
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
-  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
+  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
   const headingMargin = calculateHeadingMargin(block.level, blockGap);
   let topMargin = headingMargin;
   let bottomMargin = headingMargin;
@@ -1742,7 +1743,7 @@ function NumberedHeadingView({
   block: NumberedHeadingBlock;
   brand?: Brand;
   headlineFont?: string;
-  headingWeights?: { h1: number; h2: number; h3: number };
+  headingWeights?: { h1: number; h2: number; h3: number; h4: number };
   headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   isNonLatin?: boolean;
   translationScale?: number;
@@ -1979,7 +1980,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     if (rtl) processed = isolateNumberRunsForRtl(processed);
     return (
       <div
-        className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""}`}
+        className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""} ${isLiteratur ? "tiptap-literatur" : ""}`}
         dir={effectiveDir}
         style={wrapperStyle}
         dangerouslySetInnerHTML={{ __html: processed }}
@@ -10842,6 +10843,77 @@ function SubjectView({ block, originalBlock, isNonLatin, translationScale }: { b
   );
 }
 
+function BoxView({ block, originalBlock, isNonLatin, translationScale, primaryColor = "#1a1a1a", blockGap }: { block: BoxBlock; originalBlock?: BoxBlock; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; blockGap?: string | null }) {
+  const radius = block.borderRadius ?? 6;
+  const isBilingual = block.bilingual && !!originalBlock;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+
+  const renderItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
+    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+      <div
+        className="tiptap max-w-none text-foreground font-normal"
+        dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
+      />
+    </div>
+  );
+
+  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        gap: "0 1rem",
+        alignItems: "start",
+      }}
+    >
+      {renderItemContent(originalContent)}
+      {renderItemContent(
+        translatedContent,
+        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
+        "tiptap-bilingual-translated"
+      )}
+    </div>
+  );
+
+  const title = (block.title || "").trim();
+  const originalTitle = (originalBlock?.title || "").trim();
+  const showTitleBilingual = isBilingual && !!originalTitle && originalTitle !== title;
+
+  return (
+    <div style={block.addTopBlockGap ? { paddingTop: blockGap || "var(--print-block-gap, 1.5rem)" } : undefined}>
+      <fieldset
+        style={{
+          border: `1px solid ${primaryColor}`,
+          borderRadius: `${radius}px`,
+          padding: title ? "0.5rem 0.75rem" : "0.75rem",
+          margin: 0,
+          breakInside: "avoid",
+          pageBreakInside: "avoid",
+        }}
+      >
+        {title ? (
+          <legend style={{ margin: "0 0.4rem", padding: "0 0.35rem", color: primaryColor, fontWeight: 600, lineHeight: 1.1 }}>
+            {showTitleBilingual ? `${originalTitle} | ${title}` : title}
+          </legend>
+        ) : null}
+        <div className="space-y-2" style={title ? { paddingLeft: "0.75rem" } : undefined}>
+          {block.items.map((item) => {
+            const originalItem = originalBlock?.items.find((i) => i.id === item.id);
+            const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+            return (
+              <div key={item.id} className="min-w-0 px-0 py-0.5 text-foreground font-normal">
+                {showBilingual
+                  ? renderBilingualColumns(originalItem.content, item.content)
+                  : renderItemContent(item.content)}
+              </div>
+            );
+          })}
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
 // ─── Checklist View ────────────────────────────────────────────
 function ChecklistView({
   block,
@@ -11126,7 +11198,7 @@ function WebsiteView({
   originalBlock?: WebsiteBlock;
   brand?: Brand;
   headlineFont?: string;
-  headingWeights?: { h1: number; h2: number; h3: number };
+  headingWeights?: { h1: number; h2: number; h3: number; h4: number };
   isNonLatin?: boolean;
   translationScale?: number;
   primaryColor?: string;
@@ -11135,7 +11207,7 @@ function WebsiteView({
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
-  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
+  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const headingStyle: React.CSSProperties = {
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
@@ -11697,7 +11769,7 @@ export function ViewerBlockRenderer({
   accentColor?: string | null;
   interactiveColor?: string;
   headlineFont?: string;
-  headingWeights?: { h1: number; h2: number; h3: number };
+  headingWeights?: { h1: number; h2: number; h3: number; h4: number };
   headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
@@ -12276,6 +12348,8 @@ export function ViewerBlockRenderer({
       return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "subject":
       return <SubjectView block={block as SubjectBlock} originalBlock={originalBlock as SubjectBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+    case "box":
+      return <BoxView block={block as BoxBlock} originalBlock={originalBlock as BoxBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} blockGap={blockGap} />;
     case "quartett":
       return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "taboo":

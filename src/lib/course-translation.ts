@@ -11,6 +11,7 @@ import {
   HeadingBlock,
   NumberedHeadingBlock,
   TextSnippetBlock,
+  BoxBlock,
   ColumnsBlock,
   AccordionBlock,
   NumberedItemsBlock,
@@ -508,6 +509,20 @@ function forEachBlockTranslationField(
 
     case "numbered-items": {
       if (!(block as NumberedItemsBlock).skipTranslation) {
+        for (const item of block.items) {
+          add(`items.${item.id}.content`, () => item.content, (v) => {
+            item.content = v;
+          });
+        }
+      }
+      break;
+    }
+
+    case "box": {
+      if (!(block as BoxBlock).skipTranslation) {
+        add("title", () => block.title || "", (v) => {
+          block.title = v;
+        });
         for (const item of block.items) {
           add(`items.${item.id}.content`, () => item.content, (v) => {
             item.content = v;

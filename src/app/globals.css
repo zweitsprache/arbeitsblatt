@@ -170,10 +170,18 @@
   margin-top: 0;
   margin-bottom: 1rem;
 }
+.tiptap h4 {
+  font-size: var(--text-cv-lg);
+  font-weight: var(--heading-h4-weight, 700);
+  line-height: 1.35;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
 
 .tiptap h1.no-margin,
 .tiptap h2.no-margin,
-.tiptap h3.no-margin {
+.tiptap h3.no-margin,
+.tiptap h4.no-margin {
   margin-top: 0;
   margin-bottom: 0;
   line-height: 1;
@@ -188,6 +196,12 @@
   font-weight: 400 !important;
 }
 
+.tiptap-bilingual-translated .tiptap h4 {
+  font-weight: 400 !important;
+}
+.tiptap-bilingual-translated.tiptap h4 {
+  font-weight: 400 !important;
+}
 .tiptap p,
 .course-content p {
   margin-top: 0;
@@ -205,6 +219,19 @@
 .tiptap-rows .tiptap p,
 .tiptap-rows.tiptap p,
 .tiptap-rows .ProseMirror p {
+  margin-bottom: 0 !important;
+}
+
+/* Literatur style uses a smaller font size, so tighten paragraph spacing. */
+.tiptap-literatur p,
+.tiptap-literatur .tiptap p,
+.tiptap-literatur .ProseMirror p {
+  margin-bottom: calc(var(--print-block-gap, 1.5rem) * 0.7) !important;
+}
+
+.tiptap-literatur p:last-child,
+.tiptap-literatur .tiptap p:last-child,
+.tiptap-literatur .ProseMirror p:last-child {
   margin-bottom: 0 !important;
 }
 
@@ -885,6 +912,9 @@
 .print-worksheet-root.print-skin-final h3 {
   font-weight: var(--print-h3-weight);
 }
+.print-worksheet-root.print-skin-final h4 {
+  font-weight: var(--print-h4-weight);
+}
 
 .print-worksheet-root.print-skin-final .text-cv-base {
   font-size: var(--print-body-size, var(--text-cv-base));
@@ -900,6 +930,9 @@
 
 .print-worksheet-root.print-skin-final .text-cv-xl {
   font-size: var(--print-h3-size, var(--text-cv-xl));
+}
+.print-worksheet-root.print-skin-final .text-cv-lg {
+  font-size: var(--print-h4-size, var(--text-cv-lg));
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h1 {
@@ -927,6 +960,8 @@
 }
 
 .print-worksheet-root.print-skin-final .print-body-content .tiptap h4 {
+  font-size: var(--print-h4-size, var(--text-cv-lg));
+  font-weight: var(--print-h4-weight);
   font-family: var(--print-headline-font) !important;
   color: var(--print-primary-color, inherit) !important;
   margin-bottom: var(--print-h4-bottom-margin, var(--print-block-gap, 1.5rem));
@@ -1165,6 +1200,9 @@
   .print-worksheet-root .text-cv-xl {
     font-size: var(--print-h3-size, var(--text-cv-xl));
   }
+  .print-worksheet-root .text-cv-lg {
+    font-size: var(--print-h4-size, var(--text-cv-lg));
+  }
 
   .print-body-content .tiptap h1 {
     font-size: var(--print-h1-size, var(--text-cv-3xl));
@@ -1191,6 +1229,8 @@
   }
 
   .print-body-content .tiptap h4 {
+    font-size: var(--print-h4-size, var(--text-cv-lg));
+    font-weight: var(--print-h4-weight);
     font-family: var(--print-headline-font) !important;
     color: var(--print-primary-color, inherit) !important;
     margin-bottom: var(--print-h4-bottom-margin, var(--print-block-gap, 1.5rem));

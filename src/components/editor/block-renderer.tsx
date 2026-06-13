@@ -76,6 +76,7 @@ import {
   NumberedItemsBlock,
   NumberedItem,
   SubjectBlock,
+  BoxBlock,
   QuartettBlock,
   TabooBlock,
   ChecklistBlock,
@@ -710,6 +711,13 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
   const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
+  const resolvedHeadingWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
+    1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
+    2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
+    3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
+    4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
+  };
+  const resolvedHeadingWeight = resolvedHeadingWeightByLevel[block.level];
   const colorKey = `h${block.level}HeadingColor` as const;
   const headingColor = resolveHeadingOverrideColor(
     state.brandProfile[colorKey],
@@ -720,7 +728,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
   return (
     <Tag
       className={`${sizes[block.level]} font-bold outline-none`}
-      style={{ ...(block.level === 3 ? { fontWeight: 800 } : {}), ...(headingColor ? { color: headingColor } : {}) }}
+      style={{ fontWeight: resolvedHeadingWeight, ...(headingColor ? { color: headingColor } : {}) }}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -771,8 +779,9 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
     1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
     2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
     3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
-    4: state.brandProfile.headlineWeight,
+    4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
   };
+  const resolvedHeadingWeight = resolvedHeadingWeightByLevel[block.level];
   const resolvedHeadingNumberWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
     1: state.brandProfile.h1HeadingNumberWeight ?? resolvedHeadingWeightByLevel[1],
     2: state.brandProfile.h2HeadingNumberWeight ?? resolvedHeadingWeightByLevel[2],
@@ -789,7 +798,7 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
   return (
     <Tag
       className={`${sizes[block.level]} font-bold outline-none`}
-      style={{ ...(block.level >= 3 ? { fontWeight: 800 } : {}), ...(headingColor ? { color: headingColor } : {}) }}
+      style={{ fontWeight: resolvedHeadingWeight, ...(headingColor ? { color: headingColor } : {}) }}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -886,7 +895,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
         isRows
           ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] py-2"
           : isLiteratur
-            ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2 text-[0.9em]"
+            ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2 text-[0.9em] tiptap-literatur"
             : undefined
       }
     />
@@ -8222,6 +8231,93 @@ function SubjectRenderer({ block }: { block: SubjectBlock }) {
   );
 }
 
+function BoxRenderer({ block }: { block: BoxBlock }) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const textBaseSize = state.brandProfile.textBaseSize;
+  const blockGap = state.brandProfile.blockGap;
+  const radius = block.borderRadius ?? 6;
+
+  const updateItem = (index: number, content: string) => {
+    localeUpdate(block.id, `items.${index}.content`, content, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], content };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), content: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const title = (block.title || "").trim();
+
+  return (
+    <div className="space-y-2">
+      <div style={block.addTopBlockGap ? { paddingTop: blockGap || "1.5rem" } : undefined}>
+        <div
+          className="relative border text-foreground px-3 py-2"
+          style={{
+            borderRadius: `${radius}px`,
+            borderColor: "currentColor",
+          }}
+        >
+        {title ? (
+          <div className="absolute -top-2 left-3 bg-white px-2 text-xs font-semibold leading-none" style={textBaseSize ? { fontSize: `calc(${textBaseSize} * 0.85)` } : undefined}>
+            {title}
+          </div>
+        ) : null}
+        <div className="space-y-2">
+          {block.items.map((item, i) => (
+            <div key={item.id} className="relative group">
+              <div className="box-richtext min-w-0 pl-2 pr-0 py-1 text-foreground font-normal">
+                <RichTextEditor
+                  content={item.content}
+                  onChange={(html) => updateItem(i, html)}
+                  placeholder="…"
+                  editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
+                />
+              </div>
+              <button
+                onClick={() => removeItem(i)}
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+        </div>
+      </div>
+      <button
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+    </div>
+  );
+}
+
 function QuartettRenderer({ block }: { block: QuartettBlock }) {
   const showGroupTitle = block.showGroupTitle !== false;
   const showFooter = block.showFooter !== false;
@@ -9735,6 +9831,8 @@ export function BlockRenderer({
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
     case "subject":
       return <SubjectRenderer block={block as SubjectBlock} />;
+    case "box":
+      return <BoxRenderer block={block as BoxBlock} />;
     case "quartett":
       return <QuartettRenderer block={block as QuartettBlock} />;
     case "taboo":
