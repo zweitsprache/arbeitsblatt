@@ -8186,13 +8186,13 @@ function SubjectRenderer({ block }: { block: SubjectBlock }) {
       {block.items.map((item, i) => (
         <div key={item.id} className="relative group">
           <div
-            className="px-3 py-1.5"
+            className="flex gap-0"
             style={hasBg ? {
               backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
             } : undefined}
           >
-            <div className="subject-richtext text-foreground font-normal">
+            <div className="subject-richtext flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
               <RichTextEditor
                 content={item.content}
                 onChange={(html) => updateItem(i, html)}

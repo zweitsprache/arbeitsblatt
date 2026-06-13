@@ -10789,19 +10789,21 @@ function SubjectView({ block, originalBlock, isNonLatin, translationScale }: { b
         return (
           <div
             key={item.id}
+            className="flex gap-0"
             style={{
               backgroundColor: surfaceBg,
               borderRadius: `${radius}px`,
-              padding: "0.75rem 1rem",
               breakInside: "avoid",
               pageBreakInside: "avoid",
             }}
           >
-            {showBilingual ? (
-              renderBilingualColumns(originalItem.content, item.content)
-            ) : (
-              renderItemContent(item.content)
-            )}
+            <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+              {showBilingual ? (
+                renderBilingualColumns(originalItem.content, item.content)
+              ) : (
+                renderItemContent(item.content)
+              )}
+            </div>
           </div>
         );
       })}
