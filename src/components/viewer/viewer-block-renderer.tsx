@@ -1694,7 +1694,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
       const marginPx = (4 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
-  } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
+  } else if ((block.level === 2 || block.level === 3) && blockGap) {
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
       const marginPx = 2 * gapPx;
@@ -1784,7 +1784,7 @@ function NumberedHeadingView({
       const marginPx = (4 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
-  } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
+  } else if ((block.level === 2 || block.level === 3) && blockGap) {
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
       const marginPx = 2 * gapPx;
