@@ -118,9 +118,6 @@
 /* Restore breathing room at the bottom of standard (non-rows) text blocks.
    Rows-style blocks use border-bottom divs as direct children (not .tiptap),
    so this only applies when tiptap is the direct child. */
-.textPlain > :global(.tiptap) {
-  padding-bottom: 0.5rem;
-}
 
 .styledBorder {
   border-color: var(--block-color);
