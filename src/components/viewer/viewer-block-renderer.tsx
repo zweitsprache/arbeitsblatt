@@ -10628,8 +10628,8 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale,
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const containerStyle: React.CSSProperties = {
-    marginTop: blockGap ? `var(--print-block-gap, ${blockGap})` : undefined,
-    marginBottom: blockGap ? `var(--print-block-gap, ${blockGap})` : undefined,
+    marginTop: blockGap || undefined,
+    marginBottom: blockGap || undefined,
   };
 
   const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
