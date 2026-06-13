@@ -75,6 +75,7 @@ import {
   TextComparisonBlock,
   NumberedItemsBlock,
   NumberedItem,
+  SubjectBlock,
   QuartettBlock,
   TabooBlock,
   ChecklistBlock,
@@ -8139,6 +8140,85 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   );
 }
 
+function SubjectRenderer({ block }: { block: SubjectBlock }) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const textBaseSize = state.brandProfile.textBaseSize;
+
+  const updateItem = (index: number, content: string) => {
+    localeUpdate(block.id, `items.${index}.content`, content, () => {
+      const newItems = [...block.items];
+      newItems[index] = { ...newItems[index], content };
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: { id: block.id, updates: { items: newItems } },
+      });
+    });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...block.items,
+      { id: crypto.randomUUID(), content: "" },
+    ];
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (block.items.length <= 1) return;
+    const newItems = block.items.filter((_, i) => i !== index);
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: newItems } },
+    });
+  };
+
+  const hasBg = !!block.bgColor;
+  const textWhite = hasBg && isDarkColor(block.bgColor!);
+  const radius = block.borderRadius ?? 6;
+  const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
+
+  return (
+    <div className="space-y-2">
+      {block.items.map((item, i) => (
+        <div key={item.id} className="relative group">
+          <div
+            className="px-3 py-1.5"
+            style={hasBg ? {
+              backgroundColor: surfaceBg,
+              borderRadius: `${radius}px`,
+            } : undefined}
+          >
+            <div className="subject-richtext text-foreground font-normal">
+              <RichTextEditor
+                content={item.content}
+                onChange={(html) => updateItem(i, html)}
+                placeholder="…"
+                editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
+              />
+            </div>
+          </div>
+          <button
+            onClick={() => removeItem(i)}
+            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
+    </div>
+  );
+}
+
 function QuartettRenderer({ block }: { block: QuartettBlock }) {
   const showGroupTitle = block.showGroupTitle !== false;
   const showFooter = block.showFooter !== false;
@@ -9650,6 +9730,8 @@ export function BlockRenderer({
       return <TextComparisonRenderer block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsRenderer block={block as NumberedItemsBlock} />;
+    case "subject":
+      return <SubjectRenderer block={block as SubjectBlock} />;
     case "quartett":
       return <QuartettRenderer block={block as QuartettBlock} />;
     case "taboo":

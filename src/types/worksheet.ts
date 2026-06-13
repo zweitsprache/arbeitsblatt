@@ -1397,6 +1397,16 @@ export interface NumberedItemsBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
+// ─── Subject block ───────────────────────────────────────────
+export interface SubjectBlock extends BlockBase {
+  type: "subject";
+  items: NumberedItem[];
+  bgColor?: string;
+  borderRadius?: number;
+  bilingual?: boolean;
+  skipTranslation?: boolean;
+}
+
 // ─── Quartett block ─────────────────────────────────────────
 export interface QuartettSubItem {
   id: string;
@@ -1584,6 +1594,7 @@ export type WorksheetBlock =
   | TextComparisonBlock
   | DosAndDontsBlock
   | NumberedItemsBlock
+  | SubjectBlock
   | QuartettBlock
   | TabooBlock
   | ChecklistBlock
@@ -3458,6 +3469,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       { id: crypto.randomUUID(), content: "" },
     ],
     startNumber: 1,
+    bgColor: "",
+    borderRadius: 6,
+    visibility: "both",
+  },
+},
+{
+  type: "subject",
+  label: "Subject",
+  description: "Subject items without numbering",
+  labelKey: "subject",
+  descriptionKey: "subjectDesc",
+  icon: "ListOrdered",
+  category: "layout",
+  translations: { de: { label: "Thema", description: "Themenpunkte ohne Nummerierung" } },
+  defaultData: {
+    type: "subject",
+    items: [
+      { id: crypto.randomUUID(), content: "" },
+    ],
     bgColor: "",
     borderRadius: 6,
     visibility: "both",

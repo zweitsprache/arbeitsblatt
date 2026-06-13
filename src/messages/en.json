@@ -675,6 +675,8 @@
     "multipleChoiceDesc": "Questions with answer options",
     "numberedItems": "Numbered Items",
     "numberedItemsDesc": "Numbered items with formatted text",
+    "subject": "Subject",
+    "subjectDesc": "Subject items without numbering",
     "numberedHeading": "Numbered Heading",
     "numberedHeadingDesc": "Heading with automatic numbering",
     "openResponse": "Open answer",

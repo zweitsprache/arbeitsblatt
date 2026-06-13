@@ -70,6 +70,7 @@ import {
   DosAndDontsBlock,
   TextComparisonBlock,
   NumberedItemsBlock,
+  SubjectBlock,
   QuartettBlock,
   TabooBlock,
   ChecklistBlock,
@@ -10725,6 +10726,89 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
   );
 }
 
+function SubjectView({ block, originalBlock, isNonLatin, translationScale }: { block: SubjectBlock; originalBlock?: SubjectBlock; isNonLatin?: boolean; translationScale?: number }) {
+  const hasBg = !!block.bgColor;
+  const textWhite = hasBg && isDarkColor(block.bgColor!);
+  const radius = block.borderRadius ?? 6;
+  const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
+  const isBilingual = block.bilingual && !!originalBlock;
+  const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+
+  const renderItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
+    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+      <div
+        className="tiptap max-w-none text-foreground font-normal"
+        dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
+      />
+    </div>
+  );
+
+  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        gap: "0 1rem",
+        alignItems: "start",
+      }}
+    >
+      {renderItemContent(originalContent)}
+      {renderItemContent(
+        translatedContent,
+        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
+        "tiptap-bilingual-translated"
+      )}
+    </div>
+  );
+
+  if (!hasBg) {
+    return (
+      <div className="space-y-1">
+        {block.items.map((item) => {
+          const originalItem = originalBlock?.items.find(i => i.id === item.id);
+          const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+          return (
+            <div key={item.id}>
+              {showBilingual ? (
+                renderBilingualColumns(originalItem.content, item.content)
+              ) : (
+                renderItemContent(item.content)
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {block.items.map((item) => {
+        const originalItem = originalBlock?.items.find(i => i.id === item.id);
+        const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
+        return (
+          <div
+            key={item.id}
+            style={{
+              backgroundColor: surfaceBg,
+              borderRadius: `${radius}px`,
+              padding: "0.75rem 1rem",
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+            }}
+          >
+            {showBilingual ? (
+              renderBilingualColumns(originalItem.content, item.content)
+            ) : (
+              renderItemContent(item.content)
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Checklist View ────────────────────────────────────────────
 function ChecklistView({
   block,
@@ -12157,6 +12241,8 @@ export function ViewerBlockRenderer({
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
       return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+    case "subject":
+      return <SubjectView block={block as SubjectBlock} originalBlock={originalBlock as SubjectBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "quartett":
       return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "taboo":

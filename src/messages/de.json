@@ -675,6 +675,8 @@
     "multipleChoiceDesc": "Fragen mit Antwortoptionen",
     "numberedItems": "Nummerierte Punkte",
     "numberedItemsDesc": "Nummerierte Punkte mit formatiertem Text",
+    "subject": "Thema",
+    "subjectDesc": "Themenpunkte ohne Nummerierung",
     "numberedHeading": "Nummerierte Überschrift",
     "numberedHeadingDesc": "Überschrift mit automatischer Nummerierung",
     "openResponse": "Offene Antwort",
