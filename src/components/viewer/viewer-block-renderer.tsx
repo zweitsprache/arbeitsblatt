@@ -10620,13 +10620,17 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale, blockGap }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number; blockGap?: string | null }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
   const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  const containerStyle: React.CSSProperties = {
+    marginTop: blockGap ? `var(--print-block-gap, ${blockGap})` : undefined,
+    marginBottom: blockGap ? `var(--print-block-gap, ${blockGap})` : undefined,
+  };
 
   const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
     <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
@@ -10657,7 +10661,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
 
   if (!hasBg) {
     return (
-      <div className={s.numberedItemsRows}>
+      <div className={s.numberedItemsRows} style={containerStyle}>
         {block.items.map((item, i) => {
           const originalItem = originalBlock?.items[i];
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
@@ -10679,7 +10683,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" style={containerStyle}>
       {block.items.map((item, i) => {
         const originalItem = originalBlock?.items[i];
         const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
@@ -12149,7 +12153,7 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} blockGap={blockGap} />;
     case "quartett":
       return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "taboo":
