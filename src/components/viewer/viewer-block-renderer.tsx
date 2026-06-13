@@ -1684,6 +1684,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3"] ?? brandFonts.headlineWeight;
   const headingMargin = calculateHeadingMargin(block.level, blockGap);
+  let topMargin = headingMargin;
   let bottomMargin = headingMargin;
   if (block.level === 1 && blockGap) {
     const config = HEADING_CONFIG[1];
@@ -1693,9 +1694,17 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
       const marginPx = (4 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
+  } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
+    const gapPx = parseFloat(blockGap);
+    if (!isNaN(gapPx)) {
+      const config = HEADING_CONFIG[block.level];
+      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
+      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      topMargin = `${marginPx.toFixed(2)}px`;
+    }
   }
   const style: React.CSSProperties = {
-    marginTop: headingMargin,
+    marginTop: topMargin,
     marginBottom: bottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
@@ -1767,6 +1776,7 @@ function NumberedHeadingView({
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
   const headingMargin = calculateHeadingMargin(block.level, blockGap);
+  let topMargin = headingMargin;
   let bottomMargin = headingMargin;
   if (block.level === 1 && blockGap) {
     const config = HEADING_CONFIG[1];
@@ -1776,9 +1786,17 @@ function NumberedHeadingView({
       const marginPx = (4 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
+  } else if ((block.level === 2 || block.level === 3 || block.level === 4) && blockGap) {
+    const gapPx = parseFloat(blockGap);
+    if (!isNaN(gapPx)) {
+      const config = HEADING_CONFIG[block.level];
+      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
+      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      topMargin = `${marginPx.toFixed(2)}px`;
+    }
   }
   const style: React.CSSProperties = {
-    marginTop: headingMargin,
+    marginTop: topMargin,
     marginBottom: bottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
