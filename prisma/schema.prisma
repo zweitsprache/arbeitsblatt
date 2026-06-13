@@ -212,6 +212,7 @@ model BrandProfile {
   h2BottomMargin           String?
   h3BottomMargin           String?
   h4BottomMargin           String?
+  blockGap                 String?
   textBaseSize             String?
   translationFontOverrides Json              @default("{}")
   gameSettings             Json              @default("{}")

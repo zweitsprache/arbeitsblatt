@@ -1649,6 +1649,7 @@ export interface BrandProfile {
   h2BottomMargin?: string | null;
   h3BottomMargin?: string | null;
   h4BottomMargin?: string | null;
+  blockGap?: string | null;
   h1NumberFormat?: string | null;
   h2NumberFormat?: string | null;
   h3NumberFormat?: string | null;

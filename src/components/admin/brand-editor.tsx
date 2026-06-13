@@ -122,6 +122,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
     h2BottomMargin: "",
     h3BottomMargin: "",
     h4BottomMargin: "",
+    blockGap: "",
     h1NumberFormat: "numbers",
     h2NumberFormat: "numbers",
     h3NumberFormat: "numbers",
@@ -190,6 +191,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
           h2BottomMargin: stripPx(data.h2BottomMargin),
           h3BottomMargin: stripPx(data.h3BottomMargin),
           h4BottomMargin: stripPx(data.h4BottomMargin),
+          blockGap: stripPx(data.blockGap),
           h1NumberFormat: data.h1NumberFormat || "numbers",
           h2NumberFormat: data.h2NumberFormat || "numbers",
           h3NumberFormat: data.h3NumberFormat || "numbers",
@@ -317,6 +319,7 @@ export function BrandEditor({ brandId }: { brandId: string }) {
         h2BottomMargin: ensurePx(String(form.h2BottomMargin)),
         h3BottomMargin: ensurePx(String(form.h3BottomMargin)),
         h4BottomMargin: ensurePx(String(form.h4BottomMargin)),
+        blockGap: ensurePx(String(form.blockGap)),
         h1NumberFormat: form.h1NumberFormat,
         h2NumberFormat: form.h2NumberFormat,
         h3NumberFormat: form.h3NumberFormat,
@@ -838,6 +841,16 @@ export function BrandEditor({ brandId }: { brandId: string }) {
                   type="number"
                   value={form.h4BottomMargin}
                   onChange={(e) => update("h4BottomMargin", e.target.value)}
+                  placeholder="24"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>{t("blockGap")} <span className="text-muted-foreground font-normal">px</span></Label>
+                <Input
+                  type="number"
+                  value={form.blockGap}
+                  onChange={(e) => update("blockGap", e.target.value)}
                   placeholder="24"
                   className="mt-1"
                 />

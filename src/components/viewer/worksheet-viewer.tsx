@@ -340,6 +340,11 @@ export function WorksheetViewer({
     ["--heading-h1-weight" as string]: String(resolvedH1Weight),
     ["--heading-h2-weight" as string]: String(resolvedH2Weight),
     ["--heading-h3-weight" as string]: String(resolvedH3Weight),
+    ["--print-h1-bottom-margin" as string]: resolvedProfile.h1BottomMargin,
+    ["--print-h2-bottom-margin" as string]: resolvedProfile.h2BottomMargin,
+    ["--print-h3-bottom-margin" as string]: resolvedProfile.h3BottomMargin,
+    ["--print-h4-bottom-margin" as string]: resolvedProfile.h4BottomMargin,
+    ["--print-block-gap" as string]: resolvedProfile.blockGap,
   } as React.CSSProperties;
 
   const printCssVars = mode === "print" ? ({
@@ -351,10 +356,6 @@ export function WorksheetViewer({
     ["--print-h1-size" as string]: resolvedProfile.h1Size,
     ["--print-h2-size" as string]: resolvedProfile.h2Size,
     ["--print-h3-size" as string]: resolvedProfile.h3Size,
-    ["--print-h1-bottom-margin" as string]: resolvedProfile.h1BottomMargin,
-    ["--print-h2-bottom-margin" as string]: resolvedProfile.h2BottomMargin,
-    ["--print-h3-bottom-margin" as string]: resolvedProfile.h3BottomMargin,
-    ["--print-h4-bottom-margin" as string]: resolvedProfile.h4BottomMargin,
     ["--print-h1-weight" as string]: String(resolvedH1Weight),
     ["--print-h2-weight" as string]: String(resolvedH2Weight),
     ["--print-h3-weight" as string]: String(resolvedH3Weight),
