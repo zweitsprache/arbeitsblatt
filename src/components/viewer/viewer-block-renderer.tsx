@@ -1688,7 +1688,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
       const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
-      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      const marginPx = (3 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
   }
@@ -1771,7 +1771,7 @@ function NumberedHeadingView({
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
       const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
-      const marginPx = (2 * gapPx) - lineHeightExtraSpace;
+      const marginPx = (3 * gapPx) - lineHeightExtraSpace;
       bottomMargin = `${marginPx.toFixed(2)}px`;
     }
   }
