@@ -1666,7 +1666,11 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   const headingBottomMargin =
     block.level === 1
       ? "var(--print-h1-bottom-margin, -4px)"
-      : `var(--print-h${block.level}-bottom-margin)`;
+      : block.level === 2
+        ? "var(--print-h2-bottom-margin, 1.5rem)"
+        : block.level === 3
+          ? "var(--print-h3-bottom-margin, 1.5rem)"
+          : "var(--print-h4-bottom-margin, 1.5rem)";
   const style: React.CSSProperties = {
     marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
@@ -1739,7 +1743,11 @@ function NumberedHeadingView({
   const headingBottomMargin =
     block.level === 1
       ? "var(--print-h1-bottom-margin, -4px)"
-      : `var(--print-h${block.level}-bottom-margin)`;
+      : block.level === 2
+        ? "var(--print-h2-bottom-margin, 1.5rem)"
+        : block.level === 3
+          ? "var(--print-h3-bottom-margin, 1.5rem)"
+          : "var(--print-h4-bottom-margin, 1.5rem)";
   const style: React.CSSProperties = {
     marginBottom: headingBottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
