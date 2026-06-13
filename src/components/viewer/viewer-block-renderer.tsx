@@ -10763,12 +10763,12 @@ function SubjectView({ block, originalBlock, isNonLatin, translationScale }: { b
 
   if (!hasBg) {
     return (
-      <div className="space-y-1">
+      <div className={s.subjectRows}>
         {block.items.map((item) => {
           const originalItem = originalBlock?.items.find(i => i.id === item.id);
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
           return (
-            <div key={item.id}>
+            <div key={item.id} className={s.subjectRow}>
               {showBilingual ? (
                 renderBilingualColumns(originalItem.content, item.content)
               ) : (

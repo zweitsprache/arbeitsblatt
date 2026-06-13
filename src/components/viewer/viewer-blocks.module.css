@@ -368,6 +368,23 @@
   line-height: 1.35;
 }
 
+.subjectRows {
+  display: grid;
+  gap: 0;
+}
+
+.subjectRow {
+  display: block;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.subjectRow:first-child {
+  border-top: 1px solid #e5e7eb;
+}
+
 .checklistRows {
   display: grid;
   gap: 0.6rem;
