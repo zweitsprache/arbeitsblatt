@@ -140,7 +140,7 @@ export function CrosswordLayout({
                 const cellBackground = !isOccupiedCell
                   ? "bg-transparent"
                   : isSpaceCell
-                    ? "bg-muted"
+                    ? "bg-neutral-300"
                     : "bg-white";
 
                 return (
