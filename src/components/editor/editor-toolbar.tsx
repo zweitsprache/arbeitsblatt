@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
@@ -55,6 +55,7 @@ import {
   X,
   Loader2,
   ImageDown,
+  AlertTriangle,
 } from "lucide-react";
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { PrintPreview } from "./print-preview";
@@ -106,6 +107,30 @@ export function EditorToolbar({
   }>({ open: false });
   const [pdfOutputMode, setPdfOutputMode] = useState<"worksheet" | "solutions" | "both">("worksheet");
   const [pdfLangs, setPdfLangs] = useState<Set<string>>(new Set(["de"]));
+  const [pdfTranslationOnly, setPdfTranslationOnly] = useState(false);
+  const [pdfTranslationStale, setPdfTranslationStale] = useState<{ isStale: boolean; staleCount: number } | null>(null);
+  // When the PDF dialog opens, check whether translations are out of date so we
+  // can warn before generating a translated PDF that would silently fall back to German.
+  useEffect(() => {
+    if (!pdfLocaleDialog.open || !state.worksheetId) {
+      setPdfTranslationStale(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch(`/api/worksheets/${state.worksheetId}/translations/status`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) setPdfTranslationStale({ isStale: !!data.isStale, staleCount: data.staleCount ?? 0 });
+      } catch {
+        /* silent */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfLocaleDialog.open, state.worksheetId]);
   const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
   const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
   const effectivePdfFormat = cardBlocksForceCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
@@ -161,7 +186,7 @@ export function EditorToolbar({
     });
   };
 
-  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE", outputMode: "worksheet" | "solutions" | "both" = "worksheet", lang: string = "de") => {
+  const handleDownloadPdf = async (preview = false, locale: "DE" | "CH" | "NEUTRAL" = "DE", outputMode: "worksheet" | "solutions" | "both" = "worksheet", lang: string = "de", translationOnly = false) => {
     if (!state.worksheetId) {
       alert(t("saveFirst"));
       return;
@@ -174,6 +199,7 @@ export function EditorToolbar({
       if (outputMode === "solutions") params.set("solutions", "1");
       if (outputMode === "both") params.set("both", "1");
       if (lang && lang !== "de") params.set("lang", lang);
+      if (lang && lang !== "de" && translationOnly) params.set("translationOnly", "1");
       const res = await authFetch(`/api/worksheets/${state.worksheetId}/pdf-v3?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -194,7 +220,7 @@ export function EditorToolbar({
       a.href = url;
       const shortId = state.worksheetId.slice(0, 16);
       const fileSuffix = locale === "NEUTRAL" ? "DACH" : locale;
-      const langSuffix = lang && lang !== "de" ? `_${lang.toUpperCase()}` : "";
+      const langSuffix = lang && lang !== "de" ? `_${lang.toUpperCase()}${translationOnly ? "_only" : ""}` : "";
       const modeSuffix = outputMode === "solutions" ? "_solutions" : outputMode === "both" ? "_complete" : "";
       a.download = preview
         ? `${shortId}_preview_${fileSuffix}${langSuffix}${modeSuffix}.pdf`
@@ -319,14 +345,16 @@ export function EditorToolbar({
     const preview = pdfLocaleDialog.preview ?? false;
     const outputMode = pdfOutputMode;
     const langs = Array.from(pdfLangs);
+    const translationOnly = pdfTranslationOnly;
     setPdfLocaleDialog({ open: false });
     setPdfOutputMode("worksheet");
     setPdfLangs(new Set(["de"]));
+    setPdfTranslationOnly(false);
     if (mode === "cover") {
       handleDownloadCover(locale);
     } else {
       for (const lang of langs) {
-        await handleDownloadPdf(preview, locale, outputMode, lang);
+        await handleDownloadPdf(preview, locale, outputMode, lang, translationOnly);
       }
     }
   };
@@ -620,6 +648,41 @@ export function EditorToolbar({
                   </button>
                 ))}
               </div>
+              {Array.from(pdfLangs).some((code) => code !== "de") && (
+                <div className="space-y-2 pt-2">
+                  <Label className="text-sm font-medium">{t("pdfTranslationMode")}</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPdfTranslationOnly(false)}
+                      className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        !pdfTranslationOnly
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t("pdfBilingual")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPdfTranslationOnly(true)}
+                      className={`rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        pdfTranslationOnly
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t("pdfTranslationOnly")}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {pdfTranslationStale?.isStale && Array.from(pdfLangs).some((code) => code !== "de") && (
+                <div className="flex items-start gap-2 rounded-sm border border-amber-500/50 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{t("pdfTranslationStale", { count: pdfTranslationStale.staleCount })}</span>
+                </div>
+              )}
             </div>
           )}
 

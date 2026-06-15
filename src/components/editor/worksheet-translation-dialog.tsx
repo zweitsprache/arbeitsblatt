@@ -23,6 +23,9 @@ interface TranslationStatus {
   translatedAt: string | null;
   stringCount: number;
   targetLanguages: string[];
+  isStale: boolean;
+  staleCount: number;
+  removedCount: number;
 }
 
 /** All supported target languages with human-readable labels, sorted A-Z. */
@@ -246,6 +249,14 @@ export function WorksheetTranslationDialog({
               {!status.hasTranslations && (
                 <p className="text-xs text-muted-foreground">{t("noTranslationsYet")}</p>
               )}
+            </div>
+          )}
+
+          {/* Staleness warning: content changed since last translation */}
+          {status?.isStale && (
+            <div className="flex items-start gap-2 rounded-sm border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{t("translationsStale", { count: status.staleCount })}</span>
             </div>
           )}
 

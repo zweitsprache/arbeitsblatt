@@ -21,6 +21,7 @@ export async function POST(
   const showSolutions = req.nextUrl.searchParams.get("solutions") === "1";
   const showBoth = req.nextUrl.searchParams.get("both") === "1";
   const lang = req.nextUrl.searchParams.get("lang"); // translation language code, e.g. "en"
+  const translationOnly = req.nextUrl.searchParams.get("translationOnly") === "1"; // render translation without original
   const shouldOptimizeImages = req.nextUrl.searchParams.get("optimizeImages") !== "0";
   const maxImageEdge = Math.min(
     Math.max(Number(req.nextUrl.searchParams.get("imgMaxEdge") || "1600"), 800),
@@ -372,6 +373,7 @@ export async function POST(
       if (locale === "CH") printParams.set("ch", "1");
       if (solutions) printParams.set("solutions", "1");
       if (lang) printParams.set("lang", lang);
+      if (translationOnly) printParams.set("transOnly", "1");
       const qs = printParams.toString();
       return `${baseUrl}/de/worksheet/${worksheet.slug}/print${qs ? `?${qs}` : ""}`;
     };

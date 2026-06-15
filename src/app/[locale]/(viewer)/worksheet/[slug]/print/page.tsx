@@ -30,6 +30,9 @@ export default async function PrintWorksheetPage({
   const isCH = sp.ch === "1";
   const showSolutions = sp.solutions === "1";
   const lang = typeof sp.lang === "string" ? sp.lang : null;
+  // When set, render the translated content only (suppress the original German
+  // shown side-by-side in bilingual blocks).
+  const translationOnly = sp.transOnly === "1";
   const scaleParam = typeof sp.scale === "string" ? Number(sp.scale) : NaN;
   const previewScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam / 100 : 1;
 
@@ -103,8 +106,9 @@ export default async function PrintWorksheetPage({
     }
   }
 
-  // Build original blocks map for bilingual text blocks (only when translated)
-  const originalBlockMap = (lang && lang !== "de")
+  // Build original blocks map for bilingual text blocks (only when translated).
+  // Skipped in translation-only mode so blocks render the translation alone.
+  const originalBlockMap = (lang && lang !== "de" && !translationOnly)
     ? Object.fromEntries(originalBlocks.map((b) => [b.id, b]))
     : undefined;
 
