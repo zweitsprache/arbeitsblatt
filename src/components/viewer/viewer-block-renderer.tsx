@@ -1679,7 +1679,7 @@ function calculateHeadingMargin(level: number, blockGap: string | null | undefin
   return `${marginPx.toFixed(2)}px`;
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -1703,15 +1703,20 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
       topMargin = `${marginPx.toFixed(2)}px`;
     }
   }
+  const deMarkerColor = originalBlock ? accentColor : undefined;
+  const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
+  // Only flip a heading to RTL when it renders purely translated content
+  // (monolingual). Bilingual headings mix German + translation inline, so they
+  // stay LTR. skipTranslation headings render the original German and stay LTR.
+  const applyRtl = isLocaleRtl && !block.skipTranslation && !isBilingual;
   const style: React.CSSProperties = {
     marginTop: topMargin,
     marginBottom: bottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
+    ...(applyRtl ? { direction: "rtl" as const, textAlign: "right" as const } : {}),
   };
-  const deMarkerColor = originalBlock ? accentColor : undefined;
-  const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   if (isBilingual) {
     const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
     return (
@@ -1722,7 +1727,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
       </Tag>
     );
   }
-  return <Tag className={sizes[block.level]} style={style}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
+  return <Tag className={sizes[block.level]} style={style} dir={applyRtl ? "rtl" : undefined}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
 }
 
 function NumberedHeadingView({
@@ -1732,6 +1737,7 @@ function NumberedHeadingView({
   headingWeights,
   headingNumberWeights,
   isNonLatin,
+  isRtl: isLocaleRtl = false,
   translationScale,
   primaryColor,
   accentColor,
@@ -1747,6 +1753,7 @@ function NumberedHeadingView({
   headingWeights?: { h1: number; h2: number; h3: number; h4: number };
   headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   isNonLatin?: boolean;
+  isRtl?: boolean;
   translationScale?: number;
   primaryColor?: string;
   accentColor?: string | null;
@@ -1767,10 +1774,11 @@ function NumberedHeadingView({
   const sequences = allBlocks ? collectNumberedHeadingSequences(allBlocks) : undefined;
   const sequence = sequences?.get(block.id) ?? 1;
   const numberLabel = formatHeadingNumber(sequence, headingNumberFormat);
+  const applyRtl = isLocaleRtl && !block.skipTranslation;
   const numberSlotStyle: React.CSSProperties = {
     display: "inline-block",
     minWidth: "1.5rem",
-    marginRight: "0.5rem",
+    ...(applyRtl ? { marginLeft: "0.5rem" } : { marginRight: "0.5rem" }),
     fontVariantNumeric: "tabular-nums",
     fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
@@ -1799,9 +1807,10 @@ function NumberedHeadingView({
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
     color: headingColor || primaryColor,
+    ...(applyRtl ? { direction: "rtl" as const, textAlign: "right" as const } : {}),
   };
   return (
-    <Tag className={sizes[block.level]} style={style}>
+    <Tag className={sizes[block.level]} style={style} dir={applyRtl ? "rtl" : undefined}>
       <span style={numberSlotStyle}>{numberLabel}</span>
       <span>{block.content}</span>
     </Tag>
@@ -10674,37 +10683,59 @@ function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLa
   }
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; translationScale?: number }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRtl = false, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
   const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+  // The RTL *layout* (number badge on the right, rows reversed) applies whenever
+  // the worksheet locale is RTL and this block renders translated content —
+  // including bilingual blocks. skipTranslation blocks render the original German
+  // and stay LTR.
+  const rtlLayout = isLocaleRtl && !block.skipTranslation;
+  // Monolingual translated content is itself right-to-left. In bilingual blocks
+  // each column sets its own direction (German LTR, translation RTL) instead.
+  const contentRtl = rtlLayout && !isBilingual;
 
-  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string) => (
-    <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
-      <div
-        className="tiptap max-w-none text-foreground font-normal"
-        dangerouslySetInnerHTML={{ __html: injectLiIcons(prepareTiptapHtml(content)) }}
-      />
-    </div>
-  );
+  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, rtl: boolean = contentRtl) => {
+    let html = injectLiIcons(prepareTiptapHtml(content), rtl);
+    if (rtl) html = isolateNumberRunsForRtl(html);
+    return (
+      <div className={`min-w-0 ${className ?? ""}`.trim()} style={style}>
+        <div
+          className="tiptap max-w-none text-foreground font-normal"
+          dir={rtl ? "rtl" : "ltr"}
+          style={{ textAlign: rtl ? "right" : "left" }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+    );
+  };
 
   const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+    // Force LTR on the columns grid so the original (German) stays on the left and
+    // the translation on the right, regardless of the surrounding RTL row layout.
     <div
       style={{
         display: "grid",
         gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
         gap: "0 1rem",
         alignItems: "start",
+        direction: "ltr",
       }}
     >
-      {renderNumberedItemContent(originalContent)}
+      {renderNumberedItemContent(originalContent, undefined, undefined, false)}
       {renderNumberedItemContent(
         translatedContent,
-        effectiveScale ? { fontSize: `${effectiveScale}em`, borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" } : { borderLeft: "1px solid #e5e7eb", paddingLeft: "1rem" },
-        "tiptap-bilingual-translated"
+        {
+          ...(effectiveScale ? { fontSize: `${effectiveScale}em` } : {}),
+          borderLeft: "1px solid #e5e7eb",
+          paddingLeft: "1rem",
+        },
+        "tiptap-bilingual-translated",
+        rtlLayout,
       )}
     </div>
   );
@@ -10731,6 +10762,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
                 padding: "0.4rem 0.65rem",
                 breakInside: "avoid",
                 pageBreakInside: "avoid",
+                ...(rtlLayout ? { direction: "rtl" as const } : {}),
               }}
             >
               {marker && <span style={{ color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap" }}>{marker}</span>}
@@ -10752,7 +10784,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
           const parentLabel = String(block.startNumber + i).padStart(2, "0");
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
           return (
-            <div key={item.id} className={s.numberedItemRow}>
+            <div key={item.id} className={s.numberedItemRow} style={rtlLayout ? { direction: "rtl" } : undefined}>
               <span className={s.accentBadge}>{parentLabel}</span>
               <div className={s.numberedItemContent}>
                 {showBilingual ? (
@@ -10779,19 +10811,22 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, translationScale 
           <div
             key={item.id}
             className="flex gap-0"
-            style={hasBg ? {
-              backgroundColor: surfaceBg,
-              borderRadius: `${radius}px`,
-              breakInside: "avoid",
-              pageBreakInside: "avoid",
-            } : undefined}
+            style={{
+              ...(hasBg ? {
+                backgroundColor: surfaceBg,
+                borderRadius: `${radius}px`,
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+              } : {}),
+              ...(rtlLayout ? { flexDirection: "row-reverse" as const } : {}),
+            }}
           >
             <div
               className="shrink-0 w-[30px] flex items-center justify-center font-bold"
               style={{
                 backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
                 color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
-                borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
+                borderRadius: hasBg ? (rtlLayout ? `0 ${radius}px ${radius}px 0` : `${radius}px 0 0 ${radius}px`) : `${radius}px`,
                 alignSelf: (item.subItems?.length ?? 0) > 0 ? "stretch" : undefined,
               }}
             >
@@ -11864,7 +11899,7 @@ export function ViewerBlockRenderer({
   const renderedBlock = (() => {
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap}/>;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap}/>;
     case "numbered-heading": {
       const nbBlock = block as NumberedHeadingBlock;
       const levelKey = `h${nbBlock.level}` as keyof typeof headingColors;
@@ -11876,6 +11911,7 @@ export function ViewerBlockRenderer({
           headingWeights={headingWeights}
           headingNumberWeights={headingNumberWeights}
           isNonLatin={isNonLatin}
+          isRtl={_isRtl}
           translationScale={translationScale}
           primaryColor={primaryColor}
           accentColor={accentColor}
@@ -12397,7 +12433,7 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} />;
     case "subject":
       return <SubjectView block={block as SubjectBlock} originalBlock={originalBlock as SubjectBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "box":

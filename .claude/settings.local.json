@@ -4,7 +4,13 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(cat)",
+      "Bash(node check-trans.mjs)",
+      "Bash(rm -f /Users/mallenspach/Projects/arbeitsblatt/check-trans.mjs)",
+      "Bash(curl -s \"http://localhost:3000/de/worksheet/rufNw7Dqek/print?lang=uk&transOnly=1\")",
+      "Bash(grep -oE \"\\(хотів|хочу|можу|розповісти|Ich|hätte|möchte|kann|gerne|<li><p>[^<]{0,40}\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/de/worksheet/rufNw7Dqek/print?lang=uk&transOnly=1\")"
     ]
   }
 }
