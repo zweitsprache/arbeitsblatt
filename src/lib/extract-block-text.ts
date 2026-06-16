@@ -1,5 +1,5 @@
 import { WorksheetBlock } from "@/types/worksheet";
-import { parseBlankContent } from "@/lib/fill-in-blank";
+import { parseBlankContent, parseBlankToken } from "@/lib/fill-in-blank";
 
 /**
  * Strip HTML tags and decode common entities to plain text.
@@ -19,10 +19,13 @@ function stripHtml(html: string): string {
 }
 
 /**
- * Extract fill-in-blank content, replacing {{blank:answer}} / {{blank*:answer}} with the answer.
+ * Extract fill-in-blank content, replacing {{blank:answer}} / {{blank,xl:answer}} with the answer.
  */
 function expandBlanks(content: string): string {
-  return content.replace(/\{\{blank\*?:?([^}]*)\}\}/g, (_m, raw) => parseBlankContent(raw).answer);
+  return content.replace(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g, (match) => {
+    const token = parseBlankToken(match);
+    return parseBlankContent(token?.raw || "").answer;
+  });
 }
 
 /**

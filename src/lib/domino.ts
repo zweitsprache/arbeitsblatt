@@ -1,4 +1,4 @@
-import { parseBlankContent } from "@/lib/fill-in-blank";
+import { parseBlankContent, parseBlankToken } from "@/lib/fill-in-blank";
 import { BoardGameCell, CardPairsBlock, CardPairsPairingMode, DominoBlock, DominoTextSize, FlashcardsBlock } from "@/types/worksheet";
 
 export interface DominoPair {
@@ -112,11 +112,14 @@ export function getCardPairsPairingMode(pairingMode?: CardPairsPairingMode | nul
   return pairingMode ?? "same";
 }
 
-const FLASHCARD_BLANK_TOKEN_PATTERN = /\{\{blank\*?(?::[^}]*)?\}\}/;
-const FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN = /\{\{blank\*?(?::([^}]*))?\}\}/g;
+const FLASHCARD_BLANK_TOKEN_PATTERN = /\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/;
+const FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN = /\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g;
 
 export function solveFlashcardBlankText(text: string): string {
-  return text.replace(FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN, (_match, raw = "") => parseBlankContent(raw).answer);
+  return text.replace(FLASHCARD_BLANK_TOKEN_REPLACE_PATTERN, (match) => {
+    const token = parseBlankToken(match);
+    return parseBlankContent(token?.raw || "").answer;
+  });
 }
 
 export function getFlashcardDisplayText(frontItem?: BoardGameCell | null, backItem?: BoardGameCell | null, sideIndex = 0): string {

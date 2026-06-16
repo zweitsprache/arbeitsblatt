@@ -106,7 +106,7 @@ import { getCardPairDisplayText, getCardPairs, getCardPairItems, getDominoEditor
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
-import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
 import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike } from "@/components/ui/rough-example-circle";
@@ -317,19 +317,17 @@ function renderReadingComprehensionCorrectionSegments(
 }
 
 function renderMissingLetterText(text: string, showExampleOnFirstBlank = false): React.ReactNode {
-  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  const parts = text.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
   let exampleShown = false;
 
   return parts.map((part, index) => {
-    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-    if (!match) {
+    const token = parseBlankToken(part);
+    if (!token) {
       return <span key={index}>{tripleInnerRegularSpaces(part)}</span>;
     }
 
-    const noSpace = match[1] === "*";
-    const raw = match[2] || "";
-    const { answer, width } = parseBlankContent(raw);
-    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+    const { answer, width } = parseBlankContent(token.raw);
+    const spacing = getBlankSpacing(width, token.noSpace, parts[index + 1]);
     const shouldRenderExample = showExampleOnFirstBlank && !exampleShown;
     const blankShellStyle: React.CSSProperties = {
       minHeight: "1.25rem",
@@ -379,18 +377,16 @@ function renderMissingLetterText(text: string, showExampleOnFirstBlank = false):
 }
 
 function renderCardTextWithBlanks(text: string, blankClassName: string): React.ReactNode {
-  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  const parts = text.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
 
   return parts.map((part, index) => {
-    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-    if (!match) {
+    const token = parseBlankToken(part);
+    if (!token) {
       return <span key={index}>{doubleInnerRegularSpaces(part)}</span>;
     }
 
-    const noSpace = match[1] === "*";
-    const raw = match[2] || "";
-    const { width } = parseBlankContent(raw);
-    const spacing = getBlankSpacing(width, noSpace, parts[index + 1]);
+    const { width } = parseBlankContent(token.raw);
+    const spacing = getBlankSpacing(width, token.noSpace, parts[index + 1]);
 
     return (
       <span
@@ -406,16 +402,15 @@ function renderCardTextWithBlanks(text: string, blankClassName: string): React.R
 }
 
 function renderSolvedFlashcardBackText(text: string): React.ReactNode {
-  const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  const parts = text.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
 
   return parts.map((part, index) => {
-    const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-    if (!match) {
+    const token = parseBlankToken(part);
+    if (!token) {
       return <span key={index}>{doubleInnerRegularSpaces(part)}</span>;
     }
 
-    const raw = match[2] || "";
-    const { answer } = parseBlankContent(raw);
+    const { answer } = parseBlankContent(token.raw);
     return <strong key={index}>{answer}</strong>;
   });
 }
@@ -2360,19 +2355,17 @@ function FillInBlankRenderer({
   interactive: boolean;
 }) {
   const t = useTranslations("blockRenderer");
-  // Parse {{blank:answer}}, {{blank}}, {{blank*:answer}} patterns
-  const parts = block.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+  // Parse {{blank:answer}}, {{blank,xl:answer}}, {{blank}}, {{blank*:answer}} patterns
+  const parts = block.content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
 
   return (
     <div className="leading-relaxed flex flex-wrap items-baseline">
       {parts.map((part, i) => {
-        const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-        if (match) {
-          const noSpace = match[1] === '*';
-          const raw = match[2] || "";
-          const { answer, width } = parseBlankContent(raw);
+        const token = parseBlankToken(part);
+        if (token) {
+          const { answer, width } = parseBlankContent(token.raw);
           const widthStyle = getBlankWidthStyle(width, false);
-          const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
+          const spacing = getBlankSpacing(width, token.noSpace, parts[i + 1]);
           return interactive ? (
             <input
               key={i}
@@ -2414,8 +2407,9 @@ function FillInBlankItemsRenderer({
   const exampleAnswers = React.useMemo(() => {
     if (!exampleItem) return new Set<string>();
     const answers = new Set<string>();
-    for (const match of exampleItem.content.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
-      const value = match[1]?.trim();
+    for (const match of exampleItem.content.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g)) {
+      const token = parseBlankToken(match[0]);
+      const value = token ? parseBlankContent(token.raw).answer.trim() : "";
       if (value) answers.add(value);
     }
     return answers;
@@ -2469,8 +2463,12 @@ function FillInBlankItemsRenderer({
     if (!block.showWordBank) return [];
     const answers: string[] = [];
     for (const item of block.items) {
-      const matches = item.content.matchAll(/\{\{blank\*?:([^,}]+)\}\}/g);
-      for (const m of matches) if (m[1].trim()) answers.push(m[1].trim());
+      const matches = item.content.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g);
+      for (const m of matches) {
+        const token = parseBlankToken(m[0]);
+        const value = token ? parseBlankContent(token.raw).answer.trim() : "";
+        if (value) answers.push(value);
+      }
     }
     return answers;
   }, [block.items, block.showWordBank]);
@@ -2505,8 +2503,8 @@ function FillInBlankItemsRenderer({
         </div>
       )}
       {block.items.map((item, idx) => {
-        // Parse {{blank:answer}}, {{blank}}, {{blank*:answer}} patterns
-        const parts = item.content.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+        // Parse {{blank:answer}}, {{blank,xl:answer}}, {{blank}}, {{blank*:answer}} patterns
+        const parts = item.content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
         const isExampleItem = item.id === exampleItem?.id;
 
         return (
@@ -2522,13 +2520,11 @@ function FillInBlankItemsRenderer({
             <ItemNumberBadge index={idx + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
             <span className="flex-1 flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
               {parts.map((part, i) => {
-                const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-                if (match) {
-                  const noSpace = match[1] === '*';
-                  const raw = match[2] || "";
-                  const { answer, width } = parseBlankContent(raw);
+                const token = parseBlankToken(part);
+                if (token) {
+                  const { answer, width } = parseBlankContent(token.raw);
                   const widthStyle = getBlankWidthStyle(width, false);
-                  const spacing = getBlankSpacing(width, noSpace, parts[i + 1]);
+                  const spacing = getBlankSpacing(width, token.noSpace, parts[i + 1]);
                   if (isExampleItem && answer) {
                     return (
                       <span
@@ -5012,7 +5008,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
                       block.type === "missing-letters" &&
                       isExampleRow &&
                       !exampleGapShown &&
-                      variant.text.includes("{{blank:");
+                      variant.text.includes("{{blank");
 
                     if (showExampleChip) {
                       exampleChipShown = true;
@@ -6862,7 +6858,7 @@ function FlashcardsRenderer({ block }: { block: FlashcardsBlock }) {
   const { state, dispatch } = useEditor();
   const items = getFlashcardItems(block.items);
   const pairs = getFlashcardPairs(block);
-  const flashcardBlankTokenPattern = /\{\{blank\*?(?::[^}]*)?\}\}/;
+  const flashcardBlankTokenPattern = /\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/;
   const textClass = getDominoEditorTextClass(block.textSize);
   const title = block.title?.trim();
   const footer = block.footer?.trim();
@@ -7342,10 +7338,10 @@ function DialogueRenderer({
   // Collect gap answers for word bank
   const gapAnswers: string[] = [];
   for (const item of block.items) {
-    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
+    const matches = item.text.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g);
     for (const m of matches) {
-      const raw = m[1];
-      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      const token = parseBlankToken(m[0]);
+      const answer = token ? parseBlankContent(token.raw).answer.trim() : "";
       if (answer) gapAnswers.push(answer);
     }
   }
@@ -7353,9 +7349,9 @@ function DialogueRenderer({
     const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
     if (!exampleItem) return new Set<string>();
     const answers = new Set<string>();
-    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
-      const raw = match[1] || "";
-      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g)) {
+      const token = parseBlankToken(match[0]);
+      const answer = token ? parseBlankContent(token.raw).answer.trim() : "";
       if (answer) answers.add(answer);
     }
     return answers;
@@ -7363,13 +7359,14 @@ function DialogueRenderer({
 
   const renderDialogueText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
     if (variant === "original") {
-      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
-        const { answer } = parseBlankContent(raw);
+      return text.replace(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g, (match) => {
+        const token = parseBlankToken(match);
+        const { answer } = parseBlankContent(token?.raw || "");
         return answer;
       });
     }
 
-    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const parts = text.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
     const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
       for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
         if (parts[cursor] !== "") return parts[cursor];
@@ -7378,20 +7375,18 @@ function DialogueRenderer({
     };
     let exampleShown = false;
     return parts.map((part, i) => {
-      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-      if (match) {
-        const noSpace = match[1] === '*';
-        const raw = match[2] || "";
-        const { answer, width } = parseBlankContent(raw);
+      const token = parseBlankToken(part);
+      if (token) {
+        const { answer, width } = parseBlankContent(token.raw);
         const widthStyle = getBlankWidthStyle(width, false);
         const previousPart = findAdjacentToken(i, -1);
         const nextPart = findAdjacentToken(i, 1);
-        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
-        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const previousIsBlank = parseBlankToken(previousPart) !== null;
+        const nextIsBlank = parseBlankToken(nextPart) !== null;
         const halfInnerGap = "0.125rem";
         // Check if blank is at start: all parts before it are empty or whitespace-only
         const isAtStart = parts.slice(0, i).every(p => !p.trim());
-        const spacing = getBlankSpacing(width, noSpace, nextPart);
+        const spacing = getBlankSpacing(width, token.noSpace, nextPart);
         // Remove left margin if at start
         let adjustedSpacing = isAtStart && spacing.style
           ? { ...spacing, style: { ...spacing.style, marginLeft: "0" } }
@@ -7596,10 +7591,10 @@ function LueckenzeilenRenderer({
 
   const gapAnswers: string[] = [];
   for (const item of block.items) {
-    const matches = item.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g);
+    const matches = item.text.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g);
     for (const m of matches) {
-      const raw = m[1];
-      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+      const token = parseBlankToken(m[0]);
+      const answer = token ? parseBlankContent(token.raw).answer.trim() : "";
       if (answer) gapAnswers.push(answer);
     }
   }
@@ -7607,9 +7602,9 @@ function LueckenzeilenRenderer({
     const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
     if (!exampleItem) return new Set<string>();
     const answers = new Set<string>();
-    for (const match of exampleItem.text.matchAll(/\{\{blank\*?:([^}]+)\}\}/g)) {
-      const raw = match[1] || "";
-      const answer = raw.includes(",") ? raw.substring(0, raw.lastIndexOf(",")).trim() : raw.trim();
+    for (const match of exampleItem.text.matchAll(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g)) {
+      const token = parseBlankToken(match[0]);
+      const answer = token ? parseBlankContent(token.raw).answer.trim() : "";
       if (answer) answers.add(answer);
     }
     return answers;
@@ -7617,13 +7612,14 @@ function LueckenzeilenRenderer({
 
   const renderLineText = (text: string, variant: "default" | "original" | "solution", showExampleOnFirstBlank = false) => {
     if (variant === "original") {
-      return text.replace(/\{\{blank\*?(?::([^}]+))?\}\}/g, (_match, raw = "") => {
-        const { answer } = parseBlankContent(raw);
+      return text.replace(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g, (match) => {
+        const token = parseBlankToken(match);
+        const { answer } = parseBlankContent(token?.raw || "");
         return answer;
       });
     }
 
-    const parts = text.split(/(\{\{blank\*?(?::[^}]*)?\}\})/g);
+    const parts = text.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
     const findAdjacentToken = (startIndex: number, direction: -1 | 1) => {
       for (let cursor = startIndex + direction; cursor >= 0 && cursor < parts.length; cursor += direction) {
         if (parts[cursor] !== "") return parts[cursor];
@@ -7632,19 +7628,17 @@ function LueckenzeilenRenderer({
     };
     let exampleShown = false;
     return parts.map((part, i) => {
-      const match = part.match(/\{\{blank(\*?)(?::(.+))?\}\}/);
-      if (match) {
-        const noSpace = match[1] === '*';
-        const raw = match[2] || "";
-        const { answer, width } = parseBlankContent(raw);
+      const token = parseBlankToken(part);
+      if (token) {
+        const { answer, width } = parseBlankContent(token.raw);
         const widthStyle = getBlankWidthStyle(width, false);
         const previousPart = findAdjacentToken(i, -1);
         const nextPart = findAdjacentToken(i, 1);
-        const previousIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(previousPart);
-        const nextIsBlank = /^\{\{blank\*?(?::[^}]*)?\}\}$/.test(nextPart);
+        const previousIsBlank = parseBlankToken(previousPart) !== null;
+        const nextIsBlank = parseBlankToken(nextPart) !== null;
         const halfInnerGap = "0.125rem";
         const isAtStart = parts.slice(0, i).every(p => !p.trim());
-        const spacing = getBlankSpacing(width, noSpace, nextPart);
+        const spacing = getBlankSpacing(width, token.noSpace, nextPart);
         let adjustedSpacing = isAtStart && spacing.style
           ? { ...spacing, style: { ...spacing.style, marginLeft: "0" } }
           : spacing;

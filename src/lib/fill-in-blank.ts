@@ -10,6 +10,28 @@ export type BlankSpacing = {
   style?: CSSProperties;
 };
 
+const BLANK_WIDTH_ALIASES: Record<string, BlankWidthSpec> = {
+  xs: { widthMultiplier: 0.5, characterWidth: null },
+  sm: { widthMultiplier: 0.75, characterWidth: null },
+  md: { widthMultiplier: 1, characterWidth: null },
+  lg: { widthMultiplier: 2, characterWidth: null },
+  xl: { widthMultiplier: 3, characterWidth: null },
+};
+
+export const BLANK_TOKEN_PATTERN = String.raw`\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}`;
+
+export function parseBlankToken(token: string): { noSpace: boolean; raw: string } | null {
+  const match = token.match(/^\{\{blank(\*?)(?:,([^:}]+))?(?::([^}]*))?\}\}$/);
+  if (!match) return null;
+
+  const leadingWidth = match[2]?.trim();
+  const answer = match[3] || "";
+  return {
+    noSpace: match[1] === "*",
+    raw: leadingWidth ? `blank,${leadingWidth}:${answer}` : answer,
+  };
+}
+
 function multiplyInnerRegularSpaces(text: string, multiplier: number): string {
   if (!text || text.length < 3) return text;
 
@@ -39,21 +61,50 @@ export function tripleInnerRegularSpaces(text: string): string {
 }
 
 export function parseBlankContent(raw: string): { answer: string; width: BlankWidthSpec } {
-  const commaIdx = raw.lastIndexOf(",");
   let answer = raw.trim();
   let widthMultiplier = 1;
   let characterWidth: number | null = null;
 
-  if (commaIdx !== -1) {
-    answer = raw.substring(0, commaIdx).trim();
-    const widthToken = raw.substring(commaIdx + 1).trim();
-    const characterMatch = widthToken.match(/^(\d+(?:\.\d+)?)\s*(?:ch|c)$/i);
+  const applyWidthToken = (token: string): boolean => {
+    const widthToken = token.trim();
+    const aliasedWidth = BLANK_WIDTH_ALIASES[widthToken.toLowerCase()];
+    if (aliasedWidth) {
+      widthMultiplier = aliasedWidth.widthMultiplier;
+      characterWidth = aliasedWidth.characterWidth;
+      return true;
+    }
 
+    const characterMatch = widthToken.match(/^(\d+(?:\.\d+)?)\s*(?:ch|c)$/i);
     if (characterMatch) {
+      widthMultiplier = 1;
       characterWidth = Number(characterMatch[1]);
-    } else {
-      const parsed = Number(widthToken);
-      if (!Number.isNaN(parsed)) widthMultiplier = parsed;
+      return true;
+    }
+
+    const parsed = Number(widthToken);
+    if (!Number.isNaN(parsed)) {
+      widthMultiplier = parsed;
+      characterWidth = null;
+      return true;
+    }
+
+    return false;
+  };
+
+  const colonIdx = raw.indexOf(":");
+  const commaBeforeColonIdx = colonIdx === -1 ? -1 : raw.substring(0, colonIdx).lastIndexOf(",");
+  if (commaBeforeColonIdx !== -1) {
+    const leadingWidthToken = raw.substring(commaBeforeColonIdx + 1, colonIdx);
+    if (applyWidthToken(leadingWidthToken)) {
+      answer = raw.substring(colonIdx + 1).trim();
+    }
+  }
+
+  const commaIdx = answer.lastIndexOf(",");
+  if (commaIdx !== -1) {
+    const trailingWidthToken = answer.substring(commaIdx + 1);
+    if (applyWidthToken(trailingWidthToken)) {
+      answer = answer.substring(0, commaIdx).trim();
     }
   }
 
@@ -116,10 +167,9 @@ export function getBlankSpacing(
   };
 
   const next = nextPart || "";
-  const nextBlankMatch = next.match(/^\{\{blank\*?(?::(.+))?\}\}$/);
-  if (nextBlankMatch) {
-    const nextRaw = nextBlankMatch[1] || "";
-    const { width: nextWidth } = parseBlankContent(nextRaw);
+  const nextBlank = parseBlankToken(next);
+  if (nextBlank) {
+    const { width: nextWidth } = parseBlankContent(nextBlank.raw);
     if (nextWidth.characterWidth !== null) {
       return { className: "", style };
     }

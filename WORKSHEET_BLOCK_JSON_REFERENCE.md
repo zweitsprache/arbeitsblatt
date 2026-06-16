@@ -636,9 +636,9 @@ Rule:
 - `{{blank}}` creates a blank gap with no solution (no auto-correction).
 - `{{blank*:correctAnswer}}` adds no space before the gap (useful for prefixes/suffixes like `ge{{blank*:macht}}`).
 - `{{blank:correctAnswer,1ch}}` creates a very narrow blank sized for roughly one character.
-- Numeric widths still work as before, for example `{{blank:correctAnswer,3}}`.
-- `{{blank:correctAnswer,1ch}}` creates a very narrow blank sized for roughly one character.
-- Numeric widths still work as before, for example `{{blank:correctAnswer,3}}`.
+- Numeric widths work after the answer, for example `{{blank:correctAnswer,3}}`.
+- Widths can also be placed before the answer, for example `{{blank,xl:correctAnswer}}` or `{{blank,3:correctAnswer}}`.
+- Named width aliases are `xs`, `sm`, `md`, `lg`, and `xl`.
 
 ### `fill-in-blank-items`
 
