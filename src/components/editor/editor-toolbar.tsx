@@ -170,6 +170,18 @@ export function EditorToolbar({
 
   // Get current brand settings with fallbacks — merge brand profile with per-worksheet overrides
   const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
+  const toLegacyBrandSettings = (updates: Partial<BrandOverrides> = {}) => {
+    const merged = { ...resolvedBrand, ...updates };
+    return {
+      logo: merged.logo || merged.iconLogo || "",
+      organization: merged.organization || "",
+      teacher: merged.teacher || "",
+      headerRight: merged.headerRight || "",
+      footerLeft: merged.footerLeft || "",
+      footerCenter: merged.footerCenter || "",
+      footerRight: merged.footerRight || "",
+    };
+  };
 
   const updateBrandOverrides = (updates: Partial<BrandOverrides>) => {
     dispatch({
@@ -177,11 +189,7 @@ export function EditorToolbar({
       payload: {
         brandOverrides: { ...state.settings.brandOverrides, ...updates },
         // Keep legacy brandSettings in sync for backward compat
-        brandSettings: {
-          ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
-          ...state.settings.brandSettings,
-          ...updates,
-        },
+        brandSettings: toLegacyBrandSettings(updates),
       },
     });
   };

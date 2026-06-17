@@ -566,6 +566,37 @@ Notes:
 - `textSize` must be `s`, `m`, `l`, or `xl`.
 - `flashcards` is a worksheet-exclusive block type.
 
+### `aufgabenkarten`
+
+```json
+{
+  "id": "aufgabenkarten-1",
+  "type": "aufgabenkarten",
+  "visibility": "both",
+  "title": "Aufgabenkarten",
+  "subtitle": "Ausschneiden",
+  "items": [
+    {
+      "id": "aufgabenkarten-item-1",
+      "title": "Karte 1",
+      "task": "Beschreibe das Bild.",
+      "chunks": ["Ich sehe ...", "Im Vordergrund ..."],
+      "imageUrl": ""
+    }
+  ],
+  "textSize": "m",
+  "textAlign": "left",
+  "textVerticalAlign": "top"
+}
+```
+
+Notes:
+
+- `textSize` must be `s`, `m`, `l`, or `xl`.
+- `textAlign` must be `left`, `center`, or `right`.
+- `textVerticalAlign` must be `top`, `center`, or `bottom`.
+- `aufgabenkarten` is a worksheet-exclusive block type.
+
 ### `syllable-cards`
 
 ```json

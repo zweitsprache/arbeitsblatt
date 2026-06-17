@@ -133,7 +133,7 @@ import {
 import { stripSyllableMarkers, syllabifyGermanText } from "@/lib/syllables";
 import { resolveWordSearchDirections } from "@/lib/word-search";
 import { formatCrosswordItemsText, parseCrosswordItemsText } from "@/lib/crossword";
-import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw, Settings, Table2 } from "lucide-react";
+import { Trash2, Plus, GripVertical, Printer, Globe, Sparkles, ArrowUpDown, Upload, Bold, Italic, X, AlertTriangle, Code2, Check, ChevronUp, ChevronDown, Shuffle, ImagePlus, Loader2, Mail, Bot, BookOpen, Scissors, Download, RefreshCw, Settings, Table2, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd } from "lucide-react";
 import { useUpload } from "@/lib/use-upload";
 import { MediaBrowserDialog } from "@/components/ui/media-browser-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -5695,6 +5695,60 @@ function AufgabenkartenProps({ block }: { block: AufgabenkartenBlock }) {
               }
             >
               {size}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("textAlignment")}</Label>
+        <div className="grid grid-cols-3 gap-1">
+          {([
+            { value: "left", label: t("alignLeft"), icon: AlignLeft },
+            { value: "center", label: t("alignCenter"), icon: AlignCenter },
+            { value: "right", label: t("alignRight"), icon: AlignRight },
+          ] as const).map(({ value, label, icon: Icon }) => (
+            <Button
+              key={value}
+              variant={(block.textAlign ?? "left") === value ? "default" : "outline"}
+              size="sm"
+              className="h-8 min-w-0 px-1"
+              title={label}
+              aria-label={label}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textAlign: value } },
+                })
+              }
+            >
+              <Icon className="h-4 w-4" />
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("textVerticalAlignment")}</Label>
+        <div className="grid grid-cols-3 gap-1">
+          {([
+            { value: "top", label: t("top"), icon: AlignVerticalJustifyStart },
+            { value: "center", label: t("verticalCenter"), icon: AlignVerticalJustifyCenter },
+            { value: "bottom", label: t("bottom"), icon: AlignVerticalJustifyEnd },
+          ] as const).map(({ value, label, icon: Icon }) => (
+            <Button
+              key={value}
+              variant={(block.textVerticalAlign ?? "top") === value ? "default" : "outline"}
+              size="sm"
+              className="h-8 min-w-0 px-1"
+              title={label}
+              aria-label={label}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: { id: block.id, updates: { textVerticalAlign: value } },
+                })
+              }
+            >
+              <Icon className="h-4 w-4" />
             </Button>
           ))}
         </div>
@@ -13027,17 +13081,37 @@ function CoverImagesPanel() {
   };
 
   const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
+  const toLegacyBrandSettings = (
+    profile: {
+      logo?: string | null;
+      iconLogo?: string | null;
+      organization?: string | null;
+      teacher?: string | null;
+      headerRight?: string | null;
+      footerLeft?: string | null;
+      footerCenter?: string | null;
+      footerRight?: string | null;
+    },
+    updates: Partial<BrandOverrides> = {},
+  ) => {
+    const merged = { ...profile, ...updates };
+    return {
+      logo: merged.logo || merged.iconLogo || "",
+      organization: merged.organization || "",
+      teacher: merged.teacher || "",
+      headerRight: merged.headerRight || "",
+      footerLeft: merged.footerLeft || "",
+      footerCenter: merged.footerCenter || "",
+      footerRight: merged.footerRight || "",
+    };
+  };
 
   const updateBrandOverrides = (updates: Partial<BrandOverrides>) => {
     dispatch({
       type: "UPDATE_SETTINGS",
       payload: {
         brandOverrides: { ...state.settings.brandOverrides, ...updates },
-        brandSettings: {
-          ...DEFAULT_BRAND_SETTINGS[state.settings.brand || "edoomio"],
-          ...state.settings.brandSettings,
-          ...updates,
-        },
+        brandSettings: toLegacyBrandSettings(resolvedBrand, updates),
       },
     });
   };
@@ -13155,12 +13229,13 @@ function CoverImagesPanel() {
             disabled={!canEditWorksheetSettings}
             onValueChange={(value: string) => {
               const [slug, subId] = value.split("::");
+              const selectedProfile = state.availableBrands.find((bp) => bp.slug === slug);
               dispatch({
                 type: "UPDATE_SETTINGS",
                 payload: {
                   brand: slug as Brand,
                   subProfileId: subId || undefined,
-                  brandSettings: DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"],
+                  brandSettings: toLegacyBrandSettings(selectedProfile || DEFAULT_BRAND_SETTINGS[slug] || DEFAULT_BRAND_SETTINGS["edoomio"]),
                 },
               });
             }}

@@ -95,9 +95,9 @@ import {
   TableCloudBlock,
   SegmentationBlock,
   FreeFormBlock,
-  BRAND_ICON_LOGOS,
   ViewMode,
   applyBrandOverrides,
+  resolveBrandLogo,
 } from "@/types/worksheet";
 import { TriangleAlert } from "lucide-react";
 import { useEditor } from "@/store/editor-store";
@@ -1858,8 +1858,7 @@ function DividerRenderer({ block }: { block: DividerBlock }) {
 // ─── Logo Divider ────────────────────────────────────────────
 function LogoDividerRenderer({ block }: { block: LogoDividerBlock }) {
   const { state } = useEditor();
-  const brand = state.settings.brand || "edoomio";
-  const logoSrc = BRAND_ICON_LOGOS[brand];
+  const logoSrc = resolveBrandLogo(applyBrandOverrides(state.brandProfile, state.settings.brandOverrides));
   return (
     <div className="flex items-center justify-center py-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -7198,9 +7197,12 @@ function AufgabenkartenRenderer({ block }: { block: AufgabenkartenBlock }) {
         imageUrl: "",
       }));
   const textClass = getDominoEditorTextClass(block.textSize);
+  const textAlign = block.textAlign ?? "left";
+  const textVerticalAlign = block.textVerticalAlign ?? "top";
+  const cardJustifyContent: React.CSSProperties["justifyContent"] = textVerticalAlign === "center" ? "center" : textVerticalAlign === "bottom" ? "flex-end" : "flex-start";
   const title = block.title?.trim();
   const subtitle = block.subtitle?.trim() || "";
-  const logoSrc = BRAND_ICON_LOGOS[state.brandProfile.slug || state.settings.brand || "edoomio"] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(applyBrandOverrides(state.brandProfile, state.settings.brandOverrides));
   const titleColor = resolveHeadingOverrideColor(
     state.brandProfile.h3HeadingColor,
     state.brandProfile.primaryColor,
@@ -7243,6 +7245,17 @@ function AufgabenkartenRenderer({ block }: { block: AufgabenkartenBlock }) {
         {items.map((item, itemIndex) => {
           const { cardTitle, cardTask, chunkLine } = getCardContent(item);
           const isSelected = state.selectedBlockId === block.id && state.activeItemIndex === itemIndex;
+          const cardStyle: React.CSSProperties = {
+            justifyContent: cardJustifyContent,
+            ...(item.imageUrl
+              ? {
+                  backgroundImage: `url(${item.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }
+              : {}),
+          };
           return (
             <div key={item.id || itemIndex} className="group relative">
               <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
@@ -7265,31 +7278,22 @@ function AufgabenkartenRenderer({ block }: { block: AufgabenkartenBlock }) {
                   dispatch({ type: "SELECT_BLOCK", payload: block.id });
                   dispatch({ type: "SET_ACTIVE_ITEM", payload: itemIndex });
                 }}
-                className={`relative flex h-[56mm] w-[36mm] flex-col items-start justify-start overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8 text-left transition-colors ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
-                style={
-                  item.imageUrl
-                    ? {
-                        backgroundImage: `url(${item.imageUrl})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                      }
-                    : undefined
-                }
+                className={`relative flex h-[56mm] w-[36mm] flex-col items-stretch overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8 transition-colors ${isSelected ? "ring-2 ring-inset ring-primary" : "hover:bg-muted/20"}`}
+                style={cardStyle}
               >
                 {logoSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={logoSrc}
                     alt=""
-                    style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain" }}
+                    style={{ position: "absolute", top: "4mm", right: "4mm", width: "auto", height: "7mm", objectFit: "contain" }}
                   />
                 ) : null}
                 {!item.imageUrl ? <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
                 {cardTitle || cardTask || chunkLine ? (
                   <div
                     className={`aufgabenkarten-card-content relative z-10 w-full rounded-sm bg-background/80 px-1 py-1 ${textClass}`}
-                    style={{ textAlign: "left" }}
+                    style={{ textAlign }}
                   >
                     {cardTitle ? <h3>{cardTitle}</h3> : null}
                     {cardTask ? <p>{cardTask}</p> : null}

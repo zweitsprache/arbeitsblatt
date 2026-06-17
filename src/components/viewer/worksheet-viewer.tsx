@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveSubProfileHeaderFooter, resolveTranslationFontOverride } from "@/types/worksheet";
+import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveBrandLogo, resolveSubProfileHeaderFooter, resolveTranslationFontOverride } from "@/types/worksheet";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -199,7 +199,7 @@ export function WorksheetViewer({
     // Logo is owned by the brand profile (with per-worksheet brandOverrides applied).
     // Prefer it over the persisted brandSettings.logo, which is only a denormalized copy
     // of a brand default and can go stale (e.g. an edoomio fallback saved for another brand).
-    logo: resolvedProfile.logo || legacyBrandSettings?.logo,
+    logo: resolveBrandLogo(resolvedProfile, "full") || legacyBrandSettings?.logo,
     organization: legacyBrandSettings?.organization || resolvedProfile.organization,
     teacher: legacyBrandSettings?.teacher || resolvedProfile.teacher,
     headerLeft: "",
@@ -523,7 +523,7 @@ export function WorksheetViewer({
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                           {...(block.type === "numbered-items" && resolvedProfile.blockGap ? { style: { marginTop: `calc(2 * ${resolvedProfile.blockGap})`, marginBottom: `calc(2 * ${resolvedProfile.blockGap})` } } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight, h4: resolvedH4Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} blockGap={resolvedProfile.blockGap} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight, h4: resolvedH4Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} brandProfile={resolvedProfile} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} blockGap={resolvedProfile.blockGap} />
                         </div>
                       ))}
                     </div>
@@ -610,6 +610,7 @@ export function WorksheetViewer({
                     itemNumberFormat={itemNumberFormat}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
+                    brandProfile={resolvedProfile}
                     bodyFont={activeBodyFont}
                     originalBodyFont={baseBodyFont}
                     bodyFontSize="clamp(0.875rem, 0.75rem + 0.5vw, 1.125rem)"

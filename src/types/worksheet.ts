@@ -629,6 +629,33 @@ export const BRAND_ICON_LOGOS: Record<string, string> = new Proxy(BRAND_ICON_LOG
   },
 });
 
+export function resolveBrandLogo(
+  brand: BrandProfile | Brand | null | undefined,
+  variant: "icon" | "full" = "icon",
+): string {
+  if (brand && typeof brand === "object") {
+    const preferred = variant === "icon"
+      ? brand.iconLogo || brand.logo
+      : brand.logo || brand.iconLogo;
+    if (preferred?.trim()) return preferred;
+    if (Object.prototype.hasOwnProperty.call(BRAND_ICON_LOGOS_BASE, brand.slug)) {
+      return variant === "icon"
+        ? BRAND_ICON_LOGOS_BASE[brand.slug]
+        : DEFAULT_BRAND_SETTINGS_BASE[brand.slug]?.logo || BRAND_ICON_LOGOS_BASE[brand.slug];
+    }
+    return "";
+  }
+
+  const slug = typeof brand === "string" && brand.trim() ? brand.trim() : "edoomio";
+  if (Object.prototype.hasOwnProperty.call(BRAND_ICON_LOGOS_BASE, slug)) {
+    return variant === "icon"
+      ? BRAND_ICON_LOGOS_BASE[slug]
+      : DEFAULT_BRAND_SETTINGS_BASE[slug]?.logo || BRAND_ICON_LOGOS_BASE[slug];
+  }
+
+  return "";
+}
+
 // ─── Multiple-choice block ──────────────────────────────────
 export interface MultipleChoiceOption {
   id: string;
@@ -790,6 +817,8 @@ export interface BoardGameBlock extends BlockBase {
 }
 
 export type DominoTextSize = "s" | "m" | "l" | "xl";
+export type CardTextAlign = "left" | "center" | "right";
+export type CardTextVerticalAlign = "top" | "center" | "bottom";
 
 export interface DominoBlock extends BlockBase {
   type: "domino";
@@ -822,6 +851,8 @@ export interface AufgabenkartenBlock extends BlockBase {
   subtitle?: string;
   items: AufgabenkartenItem[];
   textSize?: DominoTextSize;
+  textAlign?: CardTextAlign;
+  textVerticalAlign?: CardTextVerticalAlign;
 }
 
 export type CardPairsPairingMode = "same" | "different";
@@ -2561,6 +2592,8 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
         imageUrl: "",
       })),
       textSize: "m",
+      textAlign: "left",
+      textVerticalAlign: "top",
       visibility: "both",
     },
   },

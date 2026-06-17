@@ -86,10 +86,11 @@ import {
   TableBlock,
   TableCloudBlock,
   SegmentationBlock,
-  BRAND_ICON_LOGOS,
   BRAND_FONTS,
   Brand,
+  BrandProfile,
   ViewMode,
+  resolveBrandLogo,
 } from "@/types/worksheet";
 import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors, FileQuestion, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -510,6 +511,7 @@ function QuartettView({
   headlineFont,
   headingWeights,
   headingColor,
+  brandProfile,
 }: {
   block: QuartettBlock;
   mode: ViewMode;
@@ -518,12 +520,13 @@ function QuartettView({
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number };
   headingColor?: string;
+  brandProfile?: BrandProfile;
 }) {
   const showGroupTitle = block.showGroupTitle !== false;
   const showFooter = block.showFooter !== false;
   const cards = React.useMemo(() => buildQuartettCardVariants(block.items), [block.items]);
   const isPrint = mode === "print";
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
@@ -756,6 +759,7 @@ function TabooView({
   headlineFont,
   headingWeights,
   headingColor,
+  brandProfile,
 }: {
   block: TabooBlock;
   mode: ViewMode;
@@ -764,10 +768,11 @@ function TabooView({
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number };
   headingColor?: string;
+  brandProfile?: BrandProfile;
 }) {
   const cards = React.useMemo(() => buildTabooCardVariants(block.items), [block.items]);
   const isPrint = mode === "print";
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
@@ -2930,8 +2935,8 @@ function DividerView({ block }: { block: DividerBlock }) {
   return <hr style={{ borderStyle: block.style }} />;
 }
 
-function LogoDividerView({ block, brand = "edoomio" }: { block: LogoDividerBlock; brand?: Brand }) {
-  const logoSrc = BRAND_ICON_LOGOS[brand];
+function LogoDividerView({ block, brand = "edoomio", brandProfile }: { block: LogoDividerBlock; brand?: Brand; brandProfile?: BrandProfile }) {
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   return (
     <div className="flex items-center justify-center py-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -5086,6 +5091,7 @@ function ColumnsView({
   primaryColor,
   allBlocks,
   brand = "edoomio",
+  brandProfile,
 }: {
   block: ColumnsBlock;
   mode: ViewMode;
@@ -5096,6 +5102,7 @@ function ColumnsView({
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  brandProfile?: BrandProfile;
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
   return (
@@ -5136,6 +5143,7 @@ function ColumnsView({
               primaryColor={primaryColor}
               allBlocks={allBlocks}
               brand={brand}
+              brandProfile={brandProfile}
             />
           ))}
         </div>
@@ -5156,6 +5164,7 @@ function GridView({
   primaryColor,
   allBlocks,
   brand = "edoomio",
+  brandProfile,
 }: {
   block: GridBlock;
   mode: ViewMode;
@@ -5166,6 +5175,7 @@ function GridView({
   primaryColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  brandProfile?: BrandProfile;
 }) {
   const answers = (answer as Record<string, unknown> | undefined) || {};
   const hasBorder = block.showBorder ?? false;
@@ -5197,6 +5207,7 @@ function GridView({
               primaryColor={primaryColor}
               allBlocks={allBlocks}
               brand={brand}
+              brandProfile={brandProfile}
             />
           ))}
         </div>
@@ -5694,7 +5705,7 @@ function CardCanvaPrintContentArea({ children }: { children: React.ReactNode }) 
   );
 }
 
-function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor, brandProfile }: { block: DominoBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string; brandProfile?: BrandProfile }) {
   const items = getDominoItems(block.items);
   const pairs = getDominoPairs(block);
   const orderedEntries = pairs.flatMap(({ pairItems, itemIndices }) =>
@@ -5705,7 +5716,7 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
   );
   const lastItemIndex = Math.max(0, items.length - 1);
   const isPrint = mode === "print";
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const viewerTextClass = getDominoEditorTextClass(block.textSize);
   const printFontSize = getDominoPrintFontSize(block.textSize);
   const title = block.title?.trim();
@@ -6034,13 +6045,13 @@ function DominoView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", 
   );
 }
 
-function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: FlashcardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor, brandProfile }: { block: FlashcardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string; brandProfile?: BrandProfile }) {
   const items = getFlashcardItems(block.items);
   const pairs = getFlashcardPairs(block);
   const flashcardBlankTokenPattern = /\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/;
   const title = block.title?.trim();
   const footer = block.footer?.trim();
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const viewerTextClass = getDominoEditorTextClass(block.textSize);
   const printFontSize = getDominoPrintFontSize(block.textSize);
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -6322,13 +6333,13 @@ function FlashcardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1
   );
 }
 
-function CardPairsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: CardPairsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+function CardPairsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor, brandProfile }: { block: CardPairsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string; brandProfile?: BrandProfile }) {
   const items = getCardPairItems(block.items);
   const pairs = getCardPairs(block);
   const pairingMode = block.pairingMode ?? "same";
   const title = block.title?.trim();
   const footer = block.footer?.trim();
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const viewerTextClass = getDominoEditorTextClass(block.textSize);
   const printFontSize = getDominoPrintFontSize(block.textSize);
   const previewImageInset = "2.5mm";
@@ -6683,7 +6694,7 @@ function CardPairsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a
   );
 }
 
-function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: AufgabenkartenBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor, brandProfile }: { block: AufgabenkartenBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string; brandProfile?: BrandProfile }) {
   const items = block.items.length > 0
     ? block.items
     : Array.from({ length: 6 }, (_, index) => ({
@@ -6693,9 +6704,12 @@ function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1
       }));
   const title = block.title?.trim();
   const subtitle = block.subtitle?.trim() || "";
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const viewerTextClass = getDominoEditorTextClass(block.textSize);
   const printFontSize = getDominoPrintFontSize(block.textSize);
+  const textAlign = block.textAlign ?? "left";
+  const textVerticalAlign = block.textVerticalAlign ?? "top";
+  const cardJustifyContent: React.CSSProperties["justifyContent"] = textVerticalAlign === "center" ? "center" : textVerticalAlign === "bottom" ? "flex-end" : "flex-start";
   const brandFonts = getBrandFonts(brand || "edoomio");
   const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
   const resolvedHeadingWeight = headingWeights?.h3 ?? brandFonts.headlineWeight;
@@ -6769,10 +6783,11 @@ function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1
                   width: `${CARD_CANVA_AUFGABENKARTEN_CELL_WIDTH_MM}mm`,
                   height: `${CARD_CANVA_AUFGABENKARTEN_CELL_HEIGHT_MM}mm`,
                   display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "flex-start",
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  justifyContent: cardJustifyContent,
                   padding: "10mm 4mm 10mm",
-                  textAlign: "left",
+                  textAlign,
                   backgroundImage: item?.imageUrl ? `url(${item.imageUrl})` : undefined,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
@@ -6784,13 +6799,13 @@ function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1
                   <img
                     src={logoSrc}
                     alt=""
-                    style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain", zIndex: 1 }}
+                    style={{ position: "absolute", top: "4mm", right: "4mm", width: "auto", height: "7mm", objectFit: "contain", zIndex: 1 }}
                   />
                 ) : null}
                 {cardTitle || cardTask || chunkLine ? (
                   <div
                     className="aufgabenkarten-card-content max-w-none"
-                    style={{ position: "relative", zIndex: 1, padding: "2mm", borderRadius: "4px", background: "rgba(255,255,255,0.82)", fontSize: printFontSize, fontWeight: 500, lineHeight: 1.2, width: "100%", textAlign: "left" }}
+                    style={{ position: "relative", zIndex: 1, padding: "2mm", borderRadius: "4px", background: "rgba(255,255,255,0.82)", fontSize: printFontSize, fontWeight: 500, lineHeight: 1.2, width: "100%", textAlign }}
                   >
                     {cardTitle ? <h3>{cardTitle}</h3> : null}
                     {cardTask ? <p>{cardTask}</p> : null}
@@ -6844,34 +6859,36 @@ function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", width: "fit-content" }}>
         {items.map((item, index) => {
           const { cardTitle, cardTask, chunkLine } = getCardContent(item);
+          const cardStyle: React.CSSProperties = {
+            justifyContent: cardJustifyContent,
+            ...(item.imageUrl
+              ? {
+                  backgroundImage: `url(${item.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }
+              : {}),
+          };
           return (
           <div
             key={item.id || `aufgabenkarten-view-${index}`}
-            className="relative flex h-[56mm] w-[36mm] flex-col items-start justify-start overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8"
-            style={
-              item.imageUrl
-                ? {
-                    backgroundImage: `url(${item.imageUrl})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }
-                : undefined
-            }
+            className="relative flex h-[56mm] w-[36mm] flex-col items-stretch overflow-hidden rounded-md border border-border bg-background px-2 pb-8 pt-8"
+            style={cardStyle}
           >
             {logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoSrc}
                 alt=""
-                style={{ position: "absolute", top: "3mm", right: "3mm", width: "7mm", height: "7mm", objectFit: "contain" }}
+                style={{ position: "absolute", top: "4mm", right: "4mm", width: "auto", height: "7mm", objectFit: "contain" }}
               />
             ) : null}
             {!item.imageUrl ? <div className="absolute inset-2 rounded-sm border border-dashed border-border/80 bg-muted/20" /> : null}
             {cardTitle || cardTask || chunkLine ? (
               <div
                 className={`aufgabenkarten-card-content relative z-10 w-full rounded-sm bg-background/80 px-1 py-1 ${viewerTextClass}`}
-                style={{ textAlign: "left" }}
+                style={{ textAlign }}
               >
                 {cardTitle ? <h3>{cardTitle}</h3> : null}
                 {cardTask ? <p>{cardTask}</p> : null}
@@ -6894,11 +6911,11 @@ function AufgabenkartenView({ block, mode, brand = "edoomio", primaryColor = "#1
   );
 }
 
-function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor }: { block: SyllableCardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string }) {
+function SyllableCardsView({ block, mode, brand = "edoomio", primaryColor = "#1a1a1a", accentColor, headlineFont, headingWeights, headingColor, brandProfile }: { block: SyllableCardsBlock; mode: ViewMode; brand?: Brand; primaryColor?: string; accentColor?: string | null; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number }; headingColor?: string; brandProfile?: BrandProfile }) {
   const items = getFlashcardItems(block.items);
   const title = block.title?.trim();
   const footer = block.footer?.trim();
-  const logoSrc = BRAND_ICON_LOGOS[brand] || BRAND_ICON_LOGOS.edoomio;
+  const logoSrc = resolveBrandLogo(brandProfile ?? brand);
   const viewerTextClass = getDominoEditorTextClass(block.textSize);
   const printFontSize = getDominoPrintFontSize(block.textSize);
   const brandFonts = getBrandFonts(brand || "edoomio");
@@ -11095,6 +11112,7 @@ function AccordionView({
   interactiveColor,
   allBlocks,
   brand = "edoomio",
+  brandProfile,
 }: {
   block: AccordionBlock;
   mode: ViewMode;
@@ -11106,6 +11124,7 @@ function AccordionView({
   interactiveColor?: string;
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  brandProfile?: BrandProfile;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const answers = (answer as Record<string, unknown> | undefined) || {};
@@ -11151,6 +11170,7 @@ function AccordionView({
                   interactiveColor={interactiveColor}
                   allBlocks={allBlocks}
                   brand={brand}
+                  brandProfile={brandProfile}
                 />
               ))}
               {(item.children ?? []).length === 0 && (
@@ -11825,6 +11845,7 @@ export function ViewerBlockRenderer({
   headingNumberWeights,
   allBlocks,
   brand = "edoomio",
+  brandProfile,
   bodyFont,
   originalBodyFont,
   bodyFontSize,
@@ -11854,6 +11875,7 @@ export function ViewerBlockRenderer({
   headingNumberWeights?: { h1: number; h2: number; h3: number; h4: number };
   allBlocks?: WorksheetBlock[];
   brand?: Brand;
+  brandProfile?: BrandProfile;
   bodyFont?: string;
   originalBodyFont?: string;
   bodyFontSize?: string;
@@ -11936,7 +11958,7 @@ export function ViewerBlockRenderer({
     case "divider":
       return <DividerView block={block} />;
     case "logo-divider":
-      return <LogoDividerView block={block as LogoDividerBlock} brand={brand} />;
+      return <LogoDividerView block={block as LogoDividerBlock} brand={brand} brandProfile={brandProfile} />;
     case "page-break":
       return <PageBreakView block={block} />;
     case "writing-lines":
@@ -12384,6 +12406,7 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
+          brandProfile={brandProfile}
          
         />
       );
@@ -12399,23 +12422,24 @@ export function ViewerBlockRenderer({
           primaryColor={primaryColor}
           allBlocks={allBlocks}
           brand={brand}
+          brandProfile={brandProfile}
          
         />
       );
     case "board-game":
       return <BoardGameView block={block as BoardGameBlock} mode={mode} />;
     case "domino":
-      return <DominoView block={block as DominoBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <DominoView block={block as DominoBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "card-pairs":
-      return <CardPairsView block={block as CardPairsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <CardPairsView block={block as CardPairsBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "flashcards":
-      return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <FlashcardsView block={block as FlashcardsBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "aufgabenkarten":
-      return <AufgabenkartenView block={block as AufgabenkartenBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <AufgabenkartenView block={block as AufgabenkartenBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "bingo-cards":
       return <BingoCardsRenderer block={block as BingoCardsBlock} mode={mode} />;
     case "syllable-cards":
-      return <SyllableCardsView block={block as SyllableCardsBlock} mode={mode} brand={brand} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <SyllableCardsView block={block as SyllableCardsBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} accentColor={accentColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "text-snippet":
       return <TextSnippetView block={block as TextSnippetBlock} mode={mode} />;
     case "email-skeleton":
@@ -12433,9 +12457,9 @@ export function ViewerBlockRenderer({
     case "box":
       return <BoxView block={block as BoxBlock} originalBlock={originalBlock as BoxBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} blockGap={blockGap} />;
     case "quartett":
-      return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <QuartettView block={block as QuartettBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "taboo":
-      return <TabooView block={block as TabooBlock} mode={mode} brand={brand} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
+      return <TabooView block={block as TabooBlock} mode={mode} brand={brand} brandProfile={brandProfile} primaryColor={primaryColor} headlineFont={headlineFont} headingWeights={headingWeights} headingColor={resolveHeadingColor(headingColors?.h3, primaryColor, accentColor)} />;
     case "checklist":
       return <ChecklistView block={block as ChecklistBlock} originalBlock={originalBlock as ChecklistBlock | undefined} mode={mode} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "accordion":
@@ -12451,6 +12475,7 @@ export function ViewerBlockRenderer({
           interactiveColor={interactiveColor}
           allBlocks={allBlocks}
           brand={brand}
+          brandProfile={brandProfile}
          
         />
       );
