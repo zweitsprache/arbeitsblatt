@@ -122,7 +122,31 @@ These are the normal blocks available in the worksheet editor sidebar.
 
 Notes:
 
-- `level` must be `1`, `2`, or `3`.
+- `level` must be `1`, `2`, `3`, or `4`.
+
+### `title`
+
+```json
+{
+  "id": "title-1",
+  "type": "title",
+  "visibility": "both",
+  "items": [
+    { "id": "title-line-1", "content": "Main title", "level": 1 },
+    { "id": "title-line-2", "content": "Subtitle", "level": 2 },
+    { "id": "title-line-3", "content": "Unit label", "level": 4, "style": "h4-normal" }
+  ],
+  "skipTranslation": false
+}
+```
+
+Notes:
+
+- `items` renders up to three title lines.
+- Each item `level` must be `1`, `2`, `3`, or `4`.
+- Optional item `style: "h4-normal"` renders at H4 size with normal weight and body/default font.
+- Optional item `style: "body"` renders at body-text size with normal weight and body/default font.
+- The first two rendered title lines omit bottom margin for compact stacking.
 
 ### `numbered-heading`
 

@@ -15,6 +15,7 @@ export type InstructionBadgeStyle = "default" | "unboxed-small-letter";
 // ─── Block types ─────────────────────────────────────────────
 export type BlockType =
   | "heading"
+  | "title"
   | "numbered-heading"
   | "text"
   | "syllables"
@@ -456,6 +457,21 @@ export interface HeadingBlock extends BlockBase {
   content: string;
   level: 1 | 2 | 3 | 4;
   bilingual?: boolean;
+  skipTranslation?: boolean;
+}
+
+export type TitleItemStyle = "h4-normal" | "body";
+
+export interface TitleItem {
+  id: string;
+  content: string;
+  level: 1 | 2 | 3 | 4;
+  style?: TitleItemStyle | undefined;
+}
+
+export interface TitleBlock extends BlockBase {
+  type: "title";
+  items: TitleItem[];
   skipTranslation?: boolean;
 }
 
@@ -1595,6 +1611,7 @@ export interface LinkedBlocksBlock extends BlockBase {
 // ─── Union type ──────────────────────────────────────────────
 export type WorksheetBlock =
   | HeadingBlock
+  | TitleBlock
   | NumberedHeadingBlock
   | TextBlock
   | SyllablesBlock
@@ -2186,6 +2203,25 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "heading",
       content: "Heading",
       level: 1,
+      visibility: "both",
+    },
+  },
+  {
+    type: "title",
+    label: "Title",
+    description: "Compact title with up to three heading lines",
+    labelKey: "titleBlock",
+    descriptionKey: "titleBlockDesc",
+    icon: "Heading",
+    category: "headings",
+    translations: { de: { label: "Titel", description: "Kompakter Titel mit bis zu drei Überschriftszeilen" } },
+    defaultData: {
+      type: "title",
+      items: [
+        { id: "title-line-1", content: "Title", level: 1 },
+        { id: "title-line-2", content: "", level: 2 },
+        { id: "title-line-3", content: "", level: 3 },
+      ],
       visibility: "both",
     },
   },

@@ -9,6 +9,7 @@ import {
   WorksheetBlock,
   TextBlock,
   HeadingBlock,
+  TitleBlock,
   NumberedHeadingBlock,
   TextSnippetBlock,
   BoxBlock,
@@ -146,6 +147,18 @@ function forEachBlockTranslationField(
         add("content", () => block.content, (v) => {
           block.content = v;
         });
+      }
+      break;
+    }
+
+    case "title": {
+      const titleBlock = block as TitleBlock;
+      if (!titleBlock.skipTranslation) {
+        for (const item of titleBlock.items ?? []) {
+          add(`items.${item.id}.content`, () => item.content, (v) => {
+            item.content = v;
+          });
+        }
       }
       break;
     }

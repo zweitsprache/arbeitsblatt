@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   WorksheetBlock,
   HeadingBlock,
+  TitleBlock,
   NumberedHeadingBlock,
   TextBlock,
   SyllablesBlock,
@@ -1733,6 +1734,61 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
     );
   }
   return <Tag className={sizes[block.level]} style={style} dir={applyRtl ? "rtl" : undefined}>{renderDeMarkers(block.content, deMarkerColor)}</Tag>;
+}
+
+function TitleView({ block, originalBlock, brand, headlineFont, bodyFont, bodyFontSize, headingWeights, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor, accentColor, headingColors, blockGap }: { block: TitleBlock; originalBlock?: TitleBlock; brand?: Brand; headlineFont?: string; bodyFont?: string; bodyFontSize?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColors?: Record<string, string>; blockGap?: string | null }) {
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedBodyFont = bodyFont || brandFonts.bodyFont;
+  const normalizedItems = Array.from({ length: 3 }, (_, index) => ({
+    id: block.items[index]?.id || `title-line-${index + 1}`,
+    content: block.items[index]?.content || "",
+    level: block.items[index]?.level || ((index + 1) as 1 | 2 | 3),
+    style: block.items[index]?.style,
+  }));
+  const originalItems = originalBlock?.items ?? [];
+
+  return (
+    <div>
+      {normalizedItems.map((item, index) => {
+        if (!item.content.trim() && !originalItems[index]?.content?.trim()) return null;
+        const isBody = item.style === "body";
+        const Tag = (isBody ? "p" : `h${item.level}`) as keyof React.JSX.IntrinsicElements;
+        const usesBodyFont = item.style === "h4-normal" || isBody;
+        const resolvedHeadingWeight = headingWeights?.[`h${item.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
+        const itemFontFamily = usesBodyFont ? resolvedBodyFont : resolvedHeadlineFont;
+        const itemFontWeight = usesBodyFont ? 400 : resolvedHeadingWeight;
+        const headingMargin = calculateHeadingMargin(item.level, blockGap);
+        const originalContent = originalItems[index]?.content || "";
+        const deMarkerColor = originalBlock ? accentColor : undefined;
+        const isBilingual = Boolean(originalBlock && originalContent && originalContent !== item.content);
+        const applyRtl = isLocaleRtl && !block.skipTranslation && !isBilingual;
+        const style: React.CSSProperties = {
+          marginTop: index === 0 ? headingMargin : 0,
+          marginBottom: index < 2 ? 0 : headingMargin,
+          ...(itemFontFamily ? { fontFamily: itemFontFamily } : {}),
+          ...(isBody && bodyFontSize ? { fontSize: bodyFontSize } : {}),
+          fontWeight: itemFontWeight,
+          color: resolveHeadingColor(headingColors?.[`h${item.level}`], primaryColor, accentColor) || primaryColor,
+          ...(applyRtl ? { direction: "rtl" as const, textAlign: "right" as const } : {}),
+        };
+
+        if (isBilingual) {
+          const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
+          return (
+            <Tag key={item.id} className={isBody ? "text-cv-base" : sizes[item.level]} style={style}>
+              <span style={{ ...(itemFontFamily ? { fontFamily: itemFontFamily } : {}), fontWeight: itemFontWeight }}>{renderDeMarkers(originalContent, deMarkerColor)}</span>
+              <span style={{ fontWeight: 400 }}> | </span>
+              <span style={{ ...(scale ? { fontSize: `${scale}em` } : {}), fontWeight: 400 }}>{renderDeMarkers(item.content, deMarkerColor)}</span>
+            </Tag>
+          );
+        }
+
+        return <Tag key={item.id} className={isBody ? "text-cv-base" : sizes[item.level]} style={style} dir={applyRtl ? "rtl" : undefined}>{renderDeMarkers(item.content || originalContent, deMarkerColor)}</Tag>;
+      })}
+    </div>
+  );
 }
 
 function NumberedHeadingView({
@@ -11916,6 +11972,8 @@ export function ViewerBlockRenderer({
   switch (block.type) {
     case "heading":
       return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap}/>;
+    case "title":
+      return <TitleView block={block as TitleBlock} originalBlock={originalBlock as TitleBlock | undefined} brand={brand} headlineFont={headlineFont} bodyFont={bodyFont} bodyFontSize={bodyFontSize} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColors={headingColors} blockGap={blockGap} />;
     case "numbered-heading": {
       const nbBlock = block as NumberedHeadingBlock;
       const levelKey = `h${nbBlock.level}` as keyof typeof headingColors;

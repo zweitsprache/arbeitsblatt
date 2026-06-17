@@ -54,6 +54,12 @@ export function extractBlocksText(
         if (block.content) parts.push(block.content);
         break;
 
+      case "title":
+        for (const item of block.items ?? []) {
+          if (item.content) parts.push(item.content);
+        }
+        break;
+
       case "numbered-heading":
         if (block.content) parts.push(block.content);
         break;

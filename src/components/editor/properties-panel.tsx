@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import {
   HeadingBlock,
+  TitleBlock,
   NumberedHeadingBlock,
   TextBlock,
   SyllablesBlock,
@@ -419,6 +420,95 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
               payload: { id: block.id, updates: { skipTranslation: checked } },
             })
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TitleProps({ block }: { block: TitleBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+  const items = block.items.length > 0
+    ? block.items.slice(0, 3)
+    : [
+        { id: "title-line-1", content: "", level: 1 as const },
+        { id: "title-line-2", content: "", level: 2 as const },
+        { id: "title-line-3", content: "", level: 3 as const },
+      ];
+  const normalizedItems = Array.from({ length: 3 }, (_, index) => ({
+    id: items[index]?.id || `title-line-${index + 1}`,
+    content: items[index]?.content || "",
+    level: items[index]?.level || ((index + 1) as 1 | 2 | 3),
+    style: items[index]?.style,
+  }));
+
+  const updateItem = (index: number, updates: Partial<TitleBlock["items"][number]>) => {
+    const nextItems = normalizedItems.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...updates } : item,
+    );
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {normalizedItems.map((item, index) => (
+        <div key={item.id} className="space-y-2 rounded-md border border-border p-2">
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">
+            {t("titleLine", { number: index + 1 })}
+          </Label>
+          <ChInput
+            blockId={block.id}
+            fieldPath={`items.${index}.content`}
+            baseValue={item.content}
+            onBaseChange={(value) => updateItem(index, { content: value })}
+            placeholder={tc("content")}
+          />
+          <Select
+            value={item.style === "h4-normal" || item.style === "body" ? item.style : String(item.level)}
+            onValueChange={(value) => {
+              if (value === "h4-normal") {
+                updateItem(index, { level: 4, style: "h4-normal" });
+                return;
+              }
+              if (value === "body") {
+                updateItem(index, { level: 4, style: "body" });
+                return;
+              }
+              updateItem(index, { level: Number(value) as 1 | 2 | 3 | 4, style: undefined });
+            }}
+          >
+            <SelectTrigger size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">{t("heading1")}</SelectItem>
+              <SelectItem value="2">{t("heading2")}</SelectItem>
+              <SelectItem value="3">{t("heading3")}</SelectItem>
+              <SelectItem value="4">{t("heading4")}</SelectItem>
+              <SelectItem value="h4-normal">{t("heading4Normal")}</SelectItem>
+              <SelectItem value="body">{t("bodyText")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ))}
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("settings")}</Label>
+        <div className="flex h-8 items-center justify-between border-b border-border">
+          <Label className="text-sm">{t("skipTranslation")}</Label>
+          <Switch
+            checked={block.skipTranslation ?? false}
+            onCheckedChange={(checked) =>
+              dispatch({
+                type: "UPDATE_BLOCK",
+                payload: { id: block.id, updates: { skipTranslation: checked } },
+              })
+            }
+          />
         </div>
       </div>
     </div>
@@ -14784,6 +14874,8 @@ export function PropertiesPanel() {
     switch (selectedBlock.type) {
       case "heading":
         return <HeadingProps block={selectedBlock} />;
+      case "title":
+        return <TitleProps block={selectedBlock as TitleBlock} />;
       case "numbered-heading":
         return <HeadingProps block={selectedBlock} />;
       case "segmentation":

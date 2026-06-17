@@ -27,6 +27,7 @@ import {
   NumberLineBlock,
   TrueFalseMatrixBlock,
   HeadingBlock,
+  TitleBlock,
   NumberedHeadingBlock,
   ColumnsBlock,
   GridBlock,
@@ -736,6 +737,66 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
     >
       {block.content}
     </Tag>
+  );
+}
+
+function TitleRenderer({ block }: { block: TitleBlock }) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
+  const normalizedItems = Array.from({ length: 3 }, (_, index) => ({
+    id: block.items[index]?.id || `title-line-${index + 1}`,
+    content: block.items[index]?.content || "",
+    level: block.items[index]?.level || ((index + 1) as 1 | 2 | 3),
+    style: block.items[index]?.style,
+  }));
+  const resolvedHeadingWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
+    1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
+    2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
+    3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
+    4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
+  };
+
+  const updateItem = (index: number, content: string) => {
+    const nextItems = normalizedItems.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, content } : item,
+    );
+    localeUpdate(block.id, `items.${index}.content`, content, () =>
+      dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items: nextItems } } })
+    );
+  };
+
+  return (
+    <div className="space-y-0">
+      {normalizedItems.map((item, index) => {
+        const isBody = item.style === "body";
+        const Tag = (isBody ? "p" : `h${item.level}`) as keyof React.JSX.IntrinsicElements;
+        const colorKey = `h${item.level}HeadingColor` as const;
+        const headingColor = resolveHeadingOverrideColor(
+          state.brandProfile[colorKey],
+          state.brandProfile.primaryColor,
+          state.brandProfile.accentColor,
+        );
+        const usesBodyFont = item.style === "h4-normal" || isBody;
+        return (
+          <Tag
+            key={item.id}
+            className={`${isBody ? "text-base" : sizes[item.level]} ${usesBodyFont ? "font-normal" : "font-bold"} outline-none`}
+            style={{
+              marginBottom: index < 2 ? 0 : undefined,
+              fontFamily: usesBodyFont ? state.brandProfile.bodyFont : undefined,
+              fontWeight: usesBodyFont ? 400 : resolvedHeadingWeightByLevel[item.level],
+              ...(headingColor ? { color: headingColor } : {}),
+            }}
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(event) => updateItem(index, event.currentTarget.textContent || "")}
+          >
+            {item.content}
+          </Tag>
+        );
+      })}
+    </div>
   );
 }
 
@@ -9854,6 +9915,8 @@ export function BlockRenderer({
   switch (block.type) {
     case "heading":
       return <HeadingRenderer block={block} />;
+    case "title":
+      return <TitleRenderer block={block as TitleBlock} />;
     case "numbered-heading":
       return <NumberedHeadingRenderer block={block} />;
     case "text":
