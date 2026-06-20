@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { authFetch } from "@/lib/auth-fetch";
+import { TITLE_DOMAINS } from "@/lib/title-domains";
 import { useEditor } from "@/store/editor-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -456,6 +457,32 @@ function TitleProps({ block }: { block: TitleBlock }) {
 
   return (
     <div className="space-y-3">
+      <div className="space-y-2 rounded-md border border-border p-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">
+          {t("titleDomain")}
+        </Label>
+        <Select
+          value={block.domain || "__none"}
+          onValueChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { domain: value === "__none" ? undefined : value } },
+            })
+          }
+        >
+          <SelectTrigger size="sm" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">{t("titleDomainNone")}</SelectItem>
+            {TITLE_DOMAINS.map((domain) => (
+              <SelectItem key={domain} value={domain}>
+                {domain}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {normalizedItems.map((item, index) => (
         <div key={item.id} className="space-y-2 rounded-md border border-border p-2">
           <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">
@@ -469,7 +496,7 @@ function TitleProps({ block }: { block: TitleBlock }) {
             placeholder={tc("content")}
           />
           <Select
-            value={item.style === "h4-normal" || item.style === "body" ? item.style : String(item.level)}
+            value={item.style === "h4-normal" || item.style === "body" || item.style === "badges" ? item.style : String(item.level)}
             onValueChange={(value) => {
               if (value === "h4-normal") {
                 updateItem(index, { level: 4, style: "h4-normal" });
@@ -477,6 +504,10 @@ function TitleProps({ block }: { block: TitleBlock }) {
               }
               if (value === "body") {
                 updateItem(index, { level: 4, style: "body" });
+                return;
+              }
+              if (value === "badges") {
+                updateItem(index, { level: 4, style: "badges" });
                 return;
               }
               updateItem(index, { level: Number(value) as 1 | 2 | 3 | 4, style: undefined });
@@ -492,6 +523,7 @@ function TitleProps({ block }: { block: TitleBlock }) {
               <SelectItem value="4">{t("heading4")}</SelectItem>
               <SelectItem value="h4-normal">{t("heading4Normal")}</SelectItem>
               <SelectItem value="body">{t("bodyText")}</SelectItem>
+              <SelectItem value="badges">{t("badges")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1918,19 +1950,24 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [tableOpen, setTableOpen] = React.useState(false);
   const [csvText, setCsvText] = React.useState("");
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
 
   const items = block.items;
 
+  const updateItems = (nextItems: FillInBlankItem[]) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: nextItems } },
+    });
+  };
+
   const updateItem = (index: number, content: string) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], content };
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { items: newItems } },
-    });
+    updateItems(newItems);
   };
 
   const addItem = () => {
@@ -1938,21 +1975,12 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
       id: `fib${Date.now()}`,
       content: "{{blank:answer}}",
     };
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { items: [...items, newItem] } },
-    });
+    updateItems([...items, newItem]);
   };
 
   const removeItem = (index: number) => {
     if (items.length <= 1) return;
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: { items: items.filter((_, i) => i !== index) },
-      },
-    });
+    updateItems(items.filter((_, i) => i !== index));
   };
 
   const moveItem = (index: number, direction: -1 | 1) => {
@@ -1962,10 +1990,17 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
     const newItems = [...items];
     [newItems[index], newItems[nextIndex]] = [newItems[nextIndex], newItems[index]];
 
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: { id: block.id, updates: { items: newItems } },
-    });
+    updateItems(newItems);
+  };
+
+  const shuffleItems = () => {
+    if (items.length <= 1) return;
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    updateItems(shuffled);
   };
 
   const handleCsvImport = () => {
@@ -2048,7 +2083,89 @@ function FillInBlankItemsProps({ block }: { block: FillInBlankItemsBlock }) {
         <Button variant="outline" size="sm" onClick={addItem} className="w-full">
           <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
         </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" size="sm" onClick={shuffleItems} disabled={items.length <= 1}>
+            <Shuffle className="h-3.5 w-3.5 mr-1" /> {t("shuffleItems")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setTableOpen(true)}>
+            <Table2 className="h-3.5 w-3.5 mr-1" /> {t("fillInBlankItemsEditTable")}
+          </Button>
+        </div>
       </div>
+      <Dialog open={tableOpen} onOpenChange={setTableOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t("fillInBlankItemsTableTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <table className="w-full border-separate border-spacing-y-1.5 text-sm">
+              <thead>
+                <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="w-8" />
+                  <th className="px-2 pb-1">{tc("content")}</th>
+                  <th className="w-24" />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <tr key={item.id} className="align-top">
+                    <td className="pt-2 text-center text-xs text-slate-400">{index + 1}</td>
+                    <td className="px-1">
+                      <ChInput
+                        blockId={block.id}
+                        fieldPath={`items.${index}.content`}
+                        baseValue={item.content}
+                        onBaseChange={(value) => updateItem(index, value)}
+                        className="min-h-[44px] w-full resize-y rounded-[4px] border border-input bg-white px-2 py-1.5 font-mono text-xs"
+                        multiline
+                      />
+                    </td>
+                    <td className="px-1">
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveItem(index, -1)}
+                          disabled={index === 0}
+                        >
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveItem(index, 1)}
+                          disabled={index === items.length - 1}
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => removeItem(index)}
+                          disabled={items.length <= 1}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> {t("addSentence")}
+            </Button>
+            <Button type="button" size="sm" onClick={() => setTableOpen(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Separator />
       <div className="flex items-center justify-between">
         <Label className="text-xs">{t("showWordBank")}</Label>

@@ -1,4 +1,4 @@
-import { parseBlankContent, parseBlankToken } from "@/lib/fill-in-blank";
+import { BLANK_TOKEN_REGEX, parseBlankContent, parseBlankToken } from "@/lib/fill-in-blank";
 
 function escapeHtml(text: string): string {
   return text
@@ -65,7 +65,7 @@ export function renderBlankTokensInHtml(html: string): string {
     .split(/(<[^>]+>)/g)
     .map((part) => {
       if (!part || part.startsWith("<")) return part;
-      return part.replace(/\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g, (match) => {
+      return part.replace(BLANK_TOKEN_REGEX, (match) => {
         const token = parseBlankToken(match);
         return renderBlankToken(token?.raw || "", token?.noSpace || false);
       });

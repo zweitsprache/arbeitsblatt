@@ -98,7 +98,7 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
-import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, renderBlankTokensInRichHtml, renderBlankTokensInText, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectNumbersRow, buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
@@ -155,6 +155,86 @@ function getSegmentationWords(value: string, casing: SegmentationBlock["casing"]
     .trim()
     .split(/\s+/)
     .filter(Boolean);
+}
+
+function adjustBlankLineStartMargins(root: HTMLElement) {
+  const probes = root.querySelectorAll<HTMLElement>("[data-blank-probe='true']");
+
+  probes.forEach((probe) => {
+    const blank = probe.nextElementSibling as HTMLElement | null;
+    if (!blank?.matches("[data-blank-token='true']")) return;
+
+    blank.style.marginLeft = "";
+    blank.style.marginRight = "";
+
+    const container = probe.closest<HTMLElement>("p, li, td, th, div") ?? root;
+    const containerRect = container.getBoundingClientRect();
+    const containerStyle = window.getComputedStyle(container);
+    const direction = containerStyle.direction;
+    const probeRect = probe.getBoundingClientRect();
+    const tolerance = 1.5;
+
+    if (direction === "rtl") {
+      const lineStart = containerRect.right - (parseFloat(containerStyle.paddingRight) || 0);
+      if (Math.abs(probeRect.right - lineStart) <= tolerance) {
+        blank.style.marginRight = "0px";
+      }
+      return;
+    }
+
+    const lineStart = containerRect.left + (parseFloat(containerStyle.paddingLeft) || 0);
+    if (Math.abs(probeRect.left - lineStart) <= tolerance) {
+      blank.style.marginLeft = "0px";
+    }
+  });
+}
+
+function RichHtmlWithBlankLineStartFix({
+  className,
+  dir,
+  html,
+  style,
+}: {
+  className?: string;
+  dir?: "rtl" | "ltr";
+  html: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+
+    let frame = 0;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => adjustBlankLineStartMargins(root));
+    };
+
+    adjustBlankLineStartMargins(root);
+    schedule();
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(schedule) : null;
+    resizeObserver?.observe(root);
+    window.addEventListener("resize", schedule);
+    document.fonts?.ready.then(schedule).catch(() => undefined);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [html]);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      dir={dir}
+      style={style}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
 function SegmentationView({
@@ -1748,14 +1828,76 @@ function TitleView({ block, originalBlock, brand, headlineFont, bodyFont, bodyFo
     style: block.items[index]?.style,
   }));
   const originalItems = originalBlock?.items ?? [];
+  const renderBadgeRow = ({
+    badges,
+    color,
+    deMarkerColor,
+    dir,
+    fontFamily,
+    key,
+    marginBottom,
+    marginTop,
+    uppercase = false,
+  }: {
+    badges: string[];
+    color: string;
+    deMarkerColor?: string | null;
+    dir?: "rtl";
+    fontFamily?: string;
+    key: string;
+    marginBottom?: React.CSSProperties["marginBottom"];
+    marginTop?: React.CSSProperties["marginTop"];
+    uppercase?: boolean;
+  }) => (
+    <div
+      key={key}
+      className="flex min-h-8 flex-wrap items-center gap-2"
+      style={{
+        marginTop,
+        marginBottom,
+        ...(fontFamily ? { fontFamily } : {}),
+        fontWeight: 400,
+        color,
+        ...(dir ? { direction: dir, textAlign: "right" as const } : {}),
+      }}
+      dir={dir}
+    >
+      {badges.map((badge, badgeIndex) => (
+        <span
+          key={`${key}-badge-${badgeIndex}`}
+          className="inline-flex items-center rounded-[3px] px-1.5 py-1 text-cv-micro font-normal leading-3"
+          style={{
+            color,
+            backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+          }}
+        >
+          {renderDeMarkers(uppercase ? badge.toUpperCase() : badge, deMarkerColor || undefined)}
+        </span>
+      ))}
+    </div>
+  );
+  const domainColor = primaryColor || "#111827";
+  const domainMarginTop = calculateHeadingMargin(1, blockGap);
 
   return (
     <div>
+      {block.domain ? renderBadgeRow({
+        badges: [block.domain],
+        color: domainColor,
+        deMarkerColor: originalBlock ? accentColor : undefined,
+        dir: isLocaleRtl && !block.skipTranslation ? "rtl" : undefined,
+        fontFamily: resolvedBodyFont,
+        key: "title-domain",
+        marginBottom: 0,
+        marginTop: domainMarginTop,
+        uppercase: true,
+      }) : null}
       {normalizedItems.map((item, index) => {
         if (!item.content.trim() && !originalItems[index]?.content?.trim()) return null;
         const isBody = item.style === "body";
+        const isBadges = item.style === "badges";
         const Tag = (isBody ? "p" : `h${item.level}`) as keyof React.JSX.IntrinsicElements;
-        const usesBodyFont = item.style === "h4-normal" || isBody;
+        const usesBodyFont = item.style === "h4-normal" || isBody || isBadges;
         const resolvedHeadingWeight = headingWeights?.[`h${item.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
         const itemFontFamily = usesBodyFont ? resolvedBodyFont : resolvedHeadlineFont;
         const itemFontWeight = usesBodyFont ? 400 : resolvedHeadingWeight;
@@ -1764,15 +1906,31 @@ function TitleView({ block, originalBlock, brand, headlineFont, bodyFont, bodyFo
         const deMarkerColor = originalBlock ? accentColor : undefined;
         const isBilingual = Boolean(originalBlock && originalContent && originalContent !== item.content);
         const applyRtl = isLocaleRtl && !block.skipTranslation && !isBilingual;
+        const itemColor = resolveHeadingColor(headingColors?.[`h${item.level}`], primaryColor, accentColor) || primaryColor || "#111827";
         const style: React.CSSProperties = {
-          marginTop: index === 0 ? headingMargin : 0,
+          marginTop: index === 0 && !block.domain ? headingMargin : 0,
           marginBottom: index < 2 ? 0 : headingMargin,
           ...(itemFontFamily ? { fontFamily: itemFontFamily } : {}),
           ...(isBody && bodyFontSize ? { fontSize: bodyFontSize } : {}),
           fontWeight: itemFontWeight,
-          color: resolveHeadingColor(headingColors?.[`h${item.level}`], primaryColor, accentColor) || primaryColor,
+          color: itemColor,
           ...(applyRtl ? { direction: "rtl" as const, textAlign: "right" as const } : {}),
         };
+
+        if (isBadges) {
+          const content = item.content || originalContent;
+          const badges = content.split("|").map((part) => part.trim()).filter(Boolean);
+          return renderBadgeRow({
+            badges,
+            color: itemColor,
+            deMarkerColor,
+            dir: applyRtl ? "rtl" : undefined,
+            fontFamily: itemFontFamily,
+            key: item.id,
+            marginBottom: style.marginBottom,
+            marginTop: style.marginTop,
+          });
+        }
 
         if (isBilingual) {
           const scale = translationScale ?? (isNonLatin ? 0.9 : undefined);
@@ -2047,14 +2205,14 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const renderContent = (html: string, wrapperStyle?: React.CSSProperties, direction?: "rtl" | "ltr") => {
     const effectiveDir = direction ?? (isRtl ? "rtl" : undefined);
     const rtl = effectiveDir === "rtl";
-    let processed = injectLiIcons(prepareTiptapHtml(html, deMarkerColor), rtl);
+    let processed = injectLiIcons(renderBlankTokensInRichHtml(prepareTiptapHtml(html, deMarkerColor)), rtl);
     if (rtl) processed = isolateNumberRunsForRtl(processed);
     return (
-      <div
+      <RichHtmlWithBlankLineStartFix
         className={`tiptap max-w-none ${hasExampleBox || hasFrameBox || hasHinweisBox ? s.tiptapFlush : ""} ${isLiteratur ? "tiptap-literatur" : ""}`}
         dir={effectiveDir}
         style={wrapperStyle}
-        dangerouslySetInnerHTML={{ __html: processed }}
+        html={processed}
       />
     );
   };
@@ -2482,16 +2640,16 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
         <div className={s.emailMeta}>
           <div className={s.emailMetaRow}>
             <div className={s.emailMetaLabel}>{t("emailTo")}</div>
-            <div className={s.emailMetaValue}>{block.to}</div>
+            <div className={s.emailMetaValue} dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.to) }} />
           </div>
           <div className={s.emailMetaRow}>
             <div className={s.emailMetaLabel}>{t("emailSubject")}</div>
-            <div className={s.emailMetaValue}>{block.subject}</div>
+            <div className={s.emailMetaValue} dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.subject) }} />
           </div>
         </div>
 
         <div className={s.emailBody}>
-          <div className="tiptap max-w-none" dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(block.body) }} />
+          <RichHtmlWithBlankLineStartFix className="tiptap max-w-none" html={renderBlankTokensInRichHtml(prepareTiptapHtml(block.body))} />
         </div>
 
         {/* Attachments */}
@@ -2502,7 +2660,7 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                 </svg>
-                {att.name}
+                <span dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(att.name) }} />
               </div>
             ))}
           </div>
@@ -3422,6 +3580,7 @@ function FillInBlankItemsView({
   const instructionText = (block.instruction || "").trim() || "Complete the sentences.";
   const isOnline = mode === "online";
   const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const twoColumnRowMinHeightClass = isOnline ? "min-h-[49px]" : "min-h-[32.5px]";
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
   const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
   const exampleAnswers = useMemo(() => {
@@ -3489,127 +3648,154 @@ function FillInBlankItemsView({
         </div>
       )}
       {block.items.map((item, idx) => {
-        const parts = item.content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
         let blankInItem = 0;
         const isExampleItem = item.id === exampleItem?.id;
+        const pipeIndex = item.content.indexOf("|");
+        const hasTwoColumnContent = pipeIndex !== -1;
+        const itemContentParts = hasTwoColumnContent
+          ? [item.content.slice(0, pipeIndex).trimEnd(), item.content.slice(pipeIndex + 1).trimStart()]
+          : [item.content];
+        const renderItemContent = (content: string, keyPrefix = "item") => {
+          const parts = content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
+
+          return parts.map((part, i) => {
+            const token = parseBlankToken(part);
+            if (token) {
+              const { answer: correctAnswer, width } = parseBlankContent(token.raw);
+              const key = `blank-${idx}-${blankInItem}`;
+              blankInItem++;
+              const userValue = blanks[key] || "";
+              const hasAnswer = correctAnswer !== "";
+              const isCorrectAnswer =
+                showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
+              const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
+              const widthStyle = getBlankWidthStyle(width, false);
+              const spacingClass = token.noSpace ? '' : 'mx-1';
+              const blankShellStyle: React.CSSProperties = {
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                verticalAlign: 'middle',
+                position: 'relative',
+                borderRadius: 3,
+                backgroundColor: 'rgb(243 244 246)',
+                lineHeight: '1.25rem',
+                minHeight: '1.25rem',
+                ...(width.characterWidth !== null
+                  ? widthStyle
+                  : {
+                      ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
+                    }),
+              };
+
+              if (hasAnswer && (isExampleItem || showSolutions)) {
+                return (
+                  <span
+                    key={`${keyPrefix}-${i}`}
+                    className={spacingClass}
+                    style={blankShellStyle}
+                  >
+                    <span aria-hidden="true">&nbsp;</span>
+                    <span
+                      className="absolute inset-x-0 block text-center leading-none"
+                      style={{
+                        fontFamily: EXAMPLE_HANDWRITING_FONT,
+                        color: isExampleItem ? '#0097dc' : '#15803d',
+                        fontSize: '18px',
+                        bottom: '2px',
+                      }}
+                    >
+                      {correctAnswer}
+                    </span>
+                  </span>
+                );
+              }
+
+              if (interactive) {
+                return (
+                  <span key={`${keyPrefix}-${i}`} className={`inline-block relative ${spacingClass}`}>
+                    <input
+                      type="text"
+                      value={userValue}
+                      disabled={showResults}
+                      onChange={(e) =>
+                        onAnswer({ ...blanks, [key]: e.target.value })
+                      }
+                      className={`h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none inline transition-colors
+                        ${showResults
+                          ? isCorrectAnswer
+                            ? "bg-green-50 text-green-700"
+                            : isWrong
+                              ? "bg-red-50 text-red-700"
+                              : ""
+                          : ""}`}
+                      style={{
+                        ...getBlankWidthStyle(width, true),
+                        ...(!showResults ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : {}),
+                      }}
+                    />
+                    {showResults && isWrong && hasAnswer && (
+                      <span className="block text-cv-xs text-green-600 text-center mt-0.5">
+                        {correctAnswer}
+                      </span>
+                    )}
+                  </span>
+                );
+              }
+              if (showSolutions && hasAnswer) {
+                return null;
+              }
+              return (
+                <span
+                  key={`${keyPrefix}-${i}`}
+                  className={`bg-gray-100 ${spacingClass}`}
+                  style={{
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    borderRadius: 3,
+                    ...(width.characterWidth !== null
+                      ? widthStyle
+                      : {
+                          lineHeight: '1.25rem',
+                          minHeight: '1.25rem',
+                          ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
+                        }),
+                  }}
+                >
+                  &nbsp;
+                </span>
+              );
+            }
+            return <span key={`${keyPrefix}-${i}`}>{renderTextWithSup(part)}</span>;
+          });
+        };
 
         return (
           <div
             key={item.id || idx}
-            className={ROW_CLASS}
+            className={`${ROW_CLASS} ${hasTwoColumnContent ? "border-b-0" : ""}`.trim()}
           >
-            <ItemNumberBadge index={idx + 1} className="shrink-0" />
-            <span className="flex-1 flex flex-wrap items-center leading-5">
-              {parts.map((part, i) => {
-                const token = parseBlankToken(part);
-                if (token) {
-                  const { answer: correctAnswer, width } = parseBlankContent(token.raw);
-                  const key = `blank-${idx}-${blankInItem}`;
-                  blankInItem++;
-                  const userValue = blanks[key] || "";
-                  const hasAnswer = correctAnswer !== "";
-                  const isCorrectAnswer =
-                    showResults && hasAnswer && userValue.trim().toLowerCase() === correctAnswer.toLowerCase();
-                  const isWrong = showResults && hasAnswer && userValue.trim() !== "" && !isCorrectAnswer;
-                  const widthStyle = getBlankWidthStyle(width, false);
-                  const spacingClass = token.noSpace ? '' : 'mx-1';
-                  const blankShellStyle: React.CSSProperties = {
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    verticalAlign: 'middle',
-                    position: 'relative',
-                    borderRadius: 3,
-                    backgroundColor: 'rgb(243 244 246)',
-                    lineHeight: '1.25rem',
-                    minHeight: '1.25rem',
-                    ...(width.characterWidth !== null
-                      ? widthStyle
-                      : {
-                          ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
-                        }),
-                  };
-
-                  if (hasAnswer && (isExampleItem || showSolutions)) {
-                    return (
-                      <span
-                        key={i}
-                        className={spacingClass}
-                        style={blankShellStyle}
-                      >
-                        <span aria-hidden="true">&nbsp;</span>
-                        <span
-                          className="absolute inset-x-0 bottom-0 block text-center leading-none"
-                          style={{
-                            fontFamily: EXAMPLE_HANDWRITING_FONT,
-                            color: isExampleItem ? '#0097dc' : '#15803d',
-                            fontSize: '18px',
-                          }}
-                        >
-                          {correctAnswer}
-                        </span>
-                      </span>
-                    );
-                  }
-
-                  if (interactive) {
-                    return (
-                      <span key={i} className={`inline-block relative ${spacingClass}`}>
-                        <input
-                          type="text"
-                          value={userValue}
-                          disabled={showResults}
-                          onChange={(e) =>
-                            onAnswer({ ...blanks, [key]: e.target.value })
-                          }
-                          className={`h-8 rounded bg-transparent px-2 py-0.5 leading-none focus:outline-none inline transition-colors
-                            ${showResults
-                              ? isCorrectAnswer
-                                ? "bg-green-50 text-green-700"
-                                : isWrong
-                                  ? "bg-red-50 text-red-700"
-                                  : ""
-                              : ""}`}
-                          style={{
-                            ...getBlankWidthStyle(width, true),
-                            ...(!showResults ? { backgroundColor: "color-mix(in srgb, var(--viewer-interactive-color) 10%, transparent)" } : {}),
-                          }}
-                        />
-                        {showResults && isWrong && hasAnswer && (
-                          <span className="block text-cv-xs text-green-600 text-center mt-0.5">
-                            {correctAnswer}
-                          </span>
-                        )}
-                      </span>
-                    );
-                  }
-                  if (showSolutions && hasAnswer) {
-                    return null;
-                  }
-                  return (
-                    <span
-                      key={i}
-                      className={`bg-gray-100 ${spacingClass}`}
-                      style={{
-                        display: 'inline-block',
-                        verticalAlign: 'middle',
-                        borderRadius: 3,
-                        ...(width.characterWidth !== null
-                          ? widthStyle
-                          : {
-                              lineHeight: '1.25rem',
-                              minHeight: '1.25rem',
-                              ...(width.widthMultiplier === 0 ? { flex: 1 } : { minWidth: `${80 * width.widthMultiplier}px` }),
-                            }),
-                      }}
-                    >
-                      &nbsp;
-                    </span>
-                  );
-                }
-                return <span key={i}>{renderTextWithSup(part)}</span>;
-              })}
-            </span>
+            {hasTwoColumnContent ? (
+              <div className="grid min-w-0 flex-1 self-stretch grid-cols-[auto_minmax(0,1fr)_1rem_minmax(0,1fr)]">
+                <span className={`flex ${twoColumnRowMinHeightClass} items-center border-b pr-3`}>
+                  <ItemNumberBadge index={idx + 1} className="shrink-0" />
+                </span>
+                <span className={`flex ${twoColumnRowMinHeightClass} min-w-0 flex-wrap items-center border-b leading-5`}>
+                  {renderItemContent(itemContentParts[0], "col-0")}
+                </span>
+                <span aria-hidden="true" />
+                <span className={`flex ${twoColumnRowMinHeightClass} min-w-0 flex-wrap items-center border-b leading-5`}>
+                  {renderItemContent(itemContentParts[1], "col-1")}
+                </span>
+              </div>
+            ) : (
+              <>
+                <ItemNumberBadge index={idx + 1} className="shrink-0" />
+                <span className="flex-1 flex flex-wrap items-center leading-5">
+                  {renderItemContent(item.content)}
+                </span>
+              </>
+            )}
           </div>
         );
       })}

@@ -18,10 +18,11 @@ const BLANK_WIDTH_ALIASES: Record<string, BlankWidthSpec> = {
   xl: { widthMultiplier: 3, characterWidth: null },
 };
 
-export const BLANK_TOKEN_PATTERN = String.raw`\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\}`;
+export const BLANK_TOKEN_PATTERN = String.raw`\{\{blanks?\*?(?:,[^:}]+)?(?::[^}]*)?\}\}`;
+export const BLANK_TOKEN_REGEX = /\{\{blanks?\*?(?:,[^:}]+)?(?::[^}]*)?\}\}/g;
 
 export function parseBlankToken(token: string): { noSpace: boolean; raw: string } | null {
-  const match = token.match(/^\{\{blank(\*?)(?:,([^:}]+))?(?::([^}]*))?\}\}$/);
+  const match = token.match(/^\{\{blanks?(\*?)(?:,([^:}]+))?(?::([^}]*))?\}\}$/);
   if (!match) return null;
 
   const leadingWidth = match[2]?.trim();
@@ -30,6 +31,69 @@ export function parseBlankToken(token: string): { noSpace: boolean; raw: string 
     noSpace: match[1] === "*",
     raw: leadingWidth ? `blank,${leadingWidth}:${answer}` : answer,
   };
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function styleObjectToCss(style: CSSProperties): string {
+  return Object.entries(style)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}:${String(value)}`)
+    .join(";");
+}
+
+function renderStaticBlankHtml(raw: string, noSpace: boolean, nextPart?: string): string {
+  const { answer, width } = parseBlankContent(raw);
+  const spacing = getBlankSpacing(width, noSpace, nextPart);
+  const style = styleObjectToCss({
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "1.25rem",
+    lineHeight: "1.25rem",
+    verticalAlign: "middle",
+    borderRadius: "3px",
+    backgroundColor: "#f3f4f6",
+    overflow: "hidden",
+    ...getBlankWidthStyle(width, false),
+    ...spacing.style,
+  });
+  const className = spacing.className ? ` class="${spacing.className}"` : "";
+  const measure = escapeHtml(answer) || "&nbsp;";
+
+  return `<span data-blank-probe="true" aria-hidden="true" style="display:inline-block;width:0;height:0;overflow:hidden"></span><span data-blank-token="true" aria-hidden="true"${className} style="${style}"><span style="visibility:hidden">${measure}</span><span class="sr-only">blank</span></span>`;
+}
+
+function renderBlankTokens(text: string, escapeText: boolean): string {
+  const parts = text.split(new RegExp(`(${BLANK_TOKEN_PATTERN})`, "g"));
+
+  return parts
+    .map((part, index) => {
+      const token = parseBlankToken(part);
+      if (!token) return escapeText ? escapeHtml(part) : part;
+      return renderStaticBlankHtml(token.raw, token.noSpace, parts[index + 1]);
+    })
+    .join("");
+}
+
+export function renderBlankTokensInText(text: string): string {
+  return renderBlankTokens(text, true);
+}
+
+export function renderBlankTokensInRichHtml(html: string): string {
+  return html
+    .split(/(<[^>]+>)/g)
+    .map((part) => {
+      if (!part || part.startsWith("<")) return part;
+      return renderBlankTokens(part, false);
+    })
+    .join("");
 }
 
 function multiplyInnerRegularSpaces(text: string, multiplier: number): string {

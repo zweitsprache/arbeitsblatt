@@ -107,7 +107,7 @@ import { getCardPairDisplayText, getCardPairs, getCardPairItems, getDominoEditor
 import { authFetch } from "@/lib/auth-fetch";
 import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
-import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
+import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, renderBlankTokensInText, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { stripOuterP } from "@/lib/print-html-normalize";
 import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike } from "@/components/ui/rough-example-circle";
@@ -756,6 +756,37 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
     3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
     4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
   };
+  const renderBadgeRow = (
+    badges: string[],
+    key: string,
+    color: string | undefined,
+    marginBottom?: React.CSSProperties["marginBottom"],
+    uppercase = false,
+  ) => (
+    <div
+      key={key}
+      className="flex min-h-8 flex-wrap items-center gap-2 outline-none"
+      style={{
+        marginBottom,
+        fontFamily: state.brandProfile.bodyFont,
+      }}
+    >
+      {badges.length > 0 ? badges.map((badge, badgeIndex) => (
+        <span
+          key={`${key}-badge-${badgeIndex}`}
+          className="inline-flex items-center rounded-[3px] px-1.5 py-1 text-[10px] font-normal leading-3"
+          style={{
+            color: color || state.brandProfile.primaryColor,
+            backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+          }}
+        >
+          {uppercase ? badge.toUpperCase() : badge}
+        </span>
+      )) : (
+        <span className="text-sm text-muted-foreground">&nbsp;</span>
+      )}
+    </div>
+  );
 
   const updateItem = (index: number, content: string) => {
     const nextItems = normalizedItems.map((item, itemIndex) =>
@@ -768,8 +799,10 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
 
   return (
     <div className="space-y-0">
+      {block.domain ? renderBadgeRow([block.domain], "title-domain", state.brandProfile.primaryColor, 0, true) : null}
       {normalizedItems.map((item, index) => {
         const isBody = item.style === "body";
+        const isBadges = item.style === "badges";
         const Tag = (isBody ? "p" : `h${item.level}`) as keyof React.JSX.IntrinsicElements;
         const colorKey = `h${item.level}HeadingColor` as const;
         const headingColor = resolveHeadingOverrideColor(
@@ -777,7 +810,11 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
           state.brandProfile.primaryColor,
           state.brandProfile.accentColor,
         );
-        const usesBodyFont = item.style === "h4-normal" || isBody;
+        const usesBodyFont = item.style === "h4-normal" || isBody || isBadges;
+        if (isBadges) {
+          const badges = item.content.split("|").map((part) => part.trim()).filter(Boolean);
+          return renderBadgeRow(badges, item.id, headingColor, index < 2 ? 0 : undefined);
+        }
         return (
           <Tag
             key={item.id}
@@ -1089,15 +1126,19 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
       <div className="px-4 pt-3 pb-2 space-y-1.5 border-b border-slate-100">
         <div className="flex items-baseline gap-2">
           <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailFrom")}</span>
-          <span className="text-slate-700">{block.from}</span>
+          <span className="text-slate-700" dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.from) }} />
         </div>
         <div className="flex items-baseline gap-2">
           <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailTo")}</span>
-          <span className="text-slate-700">{block.to}</span>
+          <span className="text-slate-700" dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.to) }} />
         </div>
         <div className="flex items-baseline gap-2 pt-1 border-t border-slate-100">
           <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailSubject")}</span>
-          <span className="font-semibold" style={isStyled ? { color } : undefined}>{block.subject}</span>
+          <span
+            className="font-semibold"
+            style={isStyled ? { color } : undefined}
+            dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.subject) }}
+          />
         </div>
       </div>
 
@@ -1120,7 +1161,7 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
           {attachments.map((att) => (
             <div key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs text-slate-600">
               <Paperclip className="h-3 w-3" />
-              {att.name}
+              <span dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(att.name) }} />
             </div>
           ))}
         </div>
@@ -2563,78 +2604,121 @@ function FillInBlankItemsRenderer({
         </div>
       )}
       {block.items.map((item, idx) => {
-        // Parse {{blank:answer}}, {{blank,xl:answer}}, {{blank}}, {{blank*:answer}} patterns
-        const parts = item.content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
         const isExampleItem = item.id === exampleItem?.id;
+        const pipeIndex = item.content.indexOf("|");
+        const hasTwoColumnContent = pipeIndex !== -1;
+        const itemContentParts = hasTwoColumnContent
+          ? [item.content.slice(0, pipeIndex).trimEnd(), item.content.slice(pipeIndex + 1).trimStart()]
+          : [item.content];
+        const renderItemContent = (content: string, keyPrefix = "item") => {
+          // Parse {{blank:answer}}, {{blank,xl:answer}}, {{blank}}, {{blank*:answer}} patterns
+          const parts = content.split(/(\{\{blank\*?(?:,[^:}]+)?(?::[^}]*)?\}\})/g);
+
+          return parts.map((part, i) => {
+            const token = parseBlankToken(part);
+            if (token) {
+              const { answer, width } = parseBlankContent(token.raw);
+              const widthStyle = getBlankWidthStyle(width, false);
+              const spacing = getBlankSpacing(width, token.noSpace, parts[i + 1]);
+              if (isExampleItem && answer) {
+                return (
+                  <span
+                    key={`${keyPrefix}-${i}`}
+                    className={`relative inline-flex items-center ${spacing.className}`}
+                    style={{
+                      ...widthStyle,
+                      ...spacing.style,
+                      verticalAlign: 'middle',
+                      minHeight: '1.25rem',
+                      lineHeight: '1.25rem',
+                      borderRadius: 3,
+                      backgroundColor: 'rgb(243 244 246)',
+                    }}
+                  >
+                    <span aria-hidden="true">&nbsp;</span>
+                    <span
+                      className="absolute inset-x-0 block text-center leading-none"
+                      style={{
+                        fontFamily: 'var(--font-handwriting), cursive',
+                        color: '#0097dc',
+                        fontSize: '18px',
+                        bottom: '2px',
+                      }}
+                    >
+                      {answer}
+                    </span>
+                  </span>
+                );
+              }
+              return interactive ? (
+                <input
+                  key={`${keyPrefix}-${i}`}
+                  type="text"
+                  placeholder={t("fillInBlankPlaceholder")}
+                  className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
+                  style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
+                />
+              ) : (
+                <span
+                  key={`${keyPrefix}-${i}`}
+                  className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacing.className} text-muted-foreground text-xs`}
+                  style={{ ...widthStyle, ...spacing.style, verticalAlign: 'middle', minHeight: '1.25rem' }}
+                >
+                  {answer || '\u00A0'}
+                </span>
+              );
+            }
+            return <span key={`${keyPrefix}-${i}`}>{renderTextWithSup(tripleInnerRegularSpaces(part))}</span>;
+          });
+        };
 
         return (
           <div
             key={item.id || idx}
-            className={`flex min-h-[49px] items-center gap-3 border-b last:border-b-0 cursor-pointer rounded-sm transition-colors ${
+            className={`flex min-h-[49px] items-center gap-3 cursor-pointer rounded-sm transition-colors ${
+              hasTwoColumnContent ? "" : "border-b last:border-b-0"
+            } ${
               !interactive && activeIdx === idx
                 ? "bg-blue-50 ring-1 ring-blue-200"
                 : "hover:bg-muted/30"
             }`}
             onClick={() => handleRowClick(idx)}
           >
-            <ItemNumberBadge index={idx + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
-            <span className="flex-1 flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
-              {parts.map((part, i) => {
-                const token = parseBlankToken(part);
-                if (token) {
-                  const { answer, width } = parseBlankContent(token.raw);
-                  const widthStyle = getBlankWidthStyle(width, false);
-                  const spacing = getBlankSpacing(width, token.noSpace, parts[i + 1]);
-                  if (isExampleItem && answer) {
-                    return (
-                      <span
-                        key={i}
-                        className={`relative inline-flex items-center ${spacing.className}`}
-                        style={{
-                          ...widthStyle,
-                          ...spacing.style,
-                          verticalAlign: 'middle',
-                          minHeight: '1.25rem',
-                          lineHeight: '1.25rem',
-                          borderRadius: 3,
-                          backgroundColor: 'rgb(243 244 246)',
-                        }}
-                      >
-                        <span aria-hidden="true">&nbsp;</span>
-                        <span
-                          className="absolute inset-x-0 bottom-0 block text-center leading-none"
-                          style={{
-                            fontFamily: 'var(--font-handwriting), cursive',
-                            color: '#0097dc',
-                            fontSize: '18px',
-                          }}
-                        >
-                          {answer}
-                        </span>
-                      </span>
-                    );
-                  }
-                  return interactive ? (
-                    <input
-                      key={i}
-                      type="text"
-                      placeholder={t("fillInBlankPlaceholder")}
-                      className={`h-5 rounded-[3px] border-0 bg-transparent px-2 py-0 text-center leading-5 ${spacing.className} focus:outline-none focus:ring-1 focus:ring-primary/50 inline`}
-                      style={{ ...getBlankWidthStyle(width, true), ...spacing.style }}
-                    />
-                  ) : (
-                    <span
-                      key={i}
-                      className={`inline-block rounded-[3px] px-2 py-0 text-center leading-5 ${spacing.className} text-muted-foreground text-xs`}
-                      style={{ ...widthStyle, ...spacing.style, verticalAlign: 'middle', minHeight: '1.25rem' }}
-                    >
-                      {answer || '\u00A0'}
-                    </span>
-                  );
-                }
-                return <span key={i}>{renderTextWithSup(tripleInnerRegularSpaces(part))}</span>;
-              })}
-            </span>
+            {hasTwoColumnContent ? (
+              <div className="grid min-w-0 flex-1 self-stretch grid-cols-[auto_minmax(0,1fr)_1rem_minmax(0,1fr)]">
+                <span
+                  className={`flex min-h-[49px] items-center border-b pr-3 ${
+                    idx === block.items.length - 1 ? "border-b-0" : ""
+                  }`}
+                >
+                  <ItemNumberBadge index={idx + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
+                </span>
+                <span
+                  className={`flex min-h-[49px] min-w-0 flex-wrap items-center border-b leading-5 ${
+                    idx === block.items.length - 1 ? "border-b-0" : ""
+                  }`}
+                  style={{ lineHeight: 1 }}
+                >
+                  {renderItemContent(itemContentParts[0], "col-0")}
+                </span>
+                <span aria-hidden="true" />
+                <span
+                  className={`flex min-h-[49px] min-w-0 flex-wrap items-center border-b leading-5 ${
+                    idx === block.items.length - 1 ? "border-b-0" : ""
+                  }`}
+                  style={{ lineHeight: 1 }}
+                >
+                  {renderItemContent(itemContentParts[1], "col-1")}
+                </span>
+              </div>
+            ) : (
+              <>
+                <ItemNumberBadge index={idx + 1} className="h-5 w-5 min-w-5 rounded-[3px] leading-none" />
+                <span className="flex-1 flex-wrap items-center leading-5" style={{ lineHeight: 1 }}>
+                  {renderItemContent(item.content)}
+                </span>
+              </>
+            )}
             {!interactive && (
               <div className="flex flex-col shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button

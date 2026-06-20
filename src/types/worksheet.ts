@@ -460,7 +460,7 @@ export interface HeadingBlock extends BlockBase {
   skipTranslation?: boolean;
 }
 
-export type TitleItemStyle = "h4-normal" | "body";
+export type TitleItemStyle = "h4-normal" | "body" | "badges";
 
 export interface TitleItem {
   id: string;
@@ -472,6 +472,7 @@ export interface TitleItem {
 export interface TitleBlock extends BlockBase {
   type: "title";
   items: TitleItem[];
+  domain?: string;
   skipTranslation?: boolean;
 }
 
