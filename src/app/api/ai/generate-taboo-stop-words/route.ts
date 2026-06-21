@@ -8,6 +8,7 @@ const client = new Anthropic({
 
 interface GenerateRequest {
   word: string;
+  stopWordCount?: 4 | 10;
   locale?: string;
   worksheetTitle?: string;
   blockTitle?: string;
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as GenerateRequest;
     const word = body.word?.trim();
+    const stopWordCount = body.stopWordCount === 10 ? 10 : 4;
     const locale = body.locale?.trim() || "de";
     const worksheetTitle = body.worksheetTitle?.trim() || "";
     const blockTitle = body.blockTitle?.trim() || "";
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 512,
+      max_tokens: stopWordCount === 10 ? 768 : 512,
       messages: [
         {
           role: "user",
@@ -60,14 +62,14 @@ export async function POST(req: NextRequest) {
 Target word: ${word}
 ${contextLines ? `\nAdditional context:\n${contextLines}\n` : ""}
 
-Task: Return EXACTLY 4 stop words or very short stop phrases that a player would naturally want to say when trying to describe the target word.
+Task: Return EXACTLY ${stopWordCount} stop words or very short stop phrases that a player would naturally want to say when trying to describe the target word.
 
 Rules:
 - Detect the language from the target word and context, and write all stop words in that same language.
 - Each stop word should be short, ideally 1 to 2 words.
 - Always use the singular form for nouns.
 - Choose strong semantic associations such as synonym, category, function, context, typical example, location, person, or object strongly linked to the target.
-- The 4 stop words should be diverse, not near-duplicates.
+- The ${stopWordCount} stop words should be diverse, not near-duplicates.
 - Do NOT include the target word itself.
 - Do NOT include compounds, phrases, or hyphenations that contain the target word.
 - Do NOT include simple inflections, plural forms, gender variants, declensions, conjugations, or obvious derivations of the target word.
@@ -75,7 +77,7 @@ Rules:
 - Avoid duplicates.
 
 Respond ONLY with valid JSON in this exact format:
-{"stopWords":["...","...","...","..."]}`,
+{"stopWords":["..."]}`,
         },
       ],
     });
@@ -122,9 +124,9 @@ Respond ONLY with valid JSON in this exact format:
       return normalizedEntry !== normalizedWord && !targetWordPattern.test(normalizedEntry);
     });
 
-    if (stopWords.length !== 4) {
+    if (stopWords.length !== stopWordCount) {
       return NextResponse.json(
-        { error: "AI did not return 4 valid stop words", raw: textBlock.text },
+        { error: `AI did not return ${stopWordCount} valid stop words`, raw: textBlock.text },
         { status: 500 }
       );
     }

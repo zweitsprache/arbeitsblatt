@@ -51,6 +51,7 @@ import {
   Globe,
   TriangleAlert,
   Square,
+  PanelTop,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -97,6 +98,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Globe,
   TriangleAlert,
   Square,
+  PanelTop,
 };
 
 function DraggableBlockItem({ definition, disabled = false }: { definition: BlockDefinition; disabled?: boolean }) {

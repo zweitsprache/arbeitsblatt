@@ -746,6 +746,51 @@ Notes:
 
 - `pairOrder` is optional persisted shuffle order for rows.
 
+### `text-matching`
+
+```json
+{
+  "id": "text-matching-1",
+  "type": "text-matching",
+  "visibility": "both",
+  "instruction": "Match each numbered item with the correct card.",
+  "columns": 3,
+  "showFirstAsExample": false,
+  "items": [
+    {
+      "id": "item-1",
+      "text": "Was ist eine Bewerbung?",
+      "content": "<p>Ein formelles Schreiben an einen Arbeitgeber.</p>"
+    },
+    {
+      "id": "item-2",
+      "text": "Was ist ein Lebenslauf?",
+      "content": "<p>Eine Übersicht über Ausbildung und Berufserfahrung.</p>"
+    },
+    {
+      "id": "item-3",
+      "text": "Nur Text, keine Karte",
+      "content": ""
+    },
+    {
+      "id": "item-4",
+      "text": "",
+      "content": "<p>Nur Karte, keine nummerierte Zeile.</p>"
+    }
+  ]
+}
+```
+
+Notes:
+
+- `text` renders as numbered rows; blank or missing values are skipped.
+- `content` is rich text HTML rendered as shuffled cards below the rows; blank or missing values are skipped.
+- `columns` controls the card grid and supports `1`, `2`, `3`, or `4`.
+- `showFirstAsExample` fills the first rendered row's answer blank with the matching card letter.
+- A row item with `text` but no `content` has no matching card; solutions render `X`.
+- A card item with `content` but no `text` renders as an extra card with no numbered row.
+- Items may leave either side blank.
+
 ### `pronunciation`
 
 ```json
@@ -1734,6 +1779,7 @@ Notes:
   "type": "taboo",
   "visibility": "both",
   "title": "Taboo",
+  "stopWordCount": 4,
   "items": [
     {
       "id": "taboo-item-1",
@@ -1765,6 +1811,8 @@ Notes:
 
 - `taboo` reuses the `QuartettItem` shape.
 - `taboo` is a worksheet-exclusive block type.
+- `stopWordCount` is optional and supports `4` or `10`; omitted blocks default to `4`.
+- Use one `subitems` entry per stop word. The print renderer uses a compact two-column stopword list for 10-word cards.
 
 ### `accordion`
 
@@ -2066,6 +2114,7 @@ Normal sidebar blocks:
 - `fill-in-blank`
 - `fill-in-blank-items`
 - `matching`
+- `text-matching`
 - `pronunciation`
 - `two-column-fill`
 - `open-response`

@@ -29,6 +29,7 @@ export type BlockType =
   | "multiple-choice"
   | "fill-in-blank"
   | "matching"
+  | "text-matching"
   | "pronunciation"
   | "open-response"
   | "word-bank"
@@ -725,6 +726,21 @@ export interface MatchingBlock extends BlockBase {
   pairOrder?: string[];
   extendedRows?: boolean;
   showWordBank?: boolean;
+  showFirstAsExample?: boolean;
+}
+
+// ─── Text Matching block ────────────────────────────────────
+export interface TextMatchingItem {
+  id: string;
+  text?: string;
+  content?: string;
+}
+
+export interface TextMatchingBlock extends BlockBase {
+  type: "text-matching";
+  instruction: string;
+  items: TextMatchingItem[];
+  columns?: 1 | 2 | 3 | 4;
   showFirstAsExample?: boolean;
 }
 
@@ -1504,6 +1520,7 @@ export interface TabooBlock extends BlockBase {
   type: "taboo";
   title?: string;
   subtitle?: string;
+  stopWordCount?: 4 | 10;
   items: QuartettItem[];
 }
 
@@ -1626,6 +1643,7 @@ export type WorksheetBlock =
   | MultipleChoiceBlock
   | FillInBlankBlock
   | MatchingBlock
+  | TextMatchingBlock
   | PronunciationBlock
   | OpenResponseBlock
   | WordBankBlock
@@ -2743,6 +2761,28 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     },
   },
   {
+    type: "text-matching",
+    label: "Text Matching",
+    description: "Numbered text rows with shuffled rich-text cards",
+    labelKey: "textMatching",
+    descriptionKey: "textMatchingDesc",
+    icon: "PanelTop",
+    category: "interactive",
+    translations: { de: { label: "Textzuordnung", description: "Nummerierte Textzeilen mit gemischten Rich-Text-Karten" } },
+    defaultData: {
+      type: "text-matching",
+      instruction: "Match each numbered item with the correct card.",
+      items: [
+        { id: "tm1", text: "Item 1", content: "<p>Matching card 1</p>" },
+        { id: "tm2", text: "Item 2", content: "<p>Matching card 2</p>" },
+        { id: "tm3", text: "Item 3", content: "<p>Matching card 3</p>" },
+      ],
+      columns: 3,
+      showFirstAsExample: false,
+      visibility: "both",
+    },
+  },
+  {
     type: "pronunciation",
     label: "Pronunciation",
     description: "Match words and pronunciations with column headers",
@@ -3641,16 +3681,17 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
 {
   type: "taboo",
   label: "Taboo",
-  description: "Word cards with four stop words",
+  description: "Word cards with 4 or 10 stop words",
   labelKey: "taboo",
   descriptionKey: "tabooDesc",
   icon: "TriangleAlert",
   category: "games",
-  translations: { de: { label: "Taboo", description: "Wortkarten mit vier Stoppwörtern" } },
+  translations: { de: { label: "Taboo", description: "Wortkarten mit 4 oder 10 Stoppwörtern" } },
   defaultData: {
     type: "taboo",
     title: "",
     subtitle: "",
+    stopWordCount: 4,
     items: [
       {
         id: crypto.randomUUID(),

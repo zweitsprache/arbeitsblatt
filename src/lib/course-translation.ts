@@ -247,6 +247,21 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "text-matching": {
+      add("instruction", () => block.instruction, (v) => {
+        block.instruction = v;
+      });
+      for (const item of block.items) {
+        add(`items.${item.id}.text`, () => item.text ?? "", (v) => {
+          item.text = v;
+        });
+        add(`items.${item.id}.content`, () => item.content ?? "", (v) => {
+          item.content = v;
+        });
+      }
+      break;
+    }
+
     case "pronunciation": {
       add("instruction", () => block.instruction, (v) => {
         block.instruction = v;

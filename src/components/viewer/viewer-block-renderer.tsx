@@ -20,6 +20,7 @@ import {
   FillInBlankBlock,
   FillInBlankItemsBlock,
   MatchingBlock,
+  TextMatchingBlock,
   PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -100,6 +101,7 @@ import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, renderBlankTokensInRichHtml, renderBlankTokensInText, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { hideTableHeaderHtml, markFirstExampleRowHtml, renderBlankTokensInHtml, stripTablePixelWidths } from "@/lib/table-html";
+import { getTextMatchingAnswerLetters, getTextMatchingCardItems, getTextMatchingTextItems } from "@/lib/text-matching";
 import { ToolWorkflowShell } from "@/ai-tools/components/tool-workflow-shell";
 import { buildCorrectNumbersRow, buildCorrectSpellingRow, buildMissingLettersRow } from "@/lib/correct-spelling";
 import { getCardPairDisplayText, getCardPairItems, getCardPairs, getDominoEditorTextClass, getDominoItems, getDominoPairs, getDominoPrintFontSize, getFlashcardDisplayText, getFlashcardItems, getFlashcardPairs } from "@/lib/domino";
@@ -478,6 +480,7 @@ function TabooCardContent({
   subtitle?: string;
 }) {
   const reservedTitleHeight = "10mm";
+  const compact = card.stopWords.length > 4;
 
   return (
     <>
@@ -515,12 +518,12 @@ function TabooCardContent({
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          padding: "16mm 0 6mm",
+          padding: compact ? "14mm 0 6mm" : "16mm 0 6mm",
         }}
       >
         <div
           style={{
-            fontSize: "13pt",
+            fontSize: compact ? "11pt" : "13pt",
             fontWeight: 700,
             lineHeight: 1.15,
             color: "#111827",
@@ -533,13 +536,14 @@ function TabooCardContent({
         </div>
         <div
           style={{
-            marginTop: "3mm",
-            paddingTop: "2.5mm",
+            marginTop: compact ? "2mm" : "3mm",
+            paddingTop: compact ? "2mm" : "2.5mm",
             borderTop: "1px solid currentColor",
             display: "grid",
-            gap: "1.5mm",
-            fontSize: "11.5pt",
-            lineHeight: 1.15,
+            gridTemplateColumns: compact ? "1fr 1fr" : "1fr",
+            gap: compact ? "1mm 2mm" : "1.5mm",
+            fontSize: compact ? "7.5pt" : "11.5pt",
+            lineHeight: compact ? 1.05 : 1.15,
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
           }}
@@ -550,13 +554,21 @@ function TabooCardContent({
               style={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: "1.5mm",
-                ...(index === 0
+                gap: compact ? "0.8mm" : "1.5mm",
+                ...(compact || index === 0
                   ? undefined
                   : { borderTop: "1px solid #e5e7eb", paddingTop: "1.5mm" }),
               }}
             >
-              <TriangleAlert style={{ width: "3.4mm", height: "3.4mm", flexShrink: 0, color: "#990000", marginTop: "0.8mm" }} />
+              <TriangleAlert
+                style={{
+                  width: compact ? "2.2mm" : "3.4mm",
+                  height: compact ? "2.2mm" : "3.4mm",
+                  flexShrink: 0,
+                  color: "#990000",
+                  marginTop: compact ? "0.3mm" : "0.8mm",
+                }}
+              />
               <span>{entry}</span>
             </div>
           ))}
@@ -2639,11 +2651,14 @@ function EmailSkeletonView({ block }: { block: EmailSkeletonBlock }) {
       >
         <div className={s.emailMeta}>
           <div className={s.emailMetaRow}>
+            <div className={s.emailMetaLabel}>{t("emailFrom")}</div>
+            <div className={s.emailMetaValue} dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.from) }} />
+          </div>
+          <div className={s.emailMetaRow}>
             <div className={s.emailMetaLabel}>{t("emailTo")}</div>
             <div className={s.emailMetaValue} dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.to) }} />
           </div>
-          <div className={s.emailMetaRow}>
-            <div className={s.emailMetaLabel}>{t("emailSubject")}</div>
+          <div>
             <div className={s.emailMetaValue} dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.subject) }} />
           </div>
         </div>
@@ -4283,6 +4298,114 @@ function FillInBlankItemsView({
             {t("resultCount", { correct: block.pairs.filter((p) => selections[p.id] === p.id).length, total: block.pairs.length })}
           </p>
         </>
+      )}
+    </div>
+  );
+}
+
+function TextMatchingView({
+  block,
+  mode,
+  accentColor,
+  instructionIndex,
+  showSolutions = false,
+}: {
+  block: TextMatchingBlock;
+  mode: ViewMode;
+  accentColor?: string | null;
+  instructionIndex?: number;
+  showSolutions?: boolean;
+}) {
+  const isOnline = mode === "online";
+  const textItems = useMemo(() => getTextMatchingTextItems(block.items), [block.items]);
+  const columns = Math.min(4, Math.max(1, block.columns ?? 3));
+  const gridClass = {
+    1: "grid-cols-1",
+    2: "grid-cols-2",
+    3: "grid-cols-2 md:grid-cols-3",
+    4: "grid-cols-2 md:grid-cols-4",
+  }[columns];
+  const cardItems = useMemo(
+    () => getTextMatchingCardItems(block.id, block.items),
+    [block.id, block.items]
+  );
+  const answerLetterByTextItemId = useMemo(
+    () => getTextMatchingAnswerLetters(block.id, block.items, (index) => toAlphabeticLabel(index, true)),
+    [block.id, block.items]
+  );
+  const exampleItemId = block.showFirstAsExample ? textItems[0]?.id : undefined;
+
+  return (
+    <div>
+      {block.instruction && (
+        <>
+          {isOnline ? (
+            <div
+              className={CONSISTENT_INSTRUCTION_ROW_CLASS}
+              style={{ color: accentColor || "var(--color-primary)" }}
+            >
+              <InstructionBadge instructionIndex={instructionIndex} />
+              <p className="min-w-0 flex-1">{block.instruction}</p>
+            </div>
+          ) : (
+            <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
+          )}
+          {(textItems.length > 0 || cardItems.length > 0) && <SectionGap size="large" />}
+        </>
+      )}
+      {textItems.length > 0 && (
+        <>
+          <div>
+            {textItems.map((item, index) => (
+              <div
+                key={item.id}
+                className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}
+              >
+                <ItemNumberBadge index={index + 1} className="shrink-0" />
+                <span
+                  className="relative inline-flex h-5 min-w-10 shrink-0 items-center justify-center rounded-[3px] bg-gray-100 px-2 leading-5 align-middle"
+                  aria-hidden="true"
+                >
+                  <span>&nbsp;</span>
+                  {(showSolutions || item.id === exampleItemId) && answerLetterByTextItemId.has(item.id) && (
+                    <span
+                      className="absolute inset-x-0 block text-center leading-none"
+                      style={{
+                        fontFamily: EXAMPLE_HANDWRITING_FONT,
+                        color: item.id === exampleItemId ? "#0097dc" : "#15803d",
+                        fontSize: "18px",
+                        bottom: "2px",
+                      }}
+                    >
+                      {answerLetterByTextItemId.get(item.id)}
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">{item.text ?? ""}</span>
+              </div>
+            ))}
+          </div>
+          {cardItems.length > 0 && <div aria-hidden="true" style={{ height: 28 }} />}
+        </>
+      )}
+      {cardItems.length > 0 && (
+        <div className={`grid gap-3 ${gridClass}`}>
+          {cardItems.map((item, index) => (
+            <div
+              key={item.id}
+              className="relative rounded-sm border border-muted-foreground/40 bg-background py-3 pr-3 pl-8"
+              style={{ breakInside: "avoid" }}
+            >
+              <span className={`${NUMBER_BADGE_LAYOUT_CLASS} absolute left-[-1px] top-[-1px] rounded-br-sm rounded-tl-sm border border-l-0 border-t-0 border-muted-foreground/40 bg-transparent text-slate-700 font-normal pl-px text-[10.5px]`}>
+                {toAlphabeticLabel(index + 1, true)}
+              </span>
+              <div
+                className="tiptap tiptap-compact max-w-none text-sm"
+                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content ?? "") }}
+              />
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -12266,6 +12389,16 @@ export function ViewerBlockRenderer({
           showSolutions={showSolutions}
           accentColor={accentColor}
           instructionIndex={instructionIndex}
+        />
+      );
+    case "text-matching":
+      return (
+        <TextMatchingView
+          block={block as TextMatchingBlock}
+          mode={mode}
+          accentColor={accentColor}
+          instructionIndex={instructionIndex}
+          showSolutions={showSolutions}
         />
       );
     case "pronunciation":

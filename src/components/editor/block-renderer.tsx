@@ -19,6 +19,7 @@ import {
   FillInBlankBlock,
   FillInBlankItemsBlock,
   MatchingBlock,
+  TextMatchingBlock,
   PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -109,7 +110,8 @@ import { useUpload } from "@/lib/use-upload";
 import { setByPath, getByPath } from "@/lib/locale-utils";
 import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, renderBlankTokensInText, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
-import { stripOuterP } from "@/lib/print-html-normalize";
+import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
+import { getTextMatchingAnswerLetters, getTextMatchingCardItems, getTextMatchingTextItems } from "@/lib/text-matching";
 import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike } from "@/components/ui/rough-example-circle";
 import { generateWordSearchGrid } from "@/lib/word-search";
 import { generateCrosswordLayout } from "@/lib/crossword";
@@ -1133,9 +1135,8 @@ function EmailSkeletonRenderer({ block }: { block: EmailSkeletonBlock }) {
           <span className="text-slate-700" dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.to) }} />
         </div>
         <div className="flex items-baseline gap-2 pt-1 border-t border-slate-100">
-          <span className="font-semibold text-slate-400 w-16 shrink-0">{t("emailSubject")}</span>
           <span
-            className="font-semibold"
+            className="font-semibold flex-1"
             style={isStyled ? { color } : undefined}
             dangerouslySetInnerHTML={{ __html: renderBlankTokensInText(block.subject) }}
           />
@@ -2937,6 +2938,79 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
         </div>
       </div>
       </div>
+    </div>
+  );
+}
+
+function TextMatchingRenderer({ block }: { block: TextMatchingBlock }) {
+  const textItems = React.useMemo(() => getTextMatchingTextItems(block.items), [block.items]);
+  const columns = Math.min(4, Math.max(1, block.columns ?? 3));
+  const gridClass = {
+    1: "grid-cols-1",
+    2: "grid-cols-2",
+    3: "grid-cols-2 md:grid-cols-3",
+    4: "grid-cols-2 md:grid-cols-4",
+  }[columns];
+  const cardItems = React.useMemo(
+    () => getTextMatchingCardItems(block.id, block.items),
+    [block.id, block.items]
+  );
+  const answerLetterByTextItemId = React.useMemo(
+    () => getTextMatchingAnswerLetters(block.id, block.items, (index) => toAlphabeticLabel(index, true)),
+    [block.id, block.items]
+  );
+  const exampleItemId = block.showFirstAsExample ? textItems[0]?.id : undefined;
+
+  return (
+    <div className="space-y-8">
+      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
+      {textItems.length > 0 && (
+        <div className="space-y-0">
+          {textItems.map((item, index) => (
+            <div
+              key={item.id}
+              className={`flex items-start gap-3 border-b py-2 ${index === 0 ? "border-t" : ""}`}
+            >
+              <ItemNumberBadge index={index + 1} />
+              <span
+                className="relative inline-flex h-5 min-w-10 shrink-0 items-center justify-center rounded-[3px] bg-gray-100 px-2 leading-5 align-middle"
+                aria-hidden="true"
+              >
+                <span>&nbsp;</span>
+                {item.id === exampleItemId && answerLetterByTextItemId.has(item.id) && (
+                  <span
+                    className="absolute inset-x-0 block text-center leading-none"
+                    style={{
+                      fontFamily: "var(--font-handwriting), cursive",
+                      color: "#0097dc",
+                      fontSize: "18px",
+                      bottom: "2px",
+                    }}
+                  >
+                    {answerLetterByTextItemId.get(item.id)}
+                  </span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1">{item.text ?? ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {cardItems.length > 0 && (
+        <div className={`grid gap-3 ${gridClass}`}>
+          {cardItems.map((item, index) => (
+            <div key={item.id} className="relative rounded-md border border-muted-foreground/40 bg-background py-3 pr-3 pl-8 shadow-sm">
+              <span className="absolute left-[-1px] top-[-1px] flex h-6 w-6 min-w-6 items-center justify-center rounded-br-md border border-l-0 border-t-0 border-muted-foreground/40 bg-muted text-xs font-bold text-muted-foreground">
+                {toAlphabeticLabel(index + 1, true)}
+              </span>
+              <div
+                className="tiptap tiptap-compact max-w-none text-sm"
+                dangerouslySetInnerHTML={{ __html: prepareTiptapHtml(item.content ?? "") }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -8718,39 +8792,45 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
         </h3>
       ) : null}
       <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
-        {cards.map((card) => (
-          <div
-            key={card.id}
-            className="relative overflow-hidden rounded-md border border-border bg-background p-4"
-            style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
-          >
-            <div style={{ minHeight: reservedTitleHeight }} />
-            <div className="space-y-3 pt-3 pb-6">
-              <div className="text-lg font-bold leading-snug whitespace-pre-wrap break-words text-foreground">
-                {card.word || "..."}
+        {cards.map((card) => {
+          const compact = card.stopWords.length > 4;
+          return (
+            <div
+              key={card.id}
+              className="relative overflow-hidden rounded-md border border-border bg-background p-4"
+              style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
+            >
+              <div style={{ minHeight: reservedTitleHeight }} />
+              <div className={compact ? "space-y-2 pt-2 pb-6" : "space-y-3 pt-3 pb-6"}>
+                <div className={`${compact ? "text-base" : "text-lg"} font-bold leading-snug whitespace-pre-wrap break-words text-foreground`}>
+                  {card.word || "..."}
+                </div>
+                <div
+                  className={`border-t text-muted-foreground ${compact ? "grid grid-cols-2 gap-x-2 gap-y-1 pt-2 text-xs leading-tight" : "space-y-2 pt-3 text-base leading-snug"}`}
+                  style={{ borderTopColor: "currentColor" }}
+                >
+                  {card.stopWords.map((entry, index) => (
+                    <div
+                      key={`${card.id}-stop-${index}`}
+                      className={`flex items-start whitespace-pre-wrap break-words ${compact ? "gap-1.5" : `gap-2 ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}`}
+                    >
+                      <TriangleAlert className={`${compact ? "mt-0.5 h-3 w-3" : "mt-1 h-4 w-4"} shrink-0`} style={{ color: "#990000" }} />
+                      <span>{entry}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="border-t pt-3 space-y-2 text-base leading-snug text-muted-foreground" style={{ borderTopColor: "currentColor" }}>
-                {card.stopWords.map((entry, index) => (
-                  <div
-                    key={`${card.id}-stop-${index}`}
-                    className={`flex items-start gap-2 whitespace-pre-wrap break-words ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}
-                  >
-                    <TriangleAlert className="mt-1 h-4 w-4 shrink-0" style={{ color: "#990000" }} />
-                    <span>{entry}</span>
-                  </div>
-                ))}
-              </div>
+              {subtitle ? (
+                <div
+                  className="absolute text-muted-foreground whitespace-pre-wrap break-words"
+                  style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
+                >
+                  {subtitle}
+                </div>
+              ) : null}
             </div>
-            {subtitle ? (
-              <div
-                className="absolute text-muted-foreground whitespace-pre-wrap break-words"
-                style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
-              >
-                {subtitle}
-              </div>
-            ) : null}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -10041,6 +10121,8 @@ export function BlockRenderer({
       return <FillInBlankItemsRenderer block={block} interactive={interactive} />;
     case "matching":
       return <MatchingRenderer block={block} />;
+    case "text-matching":
+      return <TextMatchingRenderer block={block as TextMatchingBlock} />;
     case "pronunciation":
       return <MatchingRenderer block={block} />;
     case "two-column-fill":

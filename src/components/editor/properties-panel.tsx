@@ -48,6 +48,7 @@ import {
   FillInBlankItemsBlock,
   FillInBlankItem,
   MatchingBlock,
+  TextMatchingBlock,
   PronunciationBlock,
   TwoColumnFillBlock,
   GlossaryBlock,
@@ -91,6 +92,7 @@ import {
   NumberedSubItemStyle,
   BoxBlock,
   QuartettBlock,
+  QuartettItem,
   TabooBlock,
   ChecklistBlock,
   NumberedLabelBlock,
@@ -147,6 +149,7 @@ import { AiMcqModal } from "./ai-mcq-modal";
 import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
 import { BingoCardsPropEditor } from "./BingoCardsPropEditor";
+import { RichTextEditor } from "./rich-text-editor";
 import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { getChoiceGroups, updateChoiceGroup, validateChoices } from "@/lib/inline-choice-utils";
@@ -2393,6 +2396,24 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
     });
   };
 
+  const movePair = (pairId: string, direction: -1 | 1) => {
+    const lockedExampleId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+    if (pairId === lockedExampleId) return;
+
+    const movablePairs = orderedPairs.filter((pair) => pair.id !== lockedExampleId);
+    const currentIndex = movablePairs.findIndex((pair) => pair.id === pairId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= movablePairs.length) return;
+
+    const nextPairs = [...movablePairs];
+    [nextPairs[currentIndex], nextPairs[nextIndex]] = [nextPairs[nextIndex], nextPairs[currentIndex]];
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { pairOrder: nextPairs.map((pair) => pair.id) } },
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div>
@@ -2499,8 +2520,31 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("pairs")}</Label>
         {orderedPairs.map((pair) => {
           const pairIndex = block.pairs.findIndex((currentPair) => currentPair.id === pair.id);
+          const lockedExampleId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
+          const movableIndex = orderedPairs.filter((currentPair) => currentPair.id !== lockedExampleId).findIndex((currentPair) => currentPair.id === pair.id);
+          const isLockedExample = pair.id === lockedExampleId;
           return (
           <div key={pair.id} className="flex items-center gap-1">
+            <div className="flex shrink-0 flex-col">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-6"
+                onClick={() => movePair(pair.id, -1)}
+                disabled={isLockedExample || movableIndex <= 0}
+              >
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-6"
+                onClick={() => movePair(pair.id, 1)}
+                disabled={isLockedExample || movableIndex === -1 || movableIndex >= orderedPairs.filter((currentPair) => currentPair.id !== lockedExampleId).length - 1}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </div>
             <div className="flex-1">
               <ChInput
                 blockId={block.id}
@@ -2643,6 +2687,138 @@ function MatchingProps({ block }: { block: MatchingBlock | PronunciationBlock })
             {t("csvImportButton")}
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TextMatchingProps({ block }: { block: TextMatchingBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const tc = useTranslations("common");
+
+  const updateItem = (itemId: string, updates: Partial<TextMatchingBlock["items"][number]>) => {
+    const items = block.items.map((item) => item.id === itemId ? { ...item, ...updates } : item);
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { items } } });
+  };
+
+  const addItem = () => {
+    const nextNumber = block.items.length + 1;
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: {
+        id: block.id,
+        updates: {
+          items: [
+            ...block.items,
+            {
+              id: `tm${Date.now()}`,
+              text: "",
+              content: `<p>${t("newMatch")} ${nextNumber}</p>`,
+            },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeItem = (itemId: string) => {
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { items: block.items.filter((item) => item.id !== itemId) } },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("instruction")}</Label>
+        <ChInput
+          blockId={block.id}
+          fieldPath="instruction"
+          baseValue={block.instruction}
+          onBaseChange={(v) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { instruction: v } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("numberOfColumns")}</Label>
+        <Select
+          value={String(block.columns ?? 3)}
+          onValueChange={(value) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { columns: Number(value) as TextMatchingBlock["columns"] } },
+            })
+          }
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1</SelectItem>
+            <SelectItem value="2">2</SelectItem>
+            <SelectItem value="3">3</SelectItem>
+            <SelectItem value="4">4</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("showFirstAsExample")}</Label>
+        <Switch
+          checked={block.showFirstAsExample ?? false}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { showFirstAsExample: checked } },
+            })
+          }
+        />
+      </div>
+      <Separator />
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("items")}</Label>
+        {block.items.map((item, index) => (
+          <div key={item.id} className="space-y-2 rounded-md border border-border p-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-xs font-semibold text-muted-foreground">
+                {index + 1}
+              </span>
+              <ChInput
+                blockId={block.id}
+                fieldPath={`items.${index}.text`}
+                baseValue={item.text ?? ""}
+                onBaseChange={(v) => updateItem(item.id, { text: v })}
+                className="h-8 text-xs"
+                placeholder={t("itemText")}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => removeItem(item.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="rounded-md border border-input bg-background px-2 py-1">
+              <RichTextEditor
+                content={item.content ?? ""}
+                onChange={(html) => updateItem(item.id, { content: html })}
+                placeholder={tc("content")}
+                editorClassName="prose prose-sm max-w-none focus:outline-none min-h-[56px] py-1"
+              />
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("newItem")}
+        </Button>
       </div>
     </div>
   );
@@ -12035,8 +12211,15 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
   const [isExportingCards, setIsExportingCards] = React.useState(false);
   const [generatingStopWordsForItem, setGeneratingStopWordsForItem] = React.useState<number | null>(null);
+  const tabooStopWordCount = kind === "taboo" ? ((block as TabooBlock).stopWordCount ?? 4) : 4;
   const update = (updates: Partial<CardListBlock>) =>
     dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+
+  const normalizeSubitems = React.useCallback((subitems: QuartettItem["subitems"], count: number) => {
+    return Array.from({ length: count }, (_, index) => (
+      subitems[index] ?? { id: crypto.randomUUID(), content: "" }
+    ));
+  }, []);
 
   const labels = kind === "quartett"
     ? {
@@ -12083,7 +12266,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
   const createEmptyCardItem = (title = "") => ({
     id: crypto.randomUUID(),
     title,
-    subitems: Array.from({ length: 4 }, () => ({
+    subitems: Array.from({ length: tabooStopWordCount }, () => ({
       id: crypto.randomUUID(),
       content: "",
     })),
@@ -12172,8 +12355,9 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     const items: CardListBlock["items"] = [];
     for (const title of order) {
       const contents = grouped.get(title) ?? [];
-      for (let index = 0; index < contents.length; index += 4) {
-        const chunk = contents.slice(index, index + 4);
+      const chunkSize = kind === "taboo" ? tabooStopWordCount : 4;
+      for (let index = 0; index < contents.length; index += chunkSize) {
+        const chunk = contents.slice(index, index + chunkSize);
         const item = createEmptyCardItem(title);
         item.subitems = item.subitems.map((subitem, subitemIndex) => ({
           ...subitem,
@@ -12186,7 +12370,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     return items;
   };
 
-  const buildTabooItemsFromFiveColumns = (rows: string[][]) => {
+  const buildTabooItemsFromColumns = (rows: string[][]) => {
     return rows
       .map((row) => {
         const word = row[0]?.trim() ?? "";
@@ -12234,8 +12418,8 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
           content: row[1] ?? "",
         }))
       );
-    } else if (kind === "taboo" && maxColumns === 5) {
-      importedItems = buildTabooItemsFromFiveColumns(parsedRows);
+    } else if (kind === "taboo" && maxColumns === tabooStopWordCount + 1) {
+      importedItems = buildTabooItemsFromColumns(parsedRows);
     } else {
       setCsvError(labels.tooManyColumns);
       return;
@@ -12262,7 +12446,9 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
 
   const updateSubitem = (itemIndex: number, subitemIndex: number, content: string) => {
     const items = [...block.items];
-    const subitems = [...items[itemIndex].subitems];
+    const subitems = kind === "taboo"
+      ? normalizeSubitems(items[itemIndex].subitems, tabooStopWordCount)
+      : [...items[itemIndex].subitems];
     subitems[subitemIndex] = { ...subitems[subitemIndex], content };
     items[itemIndex] = { ...items[itemIndex], subitems };
     update({ items });
@@ -12270,9 +12456,11 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
 
   const moveSubitem = (itemIndex: number, subitemIndex: number, direction: -1 | 1) => {
     const targetIndex = subitemIndex + direction;
-    if (targetIndex < 0 || targetIndex >= block.items[itemIndex].subitems.length) return;
     const items = [...block.items];
-    const subitems = [...items[itemIndex].subitems];
+    const subitems = kind === "taboo"
+      ? normalizeSubitems(items[itemIndex].subitems, tabooStopWordCount)
+      : [...items[itemIndex].subitems];
+    if (targetIndex < 0 || targetIndex >= subitems.length) return;
     [subitems[subitemIndex], subitems[targetIndex]] = [subitems[targetIndex], subitems[subitemIndex]];
     items[itemIndex] = { ...items[itemIndex], subitems };
     update({ items });
@@ -12309,6 +12497,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           word,
+          stopWordCount: tabooStopWordCount,
           locale: activeLocale,
           worksheetTitle: state.title,
           blockTitle: block.title || "",
@@ -12320,13 +12509,13 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
         throw new Error(data.error || labels.generateStopWordsFailed);
       }
 
-      const stopWords = Array.isArray(data.stopWords) ? data.stopWords.slice(0, 4) : [];
-      if (stopWords.length !== 4) {
+      const stopWords = Array.isArray(data.stopWords) ? data.stopWords.slice(0, tabooStopWordCount) : [];
+      if (stopWords.length !== tabooStopWordCount) {
         throw new Error(labels.generateStopWordsFailed);
       }
 
       const items = [...block.items];
-      const subitems = [...items[itemIndex].subitems];
+      const subitems = normalizeSubitems(items[itemIndex].subitems, tabooStopWordCount);
       items[itemIndex] = {
         ...items[itemIndex],
         subitems: subitems.map((subitem, subitemIndex) => ({
@@ -12417,6 +12606,35 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
             placeholder={labels.subtitlePlaceholder}
             className="h-8"
           />
+        </div>
+      ) : null}
+
+      {kind === "taboo" ? (
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">
+            {t("tabooStopWordCount")}
+          </Label>
+          <Select
+            value={String(tabooStopWordCount)}
+            onValueChange={(value) => {
+              const count: 4 | 10 = value === "10" ? 10 : 4;
+              update({
+                stopWordCount: count,
+                items: block.items.map((item) => ({
+                  ...item,
+                  subitems: normalizeSubitems(item.subitems, count),
+                })),
+              } as Partial<CardListBlock>);
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4">{t("tabooStopWordCount4")}</SelectItem>
+              <SelectItem value="10">{t("tabooStopWordCount10")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
 
@@ -12550,7 +12768,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
               {labels.subitems}
             </Label>
             <div className="space-y-2">
-              {item.subitems.map((subitem, subitemIndex) => (
+              {(kind === "taboo" ? normalizeSubitems(item.subitems, tabooStopWordCount) : item.subitems).map((subitem, subitemIndex) => (
                 <div key={subitem.id} className="flex items-center gap-2">
                   <span className="w-8 shrink-0 text-xs font-medium text-muted-foreground text-center">
                     {String(subitemIndex + 1).padStart(2, "0")}
@@ -15029,6 +15247,8 @@ export function PropertiesPanel() {
         return <FillInBlankItemsProps block={selectedBlock} />;
       case "matching":
         return <MatchingProps block={selectedBlock} />;
+      case "text-matching":
+        return <TextMatchingProps block={selectedBlock as TextMatchingBlock} />;
       case "pronunciation":
         return <MatchingProps block={selectedBlock} />;
       case "two-column-fill":

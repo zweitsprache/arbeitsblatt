@@ -1,5 +1,6 @@
 import { WorksheetBlock } from "@/types/worksheet";
 import { parseBlankContent, parseBlankToken } from "@/lib/fill-in-blank";
+import { hasTextMatchingContent, hasTextMatchingText } from "@/lib/text-matching";
 
 /**
  * Strip HTML tags and decode common entities to plain text.
@@ -94,6 +95,14 @@ export function extractBlocksText(
         if (block.instruction) parts.push(block.instruction);
         for (const pair of block.pairs ?? []) {
           parts.push(`${pair.left} → ${pair.right}`);
+        }
+        break;
+
+      case "text-matching":
+        if (block.instruction) parts.push(block.instruction);
+        for (const item of block.items ?? []) {
+          if (hasTextMatchingText(item.text)) parts.push(item.text ?? "");
+          if (hasTextMatchingContent(item.content)) parts.push(stripHtml(item.content ?? ""));
         }
         break;
 
