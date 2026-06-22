@@ -47,6 +47,10 @@ export default async function PrintWorksheetPage({
 
   let blocks = migratedLocaleData.blocks;
   const cardBlocksForceCanva = blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
+  const hasTenStopWordTabooBlock = blocks.some((block) => (
+    block.type === "taboo"
+    && (block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4))
+  ));
   const rawSettings = worksheet.settings as unknown as Partial<WorksheetSettings>;
   const brand = ((rawSettings?.brand as string) || "edoomio") as Brand;
   const now = new Date();
@@ -73,7 +77,7 @@ export default async function PrintWorksheetPage({
   const settings: WorksheetSettings = {
     ...DEFAULT_SETTINGS,
     ...migratedLocaleData.settings,
-    orientation: cardBlocksForceCanva ? "landscape-canva" : migratedLocaleData.settings.orientation,
+    orientation: hasTenStopWordTabooBlock ? "portrait" : (cardBlocksForceCanva ? "landscape-canva" : migratedLocaleData.settings.orientation),
     brandSettings: resolvedBrandSettings,
   };
   const effectiveOrientation = settings.orientation === "portrait" ? "portrait" : "landscape";

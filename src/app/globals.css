@@ -625,6 +625,20 @@
   page-break-inside: avoid;
 }
 
+.print-worksheet-root .print-body-content .worksheet-column-cell-bordered {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  box-sizing: border-box;
+}
+
+.print-worksheet-root .print-body-content .worksheet-column-cell-bordered .textPlain {
+  overflow: visible;
+}
+
+.print-worksheet-root .print-body-content .worksheet-column-cell-bordered .tiptap > p:last-child {
+  margin-bottom: 0 !important;
+}
+
 /* Print page preview (screen) shares core print layout so margins/logo are accurate */
 .print-worksheet-root {
   --page-width: 210mm;
@@ -876,6 +890,68 @@
 
 .print-worksheet-root.print-canva .print-body-content {
   padding: 0;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-body-content {
+  padding: 0;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-header {
+  position: fixed;
+  top: 15mm;
+  left: 20mm;
+  right: 15mm;
+  z-index: 10;
+  pointer-events: none;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #666;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-header img {
+  display: block;
+  height: 8mm;
+  max-height: 8mm;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-footer {
+  position: fixed;
+  left: 15mm;
+  right: 15mm;
+  bottom: 8mm;
+  z-index: 10;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  align-items: end;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: hsl(var(--foreground));
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-footer > div {
+  min-width: 0;
+  text-align: left;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-footer > div:nth-child(2) {
+  text-align: center;
+}
+
+.print-worksheet-root.print-has-taboo-ten .print-taboo-ten-footer > div:last-child {
+  text-align: right;
 }
 
 /* Keep preview typography aligned with PDF output.
@@ -1440,13 +1516,28 @@
   /* Print-safe line-dot list marker using CSS gradients instead of SVG background assets. */
 
   /* Schedule block print styles */
-  /* Align time cells to top vertically and override inline middle alignment */
-  .print-worksheet-root .scheduleNew tbody td:nth-child(n+3):nth-child(-n+5) {
-    vertical-align: top !important;
+  .print-worksheet-root .scheduleNew {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
-  /* Remove left padding from Zeit header (3rd th element in header row) */
-  .print-worksheet-root .scheduleNew thead th:nth-child(3) {
+  .print-worksheet-root .scheduleNew thead th,
+  .print-worksheet-root .scheduleNew tbody td {
+    height: 37px !important;
+  }
+
+  /* Keep schedule body cells vertically centered in PDF output. */
+  .print-worksheet-root .scheduleNew thead th,
+  .print-worksheet-root .scheduleNew tbody td {
+    vertical-align: middle !important;
+  }
+
+  .print-worksheet-root .scheduleNew tbody td.scheduleTimeCell {
+    vertical-align: middle !important;
+  }
+
+  /* Remove left padding from Zeit header */
+  .print-worksheet-root .scheduleNew thead th.scheduleTimeHeader {
     padding-left: 0 !important;
   }
 }

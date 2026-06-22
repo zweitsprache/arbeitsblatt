@@ -21,9 +21,11 @@ export default async function TabooExportPreviewPage({
   }
 
   const block = exportState.block as TabooBlock;
+  const isTenStopWordVariant = block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4);
   const settings: WorksheetSettings = {
     ...DEFAULT_SETTINGS,
     ...exportState.settings,
+    orientation: isTenStopWordVariant ? "portrait" : (exportState.settings.orientation ?? DEFAULT_SETTINGS.orientation),
   };
   const effectiveOrientation = settings.orientation === "portrait" ? "portrait" : "landscape";
   const pageSizeCss = effectiveOrientation === "landscape" ? "297mm 210mm" : "210mm 297mm";

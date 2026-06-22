@@ -1812,7 +1812,8 @@ Notes:
 - `taboo` reuses the `QuartettItem` shape.
 - `taboo` is a worksheet-exclusive block type.
 - `stopWordCount` is optional and supports `4` or `10`; omitted blocks default to `4`.
-- Use one `subitems` entry per stop word. The print renderer uses a compact two-column stopword list for 10-word cards.
+- Use one `subitems` entry per stop word. Cards use the same stopword typography and one-column layout for both supported counts.
+- The 4-stopword print layout uses 4 columns by 2 rows with 58mm by 87mm cards. The 10-stopword print layout uses 2 columns by 2 rows with 80mm by 111mm cards.
 
 ### `accordion`
 

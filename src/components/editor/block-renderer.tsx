@@ -6636,7 +6636,7 @@ function DroppableColumn({
     <div
       ref={setNodeRef}
       className={`px-3 py-0 min-h-[80px] space-y-2 transition-colors
-        [&_p:first-child]:-mt-2.5 [&_p:last-child]:mb-0
+        [&_p:first-child]:-mt-2.5
         ${bgColor || borderColor ? "rounded" : "rounded-sm"}
         ${showBorder ? "border border-dashed" : "border border-transparent"}
         ${isOver ? "border-primary bg-primary/5" : showBorder ? "border-border" : ""}
@@ -6647,7 +6647,7 @@ function DroppableColumn({
           : {
               ...(bgColor ? { backgroundColor: bgColor } : {}),
               ...(showBorder && borderColor ? { borderColor } : {}),
-              ...(showBorder ? { paddingTop: "6px" } : {}),
+              ...(showBorder ? { paddingTop: "6px", paddingBottom: "6px" } : {}),
             }),
       }}
     >
@@ -8783,6 +8783,9 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
   const blockTitle = block.title?.trim();
   const subtitle = block.subtitle?.trim() || "";
   const reservedTitleHeight = "1.75rem";
+  const isTenStopWordVariant = block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4);
+  const cardWidthMm = isTenStopWordVariant ? 80 : 58;
+  const columns = isTenStopWordVariant ? 2 : 4;
 
   return (
     <div className="space-y-4">
@@ -8791,46 +8794,45 @@ function TabooRenderer({ block }: { block: TabooBlock }) {
           {blockTitle}
         </h3>
       ) : null}
-      <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
-        {cards.map((card) => {
-          const compact = card.stopWords.length > 4;
-          return (
-            <div
-              key={card.id}
-              className="relative overflow-hidden rounded-md border border-border bg-background p-4"
-              style={{ aspectRatio: "58 / 90", minHeight: "220px" }}
-            >
-              <div style={{ minHeight: reservedTitleHeight }} />
-              <div className={compact ? "space-y-2 pt-2 pb-6" : "space-y-3 pt-3 pb-6"}>
-                <div className={`${compact ? "text-base" : "text-lg"} font-bold leading-snug whitespace-pre-wrap break-words text-foreground`}>
-                  {card.word || "..."}
-                </div>
-                <div
-                  className={`border-t text-muted-foreground ${compact ? "grid grid-cols-2 gap-x-2 gap-y-1 pt-2 text-xs leading-tight" : "space-y-2 pt-3 text-base leading-snug"}`}
-                  style={{ borderTopColor: "currentColor" }}
-                >
-                  {card.stopWords.map((entry, index) => (
-                    <div
-                      key={`${card.id}-stop-${index}`}
-                      className={`flex items-start whitespace-pre-wrap break-words ${compact ? "gap-1.5" : `gap-2 ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}`}
-                    >
-                      <TriangleAlert className={`${compact ? "mt-0.5 h-3 w-3" : "mt-1 h-4 w-4"} shrink-0`} style={{ color: "#990000" }} />
-                      <span>{entry}</span>
-                    </div>
-                  ))}
-                </div>
+      <div
+        className="grid gap-4 justify-center"
+        style={{ gridTemplateColumns: isTenStopWordVariant ? `repeat(${columns}, ${cardWidthMm}mm)` : "repeat(4, minmax(0, 1fr))" }}
+      >
+        {cards.map((card) => (
+          <div
+            key={card.id}
+            className="relative overflow-hidden rounded-md border border-border bg-background p-4"
+            style={isTenStopWordVariant
+              ? { width: `${cardWidthMm}mm`, height: "111mm" }
+              : { aspectRatio: "58 / 90", minHeight: "220px" }}
+          >
+            <div style={{ minHeight: reservedTitleHeight }} />
+            <div className="space-y-3 pt-3 pb-6">
+              <div className="text-lg font-bold leading-snug whitespace-pre-wrap break-words text-foreground">
+                {card.word || "..."}
               </div>
-              {subtitle ? (
-                <div
-                  className="absolute text-muted-foreground whitespace-pre-wrap break-words"
-                  style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
-                >
-                  {subtitle}
-                </div>
-              ) : null}
+              <div className="border-t pt-3 space-y-2 text-base leading-snug text-muted-foreground" style={{ borderTopColor: "currentColor" }}>
+                {card.stopWords.map((entry, index) => (
+                  <div
+                    key={`${card.id}-stop-${index}`}
+                    className={`flex items-start gap-2 whitespace-pre-wrap break-words ${index === 0 ? "" : "border-t border-slate-200 pt-2"}`}
+                  >
+                    <TriangleAlert className="mt-1 h-4 w-4 shrink-0" style={{ color: "#990000" }} />
+                    <span>{entry}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          );
-        })}
+            {subtitle ? (
+              <div
+                className="absolute text-muted-foreground whitespace-pre-wrap break-words"
+                style={{ left: "3mm", bottom: "3mm", maxWidth: "calc(100% - 6mm)", fontSize: "10px", lineHeight: 1.15 }}
+              >
+                {subtitle}
+              </div>
+            ) : null}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -9662,12 +9664,20 @@ function StaticScheduleTable({
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     paddingTop: "4px",
-    paddingRight: "8px",
+    paddingRight: "14px",
     paddingBottom: "4px",
     paddingLeft: 0,
     lineHeight: "1.35rem",
-    verticalAlign: "top",
+    verticalAlign: "middle",
     boxSizing: "border-box",
+    height: "37px",
+    fontVariantNumeric: "tabular-nums",
+    fontFeatureSettings: '"tnum" 1',
+  };
+  const weekdayStyle: React.CSSProperties = {
+    display: "inline-block",
+    width: "2.4ch",
+    marginRight: "0.75ch",
   };
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
@@ -9677,29 +9687,22 @@ function StaticScheduleTable({
     fontWeight: "inherit",
     textTransform: "none",
     lineHeight: "1.35rem",
-    height: "2rem",
-    verticalAlign: "top",
+    height: "37px",
+    verticalAlign: "middle",
     boxSizing: "border-box",
   };
   const headerTimeStyle: React.CSSProperties = {
     ...headerCellStyle,
     paddingLeft: 0,
-  };
-  const dashStyle: React.CSSProperties = {
-    whiteSpace: "nowrap",
-    padding: "4px 0",
-    lineHeight: "1.35rem",
-    verticalAlign: "top",
-    textAlign: "center",
-    boxSizing: "border-box",
-    width: "auto",
+    paddingRight: "14px",
   };
 
   return (
     <>
       <style>{`
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 8px 4px 0;vertical-align:top;box-sizing:border-box;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 14px 4px 0;vertical-align:middle;box-sizing:border-box;}
+        .scheduleNew thead th,.scheduleNew tbody td{height:37px;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
         .scheduleNew thead tr th{border-top:none;}
         .scheduleNew{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
@@ -9707,9 +9710,6 @@ function StaticScheduleTable({
       <table className="scheduleNew">
         <colgroup>
           {showDate && <col style={{ width: "1%" }} />}
-          {showDate && <col style={{ width: "1%" }} />}
-          <col style={{ width: "1%" }} />
-          <col style={{ width: "auto" }} />
           <col style={{ width: "1%" }} />
           {showRoom && <col style={{ width: "1%" }} />}
           <col />
@@ -9717,9 +9717,9 @@ function StaticScheduleTable({
         {showHeader && (
           <thead>
             <tr>
-              {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
-              <th colSpan={3} style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={{ ...headerCellStyle, paddingRight: "12px" }}>Raum</th>}
+              {showDate && <th style={headerCellStyle}>Datum</th>}
+              <th style={headerTimeStyle}>Zeit</th>
+              {showRoom && <th style={{ ...headerCellStyle, paddingRight: "18px" }}>Raum</th>}
               <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
             </tr>
           </thead>
@@ -9730,13 +9730,21 @@ function StaticScheduleTable({
 
             return (
               <tr key={item.id}>
-                {showDate && <td style={rowCellStyle}>{weekday}</td>}
-                {showDate && <td style={rowCellStyle}>{formatted}</td>}
-                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 3 }}>{formatScheduleCellTime(item.start)}</td>
-                <td style={dashStyle}>–</td>
-                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: 6 }}>{formatScheduleCellTime(item.end)}</td>
-                {showRoom && <td style={{ ...rowCellStyle, paddingRight: "12px" }}>{item.room}</td>}
-                <td style={{ paddingTop: "4px", paddingRight: "8px", paddingBottom: "4px", paddingLeft: 0, lineHeight: "1.35rem", verticalAlign: "top", boxSizing: "border-box" }}>
+                {showDate && (
+                  <td style={rowCellStyle}>
+                    {weekday ? (
+                      <>
+                        <span style={weekdayStyle}>{weekday}</span>
+                        <span>{formatted}</span>
+                      </>
+                    ) : formatted}
+                  </td>
+                )}
+                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: "14px" }}>
+                  {formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}
+                </td>
+                {showRoom && <td style={{ ...rowCellStyle, paddingRight: "18px" }}>{item.room}</td>}
+                <td style={{ paddingTop: "4px", paddingRight: "14px", paddingBottom: "4px", paddingLeft: 0, lineHeight: "1.35rem", verticalAlign: "middle", boxSizing: "border-box", height: "37px" }}>
                   <div style={{ fontWeight: 700 }}>{item.title}</div>
                   {item.description ? <div>{item.description}</div> : null}
                 </td>

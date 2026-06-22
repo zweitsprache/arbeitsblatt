@@ -295,6 +295,10 @@ export function WorksheetViewer({
   const hasCardPairsBlock = visibleBlocks.some((block) => block.type === "card-pairs");
   const hasQuartettBlock = visibleBlocks.some((block) => block.type === "quartett");
   const hasTabooBlock = visibleBlocks.some((block) => block.type === "taboo");
+  const hasTenStopWordTabooBlock = visibleBlocks.some((block) => (
+    block.type === "taboo"
+    && (block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4))
+  ));
   const hasSyllableCardsBlock = visibleBlocks.some((block) => block.type === "syllable-cards");
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
   const resolvedLetterSpacing = resolvedProfile.letterSpacing?.trim() || "";
@@ -305,8 +309,8 @@ export function WorksheetViewer({
   const useDedicatedCardPrintFooter = false;
   const useDedicatedQuartettPrintFooter = mode === "print" && isCanvaLandscape && (hasQuartettBlock || hasTabooBlock) && showPrintFooter;
   const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
-  const showTablePrintHeader = showPrintHeader && !useCanvaSideRail && !useDedicatedCardPrintHeader;
-  const showTablePrintFooter = showPrintFooter && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
+  const showTablePrintHeader = showPrintHeader && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintHeader;
+  const showTablePrintFooter = showPrintFooter && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
   const printBottomReservePx = showTablePrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
@@ -378,7 +382,7 @@ export function WorksheetViewer({
 
   return (
     <div
-      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasAufgabenkartenBlock ? "print-has-aufgabenkarten" : ""} ${hasCardPairsBlock ? "print-has-card-pairs" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
+      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasAufgabenkartenBlock ? "print-has-aufgabenkarten" : ""} ${hasCardPairsBlock ? "print-has-card-pairs" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasTenStopWordTabooBlock ? "print-has-taboo-ten" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
       style={viewerCssVars}
     >
       {fontStylesheetUrls.map((href) => (
@@ -442,6 +446,38 @@ export function WorksheetViewer({
           )}
           {useDedicatedQuartettPrintFooter && (
             <div className="print-canva-side-footer print-quartett-rotated-footer" aria-hidden="true">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+              </div>
+              <div>
+                {processedFooterCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+              </div>
+            </div>
+          )}
+          {hasTenStopWordTabooBlock && showPrintHeader && (
+            <div className="print-taboo-ten-header" aria-hidden="true">
+              <div>
+                {hasHeaderLeft ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                ) : (
+                  hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                )}
+              </div>
+              <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: "12px" }}>
+                {hasHeaderLeft && hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+                {hasLogo && <img src={brandSettings.logo} alt="" />}
+              </div>
+            </div>
+          )}
+          {hasTenStopWordTabooBlock && showPrintFooter && (
+            <div className="print-taboo-ten-footer" aria-hidden="true">
               <div>
                 {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
               </div>

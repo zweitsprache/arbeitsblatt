@@ -427,6 +427,60 @@ model FlashcardCollectionSet {
   @@index([worksheetId])
 }
 
+model Entry {
+  id                   String      @id
+  lemma                String
+  pos                  Pos
+  level                String      @default("A1")
+  frequencyRank        Int?        @map("frequency_rank")
+  pronunciation        Json
+  source               Json
+  examples             Json        @default("[]")
+  register             String?
+  domain               String[]    @default([])
+  tags                 String[]    @default([])
+  notes                String?
+  dateAdded            DateTime    @default(now()) @map("date_added")
+  extractionConfidence String      @map("extraction_confidence")
+  posData              Json        @map("pos_data")
+  verbDetail           VerbDetail?
+
+  @@index([pos])
+}
+
+model VerbDetail {
+  entryId         String  @id
+  entry           Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  infinitive      String
+  auxiliary       String
+  regularity      String
+  separable       Boolean @default(false)
+  separablePrefix String?
+  reflexive       String  @default("none")
+  stemChange      Boolean @default(false)
+  stemChangeType  String?
+  ablautPattern   String?
+  ablautClass     String?
+  prepObject      String?
+  prepCase        String?
+
+  @@index([stemChange])
+  @@index([auxiliary])
+  @@index([regularity])
+}
+
+enum Pos {
+  noun
+  verb
+  adjective
+  adverb
+  pronoun
+  preposition
+  conjunction
+  interjection
+  phrase
+}
+
 enum AiToolRunStatus {
   ACTIVE
   COMPLETED

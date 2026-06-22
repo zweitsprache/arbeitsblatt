@@ -479,8 +479,7 @@ function TabooCardContent({
   titleFont?: string;
   subtitle?: string;
 }) {
-  const reservedTitleHeight = "10mm";
-  const compact = card.stopWords.length > 4;
+  const reservedTitleHeight = "7mm";
 
   return (
     <>
@@ -493,8 +492,9 @@ function TabooCardContent({
             position: "absolute",
             top: "3mm",
             right: "3mm",
-            width: "7mm",
-            height: "7mm",
+            width: "auto",
+            height: "5mm",
+            maxHeight: "5mm",
             objectFit: "contain",
           }}
         />
@@ -504,7 +504,7 @@ function TabooCardContent({
           position: "absolute",
           top: "3mm",
           left: "3mm",
-          right: logoSrc ? "13mm" : "3mm",
+          right: logoSrc ? "10mm" : "3mm",
           minHeight: reservedTitleHeight,
           fontSize: "8pt",
           fontWeight: 700,
@@ -518,12 +518,12 @@ function TabooCardContent({
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          padding: compact ? "14mm 0 6mm" : "16mm 0 6mm",
+          padding: "11mm 0 6mm",
         }}
       >
         <div
           style={{
-            fontSize: compact ? "11pt" : "13pt",
+            fontSize: "13pt",
             fontWeight: 700,
             lineHeight: 1.15,
             color: "#111827",
@@ -536,14 +536,13 @@ function TabooCardContent({
         </div>
         <div
           style={{
-            marginTop: compact ? "2mm" : "3mm",
-            paddingTop: compact ? "2mm" : "2.5mm",
+            marginTop: "3mm",
+            paddingTop: "2.5mm",
             borderTop: "1px solid currentColor",
             display: "grid",
-            gridTemplateColumns: compact ? "1fr 1fr" : "1fr",
-            gap: compact ? "1mm 2mm" : "1.5mm",
-            fontSize: compact ? "7.5pt" : "11.5pt",
-            lineHeight: compact ? 1.05 : 1.15,
+            gap: "1.5mm",
+            fontSize: "11.5pt",
+            lineHeight: 1.15,
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
           }}
@@ -554,19 +553,19 @@ function TabooCardContent({
               style={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: compact ? "0.8mm" : "1.5mm",
-                ...(compact || index === 0
+                gap: "1.5mm",
+                ...(index === 0
                   ? undefined
                   : { borderTop: "1px solid #e5e7eb", paddingTop: "1.5mm" }),
               }}
             >
               <TriangleAlert
                 style={{
-                  width: compact ? "2.2mm" : "3.4mm",
-                  height: compact ? "2.2mm" : "3.4mm",
+                  width: "3.4mm",
+                  height: "3.4mm",
                   flexShrink: 0,
                   color: "#990000",
-                  marginTop: compact ? "0.3mm" : "0.8mm",
+                  marginTop: "0.8mm",
                 }}
               />
               <span>{entry}</span>
@@ -872,22 +871,23 @@ function TabooView({
   const cardTitleColor = headingColor || primaryColor;
   const blockTitle = block.title?.trim() || "";
   const subtitle = block.subtitle?.trim() || "";
-  const cardWidthMm = 58;
-  const cardHeightMm = 87;
-  const columns = 4;
+  const isTenStopWordVariant = block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4);
+  const cardWidthMm = isTenStopWordVariant ? 80 : 58;
+  const cardHeightMm = isTenStopWordVariant ? 111 : 87;
+  const columns = isTenStopWordVariant ? 2 : 4;
   const rows = 2;
   const sheetWidthMm = cardWidthMm * columns;
   const sheetHeightMm = cardHeightMm * rows;
   const sideRailWidthMm = 10;
   const printSheetWidthMm = sheetWidthMm + sideRailWidthMm * 2;
-  const tabooPrintPageWidthMm = 297;
-  const tabooPrintPageHeight = "210mm";
-  const tabooTitleBoxWidthMm = 190;
+  const tabooPrintPageWidthMm = isTenStopWordVariant ? 210 : 297;
+  const tabooPrintPageHeightMm = isTenStopWordVariant ? 297 : 210;
+  const tabooTitleBoxWidthMm = isTenStopWordVariant ? 270 : 190;
   const tabooTitleBoxHeightMm = 10;
   const printContentOffsetY = "0mm";
 
   if (isPrint) {
-    const cardsPerPage = 8;
+    const cardsPerPage = columns * rows;
     const pageCount = Math.max(1, Math.ceil(cards.length / cardsPerPage));
     const pages = Array.from({ length: pageCount }, (_, pageIndex) => {
       const start = pageIndex * cardsPerPage;
@@ -902,7 +902,7 @@ function TabooView({
             style={{
               position: "relative",
               width: `${tabooPrintPageWidthMm}mm`,
-              height: tabooPrintPageHeight,
+              height: `${tabooPrintPageHeightMm}mm`,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
@@ -918,7 +918,7 @@ function TabooView({
                 style={{
                   position: "absolute",
                   left: `${10 + tabooTitleBoxHeightMm}mm`,
-                  top: `${200 - tabooTitleBoxHeightMm}mm`,
+                  top: `${tabooPrintPageHeightMm - tabooTitleBoxHeightMm}mm`,
                   width: `${tabooTitleBoxWidthMm}mm`,
                   height: `${tabooTitleBoxHeightMm}mm`,
                   transform: "rotate(-90deg)",
@@ -1068,12 +1068,19 @@ function TabooView({
           {blockTitle}
         </h3>
       ) : null}
-      <div className="grid gap-4 justify-center" style={{ gridTemplateColumns: "repeat(4, minmax(0, 58mm))" }}>
+      <div
+        className="grid gap-4 justify-center"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, ${cardWidthMm}mm))` }}
+      >
         {cards.map((card) => (
           <div
             key={card.id}
             className="relative overflow-hidden rounded-md border border-border bg-background"
-            style={{ width: "58mm", minHeight: "90mm", padding: "4mm" }}
+            style={{
+              width: `${cardWidthMm}mm`,
+              minHeight: isTenStopWordVariant ? "111mm" : "90mm",
+              padding: "4mm",
+            }}
           >
             <TabooCardContent
               card={card}
@@ -5480,8 +5487,9 @@ function ColumnsView({
         return (
         <div
           key={colIndex}
-          className={`space-y-4 px-3 py-0
-            [&_p:first-child]:-mt-2.5 [&_p:last-child]:mb-0
+          className={`worksheet-column-cell ${colBorder ? "worksheet-column-cell-bordered" : ""}
+            space-y-4 px-3 py-0
+            [&_p:first-child]:-mt-2.5
             ${block.columnBgColors?.[colIndex] ? "rounded" : "rounded-sm"}
             ${colBorder ? "border border-border" : ""}`}
           style={{
@@ -5491,7 +5499,7 @@ function ColumnsView({
             ...(colBorder && block.columnBorderColors?.[colIndex]
               ? { borderColor: block.columnBorderColors[colIndex] }
               : {}),
-            ...(colBorder ? { paddingTop: "6px" } : {}),
+            ...(colBorder ? { paddingTop: "6px", paddingBottom: "6px" } : {}),
           }}
         >
           {col.map((childBlock) => (
@@ -11842,26 +11850,23 @@ function StaticScheduleTable({
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     paddingTop: 6,
-    paddingRight: 12,
+    paddingRight: 18,
     paddingBottom: 6,
     paddingLeft: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
+    height: 37,
+    fontVariantNumeric: "tabular-nums",
+    fontFeatureSettings: '"tnum" 1',
   };
   const timeRowStyle: React.CSSProperties = {
     ...rowCellStyle,
-    verticalAlign: "top",
+    verticalAlign: "middle",
   };
-  const dashStyle: React.CSSProperties = {
-    whiteSpace: "nowrap",
-    paddingTop: 6,
-    paddingRight: 2,
-    paddingBottom: 6,
-    paddingLeft: 2,
-    verticalAlign: "top",
-    textAlign: "center",
-    boxSizing: "border-box",
-    width: "1%",
+  const weekdayStyle: React.CSSProperties = {
+    display: "inline-block",
+    width: "2.4ch",
+    marginRight: "0.75ch",
   };
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
@@ -11871,16 +11876,17 @@ function StaticScheduleTable({
     fontWeight: "inherit",
     textTransform: "none",
     paddingTop: 3,
-    paddingRight: 12,
+    paddingRight: 18,
     paddingBottom: 3,
     paddingLeft: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
+    height: 37,
   };
   const headerTimeStyle: React.CSSProperties = {
     ...headerCellStyle,
     paddingLeft: 0,
-    paddingRight: 2,
+    paddingRight: 18,
   };
 
   return (
@@ -11888,15 +11894,12 @@ function StaticScheduleTable({
       <style>{`
         .scheduleNew{width:100%;border-collapse:collapse;border-top:var(--viewer-divider-style, 1px solid var(--border));}
         .scheduleNew th,.scheduleNew td{border-bottom:var(--viewer-divider-style, 1px solid var(--border));vertical-align:middle;box-sizing:border-box;}
-        .scheduleNew tbody td{height:37px;}
-        .scheduleNew thead tr th{height:auto;border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:inherit;}
+        .scheduleNew thead th,.scheduleNew tbody td{height:37px;}
+        .scheduleNew thead tr th{border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:inherit;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
           {showDate && <col style={{ width: "1%" }} />}
-          {showDate && <col style={{ width: "1%" }} />}
-          <col style={{ width: "1%" }} />
-          <col style={{ width: "1%" }} />
           <col style={{ width: "1%" }} />
           {showRoom && <col style={{ width: "1%" }} />}
           <col />
@@ -11904,9 +11907,9 @@ function StaticScheduleTable({
         {showHeader && (
           <thead>
             <tr>
-              {showDate && <th colSpan={2} style={headerCellStyle}>Datum</th>}
-              <th colSpan={3} style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={{ ...headerCellStyle, paddingRight: 16 }}>Raum</th>}
+              {showDate && <th style={headerCellStyle}>Datum</th>}
+              <th className="scheduleTimeHeader" style={headerTimeStyle}>Zeit</th>
+              {showRoom && <th style={{ ...headerCellStyle, paddingRight: 22 }}>Raum</th>}
               <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
             </tr>
           </thead>
@@ -11928,12 +11931,20 @@ function StaticScheduleTable({
 
             return (
               <tr key={item.id}>
-                {showDate && <td style={rowCellStyle}>{weekday}</td>}
-                {showDate && <td style={rowCellStyle}>{formatted}</td>}
-                <td style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 2 }}>{formatScheduleCellTime(item.start)}</td>
-                <td style={dashStyle}>–</td>
-                <td style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 12 }}>{formatScheduleCellTime(item.end)}</td>
-                {showRoom && <td style={{ ...rowCellStyle, paddingRight: 16 }}>{item.room}</td>}
+                {showDate && (
+                  <td style={rowCellStyle}>
+                    {weekday ? (
+                      <>
+                        <span style={weekdayStyle}>{weekday}</span>
+                        <span>{formatted}</span>
+                      </>
+                    ) : formatted}
+                  </td>
+                )}
+                <td className="scheduleTimeCell" style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 18 }}>
+                  {formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}
+                </td>
+                {showRoom && <td style={{ ...rowCellStyle, paddingRight: 22 }}>{item.room}</td>}
                 <td style={rowCellStyle}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
