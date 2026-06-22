@@ -2385,7 +2385,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ marginBottom: "-2rem", ...singleColumnTextStyle, color: primaryColor }}>
+      <div className={s.textPlain} style={{ ...singleColumnTextStyle, marginBottom: "-1.75rem", color: primaryColor }}>
         {renderContent(block.content, translatedDirectionStyle, isRtl ? "rtl" : undefined)}
       </div>
     );
@@ -5499,7 +5499,7 @@ function ColumnsView({
             ...(colBorder && block.columnBorderColors?.[colIndex]
               ? { borderColor: block.columnBorderColors[colIndex] }
               : {}),
-            ...(colBorder ? { paddingTop: "6px", paddingBottom: "6px" } : {}),
+            ...(colBorder ? { paddingTop: "12px", paddingBottom: "12px" } : {}),
           }}
         >
           {col.map((childBlock) => (
@@ -11849,10 +11849,7 @@ function StaticScheduleTable({
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
-    paddingTop: 6,
-    paddingRight: 18,
-    paddingBottom: 6,
-    paddingLeft: 0,
+    padding: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
     height: 37,
@@ -11871,31 +11868,31 @@ function StaticScheduleTable({
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     textAlign: "left",
-    color: "inherit",
+    color: primaryColor,
     fontSize: "inherit",
-    fontWeight: "inherit",
+    fontWeight: 700,
     textTransform: "none",
-    paddingTop: 3,
-    paddingRight: 18,
-    paddingBottom: 3,
-    paddingLeft: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
     height: 37,
+    padding: 0,
   };
-  const headerTimeStyle: React.CSSProperties = {
-    ...headerCellStyle,
-    paddingLeft: 0,
+  const cellContentStyle: React.CSSProperties = {
+    minHeight: 36,
+    display: "flex",
+    alignItems: "center",
     paddingRight: 18,
+    boxSizing: "border-box",
+    transform: "translateY(var(--font-baseline-adjustment, 0px))",
   };
 
   return (
     <>
       <style>{`
-        .scheduleNew{width:100%;border-collapse:collapse;border-top:var(--viewer-divider-style, 1px solid var(--border));}
+        .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;border-top:var(--viewer-divider-style, 1px solid var(--border));}
         .scheduleNew th,.scheduleNew td{border-bottom:var(--viewer-divider-style, 1px solid var(--border));vertical-align:middle;box-sizing:border-box;}
         .scheduleNew thead th,.scheduleNew tbody td{height:37px;}
-        .scheduleNew thead tr th{border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:inherit;}
+        .scheduleNew thead tr th{border-bottom:var(--viewer-divider-style, 1px solid var(--border));font-weight:700;}
       `}</style>
       <table className="scheduleNew">
         <colgroup>
@@ -11907,10 +11904,10 @@ function StaticScheduleTable({
         {showHeader && (
           <thead>
             <tr>
-              {showDate && <th style={headerCellStyle}>Datum</th>}
-              <th className="scheduleTimeHeader" style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={{ ...headerCellStyle, paddingRight: 22 }}>Raum</th>}
-              <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
+              {showDate && <th style={headerCellStyle}><div style={cellContentStyle}>Datum</div></th>}
+              <th className="scheduleTimeHeader" style={headerCellStyle}><div style={cellContentStyle}>Zeit</div></th>
+              {showRoom && <th style={headerCellStyle}><div style={{ ...cellContentStyle, paddingRight: 22 }}>Raum</div></th>}
+              <th style={{ ...headerCellStyle, whiteSpace: "normal" }}><div style={cellContentStyle}>Inhalt</div></th>
             </tr>
           </thead>
         )}
@@ -11933,19 +11930,20 @@ function StaticScheduleTable({
               <tr key={item.id}>
                 {showDate && (
                   <td style={rowCellStyle}>
-                    {weekday ? (
-                      <>
+                    <div style={cellContentStyle}>
+                      {weekday ? (<>
                         <span style={weekdayStyle}>{weekday}</span>
                         <span>{formatted}</span>
-                      </>
-                    ) : formatted}
+                      </>) : formatted}
+                    </div>
                   </td>
                 )}
-                <td className="scheduleTimeCell" style={{ ...timeRowStyle, paddingLeft: 0, paddingRight: 18 }}>
-                  {formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}
+                <td className="scheduleTimeCell" style={timeRowStyle}>
+                  <div style={cellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
                 </td>
-                {showRoom && <td style={{ ...rowCellStyle, paddingRight: 22 }}>{item.room}</td>}
+                {showRoom && <td style={rowCellStyle}><div style={{ ...cellContentStyle, paddingRight: 22 }}>{item.room}</div></td>}
                 <td style={rowCellStyle}>
+                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", paddingTop: 4, paddingBottom: 4 }}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
                       <div style={{ fontWeight: 700 }}>{originalItem.title}</div>
@@ -11962,6 +11960,7 @@ function StaticScheduleTable({
                   ) : item.description ? (
                     <div>{item.description}</div>
                   ) : null}
+                  </div>
                 </td>
               </tr>
             );

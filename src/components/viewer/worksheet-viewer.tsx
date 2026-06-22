@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from "react";
 import { WorksheetBlock, WorksheetSettings, ViewMode, BRAND_FONTS, BrandFonts, BrandProfile, getStaticBrandProfile, applyBrandOverrides, resolveBrandLogo, resolveSubProfileHeaderFooter, resolveTranslationFontOverride } from "@/types/worksheet";
+import { getFontBaselineAdjustment } from "@/lib/font-baseline";
 import { ViewerBlockRenderer } from "./viewer-block-renderer";
 import { BlockScreenshotButton } from "./block-screenshot-button";
 import { WorksheetLanguageSwitcher } from "./worksheet-language-switcher";
@@ -378,6 +379,7 @@ export function WorksheetViewer({
     ["--worksheet-example-font" as string]: activeExampleFont,
     ["--worksheet-original-example-font" as string]: originalExampleFont,
     ["--brand-letter-spacing" as string]: resolvedLetterSpacing || "normal",
+    ["--font-baseline-adjustment" as string]: getFontBaselineAdjustment(activeBodyFont),
   } as React.CSSProperties;
 
   return (

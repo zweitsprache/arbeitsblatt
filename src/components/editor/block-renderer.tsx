@@ -111,6 +111,7 @@ import { setByPath, getByPath } from "@/lib/locale-utils";
 import { doubleInnerRegularSpaces, getBlankSpacing, getBlankWidthStyle, parseBlankContent, parseBlankToken, renderBlankTokensInText, tripleInnerRegularSpaces } from "@/lib/fill-in-blank";
 import { normalizeToHtml } from "@/lib/markdown-to-html";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
+import { getFontBaselineAdjustment } from "@/lib/font-baseline";
 import { getTextMatchingAnswerLetters, getTextMatchingCardItems, getTextMatchingTextItems } from "@/lib/text-matching";
 import { RoughExampleCircle, RoughExampleDivider, RoughExampleStrike } from "@/components/ui/rough-example-circle";
 import { generateWordSearchGrid } from "@/lib/word-search";
@@ -6647,7 +6648,7 @@ function DroppableColumn({
           : {
               ...(bgColor ? { backgroundColor: bgColor } : {}),
               ...(showBorder && borderColor ? { borderColor } : {}),
-              ...(showBorder ? { paddingTop: "6px", paddingBottom: "6px" } : {}),
+              ...(showBorder ? { paddingTop: "12px", paddingBottom: "12px" } : {}),
             }),
       }}
     >
@@ -9621,6 +9622,7 @@ function WebsiteRenderer({ block }: { block: WebsiteBlock }) {
 function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
   const { state } = useEditor();
   const primaryColor = state.brandProfile.primaryColor || "#1a1a1a";
+  const baselineAdjustment = getFontBaselineAdjustment(state.brandProfile.bodyFont);
 
   return (
     <StaticScheduleTable
@@ -9629,6 +9631,7 @@ function ScheduleRenderer({ block }: { block: ScheduleBlock }) {
       showDate={block.showDate ?? false}
       showRoom={block.showRoom ?? false}
       showHeader={block.showHeader ?? false}
+      baselineAdjustment={baselineAdjustment}
     />
   );
 }
@@ -9654,20 +9657,18 @@ function StaticScheduleTable({
   showDate,
   showRoom,
   showHeader,
+  baselineAdjustment,
 }: {
   items: ScheduleBlock["items"];
   primaryColor: string;
   showDate: boolean;
   showRoom: boolean;
   showHeader: boolean;
+  baselineAdjustment: string;
 }) {
   const rowCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
-    paddingTop: "4px",
-    paddingRight: "14px",
-    paddingBottom: "4px",
-    paddingLeft: 0,
-    lineHeight: "1.35rem",
+    padding: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
     height: "37px",
@@ -9682,26 +9683,29 @@ function StaticScheduleTable({
   const headerCellStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
     textAlign: "left",
-    color: "inherit",
+    color: primaryColor,
     fontSize: "inherit",
-    fontWeight: "inherit",
+    fontWeight: 700,
     textTransform: "none",
-    lineHeight: "1.35rem",
     height: "37px",
     verticalAlign: "middle",
     boxSizing: "border-box",
+    padding: 0,
   };
-  const headerTimeStyle: React.CSSProperties = {
-    ...headerCellStyle,
-    paddingLeft: 0,
+  const cellContentStyle: React.CSSProperties = {
+    minHeight: "36px",
+    display: "flex",
+    alignItems: "center",
     paddingRight: "14px",
+    boxSizing: "border-box",
+    transform: `translateY(${baselineAdjustment})`,
   };
 
   return (
     <>
       <style>{`
         .scheduleNew{width:100%;border-collapse:separate;border-spacing:0;}
-        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:4px 14px 4px 0;vertical-align:middle;box-sizing:border-box;}
+        .scheduleNew th,.scheduleNew td{border-bottom:1px solid #ccc;padding:0;vertical-align:middle;box-sizing:border-box;}
         .scheduleNew thead th,.scheduleNew tbody td{height:37px;}
         .scheduleNew tbody tr:last-child td{border-bottom:none;}
         .scheduleNew thead tr th{border-top:none;}
@@ -9717,10 +9721,10 @@ function StaticScheduleTable({
         {showHeader && (
           <thead>
             <tr>
-              {showDate && <th style={headerCellStyle}>Datum</th>}
-              <th style={headerTimeStyle}>Zeit</th>
-              {showRoom && <th style={{ ...headerCellStyle, paddingRight: "18px" }}>Raum</th>}
-              <th style={{ ...headerCellStyle, whiteSpace: "normal" }}>Inhalt</th>
+              {showDate && <th style={headerCellStyle}><div style={cellContentStyle}>Datum</div></th>}
+              <th style={headerCellStyle}><div style={cellContentStyle}>Zeit</div></th>
+              {showRoom && <th style={headerCellStyle}><div style={{ ...cellContentStyle, paddingRight: "18px" }}>Raum</div></th>}
+              <th style={{ ...headerCellStyle, whiteSpace: "normal" }}><div style={cellContentStyle}>Inhalt</div></th>
             </tr>
           </thead>
         )}
@@ -9732,21 +9736,23 @@ function StaticScheduleTable({
               <tr key={item.id}>
                 {showDate && (
                   <td style={rowCellStyle}>
-                    {weekday ? (
-                      <>
+                    <div style={cellContentStyle}>
+                      {weekday ? (<>
                         <span style={weekdayStyle}>{weekday}</span>
                         <span>{formatted}</span>
-                      </>
-                    ) : formatted}
+                      </>) : formatted}
+                    </div>
                   </td>
                 )}
-                <td style={{ ...rowCellStyle, paddingLeft: 0, paddingRight: "14px" }}>
-                  {formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}
+                <td style={rowCellStyle}>
+                  <div style={cellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
                 </td>
-                {showRoom && <td style={{ ...rowCellStyle, paddingRight: "18px" }}>{item.room}</td>}
-                <td style={{ paddingTop: "4px", paddingRight: "14px", paddingBottom: "4px", paddingLeft: 0, lineHeight: "1.35rem", verticalAlign: "middle", boxSizing: "border-box", height: "37px" }}>
-                  <div style={{ fontWeight: 700 }}>{item.title}</div>
-                  {item.description ? <div>{item.description}</div> : null}
+                {showRoom && <td style={rowCellStyle}><div style={{ ...cellContentStyle, paddingRight: "18px" }}>{item.room}</div></td>}
+                <td style={rowCellStyle}>
+                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", paddingTop: "4px", paddingBottom: "4px" }}>
+                    <div style={{ fontWeight: 700 }}>{item.title}</div>
+                    {item.description ? <div>{item.description}</div> : null}
+                  </div>
                 </td>
               </tr>
             );
