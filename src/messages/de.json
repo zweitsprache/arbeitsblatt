@@ -1585,6 +1585,7 @@
     "columnColor": "Spalte {index}",
     "columnColors": "Spaltenfarben",
     "columnLabels": "Spaltenüberschriften",
+    "compactOptionColumns": "Schmale Optionsspalten",
     "completeSentencePlaceholder": "Satzanfang eingeben…",
     "completeSentencesHelp": "Satzanfänge eingeben, die vervollständigt werden sollen",
     "startSentencePlaceholder": "Satzfragment eingeben…",

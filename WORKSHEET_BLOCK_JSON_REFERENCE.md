@@ -920,6 +920,7 @@ Notes:
   "visibility": "both",
   "instruction": "Mark the correct options for each statement.",
   "showPill": true,
+  "compactOptionColumns": true,
   "options": [
     {
       "id": "option-1",
@@ -953,6 +954,7 @@ Notes:
 Notes:
 
 - `options` supports up to 5 entries.
+- Set `compactOptionColumns` to `true` for short labels such as `1`, `2`, `3`, and `4`.
 - `correctOptionIds` allows multiple correct options per statement.
 
 ### `mcq-rows`

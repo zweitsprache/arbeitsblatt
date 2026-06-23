@@ -6990,6 +6990,19 @@ function MCQMatrixProps({ block }: { block: MCQMatrixBlock }) {
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("showTaskLabel")}</Label>
       </div>
       <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("compactOptionColumns")}</Label>
+        <Switch
+          checked={!!block.compactOptionColumns}
+          onCheckedChange={(checked) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { compactOptionColumns: checked } },
+            })
+          }
+        />
+      </div>
+      <Separator />
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("columnLabels")}</Label>
         <div className="space-y-2">

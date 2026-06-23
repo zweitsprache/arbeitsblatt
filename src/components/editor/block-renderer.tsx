@@ -3537,6 +3537,7 @@ function MCQMatrixRenderer({
     return exampleStatement ? [exampleStatement, ...remainingStatements] : remainingStatements;
   })();
   const showAfterOptionsColumn = !interactive || orderedStatements.some((statement) => (statement.afterOptionsText || "").trim().length > 0);
+  const optionColumnWidth = block.compactOptionColumns ? "w-10" : "w-24";
 
   return (
     <div className="space-y-3">
@@ -3567,7 +3568,7 @@ function MCQMatrixRenderer({
         <div className="flex items-center gap-3 py-2 border-y">
           <div className="flex-1" />
           {block.options.map((option, optionIndex) => (
-            <div key={option.id} className="w-24 flex items-center justify-center gap-1">
+            <div key={option.id} className={`${optionColumnWidth} flex shrink-0 items-center justify-center gap-1`}>
               <span
                 className="outline-none block text-center font-semibold text-foreground text-xs flex-1"
                 contentEditable={!interactive}
@@ -3621,7 +3622,7 @@ function MCQMatrixRenderer({
                 const isSelected = statement.correctOptionIds.includes(option.id);
                 const isExampleRow = statement.id === exampleStatementId;
                 return (
-                  <div key={option.id} className="w-24 flex items-center justify-center">
+                  <div key={option.id} className={`${optionColumnWidth} flex shrink-0 items-center justify-center`}>
                     <button
                       type="button"
                       className="w-5 h-5 rounded-sm border-2 inline-flex items-center justify-center transition-colors border-muted-foreground/30 hover:border-green-400"

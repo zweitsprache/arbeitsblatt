@@ -940,6 +940,7 @@ export interface MCQMatrixBlock extends BlockBase {
   type: "mcq-matrix";
   instruction: string;
   statementColumnHeader?: string;
+  compactOptionColumns?: boolean;
   showPill?: boolean;
   showFirstAsExample?: boolean;
   wordBank?: string[];
@@ -2896,6 +2897,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     defaultData: {
       type: "mcq-matrix",
       instruction: "Mark the correct options for each statement.",
+      compactOptionColumns: false,
       showFirstAsExample: false,
       wordBank: [],
       options: [

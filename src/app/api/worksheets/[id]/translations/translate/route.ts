@@ -30,6 +30,8 @@ const MAX_CHUNK_JSON_BYTES = 12000;
 const MAX_CHUNK_KEYS = 80;
 const MAX_SPECIAL_INSTRUCTIONS = 50;
 const CHUNK_TRANSLATION_CONCURRENCY = 3;
+const TRANSLATION_MODEL =
+  process.env.ANTHROPIC_TRANSLATION_MODEL?.trim() || "claude-sonnet-4-6";
 
 type TranslationMap = Record<string, string>;
 type TranslationEntries = Array<[string, string]>;
@@ -186,7 +188,7 @@ async function requestChunkTranslation(
   );
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: TRANSLATION_MODEL,
     max_tokens: 16000,
     messages: [
       {
@@ -287,25 +289,14 @@ async function translateChunkWithFallback(
 
     return { ...acceptedTranslations, ...recoveredTranslations };
   } catch (error) {
-    if (chunkEntries.length === 1) {
-      console.error(
-        `[translate] ${langCode} ${chunkLabel}: Single-key translation failed:`,
-        error instanceof Error ? error.message : error
-      );
-      return {};
-    }
-
-    const [leftEntries, rightEntries] = splitEntries(chunkEntries);
-    console.warn(
-      `[translate] ${langCode} ${chunkLabel}: Chunk request failed, retrying in halves (${leftEntries.length} + ${rightEntries.length})`
+    // Provider/auth/model/rate-limit failures are independent of chunk size.
+    // Propagate them instead of recursively retrying every individual string
+    // and eventually replacing the useful error with "no valid translations".
+    console.error(
+      `[translate] ${langCode} ${chunkLabel}: Provider request failed:`,
+      error instanceof Error ? error.message : error
     );
-
-    const [leftTranslations, rightTranslations] = await Promise.all([
-      translateChunkWithFallback(leftEntries, langCode, langName, `${chunkLabel}.a`),
-      translateChunkWithFallback(rightEntries, langCode, langName, `${chunkLabel}.b`),
-    ]);
-
-    return { ...leftTranslations, ...rightTranslations };
+    throw error;
   }
 }
 
@@ -355,6 +346,13 @@ export async function POST(
 
   const body = await req.json().catch(() => null);
   const force = body?.force === true;
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "Worksheet translation is not configured: ANTHROPIC_API_KEY is missing" },
+      { status: 503 }
+    );
+  }
 
   const blocks = (worksheet.blocks as unknown as WorksheetBlock[]) ?? [];
   const settings = (worksheet.settings as unknown as WorksheetSettings) ?? {};

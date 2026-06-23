@@ -1585,6 +1585,7 @@
     "columnColor": "Column {index}",
     "columnColors": "Column colors",
     "columnLabels": "Column labels",
+    "compactOptionColumns": "Narrow option columns",
     "completeSentencePlaceholder": "Enter sentence beginning…",
     "completeSentencesHelp": "Enter sentence beginnings to be completed",
     "startSentencePlaceholder": "Enter sentence fragment…",

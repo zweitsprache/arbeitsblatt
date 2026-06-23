@@ -5111,6 +5111,10 @@ function MCQMatrixView({
   const currentStatement = orderedStatements[currentStatementIndex];
   const t = useTranslations("viewer");
   const showAfterOptionsColumn = orderedStatements.some((statement) => (statement.afterOptionsText || "").trim().length > 0);
+  const optionColumnWidth = block.compactOptionColumns ? "w-10" : "w-20";
+  const statementRowClass = isOnline
+    ? `${CONSISTENT_ROW_CLASS} py-1`
+    : "flex min-h-[37px] items-center gap-3 border-b py-1";
 
   return (
     <div>
@@ -5254,7 +5258,7 @@ function MCQMatrixView({
           <span className="w-6 shrink-0" aria-hidden="true" />
           <div className="flex-1" aria-hidden="true" />
           {block.options.map((option) => (
-            <div key={option.id} className="w-20 text-center font-semibold text-foreground text-[14px]">
+            <div key={option.id} className={`${optionColumnWidth} shrink-0 text-center font-semibold text-foreground text-[14px]`}>
               {option.text}
             </div>
           ))}
@@ -5266,9 +5270,9 @@ function MCQMatrixView({
             const isExampleRow = statement.id === exampleStatementId;
 
             return (
-              <div key={statement.id} className={isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT}>
+              <div key={statement.id} className={statementRowClass}>
                 <ItemNumberBadge index={statementIndex + 1} className="shrink-0" />
-                  <span className="flex-1" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.text) }} />
+                  <span className="min-w-0 flex-1 leading-snug" dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.text) }} />
                 {block.options.map((option) => {
                   const isSelected = selectedIds.includes(option.id);
                   const isCorrect = statement.correctOptionIds.includes(option.id);
@@ -5293,7 +5297,7 @@ function MCQMatrixView({
                   }
 
                   return (
-                    <div key={option.id} className="w-20 flex items-center justify-center">
+                    <div key={option.id} className={`${optionColumnWidth} flex shrink-0 items-center justify-center`}>
                       {showExampleOverlay || (showSolutions && !interactive) ? (
                         showExampleOverlay
                           ? renderHandwrittenMatrixIndicator("#0097dc")
@@ -5313,7 +5317,7 @@ function MCQMatrixView({
                 })}
                 {showAfterOptionsColumn && (
                   <span
-                    className="w-36 text-sm"
+                    className="w-36 text-sm leading-snug"
                     dangerouslySetInnerHTML={{ __html: normalizeInlineViewerHtml(statement.afterOptionsText || "") }}
                   />
                 )}
