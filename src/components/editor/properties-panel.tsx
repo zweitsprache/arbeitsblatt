@@ -1688,6 +1688,22 @@ function WritingLinesProps({ block }: { block: WritingLinesBlock }) {
         />
         <div className="text-xs text-muted-foreground mt-1 text-right">{block.lineSpacing}px</div>
       </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("negativeTopMargin")}</Label>
+        <Slider
+          value={[block.negativeTopMargin ?? 0]}
+          min={0}
+          max={48}
+          step={1}
+          onValueChange={([v]) =>
+            dispatch({
+              type: "UPDATE_BLOCK",
+              payload: { id: block.id, updates: { negativeTopMargin: v } },
+            })
+          }
+        />
+        <div className="text-xs text-muted-foreground mt-1 text-right">-{block.negativeTopMargin ?? 0}px</div>
+      </div>
     </div>
   );
 }
@@ -12060,6 +12076,17 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
           value={block.startNumber}
           onChange={(e) => update({ startNumber: Number(e.target.value) })}
         />
+      </div>
+      <div>
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("itemGap")}</Label>
+        <Slider
+          min={0}
+          max={32}
+          step={1}
+          value={[block.itemGap ?? 8]}
+          onValueChange={([v]) => update({ itemGap: v })}
+        />
+        <span className="text-xs text-muted-foreground">{block.itemGap ?? 8}px</span>
       </div>
       <Separator />
       <div>

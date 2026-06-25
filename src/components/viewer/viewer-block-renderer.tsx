@@ -3191,8 +3191,9 @@ function PageBreakView({ block: _block }: { block: PageBreakBlock }) {
 }
 
 function WritingLinesView({ block }: { block: WritingLinesBlock }) {
+  const negativeTopMargin = block.negativeTopMargin ?? 0;
   return (
-    <div>
+    <div style={negativeTopMargin ? { marginTop: `-${negativeTopMargin}px` } : undefined}>
       {Array.from({ length: block.lineCount }).map((_, i) => (
         <div
           key={i}
@@ -11056,6 +11057,19 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
+function mixColorWithWhite(color: string, whiteRatio: number): string {
+  const hex = color.trim();
+  const match = hex.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!match) return `color-mix(in srgb, ${color} ${Math.round((1 - whiteRatio) * 100)}%, white)`;
+
+  const raw = match[1].length === 3
+    ? match[1].split("").map((char) => `${char}${char}`).join("")
+    : match[1];
+  const channels = [0, 2, 4].map((start) => parseInt(raw.slice(start, start + 2), 16));
+  const mixed = channels.map((channel) => Math.round(channel + (255 - channel) * whiteRatio));
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 // Marker shown for a sub-item given the configured style.
 function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLabel: string, subIndex: number): string {
   switch (style) {
@@ -11071,11 +11085,14 @@ function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLa
   }
 }
 
-function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRtl = false, translationScale }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number }) {
+function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor = "#1a1a1a" }: { block: NumberedItemsBlock; originalBlock?: NumberedItemsBlock; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string }) {
   const hasBg = !!block.bgColor;
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
   const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
+  const numberToneBg = mixColorWithWhite(primaryColor, 0.88);
+  const rowToneBg = mixColorWithWhite(primaryColor, 0.96);
+  const itemGap = block.itemGap ?? 8;
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   // The RTL *layout* (number badge on the right, rows reversed) applies whenever
@@ -11087,7 +11104,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
   // each column sets its own direction (German LTR, translation RTL) instead.
   const contentRtl = rtlLayout && !isBilingual;
 
-  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, rtl: boolean = contentRtl) => {
+  const renderNumberedItemContent = (content: string, style?: React.CSSProperties, className?: string, rtl: boolean = contentRtl, textColor?: string) => {
     let html = injectLiIcons(prepareTiptapHtml(content), rtl);
     if (rtl) html = isolateNumberRunsForRtl(html);
     return (
@@ -11095,14 +11112,14 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
         <div
           className="tiptap max-w-none text-foreground font-normal"
           dir={rtl ? "rtl" : "ltr"}
-          style={{ textAlign: rtl ? "right" : "left" }}
+          style={{ textAlign: rtl ? "right" : "left", ...(textColor ? { color: textColor } : {}) }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
     );
   };
 
-  const renderBilingualColumns = (originalContent: string, translatedContent: string) => (
+  const renderBilingualColumns = (originalContent: string, translatedContent: string, textColor?: string) => (
     // Force LTR on the columns grid so the original (German) stays on the left and
     // the translation on the right, regardless of the surrounding RTL row layout.
     <div
@@ -11114,7 +11131,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
         direction: "ltr",
       }}
     >
-      {renderNumberedItemContent(originalContent, undefined, undefined, false)}
+      {renderNumberedItemContent(originalContent, undefined, undefined, false, textColor)}
       {renderNumberedItemContent(
         translatedContent,
         {
@@ -11124,6 +11141,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
         },
         "tiptap-bilingual-translated",
         rtlLayout,
+        textColor,
       )}
     </div>
   );
@@ -11131,7 +11149,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
   const renderSubItems = (item: NumberedItemsBlock["items"][number], originalItem: NumberedItemsBlock["items"][number] | undefined, parentLabel: string) => {
     if (!item.subItems || item.subItems.length === 0) return null;
     return (
-      <div style={{ marginTop: "0.4rem", marginBottom: "0.3rem", display: "grid", gap: "0.4rem" }}>
+      <div style={{ marginTop: "0.75rem", marginBottom: "0.3rem", display: "grid", gap: "0.4rem" }}>
         {item.subItems.map((sub, si) => {
           const marker = numberedSubItemMarker(block.subItemStyle, parentLabel, si);
           const originalSub = originalItem?.subItems?.[si];
@@ -11166,19 +11184,44 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
 
   if (!hasBg) {
     return (
-      <div className={s.numberedItemsRows}>
+      <div className={s.numberedItemsRows} style={{ gap: `${itemGap}px` }}>
         {block.items.map((item, i) => {
           const originalItem = originalBlock?.items[i];
           const parentLabel = String(block.startNumber + i).padStart(2, "0");
           const showBilingual = isBilingual && !!originalItem && originalItem.content !== item.content;
           return (
-            <div key={item.id} className={s.numberedItemRow} style={rtlLayout ? { direction: "rtl" } : undefined}>
-              <span className={s.accentBadge}>{parentLabel}</span>
-              <div className={s.numberedItemContent}>
+            <div
+              key={item.id}
+              className={s.numberedItemRow}
+              style={{
+                backgroundColor: rowToneBg,
+                borderRadius: `${radius}px`,
+                ...(rtlLayout ? { direction: "rtl" as const } : {}),
+              }}
+            >
+              <span
+                className={s.accentBadge}
+                style={{
+                  backgroundColor: numberToneBg,
+                  borderColor: numberToneBg,
+                  color: primaryColor,
+                }}
+              >
+                {parentLabel}
+              </span>
+              <div
+                className={s.numberedItemContent}
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: `${radius}px`,
+                  border: "1px solid #e5e7eb",
+                  padding: "0.625rem 0.75rem",
+                }}
+              >
                 {showBilingual ? (
-                  renderBilingualColumns(originalItem.content, item.content)
+                  renderBilingualColumns(originalItem.content, item.content, primaryColor)
                 ) : (
-                  renderNumberedItemContent(item.content)
+                  renderNumberedItemContent(item.content, undefined, undefined, contentRtl, primaryColor)
                 )}
                 {renderSubItems(item, originalItem, parentLabel)}
               </div>
@@ -11190,7 +11233,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
   }
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: "grid", gap: `${itemGap}px` }}>
       {block.items.map((item, i) => {
         const originalItem = originalBlock?.items[i];
         const parentLabel = String(block.startNumber + i).padStart(2, '0');
@@ -11212,18 +11255,26 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
             <div
               className="shrink-0 w-[30px] flex items-center justify-center font-bold"
               style={{
-                backgroundColor: hasBg ? block.bgColor : 'var(--color-primary, #1a1a1a)12',
-                color: hasBg ? (textWhite ? '#fff' : '#000') : 'var(--color-primary, #1a1a1a)',
+                backgroundColor: hasBg ? block.bgColor : numberToneBg,
+                color: hasBg ? (textWhite ? '#fff' : '#000') : primaryColor,
                 borderRadius: hasBg ? (rtlLayout ? `0 ${radius}px ${radius}px 0` : `${radius}px 0 0 ${radius}px`) : `${radius}px`,
                 alignSelf: (item.subItems?.length ?? 0) > 0 ? "stretch" : undefined,
               }}
             >
               {parentLabel}
             </div>
-            <div className="flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+            <div
+              className="flex-1 min-w-0 px-3 py-2.5 text-foreground font-normal bg-white"
+              style={{
+                borderRadius: hasBg ? (rtlLayout ? `${radius}px 0 0 ${radius}px` : `0 ${radius}px ${radius}px 0`) : `${radius}px`,
+                border: "1px solid #e5e7eb",
+                paddingTop: "0.875rem",
+                paddingBottom: "0.875rem",
+              }}
+            >
               {showBilingual
-                ? renderBilingualColumns(originalItem.content, item.content)
-                : renderNumberedItemContent(item.content)}
+                ? renderBilingualColumns(originalItem.content, item.content, primaryColor)
+                : renderNumberedItemContent(item.content, undefined, undefined, contentRtl, primaryColor)}
               {renderSubItems(item, originalItem, parentLabel)}
             </div>
           </div>
@@ -12842,7 +12893,7 @@ export function ViewerBlockRenderer({
     case "text-comparison":
       return <TextComparisonView block={block as TextComparisonBlock} />;
     case "numbered-items":
-      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} />;
+      return <NumberedItemsView block={block as NumberedItemsBlock} originalBlock={originalBlock as NumberedItemsBlock | undefined} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} />;
     case "subject":
       return <SubjectView block={block as SubjectBlock} originalBlock={originalBlock as SubjectBlock | undefined} isNonLatin={isNonLatin} translationScale={translationScale} />;
     case "box":

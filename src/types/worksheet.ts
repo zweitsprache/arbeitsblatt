@@ -1373,6 +1373,7 @@ export interface WritingLinesBlock extends BlockBase {
   type: "writing-lines";
   lineCount: number;
   lineSpacing: number; // px height per line row
+  negativeTopMargin?: number; // px to pull the block upward
 }
 
 // ─── Writing Rows block ──────────────────────────────────────
@@ -1471,6 +1472,7 @@ export interface NumberedItemsBlock extends BlockBase {
   startNumber: number;
   bgColor?: string;
   borderRadius?: number;
+  itemGap?: number;
   subItemStyle?: NumberedSubItemStyle;
   bilingual?: boolean;
   skipTranslation?: boolean;
@@ -3480,6 +3482,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
       type: "writing-lines",
       lineCount: 5,
       lineSpacing: 24,
+      negativeTopMargin: 0,
       visibility: "both",
     },
   },
@@ -3611,6 +3614,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     startNumber: 1,
     bgColor: "",
     borderRadius: 6,
+    itemGap: 8,
     visibility: "both",
   },
 },

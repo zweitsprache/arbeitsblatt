@@ -1991,8 +1991,9 @@ function PageBreakRenderer({ block }: { block: PageBreakBlock }) {
 
 // ─── Writing Lines ───────────────────────────────────────────
 function WritingLinesRenderer({ block }: { block: WritingLinesBlock }) {
+  const negativeTopMargin = block.negativeTopMargin ?? 0;
   return (
-    <div>
+    <div style={negativeTopMargin ? { marginTop: `-${negativeTopMargin}px` } : undefined}>
       {Array.from({ length: block.lineCount }).map((_, i) => (
         <div
           key={i}
@@ -8283,6 +8284,19 @@ function isDarkColor(hex: string): boolean {
   return L < 0.35;
 }
 
+function mixColorWithWhite(color: string, whiteRatio: number): string {
+  const hex = color.trim();
+  const match = hex.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!match) return `color-mix(in srgb, ${color} ${Math.round((1 - whiteRatio) * 100)}%, white)`;
+
+  const raw = match[1].length === 3
+    ? match[1].split("").map((char) => `${char}${char}`).join("")
+    : match[1];
+  const channels = [0, 2, 4].map((start) => parseInt(raw.slice(start, start + 2), 16));
+  const mixed = channels.map((channel) => Math.round(channel + (255 - channel) * whiteRatio));
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 // Marker shown for a sub-item given the configured style.
 function numberedSubItemMarker(style: NumberedSubItemStyle | undefined, parentLabel: string, subIndex: number): string {
   switch (style) {
@@ -8411,37 +8425,51 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   const textWhite = hasBg && isDarkColor(block.bgColor!);
   const radius = block.borderRadius ?? 6;
   const surfaceBg = hasBg ? `${block.bgColor}${textWhite ? '18' : '40'}` : undefined;
+  const primaryColor = state.brandProfile.primaryColor || "#1a1a1a";
+  const numberToneBg = mixColorWithWhite(primaryColor, 0.88);
+  const rowToneBg = mixColorWithWhite(primaryColor, 0.96);
+  const itemGap = block.itemGap ?? 8;
 
   return (
-    <div className="space-y-2">
+    <div style={{ display: "grid", gap: `${itemGap}px` }}>
       {block.items.map((item, i) => {
         const parentLabel = String(block.startNumber + i).padStart(2, '0');
         return (
-        <div key={item.id} className="space-y-1">
+        <div key={item.id} className="space-y-2">
           <div className="relative group">
             <div
               className="flex gap-0"
-              style={hasBg ? {
-                backgroundColor: surfaceBg,
+              style={{
+                backgroundColor: hasBg ? surfaceBg : rowToneBg,
                 borderRadius: `${radius}px`,
-              } : undefined}
+              }}
             >
               <div
-                className={`shrink-0 w-[30px] flex items-center justify-center font-bold${!hasBg ? ' bg-primary/10 text-primary' : ''}`}
+                className="shrink-0 w-[30px] flex items-center justify-center font-bold"
                 style={{
-                  ...(hasBg ? { backgroundColor: block.bgColor, color: textWhite ? '#fff' : '#000' } : {}),
+                  backgroundColor: hasBg ? block.bgColor : numberToneBg,
+                  color: hasBg ? (textWhite ? '#fff' : '#000') : primaryColor,
                   borderRadius: hasBg ? `${radius}px 0 0 ${radius}px` : `${radius}px`,
                   ...(textBaseSize ? { fontSize: textBaseSize } : {}),
                 }}
               >
                 {parentLabel}
               </div>
-              <div className="numbered-items-richtext flex-1 min-w-0 px-3 py-1.5 text-foreground font-normal">
+              <div
+                className="numbered-items-richtext flex-1 min-w-0 px-3 py-2.5 text-foreground font-normal bg-white"
+                style={{
+                  borderRadius: hasBg ? `0 ${radius}px ${radius}px 0` : `${radius}px`,
+                  border: "1px solid #e5e7eb",
+                  color: primaryColor,
+                  paddingTop: "0.875rem",
+                  paddingBottom: "0.875rem",
+                }}
+              >
                 <RichTextEditor
                   content={item.content}
                   onChange={(html) => updateItem(i, html)}
                   placeholder="…"
-                  editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 text-foreground font-normal"
+                  editorClassName="tiptap prose prose-sm max-w-none focus:outline-none px-0 py-0 font-normal"
                 />
               </div>
             </div>

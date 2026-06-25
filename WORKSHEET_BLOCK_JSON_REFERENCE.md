@@ -1587,7 +1587,8 @@ Allowed `icon` values:
   "type": "writing-lines",
   "visibility": "both",
   "lineCount": 5,
-  "lineSpacing": 24
+  "lineSpacing": 24,
+  "negativeTopMargin": 0
 }
 ```
 
@@ -1735,6 +1736,7 @@ Allowed `layout` values:
   "startNumber": 1,
   "bgColor": "",
   "borderRadius": 6,
+  "itemGap": 8,
   "bilingual": false,
   "skipTranslation": false
 }
