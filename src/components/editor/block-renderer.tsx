@@ -9696,13 +9696,20 @@ function StaticScheduleTable({
   baselineAdjustment: string;
 }) {
   const rowCellStyle: React.CSSProperties = {
-    whiteSpace: "nowrap",
     padding: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
     height: "37px",
     fontVariantNumeric: "tabular-nums",
     fontFeatureSettings: '"tnum" 1',
+  };
+  const compactRowCellStyle: React.CSSProperties = {
+    ...rowCellStyle,
+    whiteSpace: "nowrap",
+  };
+  const timeRowStyle: React.CSSProperties = {
+    ...compactRowCellStyle,
+    verticalAlign: "top",
   };
   const weekdayStyle: React.CSSProperties = {
     display: "inline-block",
@@ -9728,6 +9735,11 @@ function StaticScheduleTable({
     paddingRight: "14px",
     boxSizing: "border-box",
     transform: `translateY(${baselineAdjustment})`,
+  };
+  const timeCellContentStyle: React.CSSProperties = {
+    ...cellContentStyle,
+    alignItems: "flex-start",
+    paddingTop: "4px",
   };
 
   return (
@@ -9764,7 +9776,7 @@ function StaticScheduleTable({
             return (
               <tr key={item.id}>
                 {showDate && (
-                  <td style={rowCellStyle}>
+                  <td style={compactRowCellStyle}>
                     <div style={cellContentStyle}>
                       {weekday ? (<>
                         <span style={weekdayStyle}>{weekday}</span>
@@ -9773,14 +9785,14 @@ function StaticScheduleTable({
                     </div>
                   </td>
                 )}
-                <td style={rowCellStyle}>
-                  <div style={cellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
+                <td style={timeRowStyle}>
+                  <div style={timeCellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
                 </td>
-                {showRoom && <td style={rowCellStyle}><div style={{ ...cellContentStyle, paddingRight: "18px" }}>{item.room}</div></td>}
+                {showRoom && <td style={compactRowCellStyle}><div style={{ ...cellContentStyle, paddingRight: "18px" }}>{item.room}</div></td>}
                 <td style={rowCellStyle}>
-                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", paddingTop: "4px", paddingBottom: "4px" }}>
-                    <div style={{ fontWeight: 700 }}>{item.title}</div>
-                    {item.description ? <div>{item.description}</div> : null}
+                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-start", width: "100%", minWidth: 0, paddingTop: "4px", paddingBottom: "4px", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                    <div style={{ width: "100%", fontWeight: 700, whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.title}</div>
+                    {item.description ? <div style={{ width: "100%", whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.description}</div> : null}
                   </div>
                 </td>
               </tr>

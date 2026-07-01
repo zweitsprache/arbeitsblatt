@@ -94,7 +94,7 @@ import {
   ViewMode,
   resolveBrandLogo,
 } from "@/types/worksheet";
-import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors, FileQuestion, TriangleAlert } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowRight, BadgeAlert, Siren, Goal, Flag, Sparkles, Loader2, Bot, FormInput, Plus, Minus, ChevronsDown, ChevronsUp, Copy, ClipboardCheck, MessageCircle, MessageCircleQuestion, Scissors, FileQuestion, TriangleAlert, Expand } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { prepareTiptapHtml, stripOuterP } from "@/lib/print-html-normalize";
@@ -2101,7 +2101,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   const HintRowIcon = () => {
     const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-    if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
+    if (isKompetenzziele) return <Expand size={20} strokeWidth={2} />;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
     if (isRedemittel) return <MessageCircle size={20} strokeWidth={2} />;
     if (isFragen) return <MessageCircleQuestion size={20} strokeWidth={2} />;
@@ -2110,7 +2110,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   const RowsIconSvg = () => {
     const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-    if (isKompetenzziele) return <svg {...p}><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/><path d="M16 2h6v6"/></svg>;
+    if (isKompetenzziele) return <Expand size={20} strokeWidth={2} />;
     if (isHandlungsziele) return <svg {...p}><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg>;
     if (isFragen) return <MessageCircleQuestion size={20} strokeWidth={2} />;
     if (isRedemittel) return <MessageCircle size={20} strokeWidth={2} />;
@@ -2120,6 +2120,10 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
   const rowIconSlotWidth = "1.5rem";
   const rowIconSlotGap = "0.5rem";
   const rowIconTextLane = `calc(${rowIconSlotWidth} + ${rowIconSlotGap})`;
+  const alignRowIconToCapHeight = isHandlungsziele || isKompetenzziele;
+  const rowIconCapStartTop = isKompetenzziele
+    ? "calc(0.375rem + 0.12em + 1px)"
+    : "calc(0.375rem + 0.12em)";
 
   // Bilingual: show 2-column layout when block is marked bilingual, a translation is active,
   // and the original content differs from the translated content
@@ -2290,11 +2294,11 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
         Array.from({ length: maxLen }, (_, i) => (
             <React.Fragment key={i}>
               <div style={{ ...cellBase, ...originalFontStyle, ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", left: 0, top: "calc(0.375rem + 0.7em)", transform: "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", left: 0, top: alignRowIconToCapHeight ? rowIconCapStartTop : "calc(0.375rem + 0.7em)", transform: alignRowIconToCapHeight ? "none" : "translateY(-50%)" }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dangerouslySetInnerHTML={{ __html: originalParas[i] || "" }} />
               </div>
               <div style={{ ...cellBase, ...translatedFontStyle, ...translatedDirectionStyle, ...(isRtl ? { padding: `0.375rem ${rowIconTextLane} 0.375rem 0.625rem` } : {}), ...(i === 0 ? { borderTop: "1px solid #d1d5db" } : {}) }}>
-                <div style={{ position: "absolute", ...(isRtl ? { right: 0 } : { left: 0 }), top: "calc(0.375rem + 0.7em)", transform: isRtl ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}><RowsIconSvg /></div>
+                <div style={{ position: "absolute", ...(isRtl ? { right: 0 } : { left: 0 }), top: alignRowIconToCapHeight ? rowIconCapStartTop : "calc(0.375rem + 0.7em)", transform: alignRowIconToCapHeight ? (isRtl ? "rotate(180deg)" : "none") : (isRtl ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)") }}><RowsIconSvg /></div>
                 <div className="tiptap max-w-none tiptap-compact" dir={isRtl ? "rtl" : undefined} style={translatedDirectionStyle} dangerouslySetInnerHTML={{ __html: isRtl ? isolateNumberRunsForRtl(translatedParas[i] || "") : (translatedParas[i] || "") }} />
               </div>
             </React.Fragment>
@@ -2395,7 +2399,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
     // Hinweis / redemittel / handlungsziele / kompetenzziele: hintBox icon+text layout, top+bottom border only
     if ((isHinweis || isRedemittel || isHandlungsziele || isKompetenzziele) && !isBilingual) {
       const borderColor = isHinweis ? "#475569" : "#d1d5db";
-      const iconColor = isHinweis ? "#475569" : "#475569";
+      const iconColor = isHandlungsziele || isKompetenzziele ? "currentColor" : "#475569";
       const paras = isHinweis ? [block.content] : splitRowItems(block.content);
       return (
         <div className={s.textPlain} style={singleColumnTextStyle}>
@@ -2413,7 +2417,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: "center", justifyContent: "flex-start", color: iconColor, transform: isRtl ? "rotate(180deg)" : undefined }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: alignRowIconToCapHeight ? "flex-start" : "center", justifyContent: "flex-start", paddingTop: alignRowIconToCapHeight ? rowIconCapStartTop : 0, color: iconColor, transform: isRtl ? "rotate(180deg)" : undefined }}>
                 <HintRowIcon />
               </div>
               <div style={{ flex: 1, minWidth: 0, padding: isRtl ? "0.375rem 0 0.375rem 0.625rem" : "0.375rem 0.625rem 0.375rem 0" }}>
@@ -2447,7 +2451,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
                 pageBreakInside: "avoid" as const,
               }}
             >
-              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: "center", justifyContent: "flex-start", color: "#475569", transform: isRtl ? "rotate(180deg)" : undefined }}>
+              <div style={{ flexShrink: 0, width: rowIconSlotWidth, minWidth: rowIconSlotWidth, marginRight: isRtl ? 0 : rowIconSlotGap, marginLeft: isRtl ? rowIconSlotGap : 0, display: "flex", alignItems: alignRowIconToCapHeight ? "flex-start" : "center", justifyContent: "flex-start", paddingTop: alignRowIconToCapHeight ? rowIconCapStartTop : 0, color: isHandlungsziele || isKompetenzziele ? "currentColor" : "#475569", transform: isRtl ? "rotate(180deg)" : undefined }}>
                 <RowsIconSvg />
               </div>
               <div style={{ flex: 1, minWidth: 0, padding: isRtl ? "0.375rem 0 0.375rem 0.625rem" : "0.375rem 0.625rem 0.375rem 0" }}>
@@ -11903,7 +11907,6 @@ function StaticScheduleTable({
 }) {
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   const rowCellStyle: React.CSSProperties = {
-    whiteSpace: "nowrap",
     padding: 0,
     verticalAlign: "middle",
     boxSizing: "border-box",
@@ -11911,9 +11914,13 @@ function StaticScheduleTable({
     fontVariantNumeric: "tabular-nums",
     fontFeatureSettings: '"tnum" 1',
   };
-  const timeRowStyle: React.CSSProperties = {
+  const compactRowCellStyle: React.CSSProperties = {
     ...rowCellStyle,
-    verticalAlign: "middle",
+    whiteSpace: "nowrap",
+  };
+  const timeRowStyle: React.CSSProperties = {
+    ...compactRowCellStyle,
+    verticalAlign: "top",
   };
   const weekdayStyle: React.CSSProperties = {
     display: "inline-block",
@@ -11939,6 +11946,11 @@ function StaticScheduleTable({
     paddingRight: 18,
     boxSizing: "border-box",
     transform: "translateY(var(--font-baseline-adjustment, 0px))",
+  };
+  const timeCellContentStyle: React.CSSProperties = {
+    ...cellContentStyle,
+    alignItems: "flex-start",
+    paddingTop: 4,
   };
 
   return (
@@ -11984,7 +11996,7 @@ function StaticScheduleTable({
             return (
               <tr key={item.id}>
                 {showDate && (
-                  <td style={rowCellStyle}>
+                  <td style={compactRowCellStyle}>
                     <div style={cellContentStyle}>
                       {weekday ? (<>
                         <span style={weekdayStyle}>{weekday}</span>
@@ -11994,26 +12006,26 @@ function StaticScheduleTable({
                   </td>
                 )}
                 <td className="scheduleTimeCell" style={timeRowStyle}>
-                  <div style={cellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
+                  <div style={timeCellContentStyle}>{formatScheduleCellTime(item.start)} – {formatScheduleCellTime(item.end)}</div>
                 </td>
-                {showRoom && <td style={rowCellStyle}><div style={{ ...cellContentStyle, paddingRight: 22 }}>{item.room}</div></td>}
+                {showRoom && <td style={compactRowCellStyle}><div style={{ ...cellContentStyle, paddingRight: 22 }}>{item.room}</div></td>}
                 <td style={rowCellStyle}>
-                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", paddingTop: 4, paddingBottom: 4 }}>
+                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-start", width: "100%", minWidth: 0, paddingTop: 4, paddingBottom: 4, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
-                      <div style={{ fontWeight: 700 }}>{originalItem.title}</div>
-                      <div style={translatedTextStyle}>{item.title}</div>
+                      <div style={{ width: "100%", fontWeight: 700, whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{originalItem.title}</div>
+                      <div style={{ ...translatedTextStyle, width: "100%", whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.title}</div>
                     </div>
                   ) : (
-                    <div style={{ fontWeight: 700 }}>{item.title}</div>
+                    <div style={{ width: "100%", fontWeight: 700, whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.title}</div>
                   )}
                   {showBilingualDescription ? (
                     <div style={bilingualPairStyle}>
-                      {originalItem.description ? <div>{originalItem.description}</div> : null}
-                      {item.description ? <div style={translatedTextStyle}>{item.description}</div> : null}
+                      {originalItem.description ? <div style={{ width: "100%", whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{originalItem.description}</div> : null}
+                      {item.description ? <div style={{ ...translatedTextStyle, width: "100%", whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.description}</div> : null}
                     </div>
                   ) : item.description ? (
-                    <div>{item.description}</div>
+                    <div style={{ width: "100%", whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{item.description}</div>
                   ) : null}
                   </div>
                 </td>

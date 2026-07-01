@@ -252,9 +252,9 @@ export const printFixtureBlocks: WorksheetBlock[] = [
     showHeader: true,
     items: [
       { id: "fixture-sc-1", date: "2026-04-07", start: "08:30", end: "09:15", room: "A101", title: "Grammatik: Perfekt", description: "Regelmäßige und unregelmäßige Verben" },
-      { id: "fixture-sc-2", date: "2026-04-07", start: "09:30", end: "10:15", room: "A101", title: "Hören & Sprechen", description: "Dialoge aus dem Alltag" },
+      { id: "fixture-sc-2", date: "2026-04-07", start: "09:30", end: "10:15", room: "A101", title: "Hören & Sprechen\nDialogtraining im Tandem", description: "Dialoge aus dem Alltag\nRollenwechsel mit Feedback" },
       { id: "fixture-sc-3", date: "2026-04-08", start: "08:30", end: "09:15", room: "B203", title: "Lesen & Verstehen", description: "" },
-      { id: "fixture-sc-4", date: "2026-04-08", start: "09:30", end: "10:15", room: "B203", title: "Schreiben: E-Mail", description: "Formelle und informelle Schreibweise" },
+      { id: "fixture-sc-4", date: "2026-04-08", start: "09:30", end: "10:15", room: "B203", title: "Schreiben: E-Mail", description: "Formelle und informelle Schreibweise mit Donaudampfschifffahrtsgesellschaftskapitän" },
     ],
     ...baseVisibility,
   },
