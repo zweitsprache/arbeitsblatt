@@ -116,6 +116,12 @@ import {
   AiPromptBlock,
   AiToolBlock,
   AudioBlock,
+  CurriculumBlock,
+  CurriculumHolidayPeriod,
+  CurriculumOffItem,
+  CurriculumLessonPlanFormat,
+  CurriculumLessonPlanRow,
+  CurriculumWeekday,
   ScheduleBlock,
   ScheduleItem,
   WebsiteBlock,
@@ -14416,6 +14422,577 @@ function AudioProps({ block }: { block: AudioBlock }) {
 }
 
 // ─── Schedule Properties ─────────────────────────────────────
+function CurriculumProps({ block }: { block: CurriculumBlock }) {
+  const { dispatch } = useEditor();
+  const t = useTranslations("properties");
+  const regularCourseWeekdays = block.regularCourseWeekdays ?? ["monday", "tuesday", "wednesday", "thursday", "friday"];
+  const offItems = block.offItems ?? [];
+  const holidayPeriods = block.holidayPeriods ?? [];
+  const lessonPlanFormat: CurriculumLessonPlanFormat = block.lessonPlanFormat ?? "schritte-plus-neu";
+  const lessonPlanRows = block.lessonPlanRows ?? [];
+
+  type CurriculumCsvRow = {
+    index: number;
+    label: string;
+    lesson: string;
+    coursebook: string;
+    workbook: string;
+    vocabulary: string;
+    communicativeGoal: string;
+    grammarGoal: string;
+  };
+
+  const [csvRows, setCsvRows] = React.useState<CurriculumCsvRow[]>([]);
+  const [csvLoading, setCsvLoading] = React.useState(false);
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+
+  const update = (updates: Partial<CurriculumBlock>) => {
+    dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates } });
+  };
+
+  const updateLessonPlanRows = (nextRows: CurriculumLessonPlanRow[]) => {
+    update({ lessonPlanRows: nextRows });
+  };
+
+  const updateLessonPlanRow = (
+    index: number,
+    updates: Partial<CurriculumLessonPlanRow>,
+    options?: { markCustom?: boolean }
+  ) => {
+    const next = [...lessonPlanRows];
+    next[index] = {
+      ...next[index],
+      ...updates,
+      ...(options?.markCustom === false ? {} : { sourceType: "custom", sourceRowIndex: undefined }),
+    };
+    updateLessonPlanRows(next);
+  };
+
+  const normalizeCsvHeader = (value: string) => (
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "")
+  );
+
+  const parseCurriculumCsv = (rawCsv: string): CurriculumCsvRow[] => {
+    const lines = rawCsv
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].replace(/^\uFEFF/, "").split(";").map(normalizeCsvHeader);
+    const findColumn = (...names: string[]) => {
+      return headers.findIndex((header) => names.some((name) => header === name || header.includes(name)));
+    };
+
+    const idxNiveau = findColumn("niveau");
+    const idxBand = findColumn("band");
+    const idxLektion = findColumn("lektion");
+    const idxSchritt = findColumn("schritt");
+    const idxKb = findColumn("kb");
+    const idxAb = findColumn("ab");
+    const idxLws = findColumn("lws");
+    const idxKommunikatives = findColumn("kommunikatives", "kommunikativ");
+    const idxGrammatik = findColumn("grammatik");
+
+    const cleanCell = (value: string | undefined) => {
+      const next = (value ?? "").trim();
+      return next === "-" || next === "–" ? "" : next;
+    };
+
+    const result: CurriculumCsvRow[] = [];
+    for (let i = 1; i < lines.length; i += 1) {
+      const cells = lines[i].split(";");
+      const niveau = cleanCell(cells[idxNiveau]);
+      const band = cleanCell(cells[idxBand]);
+      const lektion = cleanCell(cells[idxLektion]);
+      const schritt = cleanCell(cells[idxSchritt]);
+      const kb = cleanCell(cells[idxKb]);
+      const ab = cleanCell(cells[idxAb]);
+      const lws = cleanCell(cells[idxLws]);
+      const kommunikatives = cleanCell(cells[idxKommunikatives]);
+      const grammatik = cleanCell(cells[idxGrammatik]);
+
+      if (!lektion && !schritt && !kommunikatives && !grammatik && !kb && !ab && !lws) {
+        continue;
+      }
+
+      const lessonLabel = [lektion ? `L${lektion}` : "", schritt].filter(Boolean).join(" ").trim();
+      const optionLabelParts = [
+        niveau || band ? [niveau, band ? `B${band}` : ""].filter(Boolean).join(" ") : "",
+        lessonLabel,
+        kommunikatives || grammatik || kb || lws || ab,
+      ].filter(Boolean);
+
+      result.push({
+        index: result.length,
+        label: optionLabelParts.join(" | "),
+        lesson: lessonLabel,
+        coursebook: kb,
+        workbook: ab,
+        vocabulary: lws,
+        communicativeGoal: kommunikatives,
+        grammarGoal: grammatik,
+      });
+    }
+
+    return result;
+  };
+
+  const applyCsvRowToLesson = (row: CurriculumLessonPlanRow, source: CurriculumCsvRow): CurriculumLessonPlanRow => {
+    return {
+      ...row,
+      sourceType: "csv",
+      sourceRowIndex: source.index,
+      lesson: source.lesson,
+      coursebook: source.coursebook,
+      workbook: source.workbook,
+      vocabulary: source.vocabulary,
+      communicativeGoal: source.communicativeGoal,
+      grammarGoal: source.grammarGoal,
+    };
+  };
+
+  const hasManualLessonContent = (row: CurriculumLessonPlanRow): boolean => {
+    return Boolean(
+      row.lesson ||
+      row.coursebook ||
+      row.workbook ||
+      row.vocabulary ||
+      row.communicativeGoal ||
+      row.grammarGoal
+    );
+  };
+
+  const setLessonSource = (rowIndex: number, value: string) => {
+    if (value === "custom") {
+      updateLessonPlanRow(rowIndex, { sourceType: "custom", sourceRowIndex: undefined }, { markCustom: false });
+      return;
+    }
+
+    if (!value.startsWith("csv:")) return;
+    const sourceIndex = Number(value.slice(4));
+    if (Number.isNaN(sourceIndex)) return;
+    const selectedSource = csvRows[sourceIndex];
+    if (!selectedSource) return;
+
+    const nextRows = [...lessonPlanRows];
+    nextRows[rowIndex] = applyCsvRowToLesson(nextRows[rowIndex], selectedSource);
+
+    const nextLessonRowIndex = nextRows.findIndex((row, idx) => idx > rowIndex && !row.isOffDay);
+    const nextSource = csvRows[sourceIndex + 1];
+    if (nextLessonRowIndex !== -1 && nextSource) {
+      const nextLessonRow = nextRows[nextLessonRowIndex];
+      const isCustomLocked = nextLessonRow.sourceType === "custom" && hasManualLessonContent(nextLessonRow);
+      if (!isCustomLocked) {
+        nextRows[nextLessonRowIndex] = applyCsvRowToLesson(nextLessonRow, nextSource);
+      }
+    }
+
+    updateLessonPlanRows(nextRows);
+  };
+
+  const formatLessonPlanRowDate = (value: string) => {
+    if (!value) return "-";
+    const d = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return value;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  };
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadCsvRows = async () => {
+      setCsvLoading(true);
+      setCsvError(null);
+      try {
+        const response = await fetch("/lw_data/SPN Detailinhalte V1.csv", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const text = await response.text();
+        if (cancelled) return;
+        setCsvRows(parseCurriculumCsv(text));
+      } catch {
+        if (cancelled) return;
+        setCsvRows([]);
+        setCsvError("CSV data could not be loaded.");
+      } finally {
+        if (!cancelled) {
+          setCsvLoading(false);
+        }
+      }
+    };
+
+    loadCsvRows();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const updateOffItem = (index: number, updates: Partial<CurriculumOffItem>) => {
+    const next = [...offItems];
+    next[index] = { ...next[index], ...updates };
+    update({ offItems: next });
+  };
+
+  const makeCurriculumItemId = (prefix: string) => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return `${prefix}${crypto.randomUUID()}`;
+    }
+    return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const addOffItem = () => {
+    const next = [...offItems, { id: makeCurriculumItemId("co"), date: "", label: "" }];
+    update({ offItems: next });
+  };
+
+  const removeOffItem = (index: number) => {
+    update({ offItems: offItems.filter((_, i) => i !== index) });
+  };
+
+  const updateHoliday = (index: number, updates: Partial<CurriculumHolidayPeriod>) => {
+    const next = [...holidayPeriods];
+    next[index] = { ...next[index], ...updates };
+    update({ holidayPeriods: next });
+  };
+
+  const addHoliday = () => {
+    const next = [...holidayPeriods, { id: makeCurriculumItemId("ch"), startDate: "", endDate: "", label: "" }];
+    update({ holidayPeriods: next });
+  };
+
+  const removeHoliday = (index: number) => {
+    update({ holidayPeriods: holidayPeriods.filter((_, i) => i !== index) });
+  };
+
+  const weekdays: Array<{ value: CurriculumWeekday; label: string }> = [
+    { value: "monday", label: t("weekdayMonday") },
+    { value: "tuesday", label: t("weekdayTuesday") },
+    { value: "wednesday", label: t("weekdayWednesday") },
+    { value: "thursday", label: t("weekdayThursday") },
+    { value: "friday", label: t("weekdayFriday") },
+    { value: "saturday", label: t("weekdaySaturday") },
+    { value: "sunday", label: t("weekdaySunday") },
+  ];
+
+  const toggleRegularWeekday = (weekday: CurriculumWeekday) => {
+    const exists = regularCourseWeekdays.includes(weekday);
+    if (exists) {
+      update({ regularCourseWeekdays: regularCourseWeekdays.filter((d) => d !== weekday) });
+      return;
+    }
+    const weekdayOrder: CurriculumWeekday[] = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+    const next = [...regularCourseWeekdays, weekday].sort(
+      (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
+    );
+    update({ regularCourseWeekdays: next });
+  };
+
+  const toLocalDate = (value: string): Date | null => {
+    if (!value) return null;
+    const d = new Date(`${value}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const toIsoDate = (date: Date): string => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const weekdayByJsIndex: CurriculumWeekday[] = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+
+  const generateLessonPlan = () => {
+    if (lessonPlanFormat !== "schritte-plus-neu") return;
+    const start = toLocalDate(block.termStartDate);
+    const end = toLocalDate(block.termEndDate);
+    if (!start || !end || start > end) {
+      update({ lessonPlanRows: [] });
+      return;
+    }
+
+    const regularSet = new Set<CurriculumWeekday>(regularCourseWeekdays);
+    const rows: CurriculumLessonPlanRow[] = [];
+    const cursor = new Date(start);
+
+    while (cursor <= end) {
+      const weekday = weekdayByJsIndex[cursor.getDay()];
+      if (regularSet.has(weekday)) {
+        const isoDate = toIsoDate(cursor);
+        const reasons: string[] = [];
+
+        const offDay = offItems.find((item) => item.date === isoDate);
+        if (offDay) {
+          reasons.push(offDay.label || t("curriculumOffDate"));
+        }
+
+        const matchingHolidays = holidayPeriods.filter((holiday) => (
+          holiday.startDate && holiday.endDate && isoDate >= holiday.startDate && isoDate <= holiday.endDate
+        ));
+        for (const holiday of matchingHolidays) {
+          reasons.push(holiday.label || t("curriculumHolidayLabel"));
+        }
+
+        const offReason = reasons.join(" / ");
+        rows.push({
+          id: `lp-${isoDate}`,
+          date: isoDate,
+          lesson: "",
+          coursebook: "",
+          workbook: "",
+          vocabulary: "",
+          communicativeGoal: offReason,
+          grammarGoal: "",
+          isOffDay: Boolean(offReason),
+          offReason: offReason || undefined,
+        });
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    update({ lessonPlanRows: rows });
+  };
+
+  return (
+    <div className="space-y-3 overflow-hidden">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("curriculumTerm")}</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <Input type="date" value={block.termStartDate} onChange={(e) => update({ termStartDate: e.target.value })} className="h-8 text-xs" aria-label={t("curriculumStartDate")} />
+          <Input type="date" value={block.termEndDate} onChange={(e) => update({ termEndDate: e.target.value })} className="h-8 text-xs" aria-label={t("curriculumEndDate")} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("curriculumRegularWeekdays")}</Label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {weekdays.map((weekday) => {
+            const selected = regularCourseWeekdays.includes(weekday.value);
+            return (
+              <Button
+                key={weekday.value}
+                type="button"
+                variant={selected ? "default" : "outline"}
+                className="h-8 justify-start text-xs"
+                onClick={() => toggleRegularWeekday(weekday.value)}
+              >
+                {weekday.label}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("curriculumLessonPlan")}</Label>
+        <div className="space-y-2 rounded-sm border border-slate-200 p-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-600">{t("curriculumLessonPlanFormat")}</Label>
+            <Select value={lessonPlanFormat} onValueChange={(value) => update({ lessonPlanFormat: value as CurriculumLessonPlanFormat })}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="schritte-plus-neu">{t("curriculumLessonPlanFormatSchrittePlusNeu")}</SelectItem>
+                <SelectItem value="treffpunkt-schweiz" disabled>
+                  {t("curriculumLessonPlanFormatTreffpunktSchweiz")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-slate-500">{t("curriculumLessonPlanRowsCount", { count: lessonPlanRows.length })}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={generateLessonPlan}
+              disabled={lessonPlanFormat !== "schritte-plus-neu"}
+            >
+              {t("curriculumLessonPlanGenerate")}
+            </Button>
+          </div>
+
+          {lessonPlanRows.length > 0 ? (
+            <div className="space-y-2 border-t border-slate-200 pt-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-slate-600">Lesson Content Source</Label>
+                {csvLoading ? <span className="text-[11px] text-slate-500">Loading CSV...</span> : null}
+              </div>
+
+              {csvError ? <p className="text-[11px] text-rose-600">{csvError}</p> : null}
+
+              <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {lessonPlanRows.map((row, rowIndex) => {
+                  const sourceValue = row.sourceType === "csv" && typeof row.sourceRowIndex === "number"
+                    ? `csv:${row.sourceRowIndex}`
+                    : "custom";
+
+                  return (
+                    <div key={`${row.id}-${rowIndex}`} className="space-y-2 rounded-sm border border-slate-200 p-2">
+                      <div className="grid grid-cols-[88px_1fr] items-center gap-2">
+                        <span className="text-[11px] font-medium text-slate-600" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>
+                          {formatLessonPlanRowDate(row.date)}
+                        </span>
+
+                        {row.isOffDay ? (
+                          <span className="text-[11px] text-amber-700">{row.offReason || t("curriculumOffDate")}</span>
+                        ) : (
+                          <Select value={sourceValue} onValueChange={(value) => setLessonSource(rowIndex, value)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select CSV row or custom" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="custom">Custom entry</SelectItem>
+                              {csvRows.map((csvRow) => (
+                                <SelectItem key={csvRow.index} value={`csv:${csvRow.index}`}>
+                                  {csvRow.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+
+                      {!row.isOffDay && sourceValue === "custom" ? (
+                        <div className="space-y-1.5">
+                          <Input
+                            value={row.lesson ?? ""}
+                            onChange={(e) => updateLessonPlanRow(rowIndex, { lesson: e.target.value })}
+                            className="h-8 text-xs"
+                            placeholder="Lektion"
+                          />
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              value={row.coursebook ?? ""}
+                              onChange={(e) => updateLessonPlanRow(rowIndex, { coursebook: e.target.value })}
+                              className="h-8 text-xs"
+                              placeholder="KB"
+                            />
+                            <Input
+                              value={row.workbook ?? ""}
+                              onChange={(e) => updateLessonPlanRow(rowIndex, { workbook: e.target.value })}
+                              className="h-8 text-xs"
+                              placeholder="AB"
+                            />
+                            <Input
+                              value={row.vocabulary ?? ""}
+                              onChange={(e) => updateLessonPlanRow(rowIndex, { vocabulary: e.target.value })}
+                              className="h-8 text-xs"
+                              placeholder="LWS"
+                            />
+                          </div>
+
+                          <Input
+                            value={row.communicativeGoal ?? ""}
+                            onChange={(e) => updateLessonPlanRow(rowIndex, { communicativeGoal: e.target.value })}
+                            className="h-8 text-xs"
+                            placeholder="Kommunikation"
+                          />
+
+                          <Input
+                            value={row.grammarGoal ?? ""}
+                            onChange={(e) => updateLessonPlanRow(rowIndex, { grammarGoal: e.target.value })}
+                            className="h-8 text-xs"
+                            placeholder="Grammatik"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("curriculumOffItems")}</Label>
+        {offItems.map((item, i) => (
+          <div key={item.id} className="grid grid-cols-[140px_1fr_auto] items-center gap-2">
+            <Input
+              type="date"
+              value={item.date ?? ""}
+              onChange={(e) => updateOffItem(i, { date: e.target.value })}
+              className="h-8 text-xs"
+              aria-label={t("curriculumOffDate")}
+            />
+            <Input
+              value={item.label}
+              onChange={(e) => updateOffItem(i, { label: e.target.value })}
+              className="h-8 text-xs"
+              placeholder={t("curriculumOffItemLabelPlaceholder")}
+            />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeOffItem(i)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addOffItem} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("curriculumHolidayPeriods")}</Label>
+        {holidayPeriods.map((item, i) => (
+          <div key={`${item.id}-${i}`} className="space-y-1.5 rounded-sm border border-slate-200 p-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="date" value={item.startDate} onChange={(e) => updateHoliday(i, { startDate: e.target.value })} className="h-8 text-xs" aria-label={t("curriculumStartDate")} />
+              <Input type="date" value={item.endDate} onChange={(e) => updateHoliday(i, { endDate: e.target.value })} className="h-8 text-xs" aria-label={t("curriculumEndDate")} />
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Input
+                value={item.label}
+                onChange={(e) => updateHoliday(i, { label: e.target.value })}
+                className="h-8 text-xs"
+                placeholder={t("curriculumHolidayLabelPlaceholder")}
+              />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeHoliday(i)}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addHoliday} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("addItem")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Schedule Properties ─────────────────────────────────────
 function ScheduleProps({ block }: { block: ScheduleBlock }) {
   const { dispatch } = useEditor();
   const t = useTranslations("properties");
@@ -15392,6 +15969,8 @@ export function PropertiesPanel() {
         return <TableProps block={selectedBlock as TableCloudBlock} />;
       case "audio":
         return <AudioProps block={selectedBlock as AudioBlock} />;
+      case "curriculum":
+        return <CurriculumProps block={selectedBlock as CurriculumBlock} />;
       case "schedule":
         return <ScheduleProps block={selectedBlock as ScheduleBlock} />;
       case "website":

@@ -83,6 +83,7 @@ import {
   AiPromptBlock,
   AiToolBlock,
   AudioBlock,
+  CurriculumBlock,
   ScheduleBlock,
   WebsiteBlock,
   TableBlock,
@@ -11869,6 +11870,155 @@ function ScheduleView({
   );
 }
 
+function formatCurriculumDate(value: string) {
+  if (!value) return "-";
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+const CURRICULUM_WEEKDAY_SHORT_DE = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"] as const;
+
+function formatCurriculumWeekdayAbbrev(value: string) {
+  if (!value) return "-";
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "-";
+  return CURRICULUM_WEEKDAY_SHORT_DE[d.getDay()];
+}
+
+const CURRICULUM_WEEKDAY_LABELS: Record<
+  "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday",
+  string
+> = {
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
+};
+
+function CurriculumView({ block }: { block: CurriculumBlock }) {
+  const weekdayOrder = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ] as const;
+  const regularCourseWeekdays = block.regularCourseWeekdays ?? ["monday", "tuesday", "wednesday", "thursday", "friday"];
+  const offItems = block.offItems ?? [];
+  const holidayPeriods = block.holidayPeriods ?? [];
+  const lessonPlanFormat = block.lessonPlanFormat ?? "schritte-plus-neu";
+  const lessonPlanRows = block.lessonPlanRows ?? [];
+  const selectedWeekdays = weekdayOrder.filter((weekday) => regularCourseWeekdays.includes(weekday));
+
+  return (
+    <div className="rounded-sm border border-slate-300 bg-white p-3 text-sm">
+      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
+        <span className="font-semibold text-slate-800">Curriculum</span>
+        <span className="text-xs text-slate-500">
+          {formatCurriculumDate(block.termStartDate)} - {formatCurriculumDate(block.termEndDate)}
+        </span>
+      </div>
+
+      <div className="mb-3">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Regular Course Weekdays</div>
+        <div className="flex flex-wrap gap-1">
+          {selectedWeekdays.length ? selectedWeekdays.map((weekday) => (
+            <span key={weekday} className="rounded-sm border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700">
+              {CURRICULUM_WEEKDAY_LABELS[weekday]}
+            </span>
+          )) : <span className="text-xs text-slate-500">-</span>}
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Off Days</div>
+        <div className="space-y-1">
+          {(offItems.length ? offItems : [{ id: "empty", date: "", label: "" }]).map((item) => (
+            <div key={item.id} className="grid grid-cols-[72px_1fr] gap-2 rounded-sm border border-slate-200 px-2 py-1">
+              <span className="text-xs font-medium text-slate-600" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>{formatCurriculumDate(item.date)}</span>
+              <span className="text-xs text-slate-700">{item.label || "-"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Holiday Periods</div>
+        <div className="space-y-1">
+          {(holidayPeriods.length ? holidayPeriods : [{ id: "empty", startDate: "", endDate: "", label: "" }]).map((item, index) => (
+            <div key={`${item.id}-${index}`} className="grid grid-cols-[1fr_1fr_1.2fr] gap-2 rounded-sm border border-slate-200 px-2 py-1">
+              <span className="text-xs text-slate-600" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>{formatCurriculumDate(item.startDate)}</span>
+              <span className="text-xs text-slate-600" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>{formatCurriculumDate(item.endDate)}</span>
+              <span className="text-xs text-slate-700">{item.label || "-"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {lessonPlanFormat === "schritte-plus-neu" ? (
+        <div className="mt-3 overflow-x-auto">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Schritte Plus Neu</div>
+          <table className="w-full table-fixed border-collapse text-xs">
+            <colgroup>
+              <col style={{ width: "2.5rem" }} />
+              <col style={{ width: "6ch" }} />
+              <col style={{ width: "12ch" }} />
+              <col style={{ width: "10ch" }} />
+              <col style={{ width: "10ch" }} />
+              <col style={{ width: "10ch" }} />
+              <col style={{ width: "10ch" }} />
+              <col />
+              <col />
+            </colgroup>
+            <thead>
+              <tr className="bg-slate-50 text-left text-slate-700">
+                <th className="border border-slate-200 px-2 py-1 whitespace-nowrap"></th>
+                <th className="border border-slate-200 px-2 py-1 whitespace-nowrap" colSpan={2}>Datum</th>
+                <th className="border border-slate-200 px-2 py-1 whitespace-nowrap">Lektion</th>
+                <th className="border border-slate-200 px-2 py-1">KB</th>
+                <th className="border border-slate-200 px-2 py-1">AB</th>
+                <th className="border border-slate-200 px-2 py-1">LWS</th>
+                <th className="border border-slate-200 px-2 py-1">Kommunikation</th>
+                <th className="border border-slate-200 px-2 py-1">Grammatik</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                let lessonNumber = 0;
+                return (lessonPlanRows.length ? lessonPlanRows : []).map((row) => {
+                  const lessonNumberLabel = row.isOffDay ? "" : String(++lessonNumber).padStart(2, "0");
+                  return (
+                    <tr key={row.id} className={row.isOffDay ? "bg-amber-50/60" : "bg-white"}>
+                      <td className="border border-slate-200 px-2 py-1 text-slate-700 whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>{lessonNumberLabel}</td>
+                      <td className="border border-slate-200 px-2 py-1 text-slate-700 whitespace-nowrap">{formatCurriculumWeekdayAbbrev(row.date)}</td>
+                      <td className="border border-slate-200 px-2 py-1 whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum" 1' }}>{formatCurriculumDate(row.date)}</td>
+                      <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{row.lesson ?? ""}</td>
+                      <td className="border border-slate-200 px-2 py-1">{row.coursebook}</td>
+                      <td className="border border-slate-200 px-2 py-1">{row.workbook}</td>
+                      <td className="border border-slate-200 px-2 py-1">{row.vocabulary}</td>
+                      <td className="border border-slate-200 px-2 py-1">{row.communicativeGoal}</td>
+                      <td className="border border-slate-200 px-2 py-1">{row.grammarGoal}</td>
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatScheduleCellDate(dateStr: string): { weekday: string; formatted: string } {
   if (!dateStr) return { weekday: "", formatted: "" };
   const d = new Date(`${dateStr}T00:00:00`);
@@ -12943,6 +13093,8 @@ export function ViewerBlockRenderer({
       return <TableView block={block as TableCloudBlock} originalBlock={originalBlock as TableCloudBlock | undefined} mode={mode} showSolutions={showSolutions} accentColor={accentColor} instructionIndex={instructionIndex} />;
     case "audio":
       return <AudioView block={block as AudioBlock} accentColor={accentColor} primaryColor={primaryColor} mode={mode} />;
+    case "curriculum":
+      return <CurriculumView block={block as CurriculumBlock} />;
     case "schedule":
       return <ScheduleView block={block as ScheduleBlock} originalBlock={originalBlock as ScheduleBlock | undefined} brand={brand} bodyFont={bodyFont} isNonLatin={isNonLatin} translationScale={translationScale} primaryColor={primaryColor} />;
     case "website":

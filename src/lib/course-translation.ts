@@ -658,6 +658,37 @@ function forEachBlockTranslationField(
       break;
     }
 
+    case "curriculum": {
+      for (const item of block.offItems) {
+        add(`offItems.${item.id}.label`, () => item.label, (v) => {
+          item.label = v;
+        });
+      }
+      for (const holiday of block.holidayPeriods) {
+        add(`holidayPeriods.${holiday.id}.label`, () => holiday.label, (v) => {
+          holiday.label = v;
+        });
+      }
+      for (const row of block.lessonPlanRows ?? []) {
+        add(`lessonPlanRows.${row.id}.coursebook`, () => row.coursebook, (v) => {
+          row.coursebook = v;
+        });
+        add(`lessonPlanRows.${row.id}.workbook`, () => row.workbook, (v) => {
+          row.workbook = v;
+        });
+        add(`lessonPlanRows.${row.id}.vocabulary`, () => row.vocabulary, (v) => {
+          row.vocabulary = v;
+        });
+        add(`lessonPlanRows.${row.id}.communicativeGoal`, () => row.communicativeGoal, (v) => {
+          row.communicativeGoal = v;
+        });
+        add(`lessonPlanRows.${row.id}.grammarGoal`, () => row.grammarGoal, (v) => {
+          row.grammarGoal = v;
+        });
+      }
+      break;
+    }
+
     case "website": {
       if (!block.skipTranslation) {
         add("title", () => block.title, (v) => {

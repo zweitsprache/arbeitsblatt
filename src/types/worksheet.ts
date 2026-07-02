@@ -84,6 +84,7 @@ export type BlockType =
   | "text-comparison"
   | "accordion"
   | "audio"
+  | "curriculum"
   | "schedule"
   | "website"
   | "checklist"
@@ -1580,6 +1581,59 @@ export interface ScheduleBlock extends BlockBase {
   showHeader?: boolean;
 }
 
+// ─── Curriculum block ───────────────────────────────────────
+export type CurriculumWeekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface CurriculumOffItem {
+  id: string;
+  date: string; // YYYY-MM-DD
+  label: string;
+}
+
+export interface CurriculumHolidayPeriod {
+  id: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  label: string;
+}
+
+export type CurriculumLessonPlanFormat = "schritte-plus-neu" | "treffpunkt-schweiz";
+
+export interface CurriculumLessonPlanRow {
+  id: string;
+  date: string; // YYYY-MM-DD
+  sourceType?: "csv" | "custom";
+  sourceRowIndex?: number;
+  sourceRowIndices?: number[];
+  continuationOfRowId?: string;
+  lesson: string;
+  coursebook: string;
+  workbook: string;
+  vocabulary: string;
+  communicativeGoal: string;
+  grammarGoal: string;
+  isOffDay?: boolean;
+  offReason?: string;
+}
+
+export interface CurriculumBlock extends BlockBase {
+  type: "curriculum";
+  termStartDate: string;
+  termEndDate: string;
+  regularCourseWeekdays: CurriculumWeekday[];
+  offItems: CurriculumOffItem[];
+  holidayPeriods: CurriculumHolidayPeriod[];
+  lessonPlanFormat?: CurriculumLessonPlanFormat;
+  lessonPlanRows?: CurriculumLessonPlanRow[];
+}
+
 // ─── Website block ───────────────────────────────────────────
 export interface WebsiteItem {
   id: string;
@@ -1697,6 +1751,7 @@ export type WorksheetBlock =
   | LogoDividerBlock
   | AccordionBlock
   | AudioBlock
+  | CurriculumBlock
   | ScheduleBlock
   | WebsiteBlock
   | DominoBlock
@@ -3839,6 +3894,32 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     src: "",
     title: "",
     visibility: "online",
+  },
+},
+// ── Curriculum ────────────────────────────────────────────────
+{
+  type: "curriculum",
+  label: "Curriculum",
+  description: "Term range with recurring off-days and holiday periods",
+  labelKey: "curriculum",
+  descriptionKey: "curriculumDesc",
+  icon: "Clock",
+  category: "content",
+  translations: { de: { label: "Curriculum", description: "Zeitraum mit freien Tagen und Ferien" } },
+  defaultData: {
+    type: "curriculum",
+    termStartDate: "",
+    termEndDate: "",
+    regularCourseWeekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    offItems: [
+      { id: "co1", date: "", label: "" },
+    ],
+    holidayPeriods: [
+      { id: "ch1", startDate: "", endDate: "", label: "" },
+    ],
+    lessonPlanFormat: "schritte-plus-neu",
+    lessonPlanRows: [],
+    visibility: "both",
   },
 },
 // ── Schedule ──────────────────────────────────────────────────
