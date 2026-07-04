@@ -5,6 +5,8 @@ import puppeteerCore from "puppeteer-core";
 import { launchBrowser } from "@/lib/puppeteer";
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
+import { getPageDimensionsMm } from "@/lib/print-layout";
+import type { WorksheetSettings } from "@/types/worksheet";
 
 // POST /api/worksheets/[id]/pdf-v3 — generate PDF via Puppeteer (headless Chrome)
 // Query params: locale=DE|CH|NEUTRAL, solutions=1
@@ -57,6 +59,11 @@ export async function POST(
           ? "landscape"
           : "portrait";
   const isLandscapePdf = orientation === "landscape" || orientation === "landscape-canva";
+  const printSettings = {
+    pageSize: (worksheetSettings.pageSize as "a4" | "letter") || "a4",
+    orientation,
+  } as WorksheetSettings;
+  const { widthMm, heightMm } = getPageDimensionsMm(printSettings);
 
   // Check if preview mode is requested
   let isPreview = false;
@@ -72,8 +79,8 @@ export async function POST(
   // Set explicit page dimensions so Chromium generates true landscape pages.
   // Relying on @page + CSS variables is unreliable in PDF mode.
   const pdfOptions = {
-    width: isLandscapePdf ? "297mm" : "210mm",
-    height: isLandscapePdf ? "210mm" : "297mm",
+    width: `${widthMm}mm`,
+    height: `${heightMm}mm`,
     landscape: false,
     margin: { top: 0, right: 0, bottom: 0, left: 0 } as const,
     printBackground: true,

@@ -5,6 +5,7 @@ import { WorksheetBlock, WorksheetSettings, DEFAULT_SETTINGS, DEFAULT_BRAND_SETT
 import { WorksheetViewer } from "@/components/viewer/worksheet-viewer";
 import { applyWorksheetTranslations } from "@/lib/worksheet-translation";
 import { migrateWorksheetLocaleDataToV2, resolveWorksheetLocaleContent } from "@/lib/worksheet-locale-migration";
+import { getPageSizeCss } from "@/lib/print-layout";
 
 // This page is used by Puppeteer for PDF rendering
 export default async function PrintWorksheetPage({
@@ -80,11 +81,7 @@ export default async function PrintWorksheetPage({
     orientation: hasTenStopWordTabooBlock ? "portrait" : (cardBlocksForceCanva ? "landscape-canva" : migratedLocaleData.settings.orientation),
     brandSettings: resolvedBrandSettings,
   };
-  const effectiveOrientation = settings.orientation === "portrait" ? "portrait" : "landscape";
-  const pageSizeCss =
-    effectiveOrientation === "landscape"
-      ? "297mm 210mm"
-      : "210mm 297mm";
+  const pageSizeCss = getPageSizeCss(settings);
 
   let title = migratedLocaleData.title;
 

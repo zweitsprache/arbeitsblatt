@@ -13,6 +13,7 @@ import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
+import { getPageDimensionsPx, getPrintFooterReservePx } from "@/lib/print-layout";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "ps", "ur", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
@@ -114,9 +115,7 @@ export function WorksheetViewer({
 
   const isCanvaLandscape = settings.orientation === "landscape-canva";
   const isLandscape = settings.orientation === "landscape" || isCanvaLandscape;
-  const pageWidth = settings.pageSize === "a4"
-    ? (isLandscape ? 1123 : 794)
-    : (isLandscape ? 1056 : 816);
+  const { widthPx: pageWidth } = getPageDimensionsPx(settings);
   const onlinePageWidth = pageWidth + 260;
 
   // Resolve brand profile: prefer prop, then static fallback, then apply per-worksheet overrides
@@ -312,7 +311,7 @@ export function WorksheetViewer({
   const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
   const showTablePrintHeader = showPrintHeader && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintHeader;
   const showTablePrintFooter = showPrintFooter && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
-  const printBottomReservePx = showTablePrintFooter ? Math.max(settings.margins.bottom || 0, 95) : 0;
+  const printBottomReservePx = getPrintFooterReservePx(settings, showTablePrintFooter);
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);

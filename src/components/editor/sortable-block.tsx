@@ -52,6 +52,7 @@ export function SortableBlock({
   const canManageVisibility = access.features.manageBlockVisibility;
   const canDuplicate = access.features.duplicateBlocks;
   const canDelete = access.features.deleteBlocks;
+  const isPrintMode = mode === "print";
 
   const {
     attributes,
@@ -91,117 +92,117 @@ export function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative transition-all
-        ${isDragging ? "opacity-30 z-50" : ""}
-        ${isSelected ? "ring-1 ring-slate-400 bg-slate-50" : ""}
-        ${!isVisibleInMode ? "opacity-40" : ""}
-      `}
+      className={`group relative transition-all ${isDragging && !isPrintMode ? "opacity-30 z-50" : ""} ${isSelected && !isPrintMode ? "ring-1 ring-slate-400 bg-slate-50" : ""} ${!isVisibleInMode ? "opacity-40" : ""}`}
       onClick={() => dispatch({ type: "SELECT_BLOCK", payload: block.id })}
     >
-      {/* Block toolbar */}
-      <div
-        className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-[4px] shadow-sm px-1 py-0.5 z-10
-          ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
-          transition-opacity`}
-      >
-        {/* Drag handle */}
-        <button
-          className="p-1 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
-          disabled={!canReorder}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-        </button>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
+      {!isPrintMode && (
+        <>
+          {/* Block toolbar */}
+          <div
+            className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-background border rounded-[4px] shadow-sm px-1 py-0.5 z-10
+              ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
+              transition-opacity`}
+          >
+            {/* Drag handle */}
             <button
-              className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveUp || !canReorder}
-              onClick={(e) => {
-                e.stopPropagation();
-                moveBlockByStep(block.id, "up");
-              }}
+              className="p-1 hover:bg-muted rounded cursor-grab active:cursor-grabbing"
+              disabled={!canReorder}
+              {...attributes}
+              {...listeners}
             >
-              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground" />
+              <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{tb("moveBlockUp")}</p>
-          </TooltipContent>
-        </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
-              disabled={!canMoveDown || !canReorder}
-              onClick={(e) => {
-                e.stopPropagation();
-                moveBlockByStep(block.id, "down");
-              }}
-            >
-              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{tb("moveBlockDown")}</p>
-          </TooltipContent>
-        </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+                  disabled={!canMoveUp || !canReorder}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveBlockByStep(block.id, "up");
+                  }}
+                >
+                  <ArrowUp className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{tb("moveBlockUp")}</p>
+              </TooltipContent>
+            </Tooltip>
 
-        {/* Visibility toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="p-1 hover:bg-muted rounded disabled:opacity-40 disabled:hover:bg-transparent"
+                  disabled={!canMoveDown || !canReorder}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveBlockByStep(block.id, "down");
+                  }}
+                >
+                  <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{tb("moveBlockDown")}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Visibility toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="p-1 hover:bg-muted rounded"
+                  disabled={!canManageVisibility}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    cycleVisibility();
+                  }}
+                >
+                  <VisIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">{tb("visibleLabel", { visibility })}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Duplicate */}
             <button
               className="p-1 hover:bg-muted rounded"
-              disabled={!canManageVisibility}
+              disabled={!canDuplicate}
               onClick={(e) => {
                 e.stopPropagation();
-                cycleVisibility();
+                duplicateBlock(block.id);
               }}
             >
-              <VisIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{tb("visibleLabel", { visibility })}</p>
-          </TooltipContent>
-        </Tooltip>
 
-        {/* Duplicate */}
-        <button
-          className="p-1 hover:bg-muted rounded"
-          disabled={!canDuplicate}
-          onClick={(e) => {
-            e.stopPropagation();
-            duplicateBlock(block.id);
-          }}
-        >
-          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-        </button>
+            {/* Delete */}
+            <button
+              className="p-1 hover:bg-destructive/10 rounded"
+              disabled={!canDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "REMOVE_BLOCK", payload: block.id });
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </button>
+          </div>
 
-        {/* Delete */}
-        <button
-          className="p-1 hover:bg-destructive/10 rounded"
-          disabled={!canDelete}
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch({ type: "REMOVE_BLOCK", payload: block.id });
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-        </button>
-      </div>
-
-      {/* Visibility badge */}
-      {visibility !== "both" && (
-        <Badge
-          variant="secondary"
-          className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 z-10"
-        >
-          {visibility === "print" ? tc("printOnly") : tc("onlineOnly")}
-        </Badge>
+          {/* Visibility badge */}
+          {visibility !== "both" && (
+            <Badge
+              variant="secondary"
+              className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 z-10"
+            >
+              {visibility === "print" ? tc("printOnly") : tc("onlineOnly")}
+            </Badge>
+          )}
+        </>
       )}
 
       {/* Block content */}

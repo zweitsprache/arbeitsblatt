@@ -14,6 +14,13 @@ import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 import {
+  getPageDimensionsPx,
+  getPrintBodyHeightPx,
+  getPrintFooterReservePx,
+  getPrintHeaderHeightPx,
+  mmToPx,
+} from "@/lib/print-layout";
+import {
   applyBrandOverrides,
   resolveBrandLogo,
   resolveSubProfileHeaderFooter,
@@ -82,23 +89,13 @@ export function WorksheetCanvas({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const isPresentationMode = (state.settings as any)._presentationMode === true;
   const isLandscape = state.settings.orientation === "landscape" || state.settings.orientation === "landscape-canva";
-  const mmToPx = (value: number) => (value * 96) / 25.4;
 
-  // Page dimensions (A4 at 96 DPI = 794 x 1123, landscape swaps those values)
-  const pageWidth = isPresentationMode
-    ? 1120
-    : state.settings.pageSize === "a4"
-      ? (isLandscape ? 1123 : 794)
-      : (isLandscape ? 1056 : 816);
-  const pageHeight = isPresentationMode
-    ? 630
-    : state.settings.pageSize === "a4"
-      ? (isLandscape ? 794 : 1123)
-      : (isLandscape ? 816 : 1056);
+  // Page dimensions (A4/Letter at 96 DPI, landscape swaps those values)
+  const { widthPx: pageWidth, heightPx: printPageHeight } = getPageDimensionsPx(state.settings);
+  const pageHeight = isPresentationMode ? 630 : printPageHeight;
 
   // Fixed print regions (match print CSS exactly, converted mm → px)
-  const HEADER_HEIGHT = mmToPx(30); // .print-header-content height
-  const FOOTER_HEIGHT = mmToPx(25); // --print-tfoot-height
+  const HEADER_HEIGHT = getPrintHeaderHeightPx(); // .print-header-content height
   const BODY_SIDE_PADDING = mmToPx(20); // .print-body-content left/right padding
 
   // ─── Resolve header/footer from brand settings ─────────────
@@ -175,9 +172,41 @@ export function WorksheetCanvas({
     ? `color-mix(in srgb, ${resolvedProfile.primaryColor} 6%, white)`
     : "#f1f5f9";
 
+  const footerReserveHeight = getPrintFooterReservePx(state.settings, showFooter);
+
   // Usable height for body content = page height minus header/footer regions
-  const usableHeight =
-    pageHeight - (showHeader ? HEADER_HEIGHT : 0) - (showFooter ? FOOTER_HEIGHT : 0);
+  const usableHeight = getPrintBodyHeightPx(state.settings, pageHeight, showHeader, showFooter);
+
+  const blockGap = resolvedProfile.blockGap || "1.5rem";
+
+  const parseGapToPx = React.useCallback((value: string): number => {
+    const trimmed = value.trim();
+    const numeric = Number.parseFloat(trimmed);
+    if (!Number.isFinite(numeric)) return 24;
+    if (trimmed.endsWith("px")) return numeric;
+    if (trimmed.endsWith("mm")) return mmToPx(numeric);
+    if (trimmed.endsWith("rem")) return numeric * 16;
+    return numeric;
+  }, []);
+  const blockGapPx = parseGapToPx(blockGap);
+
+  const isCardSheetBlock = (block: WorksheetBlock) => (
+    block.type === "domino" ||
+    block.type === "flashcards" ||
+    block.type === "aufgabenkarten" ||
+    block.type === "bingo-cards" ||
+    block.type === "quartett" ||
+    block.type === "taboo" ||
+    block.type === "syllable-cards"
+  );
+
+  const getSiblingGapPx = React.useCallback((previousBlock: WorksheetBlock | undefined, block: WorksheetBlock): number => {
+    if (!previousBlock) return 0;
+    if (previousBlock.type === "page-break") return 0;
+    if (isCardSheetBlock(previousBlock) && isCardSheetBlock(block)) return 0;
+
+    return blockGapPx;
+  }, [blockGapPx]);
 
   // Break blocks into pages based on actual rendered heights
   const pages = React.useMemo(() => {
@@ -192,6 +221,13 @@ export function WorksheetCanvas({
 
       const isManualBreak = block.type === "page-break";
 
+      const previousBlock = currentPage.blocks[currentPage.blocks.length - 1];
+      const interBlockGap = getSiblingGapPx(previousBlock, block);
+
+      if (!isManualBreak && interBlockGap > 0) {
+        currentPage.height += interBlockGap;
+      }
+
       // If adding this block would exceed the page, start a new page
       if (
         !isManualBreak &&
@@ -203,7 +239,9 @@ export function WorksheetCanvas({
       }
 
       currentPage.blocks.push(block);
-      currentPage.height += blockHeight;
+      if (!isManualBreak) {
+        currentPage.height += blockHeight;
+      }
 
       // Manual page break: finalize this page so following blocks start on a new page
       if (isManualBreak) {
@@ -217,7 +255,7 @@ export function WorksheetCanvas({
     }
 
     return result;
-  }, [state.blocks, usableHeight]);
+  }, [state.blocks, usableHeight, getSiblingGapPx]);
 
   return (
     <div
@@ -243,7 +281,7 @@ export function WorksheetCanvas({
                     height: pageHeight,
                     padding: isPresentationMode
                       ? "40px 60px"
-                      : `${HEADER_HEIGHT}px ${BODY_SIDE_PADDING}px ${FOOTER_HEIGHT}px ${BODY_SIDE_PADDING}px`,
+                      : `${showHeader ? HEADER_HEIGHT : 0}px ${BODY_SIDE_PADDING}px ${footerReserveHeight}px ${BODY_SIDE_PADDING}px`,
                     backgroundColor: "white",
                     borderRadius: "4px",
                     boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
@@ -323,10 +361,10 @@ export function WorksheetCanvas({
 
                     {/* Blocks on this page — body region with left/right padding only */}
                     <div
+                      className="print-body-content"
                       style={{
                         flex: "1 1 auto",
                         minHeight: 0,
-                        overflow: "hidden",
                         paddingLeft: BODY_SIDE_PADDING,
                         paddingRight: BODY_SIDE_PADDING,
                         fontSize: resolvedBodyFontSize,
@@ -337,7 +375,6 @@ export function WorksheetCanvas({
                         const isOverThis = overId === block.id;
                         const isActiveBlock = activeId === block.id;
                         const previousBlock = page.blocks[blockIndex - 1];
-                        const followsNumberedHeading = previousBlock?.type === "numbered-heading";
 
                         const showAbove =
                           blockIndex === 0 &&
@@ -363,15 +400,18 @@ export function WorksheetCanvas({
                                   blockRefs.current.set(block.id, el);
                                 }
                               }}
-                              style={
-                                blockIndex > 0
-                                  ? { marginTop: followsNumberedHeading ? 0 : "var(--block-gap, 6px)" }
-                                  : undefined
-                              }
+                              data-block-id={block.id}
+                              className={`worksheet-block worksheet-block-${block.type}`}
+                              {...(block.type === "text" && !!(block as { tightTop?: boolean }).tightTop ? { "data-tight": "true" } : {})}
+                              {...(block.type === "heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual) } : {})}
+                              {...(block.type === "numbered-heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual), "data-numbered-heading": "true" } : {})}
+                              {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
+                              {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
+                              style={blockIndex > 0 ? { marginTop: getSiblingGapPx(previousBlock, block) } : undefined}
                             >
                               <SortableBlock
                                 block={block}
-                                mode={state.viewMode}
+                                mode="print"
                               />
                             </div>
                             {isDragging && !isActiveBlock && (
@@ -387,7 +427,7 @@ export function WorksheetCanvas({
                       <div
                         aria-hidden="true"
                         style={{
-                          height: FOOTER_HEIGHT,
+                          height: footerReserveHeight,
                           padding: `0 ${mmToPx(15)}px ${mmToPx(8)}px ${mmToPx(15)}px`,
                           boxSizing: "border-box",
                           display: "flex",
