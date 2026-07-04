@@ -1,10 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 
 const locale = process.env.PLAYWRIGHT_LOCALE || "de";
 const targetHeadingText = "In meiner Wohnung";
 
 async function pulseFocus(
-  locator: Parameters<typeof expect>[0],
+  locator: Locator,
   holdMs = 700,
   scale = 1.08,
   padding: number | { x: number; top: number; bottom: number } = 14
@@ -22,7 +22,7 @@ async function pulseFocus(
   const overlayId = `pw-highlight-${Date.now()}`;
 
   await page.evaluate(
-    ({ id, boxModel, nextScale, gap }) => {
+    ({ id, boxModel, nextScale, gap }: { id: string; boxModel: { x: number; y: number; width: number; height: number }; nextScale: number; gap: { x: number; top: number; bottom: number } }) => {
       const overlay = document.createElement("div");
       overlay.id = id;
       overlay.style.position = "fixed";
@@ -45,7 +45,7 @@ async function pulseFocus(
   );
 
   await page.waitForTimeout(holdMs);
-  await page.evaluate((id) => document.getElementById(id)?.remove(), overlayId);
+  await page.evaluate((id: string) => document.getElementById(id)?.remove(), overlayId);
 }
 
 test.describe("tutorial recording", () => {

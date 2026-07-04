@@ -20,6 +20,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { EditorProvider, useEditor } from "@/store/editor-store";
 import { BlockSidebar } from "./block-sidebar";
 import { WorksheetCanvas } from "./worksheet-canvas";
+import { WorksheetCanvasV3 } from "./worksheet-canvas-v3";
 import { PropertiesPanel } from "./properties-panel";
 import { EditorToolbar } from "./editor-toolbar";
 import { WorksheetDocument, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/types/worksheet";
@@ -33,7 +34,7 @@ function EditorInner({
   editorVersion,
 }: {
   initialData?: WorksheetDocument | null;
-  editorVersion: "v1" | "v2";
+  editorVersion: "v1" | "v2" | "v3";
 }) {
   const { state, dispatch, addBlock, canAddBlockType, save } = useEditor();
   const tb = useTranslations("blocks");
@@ -42,6 +43,29 @@ function EditorInner({
   const [overId, setOverId] = useState<string | null>(null);
   const [overPosition, setOverPosition] = useState<"above" | "below">("below");
   const [showPageGuides, setShowPageGuides] = useState(true);
+
+  const normalizeV3DropTarget = useCallback((rawOverId: string | null): {
+    overId: string | null;
+    position: "above" | "below";
+  } => {
+    if (!rawOverId) {
+      return { overId: null, position: "below" };
+    }
+
+    if (rawOverId === "v3-lane-end") {
+      return { overId: null, position: "below" };
+    }
+
+    const laneMatch = rawOverId.match(/^v3-lane-(before|after)-(.+)$/);
+    if (laneMatch) {
+      return {
+        overId: laneMatch[2],
+        position: laneMatch[1] === "before" ? "above" : "below",
+      };
+    }
+
+    return { overId: rawOverId, position: "below" };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -97,8 +121,14 @@ function EditorInner({
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    const overId = event.over?.id as string | null;
-    setOverId(overId);
+    const rawOverId = event.over?.id as string | null;
+    const normalized = normalizeV3DropTarget(rawOverId);
+    setOverId(normalized.overId);
+
+    if (rawOverId?.startsWith("v3-lane-")) {
+      setOverPosition(normalized.position);
+      return;
+    }
 
     // Determine if pointer is in the top or bottom half of the over element
     if (event.over && event.activatorEvent && 'clientY' in event.activatorEvent) {
@@ -108,7 +138,7 @@ function EditorInner({
       const midY = overRect.top + overRect.height / 2;
       setOverPosition(pointerY < midY ? "above" : "below");
     }
-  }, []);
+  }, [normalizeV3DropTarget]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
@@ -116,6 +146,12 @@ function EditorInner({
     const { active, over } = event;
     const activeData = active.data.current;
     const overData = over?.data.current;
+    const rawOverId = (over?.id as string | undefined) ?? null;
+    const normalizedTarget = normalizeV3DropTarget(rawOverId);
+    const normalizedOverId = normalizedTarget.overId;
+    const normalizedOverPosition = rawOverId?.startsWith("v3-lane-")
+      ? normalizedTarget.position
+      : overPosition;
 
     // ── 1. Dragging from sidebar library ──────────────────────
     if (activeData?.type === "library-block") {
@@ -154,10 +190,10 @@ function EditorInner({
         return;
       }
 
-      if (over) {
-        const overIndex = state.blocks.findIndex((b) => b.id === over.id);
+      if (normalizedOverId) {
+        const overIndex = state.blocks.findIndex((b) => b.id === normalizedOverId);
         if (overIndex >= 0) {
-          addBlock(blockType, overPosition === "above" ? overIndex : overIndex + 1);
+          addBlock(blockType, normalizedOverPosition === "above" ? overIndex : overIndex + 1);
         } else {
           addBlock(blockType);
         }
@@ -185,8 +221,8 @@ function EditorInner({
       }
 
       // Dropped on a top-level sortable block → move out of column to top level
-      if (over) {
-        const overTopLevelId = over.id as string;
+      if (normalizedOverId) {
+        const overTopLevelId = normalizedOverId;
         // Only proceed if the over target is a top-level block
         const isTopLevel = state.blocks.some((b) => b.id === overTopLevelId);
         if (isTopLevel) {
@@ -207,7 +243,7 @@ function EditorInner({
     }
 
     // ── 3. Dragging a top-level sortable block ────────────────
-    if (over && active.id !== over.id) {
+    if (normalizedOverId && active.id !== normalizedOverId) {
       // Dropped into a column
       if (overData?.type === "column-drop") {
         const { blockId: targetParentId, colIndex: targetColIndex } = overData as {
@@ -228,7 +264,7 @@ function EditorInner({
       // Normal top-level reorder
       dispatch({
         type: "MOVE_BLOCK",
-        payload: { activeId: active.id as string, overId: over.id as string, position: overPosition },
+        payload: { activeId: active.id as string, overId: normalizedOverId, position: normalizedOverPosition },
       });
     }
   };
@@ -261,12 +297,21 @@ function EditorInner({
         />
         <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
           <BlockSidebar onAddBlock={(type) => addBlock(type)} canAddBlock={canAddBlockType} />
-          <WorksheetCanvas
-            activeId={activeId}
-            overId={overId}
-            overPosition={overPosition}
-            showPageGuides={showPageGuides}
-          />
+          {editorVersion === "v3" ? (
+            <WorksheetCanvasV3
+              activeId={activeId}
+              overId={overId}
+              overPosition={overPosition}
+              showPageGuides={showPageGuides}
+            />
+          ) : (
+            <WorksheetCanvas
+              activeId={activeId}
+              overId={overId}
+              overPosition={overPosition}
+              showPageGuides={showPageGuides}
+            />
+          )}
           <PropertiesPanel />
         </div>
       </div>
@@ -297,7 +342,7 @@ export function WorksheetEditor({
   editorVersion = "v1",
 }: {
   initialData?: WorksheetDocument | null;
-  editorVersion?: "v1" | "v2";
+  editorVersion?: "v1" | "v2" | "v3";
 }) {
   const { payload, isLoading } = useUserAccess();
 

@@ -4826,8 +4826,7 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
 
 // ─── Sorting Categories ─────────────────────────────────────
 function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
-  const { dispatch } = useEditor();
-  const { localeUpdate } = useLocaleAwareEdit();
+  useEditor();
   const colorCodeEnabled = !!block.colorCode;
   const useTwoColumnCategoryLines = block.categories.length === 2 && !!block.twoColumnCategoryLines;
   const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
@@ -4859,11 +4858,6 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
   };
   const getCategoryExampleItem = (catId: string) =>
     exampleCategoryId === catId ? exampleItem : undefined;
-
-  const getCategoryLabelPath = (catId: string) => {
-    const catIdx = block.categories.findIndex((cat) => cat.id === catId);
-    return `categories.${catIdx}.label`;
-  };
 
   const categoryPalette = [
     { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
@@ -4898,51 +4892,6 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
     );
   };
 
-  const updateItem = (id: string, text: string) => {
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: {
-          items: block.items.map((item) =>
-            item.id === id ? { ...item, text } : item
-          ),
-        },
-      },
-    });
-  };
-
-  const removeItem = (itemId: string) => {
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: {
-          items: block.items.filter((item) => item.id !== itemId),
-          categories: block.categories.map((cat) => ({
-            ...cat,
-            correctItems: cat.correctItems.filter((id) => id !== itemId),
-          })),
-        },
-      },
-    });
-  };
-
-  const updateCategoryLabel = (catId: string, label: string) => {
-    localeUpdate(block.id, getCategoryLabelPath(catId), label, () =>
-      dispatch({
-        type: "UPDATE_BLOCK",
-        payload: {
-          id: block.id,
-          updates: {
-            categories: block.categories.map((cat) =>
-              cat.id === catId ? { ...cat, label } : cat
-            ),
-          },
-        },
-      })
-    );
-  };
 
   return (
     <div>
@@ -4956,7 +4905,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
           return (
             <span
               key={item.id}
-              className="group/item relative rounded border px-2 py-0.5"
+              className="relative rounded border px-2 py-0.5"
               style={colorCodeEnabled
                 ? {
                     backgroundColor: itemTheme.itemBg,
@@ -4965,30 +4914,9 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                   }
                 : undefined}
             >
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                className="outline-none"
-                style={{ color: isExampleItem ? "#0097dc" : undefined }}
-                onBlur={(e) => {
-                  const value = e.currentTarget.textContent || "";
-                  const arrIdx = block.items.findIndex((w) => w.id === item.id);
-                  localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                    updateItem(item.id, value)
-                  );
-                }}
-              >
+              <span style={{ color: isExampleItem ? "#0097dc" : undefined }}>
                 {isExampleItem ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
               </span>
-              <button
-                className="absolute -right-2 -top-2 opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded bg-background transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeItem(item.id);
-                }}
-              >
-                <X className="h-3 w-3 text-destructive" />
-              </button>
             </span>
           );
         })}
@@ -5041,14 +4969,7 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
                     }
                   : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottomColor: "#f8fafc" }}
               >
-                <span
-                  className="font-semibold outline-none block"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) => updateCategoryLabel(cat.id, e.currentTarget.textContent || "")}
-                >
-                  {cat.label}
-                </span>
+                <span className="font-semibold block">{cat.label}</span>
               </div>
               {renderWritingRows(rows)}
             </div>

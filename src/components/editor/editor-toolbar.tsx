@@ -68,7 +68,7 @@ export function EditorToolbar({
   showPageGuides,
   onTogglePageGuides,
 }: {
-  editorVersion?: "v1" | "v2";
+  editorVersion?: "v1" | "v2" | "v3";
   showPageGuides: boolean;
   onTogglePageGuides: (value: boolean) => void;
 }) {
@@ -135,7 +135,7 @@ export function EditorToolbar({
       cancelled = true;
     };
   }, [pdfLocaleDialog.open, state.worksheetId]);
-  const editorV2Enabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
+  const editorVersionSwitchEnabled = process.env.NEXT_PUBLIC_ENABLE_EDITOR_V3 === "1" || process.env.NEXT_PUBLIC_ENABLE_EDITOR_V2 === "1";
   const cardBlocksForceCanva = state.blocks.some((block) => block.type === "domino" || block.type === "flashcards" || block.type === "aufgabenkarten");
   const effectivePdfFormat = cardBlocksForceCanva ? "landscape-canva" : (state.settings.orientation || "portrait");
   const canEditTitle = access.features.editTitle;
@@ -144,6 +144,12 @@ export function EditorToolbar({
   const canExportWorksheet = access.features.exportWorksheet;
   const canSaveWorksheet = access.features.saveWorksheet;
   const canPublishWorksheet = access.features.publishWorksheet;
+
+  const getEditorBasePath = (version: "v1" | "v2" | "v3") => {
+    if (version === "v2") return "editor-v2";
+    if (version === "v3") return "editor-v3";
+    return "editor";
+  };
 
   const handleOpenPrintPreviewInNewTab = async (showSolutions = false) => {
     if (!state.slug) {
@@ -324,7 +330,7 @@ export function EditorToolbar({
             published: data.published,
           },
         });
-        const basePath = editorVersion === "v2" ? "editor-v2" : "editor";
+        const basePath = getEditorBasePath(editorVersion);
         window.history.replaceState(null, "", `/${locale}/${basePath}/${data.id}`);
       }
       dispatch({ type: "MARK_SAVED" });
@@ -343,7 +349,8 @@ export function EditorToolbar({
   };
 
   const handleSwitchEditorVersion = () => {
-    const targetBase = editorVersion === "v2" ? "editor" : "editor-v2";
+    const targetVersion: "v1" | "v3" = editorVersion === "v1" ? "v3" : "v1";
+    const targetBase = getEditorBasePath(targetVersion);
     const target = state.worksheetId
       ? `/${locale}/${targetBase}/${state.worksheetId}`
       : `/${locale}/${targetBase}`;
@@ -396,14 +403,14 @@ export function EditorToolbar({
 
         <div className="flex-1" />
 
-        {editorV2Enabled && (
+        {editorVersionSwitchEnabled && (
           <Button
             variant="outline"
             size="sm"
             className={cn("h-8 gap-1.5", terracottaOutlineButtonClass)}
             onClick={handleSwitchEditorVersion}
           >
-            {editorVersion === "v2" ? t("editorSwitchToV1") : t("editorSwitchToV2")}
+            {editorVersion === "v1" ? t("editorSwitchToV3") : t("editorSwitchToV1")}
           </Button>
         )}
 
@@ -629,7 +636,7 @@ export function EditorToolbar({
       <PrintPreview
         open={showPrintPreview}
         onOpenChange={setShowPrintPreview}
-        engine={editorVersion === "v2" ? "pagedjs" : "default"}
+        engine={editorVersion === "v1" ? "default" : "pagedjs"}
       />
 
       {/* PDF Locale Picker Dialog */}

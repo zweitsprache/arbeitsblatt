@@ -4,6 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import { v4 as uuidv4 } from "uuid";
 import { authFetch } from "@/lib/auth-fetch";
 import { deepCloneBlocksWithNewIds } from "@/lib/block-utils";
+import { composePages } from "@/lib/page-composer";
 import { migrateWorksheetLocaleDataToV2 } from "@/lib/worksheet-locale-migration";
 import {
   WorksheetBlock,
@@ -24,6 +25,12 @@ import {
   canUseEditorFeature,
   isBlockTypeAllowed,
 } from "@/types/user-access";
+import {
+  INITIAL_PAGE_COMPOSITION_STATE,
+  type PageComposerMode,
+  type PageCompositionSnapshot,
+  type PageCompositionState,
+} from "@/types/page-composition";
 
 export type LocaleMode = "DE" | "CH";
 
@@ -43,6 +50,7 @@ interface EditorState {
   published: boolean;
   brandProfile: BrandProfile;
   availableBrands: BrandProfile[];
+  pageComposition: PageCompositionState;
 }
 
 const initialState: EditorState = {
@@ -60,6 +68,7 @@ const initialState: EditorState = {
   published: false,
   brandProfile: getStaticBrandProfile("edoomio"),
   availableBrands: [],
+  pageComposition: INITIAL_PAGE_COMPOSITION_STATE,
 };
 
 // ─── Actions ─────────────────────────────────────────────────
@@ -91,7 +100,27 @@ type EditorAction =
   | { type: "MOVE_BLOCK_BETWEEN_COLUMNS"; payload: { blockId: string; targetParentId: string; targetColIndex: number } }
   | { type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP"; payload: { id: string; direction: "up" | "down" } }
   | { type: "SET_BRAND_PROFILE"; payload: BrandProfile }
-  | { type: "SET_AVAILABLE_BRANDS"; payload: BrandProfile[] };
+  | { type: "SET_AVAILABLE_BRANDS"; payload: BrandProfile[] }
+  | { type: "SET_PAGE_COMPOSER_MODE"; payload: PageComposerMode }
+  | { type: "SET_PAGE_COMPOSITION"; payload: PageCompositionSnapshot }
+  | { type: "MARK_PAGE_COMPOSITION_STALE" }
+  | { type: "CLEAR_PAGE_COMPOSITION" };
+
+function markPageCompositionStale(current: PageCompositionState): PageCompositionState {
+  return {
+    ...current,
+    status: current.pages.length > 0 ? "stale" : "idle",
+    dirty: true,
+    revision: current.revision + 1,
+  };
+}
+
+function withStalePageComposition(nextState: EditorState): EditorState {
+  return {
+    ...nextState,
+    pageComposition: markPageCompositionStale(nextState.pageComposition),
+  };
+}
 
 // ─── Reducer ─────────────────────────────────────────────────
 
@@ -273,11 +302,15 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         settings: { ...DEFAULT_SETTINGS, ...migrated.settings },
         published: action.payload.published,
         isDirty: false,
+        pageComposition: {
+          ...INITIAL_PAGE_COMPOSITION_STATE,
+          mode: state.pageComposition.mode,
+        },
       };
       }
 
     case "SET_TITLE":
-      return { ...state, title: action.payload, isDirty: true };
+      return withStalePageComposition({ ...state, title: action.payload, isDirty: true });
 
     case "ADD_BLOCK": {
       const { block, index } = action.payload;
@@ -290,26 +323,26 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       } else {
         newBlocks.push(block);
       }
-      return { ...state, blocks: newBlocks, selectedBlockId: block.id, isDirty: true };
+      return withStalePageComposition({ ...state, blocks: newBlocks, selectedBlockId: block.id, isDirty: true });
     }
 
     case "UPDATE_BLOCK":
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: deepMapBlocks(state.blocks, (b) =>
           b.id === action.payload.id ? { ...b, ...action.payload.updates } as WorksheetBlock : b
         ),
         isDirty: true,
-      };
+      });
 
     case "REMOVE_BLOCK":
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: deepFilterBlocks(state.blocks, (b) => b.id !== action.payload),
         selectedBlockId:
           state.selectedBlockId === action.payload ? null : state.selectedBlockId,
         isDirty: true,
-      };
+      });
 
     case "MOVE_BLOCK": {
       const { activeId, overId, position } = action.payload;
@@ -328,7 +361,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         insertIndex = oldIndex < newIndex ? newIndex : newIndex;
       }
       newBlocks.splice(insertIndex, 0, moved);
-      return { ...state, blocks: newBlocks, isDirty: true };
+      return withStalePageComposition({ ...state, blocks: newBlocks, isDirty: true });
     }
 
     case "MOVE_BLOCK_BY_STEP": {
@@ -342,11 +375,11 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       const [moved] = newBlocks.splice(currentIndex, 1);
       newBlocks.splice(targetIndex, 0, moved);
 
-      return { ...state, blocks: newBlocks, isDirty: true };
+      return withStalePageComposition({ ...state, blocks: newBlocks, isDirty: true });
     }
 
     case "REORDER_BLOCKS":
-      return { ...state, blocks: action.payload, isDirty: true };
+      return withStalePageComposition({ ...state, blocks: action.payload, isDirty: true });
 
     case "SELECT_BLOCK":
       return {
@@ -363,14 +396,14 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, viewMode: action.payload };
 
     case "UPDATE_SETTINGS":
-      return {
+      return withStalePageComposition({
         ...state,
         settings: { ...state.settings, ...action.payload },
         isDirty: true,
-      };
+      });
 
     case "SET_BLOCK_VISIBILITY":
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: deepMapBlocks(state.blocks, (b) =>
           b.id === action.payload.id
@@ -378,10 +411,10 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
             : b
         ),
         isDirty: true,
-      };
+      });
 
     case "SET_BLOCK_DISPLAY_ON":
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: deepMapBlocks(state.blocks, (b) => {
           if (b.id !== action.payload.id) return b;
@@ -402,7 +435,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           } as WorksheetBlock;
         }),
         isDirty: true,
-      };
+      });
 
     case "SET_SAVING":
       return { ...state, isSaving: action.payload };
@@ -411,7 +444,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, isDirty: false, isSaving: false };
 
     case "SET_PUBLISHED":
-      return { ...state, published: action.payload, isDirty: true };
+      return withStalePageComposition({ ...state, published: action.payload, isDirty: true });
 
     case "SET_LOCALE_MODE":
       return { ...state, localeMode: action.payload };
@@ -419,7 +452,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case "SET_CH_OVERRIDE": {
       const { blockId, fieldPath, value } = action.payload;
       const existing = state.settings.chOverrides || {};
-      return {
+      return withStalePageComposition({
         ...state,
         settings: {
           ...state.settings,
@@ -432,7 +465,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           },
         },
         isDirty: true,
-      };
+      });
     }
 
     case "CLEAR_CH_OVERRIDE": {
@@ -446,33 +479,33 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       } else {
         newOverrides[blockId] = blockOverrides;
       }
-      return {
+      return withStalePageComposition({
         ...state,
         settings: {
           ...state.settings,
           chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
         },
         isDirty: true,
-      };
+      });
     }
 
     case "CLEAR_BLOCK_CH_OVERRIDES": {
       const existing = state.settings.chOverrides || {};
       const newOverrides = { ...existing };
       delete newOverrides[action.payload];
-      return {
+      return withStalePageComposition({
         ...state,
         settings: {
           ...state.settings,
           chOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
         },
         isDirty: true,
-      };
+      });
     }
 
     case "DUPLICATE_IN_COLUMN": {
       const { parentBlockId, colIndex, block: newBlock, afterIndex } = action.payload;
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: state.blocks.map((b) => {
           if (b.id !== parentBlockId || !CONTAINER_TYPES.has(b.type)) return b;
@@ -484,7 +517,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         }),
         selectedBlockId: newBlock.id,
         isDirty: true,
-      };
+      });
     }
 
     case "MOVE_BLOCK_TO_COLUMN": {
@@ -496,7 +529,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       // Don't allow dropping a container block into a container
       if (CONTAINER_TYPES.has(block.type)) return state;
       const newBlocks = state.blocks.filter((b) => b.id !== blockId);
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: newBlocks.map((b) => {
           if (b.id !== targetParentId || !CONTAINER_TYPES.has(b.type)) return b;
@@ -505,7 +538,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           return setContainerSlot(b, targetColIndex, [...slot, block]);
         }),
         isDirty: true,
-      };
+      });
     }
 
     case "MOVE_BLOCK_FROM_COLUMN_TO_TOP": {
@@ -530,7 +563,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       } else {
         cleanedBlocks.push(block);
       }
-      return { ...state, blocks: cleanedBlocks, isDirty: true };
+      return withStalePageComposition({ ...state, blocks: cleanedBlocks, isDirty: true });
     }
 
     case "MOVE_BLOCK_BETWEEN_COLUMNS": {
@@ -553,7 +586,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         newBlocks = state.blocks.filter((b) => b.id !== blockId);
       }
       // Insert into target container
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: newBlocks.map((b) => {
           if (b.id !== targetParentId || !CONTAINER_TYPES.has(b.type)) return b;
@@ -562,7 +595,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           return setContainerSlot(b, targetColIndex, [...slot, block]);
         }),
         isDirty: true,
-      };
+      });
     }
 
     case "MOVE_BLOCK_IN_CONTAINER_BY_STEP": {
@@ -574,7 +607,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
       const targetIndex = direction === "up" ? found.indexInCol - 1 : found.indexInCol + 1;
 
-      return {
+      return withStalePageComposition({
         ...state,
         blocks: state.blocks.map((b) => {
           if (b.id !== found.parentBlockId || !CONTAINER_TYPES.has(b.type)) return b;
@@ -587,7 +620,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           return setContainerSlot(b, found.colIndex!, newSlot);
         }),
         isDirty: true,
-      };
+      });
     }
 
     case "SET_BRAND_PROFILE":
@@ -595,6 +628,47 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "SET_AVAILABLE_BRANDS":
       return { ...state, availableBrands: action.payload };
+
+    case "SET_PAGE_COMPOSER_MODE":
+      if (action.payload === state.pageComposition.mode) {
+        return state;
+      }
+      return {
+        ...state,
+        pageComposition: {
+          ...markPageCompositionStale(state.pageComposition),
+          mode: action.payload,
+          status: action.payload === "flow" ? "idle" : state.pageComposition.status,
+        },
+      };
+
+    case "SET_PAGE_COMPOSITION":
+      return {
+        ...state,
+        pageComposition: {
+          ...state.pageComposition,
+          status: "ready",
+          pages: action.payload.pages,
+          overflowBlockIds: action.payload.overflowBlockIds,
+          meta: action.payload.meta,
+          dirty: false,
+        },
+      };
+
+    case "MARK_PAGE_COMPOSITION_STALE":
+      return {
+        ...state,
+        pageComposition: markPageCompositionStale(state.pageComposition),
+      };
+
+    case "CLEAR_PAGE_COMPOSITION":
+      return {
+        ...state,
+        pageComposition: {
+          ...INITIAL_PAGE_COMPOSITION_STATE,
+          mode: state.pageComposition.mode,
+        },
+      };
 
     default:
       return state;
@@ -611,6 +685,8 @@ interface EditorContextValue {
   duplicateBlock: (id: string) => void;
   moveBlockByStep: (id: string, direction: "up" | "down") => void;
   moveBlockInContainerByStep: (id: string, direction: "up" | "down") => void;
+  setPageComposerMode: (mode: PageComposerMode) => void;
+  recomputePageComposition: () => void;
   save: () => Promise<void>;
 }
 
@@ -767,6 +843,33 @@ export function EditorProvider({
     rawDispatch({ type: "MOVE_BLOCK_IN_CONTAINER_BY_STEP", payload: { id, direction } });
   }, [access]);
 
+  const setPageComposerMode = useCallback((mode: PageComposerMode) => {
+    rawDispatch({ type: "SET_PAGE_COMPOSER_MODE", payload: mode });
+  }, []);
+
+  const recomputePageComposition = useCallback(() => {
+    rawDispatch({ type: "MARK_PAGE_COMPOSITION_STALE" });
+  }, []);
+
+  useEffect(() => {
+    if (state.pageComposition.mode !== "page") return;
+    if (!state.pageComposition.dirty) return;
+
+    const snapshot = composePages(
+      state.blocks,
+      state.settings,
+      state.pageComposition.revision,
+    );
+
+    rawDispatch({ type: "SET_PAGE_COMPOSITION", payload: snapshot });
+  }, [
+    state.blocks,
+    state.settings,
+    state.pageComposition.mode,
+    state.pageComposition.dirty,
+    state.pageComposition.revision,
+  ]);
+
   const save = useCallback(async () => {
     if (!canUseEditorFeature(access, "saveWorksheet")) return;
     rawDispatch({ type: "SET_SAVING", payload: true });
@@ -809,7 +912,7 @@ export function EditorProvider({
   }, [access, apiEndpoint, editorBasePath, state.worksheetId, state.title, state.blocks, state.settings, state.published]);
 
   return (
-    <EditorContext.Provider value={{ state, access, dispatch, addBlock, canAddBlockType, duplicateBlock, moveBlockByStep, moveBlockInContainerByStep, save }}>
+    <EditorContext.Provider value={{ state, access, dispatch, addBlock, canAddBlockType, duplicateBlock, moveBlockByStep, moveBlockInContainerByStep, setPageComposerMode, recomputePageComposition, save }}>
       {children}
     </EditorContext.Provider>
   );
