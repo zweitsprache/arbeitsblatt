@@ -125,6 +125,9 @@ interface RichTextEditorProps {
   editable?: boolean;
   floatingElement?: React.ReactNode;
   editorClassName?: string;
+  wrapperClassName?: string;
+  editingContentClassName?: string;
+  bodyFontSize?: string;
   /** When true, registers the SnippetBreak node and shows a break button in the toolbar. */
   snippetBreak?: boolean;
 }
@@ -169,6 +172,9 @@ export function RichTextEditor({
   editable = true,
   floatingElement,
   editorClassName,
+  wrapperClassName,
+  editingContentClassName,
+  bodyFontSize,
   snippetBreak = false,
 }: RichTextEditorProps) {
   const t = useTranslations("richtext");
@@ -296,7 +302,7 @@ export function RichTextEditor({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div ref={wrapperRef} className="rounded-md border border-input bg-background">
+      <div ref={wrapperRef} className={wrapperClassName ?? "rounded-md border border-input bg-background"}>
         {/* Toolbar – only shown when this editor has focus */}
         {editable && showToolbar && (
           <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1" onFocus={handleToolbarFocusIn}>
@@ -559,7 +565,10 @@ export function RichTextEditor({
         )}
 
         {/* Editor content */}
-        <div style={{ overflow: "hidden" }}>
+        <div
+          className={editable && showToolbar ? editingContentClassName : undefined}
+          style={{ overflow: "hidden", ...(bodyFontSize ? { fontSize: bodyFontSize } : {}) }}
+        >
           {floatingElement}
           <EditorContent editor={editor} />
         </div>

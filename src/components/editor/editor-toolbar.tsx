@@ -65,8 +65,12 @@ import { Upload } from "lucide-react";
 
 export function EditorToolbar({
   editorVersion = "v1",
+  showPageGuides,
+  onTogglePageGuides,
 }: {
   editorVersion?: "v1" | "v2";
+  showPageGuides: boolean;
+  onTogglePageGuides: (value: boolean) => void;
 }) {
   const { state, access, dispatch, save } = useEditor();
   const t = useTranslations("toolbar");
@@ -469,6 +473,21 @@ export function EditorToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t("previewOnline")}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={showPageGuides ? "default" : "outline"}
+              size="sm"
+              className={cn("h-8 gap-1.5", showPageGuides ? "" : terracottaOutlineButtonClass)}
+              onClick={() => onTogglePageGuides(!showPageGuides)}
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              Guides
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Show or hide page guides in the editor preview</TooltipContent>
         </Tooltip>
 
 

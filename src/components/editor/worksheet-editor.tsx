@@ -41,6 +41,7 @@ function EditorInner({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [overPosition, setOverPosition] = useState<"above" | "below">("below");
+  const [showPageGuides, setShowPageGuides] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -253,10 +254,19 @@ function EditorInner({
       onDragEnd={handleDragEnd}
     >
       <div className="h-full flex flex-col">
-        <EditorToolbar editorVersion={editorVersion} />
+        <EditorToolbar
+          editorVersion={editorVersion}
+          showPageGuides={showPageGuides}
+          onTogglePageGuides={setShowPageGuides}
+        />
         <div className="flex flex-1 min-h-0 overflow-hidden bg-white px-4 gap-3">
           <BlockSidebar onAddBlock={(type) => addBlock(type)} canAddBlock={canAddBlockType} />
-          <WorksheetCanvas activeId={activeId} overId={overId} overPosition={overPosition} />
+          <WorksheetCanvas
+            activeId={activeId}
+            overId={overId}
+            overPosition={overPosition}
+            showPageGuides={showPageGuides}
+          />
           <PropertiesPanel />
         </div>
       </div>

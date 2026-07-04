@@ -714,11 +714,56 @@ function resolveHeadingOverrideColor(
   return undefined;
 }
 
+const HEADING_CONFIG: Record<number, { fontSize: number; lineHeight: number }> = {
+  1: { fontSize: 28, lineHeight: 1.2 },
+  2: { fontSize: 24, lineHeight: 1.25 },
+  3: { fontSize: 21, lineHeight: 1.3 },
+  4: { fontSize: 19, lineHeight: 1.5 },
+};
+
+function calculateHeadingMargin(level: number, blockGap: string | null | undefined): string {
+  if (!blockGap) return level === 1 ? "-4px" : "1.5rem";
+  const config = HEADING_CONFIG[level];
+  if (!config) return blockGap;
+  const gapPx = parseFloat(blockGap);
+  if (Number.isNaN(gapPx)) return blockGap;
+  const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
+  const marginPx = gapPx - lineHeightExtraSpace;
+  return `${marginPx.toFixed(2)}px`;
+}
+
+function resolveHeadingMargins(
+  level: number,
+  blockGap: string | null | undefined,
+): { marginTop: string; marginBottom: string } {
+  const headingMargin = calculateHeadingMargin(level, blockGap);
+  let marginTop = headingMargin;
+  let marginBottom = headingMargin;
+  if (level === 1 && blockGap) {
+    const config = HEADING_CONFIG[1];
+    const gapPx = parseFloat(blockGap);
+    if (!Number.isNaN(gapPx)) {
+      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
+      const marginPx = 4 * gapPx - lineHeightExtraSpace;
+      marginBottom = `${marginPx.toFixed(2)}px`;
+    }
+  } else if ((level === 2 || level === 3) && blockGap) {
+    const gapPx = parseFloat(blockGap);
+    if (!Number.isNaN(gapPx)) {
+      const marginPx = 2 * gapPx;
+      marginTop = `${marginPx.toFixed(2)}px`;
+    }
+  }
+  return { marginTop, marginBottom };
+}
+
 function HeadingRenderer({ block }: { block: HeadingBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
+  const headingConfig = HEADING_CONFIG[block.level];
+  const headingSizeKey = `h${block.level}Size` as const;
+  const headingFontSize = state.brandProfile[headingSizeKey] || `${headingConfig.fontSize}px`;
   const resolvedHeadingWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
     1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
     2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
@@ -732,11 +777,21 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
     state.brandProfile.primaryColor,
     state.brandProfile.accentColor,
   );
+  const headingMargin = resolveHeadingMargins(block.level, state.brandProfile.blockGap);
+  const bottomMarginOverrideKey = `h${block.level}BottomMargin` as const;
+  const bottomMargin = state.brandProfile[bottomMarginOverrideKey] || headingMargin.marginBottom;
 
   return (
     <Tag
-      className={`${sizes[block.level]} font-bold outline-none`}
-      style={{ fontWeight: resolvedHeadingWeight, ...(headingColor ? { color: headingColor } : {}) }}
+      className={`font-bold outline-none`}
+      style={{
+        fontSize: headingFontSize,
+        lineHeight: headingConfig.lineHeight,
+        fontWeight: resolvedHeadingWeight,
+        marginTop: headingMargin.marginTop,
+        marginBottom: bottomMargin,
+        ...(headingColor ? { color: headingColor } : {}),
+      }}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -754,7 +809,6 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
 function TitleRenderer({ block }: { block: TitleBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
-  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
   const normalizedItems = Array.from({ length: 3 }, (_, index) => ({
     id: block.items[index]?.id || `title-line-${index + 1}`,
     content: block.items[index]?.content || "",
@@ -766,6 +820,12 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
     2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
     3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
     4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
+  };
+  const resolvedHeadingSizeByLevel: Record<1 | 2 | 3 | 4, string> = {
+    1: state.brandProfile.h1Size || `${HEADING_CONFIG[1].fontSize}px`,
+    2: state.brandProfile.h2Size || `${HEADING_CONFIG[2].fontSize}px`,
+    3: state.brandProfile.h3Size || `${HEADING_CONFIG[3].fontSize}px`,
+    4: state.brandProfile.h4Size || `${HEADING_CONFIG[4].fontSize}px`,
   };
   const renderBadgeRow = (
     badges: string[],
@@ -826,14 +886,21 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
           const badges = item.content.split("|").map((part) => part.trim()).filter(Boolean);
           return renderBadgeRow(badges, item.id, headingColor, index < 2 ? 0 : undefined);
         }
+        const headingConfig = HEADING_CONFIG[item.level];
         return (
           <Tag
             key={item.id}
-            className={`${isBody ? "text-base" : sizes[item.level]} ${usesBodyFont ? "font-normal" : "font-bold"} outline-none`}
+            className={`${isBody ? "text-base" : ""} ${usesBodyFont ? "font-normal" : "font-bold"} outline-none`}
             style={{
               marginBottom: index < 2 ? 0 : undefined,
               fontFamily: usesBodyFont ? state.brandProfile.bodyFont : undefined,
               fontWeight: usesBodyFont ? 400 : resolvedHeadingWeightByLevel[item.level],
+              ...(isBody
+                ? {}
+                : {
+                    fontSize: resolvedHeadingSizeByLevel[item.level],
+                    lineHeight: headingConfig.lineHeight,
+                  }),
               ...(headingColor ? { color: headingColor } : {}),
             }}
             contentEditable
@@ -852,7 +919,9 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-3xl", 2: "text-2xl", 3: "text-xl", 4: "text-lg" };
+  const headingConfig = HEADING_CONFIG[block.level];
+  const headingSizeKey = `h${block.level}Size` as const;
+  const headingFontSize = state.brandProfile[headingSizeKey] || `${headingConfig.fontSize}px`;
   const numberSlotStyle: React.CSSProperties = {
     display: "inline-block",
     width: "1.5rem",
@@ -894,6 +963,9 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
     4: state.brandProfile.h4HeadingNumberWeight ?? resolvedHeadingWeightByLevel[4],
   };
   const resolvedHeadingNumberWeight = resolvedHeadingNumberWeightByLevel[block.level];
+  const headingMargin = resolveHeadingMargins(block.level, state.brandProfile.blockGap);
+  const bottomMarginOverrideKey = `h${block.level}BottomMargin` as const;
+  const bottomMargin = state.brandProfile[bottomMarginOverrideKey] || headingMargin.marginBottom;
   const numberStyle: React.CSSProperties = {
     ...numberSlotStyle,
     fontWeight: resolvedHeadingNumberWeight,
@@ -902,8 +974,15 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
 
   return (
     <Tag
-      className={`${sizes[block.level]} font-bold outline-none`}
-      style={{ fontWeight: resolvedHeadingWeight, ...(headingColor ? { color: headingColor } : {}) }}
+      className={`font-bold outline-none`}
+      style={{
+        fontSize: headingFontSize,
+        lineHeight: headingConfig.lineHeight,
+        fontWeight: resolvedHeadingWeight,
+        marginTop: headingMargin.marginTop,
+        marginBottom: bottomMargin,
+        ...(headingColor ? { color: headingColor } : {}),
+      }}
       contentEditable
       suppressContentEditableWarning
       onBlur={(e) => {
@@ -931,10 +1010,11 @@ function stripTrailingEmptyParagraphs(html: string): string {
 }
 
 function TextRenderer({ block }: { block: TextBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const bodyFontSize = state.brandProfile.textBaseSize || `${(state.settings.fontSize || 12.5) + 1}px`;
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
@@ -996,12 +1076,15 @@ function TextRenderer({ block }: { block: TextBlock }) {
       }}
       placeholder={t("startTyping")}
       floatingElement={imageEl}
+      bodyFontSize={bodyFontSize}
+      wrapperClassName="bg-transparent border-0 rounded-none"
+      editingContentClassName={hasHinweisBox ? undefined : "px-3 py-2"}
       editorClassName={
         isRows
-          ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] py-2"
+          ? "prose prose-sm max-w-none focus:outline-none min-h-[60px]"
           : isLiteratur
-            ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] px-3 py-2 text-[0.9em] tiptap-literatur"
-            : undefined
+            ? "prose prose-sm max-w-none focus:outline-none min-h-[60px] text-[0.9em] tiptap-literatur"
+            : "prose prose-sm max-w-none focus:outline-none min-h-[60px]"
       }
     />
   );

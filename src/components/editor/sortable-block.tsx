@@ -91,9 +91,9 @@ export function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded-[4px] transition-all border border-transparent
+      className={`group relative transition-all
         ${isDragging ? "opacity-30 z-50" : ""}
-        ${isSelected ? "ring-1 ring-slate-400 bg-slate-50" : "hover:border-border"}
+        ${isSelected ? "ring-1 ring-slate-400 bg-slate-50" : ""}
         ${!isVisibleInMode ? "opacity-40" : ""}
       `}
       onClick={() => dispatch({ type: "SELECT_BLOCK", payload: block.id })}
@@ -205,7 +205,7 @@ export function SortableBlock({
       )}
 
       {/* Block content */}
-      <div className="p-3">
+      <div>
         <BlockRenderer block={block} mode={mode} />
       </div>
     </div>

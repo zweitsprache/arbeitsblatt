@@ -12,6 +12,11 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
+import {
+  applyBrandOverrides,
+  resolveBrandLogo,
+  resolveSubProfileHeaderFooter,
+} from "@/types/worksheet";
 
 
 function DropIndicator({ isActive }: { isActive: boolean }) {
@@ -55,114 +60,346 @@ export function WorksheetCanvas({
   activeId,
   overId,
   overPosition,
+  showPageGuides = true,
 }: {
   activeId: string | null;
   overId: string | null;
   overPosition: "above" | "below";
+  showPageGuides?: boolean;
 }) {
   const { state, dispatch } = useEditor();
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({ id: "canvas-drop-zone" });
+  const blockRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const clearSelectionIfWorkspaceClick = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      dispatch({ type: "SELECT_BLOCK", payload: null });
+    }
+  }, [dispatch]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const isPresentationMode = (state.settings as any)._presentationMode === true;
+  const isLandscape = state.settings.orientation === "landscape" || state.settings.orientation === "landscape-canva";
+  const mmToPx = (value: number) => (value * 96) / 25.4;
 
-  // Page dimensions (A4 at 96 DPI = 794 x 1123, 16:9 presentation = 1120 x 630)
-  const pageWidth = isPresentationMode ? 1120 : state.settings.pageSize === "a4" ? 794 : 816;
-  const minHeight = isPresentationMode ? 630 : 1123;
+  // Page dimensions (A4 at 96 DPI = 794 x 1123, landscape swaps those values)
+  const pageWidth = isPresentationMode
+    ? 1120
+    : state.settings.pageSize === "a4"
+      ? (isLandscape ? 1123 : 794)
+      : (isLandscape ? 1056 : 816);
+  const pageHeight = isPresentationMode
+    ? 630
+    : state.settings.pageSize === "a4"
+      ? (isLandscape ? 794 : 1123)
+      : (isLandscape ? 816 : 1056);
+
+  // Fixed print regions (match print CSS exactly, converted mm → px)
+  const HEADER_HEIGHT = mmToPx(30); // .print-header-content height
+  const FOOTER_HEIGHT = mmToPx(25); // --print-tfoot-height
+  const BODY_SIDE_PADDING = mmToPx(20); // .print-body-content left/right padding
+
+  // ─── Resolve header/footer from brand settings ─────────────
+  const resolvedProfile = applyBrandOverrides(
+    state.brandProfile,
+    state.settings.brandOverrides,
+  );
+
+  const nonEmpty = (value?: string | null, fallback?: string) => {
+    const v = value?.trim();
+    return v ? v : fallback ?? "";
+  };
+
+  const brandHeaderFooter = {
+    logo: resolveBrandLogo(resolvedProfile, "full"),
+    organization: resolvedProfile.organization,
+    teacher: resolvedProfile.teacher,
+    headerLeft: "",
+    headerRight: nonEmpty(state.settings.brandOverrides?.headerRight, resolvedProfile.headerRight),
+    footerLeft: nonEmpty(state.settings.brandOverrides?.footerLeft, resolvedProfile.footerLeft),
+    footerCenter: nonEmpty(state.settings.brandOverrides?.footerCenter, resolvedProfile.footerCenter),
+    footerRight: nonEmpty(state.settings.brandOverrides?.footerRight, resolvedProfile.footerRight),
+  };
+
+  // Apply sub-profile header/footer overrides (variant 1 = multiline)
+  const subHeaders = resolveSubProfileHeaderFooter(resolvedProfile, state.settings.subProfileId, 1);
+  if (subHeaders) {
+    brandHeaderFooter.headerLeft = subHeaders.headerLeft;
+    brandHeaderFooter.headerRight = subHeaders.headerRight;
+    brandHeaderFooter.footerLeft = subHeaders.footerLeft;
+    brandHeaderFooter.footerRight = subHeaders.footerRight;
+  }
+
+  // Replace template variables (online/editor mode — no page numbers)
+  const replaceVariables = (html: string): string => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return html
+      .replace(/\{current_date\}/g, dateStr)
+      .replace(/\{current_year\}/g, String(now.getFullYear()))
+      .replace(/\{organization\}/g, brandHeaderFooter.organization || "")
+      .replace(/\{teacher\}/g, brandHeaderFooter.teacher || "")
+      .replace(/\{worksheet_uuid\}/g, (state.worksheetId || "").toUpperCase())
+      .replace(/\{current_page\}/g, "")
+      .replace(/\{no_of_pages\}/g, "");
+  };
+
+  const hasLogo = !!brandHeaderFooter.logo;
+  const processedHeaderLeft = replaceVariables(brandHeaderFooter.headerLeft || "");
+  const processedHeaderRight = replaceVariables(brandHeaderFooter.headerRight || "");
+  const processedFooterLeft = replaceVariables(brandHeaderFooter.footerLeft || "");
+  const processedFooterCenter = replaceVariables(brandHeaderFooter.footerCenter || "");
+  const processedFooterRight = replaceVariables(brandHeaderFooter.footerRight || "");
+  const hasHeaderLeft = !!processedHeaderLeft;
+  const hasHeaderRight = !!processedHeaderRight;
+  const hasFooterLeft = !!processedFooterLeft;
+  const hasFooterCenter = !!processedFooterCenter || !!state.settings.footerText;
+  const hasFooterRight = !!processedFooterRight;
+  const showHeader = state.settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
+  const showFooter = state.settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
+  const headerFooterFont =
+    resolvedProfile.headerFooterFont?.trim() || "'Encode Sans', sans-serif";
+  const canvasBackgroundColor = resolvedProfile.primaryColor
+    ? `color-mix(in srgb, ${resolvedProfile.primaryColor} 6%, white)`
+    : "#f1f5f9";
+
+  // Usable height for body content = page height minus header/footer regions
+  const usableHeight =
+    pageHeight - (showHeader ? HEADER_HEIGHT : 0) - (showFooter ? FOOTER_HEIGHT : 0);
+
+  // Break blocks into pages based on actual rendered heights
+  const pages = React.useMemo(() => {
+    const result: Array<{ pageNum: number; blocks: any[] }> = [];
+    let currentPage = { pageNum: 0, blocks: [], height: 0 };
+
+    for (const block of state.blocks) {
+      // Get actual rendered height from ref, fallback to estimate if not measured yet
+      const blockEl = blockRefs.current.get(block.id);
+      const blockHeight = blockEl?.offsetHeight || 100;
+
+      const isManualBreak = block.type === "page-break";
+
+      // If adding this block would exceed the page, start a new page
+      if (
+        !isManualBreak &&
+        currentPage.height + blockHeight > usableHeight &&
+        currentPage.blocks.length > 0
+      ) {
+        result.push(currentPage);
+        currentPage = { pageNum: result.length, blocks: [], height: 0 };
+      }
+
+      currentPage.blocks.push(block);
+      currentPage.height += blockHeight;
+
+      // Manual page break: finalize this page so following blocks start on a new page
+      if (isManualBreak) {
+        result.push(currentPage);
+        currentPage = { pageNum: result.length, blocks: [], height: 0 };
+      }
+    }
+
+    if (currentPage.blocks.length > 0) {
+      result.push(currentPage);
+    }
+
+    return result;
+  }, [state.blocks, usableHeight]);
 
   return (
-    <div 
+    <div
       className="flex-1 overflow-auto canvas-scroll"
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      style={{ backgroundColor: canvasBackgroundColor, scrollbarWidth: "none", msOverflowStyle: "none" }}
     >
-      <div className="flex justify-center pt-4 pb-8 px-4">
-        <div
-          ref={state.blocks.length === 0 ? setCanvasRef : undefined}
-          className={`editor-canvas bg-white shadow-lg rounded-sm border transition-colors
-            ${isCanvasOver && state.blocks.length === 0 ? "border-primary ring-2 ring-primary/20" : ""}`}
-          style={{
-            width: pageWidth,
-            minHeight,
-            padding: isPresentationMode
-              ? "40px 60px"
-              : `${state.settings.margins.top}px ${state.settings.margins.right}px ${state.settings.margins.bottom}px ${state.settings.margins.left}px`,
-            fontFamily: "'Encode Sans Semi Condensed', sans-serif",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              dispatch({ type: "SELECT_BLOCK", payload: null });
-            }
-          }}
+      <div className="flex justify-center pt-4 pb-8 px-4" onMouseDown={clearSelectionIfWorkspaceClick}>
+        <SortableContext
+          items={state.blocks.map((b) => b.id)}
+          strategy={verticalListSortingStrategy}
         >
-          {/* Header */}
-          {state.settings.showHeader && state.settings.headerText && (
-            <div className="text-center text-sm text-muted-foreground mb-4 pb-2 border-b">
-              {state.settings.headerText}
-            </div>
-          )}
-
-          {/* Blocks */}
-          {state.blocks.length === 0 ? (
-            <EmptyDropZone />
-          ) : (
-            <SortableContext
-              items={state.blocks.map((b) => b.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div>
-                {state.blocks.map((block, index) => {
-                  // Show drop indicator before/after blocks based on overId + pointer position
-                  const isDragging = !!activeId;
-                  const isOverThis = overId === block.id;
-                  const isActiveBlock = activeId === block.id;
-
-                  // Show above indicator: only on the first block when pointer is in top half
-                  const showAbove =
-                    index === 0 &&
-                    isDragging &&
-                    isOverThis &&
-                    !isActiveBlock &&
-                    overPosition === "above";
-
-                  // Show below indicator: when pointer is in bottom half (or for non-first blocks)
-                  const showBelow =
-                    isDragging &&
-                    isOverThis &&
-                    !isActiveBlock &&
-                    (index > 0 || overPosition === "below");
-
-                  return (
-                    <React.Fragment key={block.id}>
-                      {/* Drop indicator before first block */}
-                      {index === 0 && isDragging && (
-                        <DropIndicator isActive={showAbove} />
-                      )}
-                      <div
-                        style={index > 0 ? { marginTop: "var(--block-gap, 6px)" } : undefined}
-                      >
-                        <SortableBlock
-                          block={block}
-                          mode={state.viewMode}
-                        />
-                      </div>
-                      {/* Drop indicator after each block */}
-                      {isDragging && !isActiveBlock && (
-                        <DropIndicator isActive={showBelow} />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+            {state.blocks.length === 0 ? (
+              <div className="relative">
+                <div
+                  ref={setCanvasRef}
+                  style={{
+                    width: pageWidth,
+                    height: pageHeight,
+                    padding: isPresentationMode
+                      ? "40px 60px"
+                      : `${HEADER_HEIGHT}px ${BODY_SIDE_PADDING}px ${FOOTER_HEIGHT}px ${BODY_SIDE_PADDING}px`,
+                    backgroundColor: "white",
+                    borderRadius: "4px",
+                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                  }}
+                >
+                  <EmptyDropZone />
+                </div>
               </div>
-            </SortableContext>
-          )}
+            ) : (
+              pages.map((page) => (
+                <div
+                  key={`page-${page.pageNum}`}
+                  className="relative"
+                  style={{
+                    width: pageWidth,
+                    backgroundColor: "white",
+                    borderRadius: "4px",
+                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "'Encode Sans Semi Condensed', sans-serif",
+                      height: pageHeight,
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        dispatch({ type: "SELECT_BLOCK", payload: null });
+                      }
+                    }}
+                  >
+                    {/* Header (brand) — fixed 30mm region */}
+                    {showHeader && (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          height: HEADER_HEIGHT,
+                          padding: `${mmToPx(15)}px ${mmToPx(15)}px 0 ${mmToPx(20)}px`,
+                          boxSizing: "border-box",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: "12px",
+                          fontFamily: headerFooterFont,
+                          fontSize: "9px",
+                          color: "#666",
+                          lineHeight: 1.5,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div>
+                          {hasHeaderLeft ? (
+                            <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                          ) : (
+                            hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                          )}
+                        </div>
+                        <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                          {hasHeaderLeft && hasHeaderRight && (
+                            <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                          )}
+                          {hasLogo && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={brandHeaderFooter.logo} alt="" style={{ height: mmToPx(8), width: "auto" }} />
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-          {/* Footer */}
-          {state.settings.showFooter && state.settings.footerText && (
-            <div className="text-center text-sm text-muted-foreground mt-4 pt-2 border-t">
-              {state.settings.footerText}
-            </div>
-          )}
-        </div>
+                    {/* Blocks on this page — body region with left/right padding only */}
+                    <div
+                      style={{
+                        flex: "1 1 auto",
+                        minHeight: 0,
+                        overflow: "hidden",
+                        paddingLeft: BODY_SIDE_PADDING,
+                        paddingRight: BODY_SIDE_PADDING,
+                      }}
+                    >
+                      {page.blocks.map((block, blockIndex) => {
+                        const isDragging = !!activeId;
+                        const isOverThis = overId === block.id;
+                        const isActiveBlock = activeId === block.id;
+
+                        const showAbove =
+                          blockIndex === 0 &&
+                          isDragging &&
+                          isOverThis &&
+                          !isActiveBlock &&
+                          overPosition === "above";
+
+                        const showBelow =
+                          isDragging &&
+                          isOverThis &&
+                          !isActiveBlock &&
+                          (blockIndex > 0 || overPosition === "below");
+
+                        return (
+                          <React.Fragment key={block.id}>
+                            {blockIndex === 0 && isDragging && (
+                              <DropIndicator isActive={showAbove} />
+                            )}
+                            <div
+                              ref={(el) => {
+                                if (el) {
+                                  blockRefs.current.set(block.id, el);
+                                }
+                              }}
+                              style={
+                                blockIndex > 0
+                                  ? { marginTop: "var(--block-gap, 6px)" }
+                                  : undefined
+                              }
+                            >
+                              <SortableBlock
+                                block={block}
+                                mode={state.viewMode}
+                              />
+                            </div>
+                            {isDragging && !isActiveBlock && (
+                              <DropIndicator isActive={showBelow} />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+
+                    {/* Footer (brand) — fixed 25mm region */}
+                    {showFooter && (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          height: FOOTER_HEIGHT,
+                          padding: `0 ${mmToPx(15)}px ${mmToPx(8)}px ${mmToPx(15)}px`,
+                          boxSizing: "border-box",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-end",
+                          gap: "12px",
+                          fontFamily: headerFooterFont,
+                          fontSize: "9px",
+                          color: "#666",
+                          lineHeight: 1.5,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+                        </div>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                          {processedFooterCenter ? (
+                            <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                          ) : state.settings.footerText ? (
+                            <span>{state.settings.footerText}</span>
+                          ) : null}
+                        </div>
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                          {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </SortableContext>
       </div>
     </div>
   );
