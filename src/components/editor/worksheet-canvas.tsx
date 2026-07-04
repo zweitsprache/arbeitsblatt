@@ -14,12 +14,14 @@ import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 import {
+  getPageDimensionsMm,
   getPageDimensionsPx,
   getPrintBodyHeightPx,
   getPrintFooterReservePx,
-  getPrintHeaderHeightPx,
   mmToPx,
+  PRINT_HEADER_HEIGHT_MM,
 } from "@/lib/print-layout";
+import { buildPrintFrame } from "@/lib/print-frame";
 import {
   applyBrandOverrides,
   resolveBrandLogo,
@@ -89,14 +91,15 @@ export function WorksheetCanvas({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const isPresentationMode = (state.settings as any)._presentationMode === true;
   const isLandscape = state.settings.orientation === "landscape" || state.settings.orientation === "landscape-canva";
+  const isCanvaLandscape = state.settings.orientation === "landscape-canva";
 
   // Page dimensions (A4/Letter at 96 DPI, landscape swaps those values)
-  const { widthPx: pageWidth, heightPx: printPageHeight } = getPageDimensionsPx(state.settings);
+  // NOTE: mm strings are the source of truth for the sheet — this matches @page
+  // size in the print/PDF path exactly. The px value is used only for the
+  // JS pagination arithmetic that still lives in this component.
+  const { widthMm: pageWidthMm, heightMm: pageHeightMm } = getPageDimensionsMm(state.settings);
+  const { heightPx: printPageHeight } = getPageDimensionsPx(state.settings);
   const pageHeight = isPresentationMode ? 630 : printPageHeight;
-
-  // Fixed print regions (match print CSS exactly, converted mm → px)
-  const HEADER_HEIGHT = getPrintHeaderHeightPx(); // .print-header-content height
-  const BODY_SIDE_PADDING = mmToPx(20); // .print-body-content left/right padding
 
   // ─── Resolve header/footer from brand settings ─────────────
   const resolvedProfile = applyBrandOverrides(
@@ -200,6 +203,57 @@ export function WorksheetCanvas({
     block.type === "syllable-cards"
   );
 
+  // ─── Shared print/PDF frame: applies the same .print-worksheet-root
+  //     .print-skin-final class chain + CSS variables to the editor canvas
+  //     that the print/PDF viewer uses. This is what keeps editor typography
+  //     (fonts, headings, block gaps, TipTap heading sizes/weights, block
+  //     spacing rules in globals.css) identical to the Puppeteer PDF output.
+  const printFrame = React.useMemo(() => {
+    const blocks = state.blocks;
+    const hasBlock = (type: WorksheetBlock["type"]) => blocks.some((b) => b.type === type);
+    const tabooTen = blocks.some(
+      (b) =>
+        b.type === "taboo" &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (((b as any).stopWordCount === 10) ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (Array.isArray((b as any).items) && (b as any).items.some((i: any) => Array.isArray(i.subitems) && i.subitems.length > 4))),
+    );
+    return buildPrintFrame({
+      settings: state.settings,
+      resolvedProfile,
+      activeBodyFont: resolvedBodyFontFamily,
+      headlineFont: nonEmpty(resolvedProfile.headlineFont, resolvedBodyFontFamily),
+      headerFooterFont,
+      resolvedBodyFontSize,
+      resolvedLetterSpacing: resolvedProfile.letterSpacing?.trim() || "",
+      reserveFooter: showFooter,
+      isLandscape,
+      isCanvaLandscape,
+      presence: {
+        domino: hasBlock("domino"),
+        flashcards: hasBlock("flashcards"),
+        aufgabenkarten: hasBlock("aufgabenkarten"),
+        cardPairs: hasBlock("card-pairs"),
+        quartett: hasBlock("quartett"),
+        taboo: hasBlock("taboo"),
+        tabooTen,
+        syllableCards: hasBlock("syllable-cards"),
+      },
+    });
+  }, [
+    state.blocks,
+    state.settings,
+    resolvedProfile,
+    resolvedBodyFontFamily,
+    headerFooterFont,
+    resolvedBodyFontSize,
+    showFooter,
+    isLandscape,
+    isCanvaLandscape,
+  ]);
+
+
   const getSiblingGapPx = React.useCallback((previousBlock: WorksheetBlock | undefined, block: WorksheetBlock): number => {
     if (!previousBlock) return 0;
     if (previousBlock.type === "page-break") return 0;
@@ -208,16 +262,92 @@ export function WorksheetCanvas({
     return blockGapPx;
   }, [blockGapPx]);
 
-  // Break blocks into pages based on actual rendered heights
+  // ─── Block height measurement ───────────────────────────────
+  // We measure block heights outside the render loop (previously the pagination
+  // useMemo read blockRefs.current.get(...).offsetHeight during render, which
+  // both violated react-hooks/refs and returned stale values on the first pass
+  // and on any intra-block edit that didn't touch state.blocks).
+  //
+  // Approach: after commit, observe every rendered .worksheet-block wrapper
+  // with a ResizeObserver, write measured px heights into state, and let the
+  // pagination useMemo depend on that state. This means:
+  //   1. Content-driven changes (TipTap edits, image loads, font swaps) update
+  //      pagination in the same tick they change layout.
+  //   2. The pagination algorithm reads from stable state, never from refs.
+  //   3. The measurement runs in the exact .print-worksheet-root
+  //      .print-skin-final .print-body-content context that the PDF uses
+  //      (from Phase 1), so offsetHeight matches the PDF's block height.
+  const [blockHeights, setBlockHeights] = React.useState<Record<string, number>>({});
+
+  // Track the block ids currently in state.blocks so the observer effect can
+  // detach stale observers when a block is removed.
+  const blockIds = React.useMemo(() => state.blocks.map((b) => b.id), [state.blocks]);
+
+  React.useLayoutEffect(() => {
+    const activeIds = new Set(blockIds);
+
+    // Seed heights synchronously so the first paginated render can use real
+    // values instead of the 100px estimate.
+    setBlockHeights((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const id of blockIds) {
+        const el = blockRefs.current.get(id);
+        const measured = el ? el.offsetHeight : prev[id] ?? 0;
+        next[id] = measured;
+        if (measured !== prev[id]) changed = true;
+      }
+      // Also drop stale ids
+      for (const id of Object.keys(prev)) {
+        if (!activeIds.has(id)) changed = true;
+      }
+      return changed ? next : prev;
+    });
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      setBlockHeights((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const entry of entries) {
+          const el = entry.target as HTMLElement;
+          const id = el.dataset.blockId;
+          if (!id || !activeIds.has(id)) continue;
+          const height = el.offsetHeight;
+          if (next[id] !== height) {
+            next[id] = height;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+
+    for (const id of blockIds) {
+      const el = blockRefs.current.get(id);
+      if (el) observer.observe(el);
+    }
+
+    // Drop refs for removed blocks so the map doesn't leak detached nodes.
+    for (const id of Array.from(blockRefs.current.keys())) {
+      if (!activeIds.has(id)) blockRefs.current.delete(id);
+    }
+
+    return () => observer.disconnect();
+  }, [blockIds]);
+
+  // Break blocks into pages based on measured heights.
   const pages = React.useMemo(() => {
     type CanvasPage = { pageNum: number; blocks: WorksheetBlock[]; height: number };
     const result: CanvasPage[] = [];
     let currentPage: CanvasPage = { pageNum: 0, blocks: [], height: 0 };
 
     for (const block of state.blocks) {
-      // Get actual rendered height from ref, fallback to estimate if not measured yet
-      const blockEl = blockRefs.current.get(block.id);
-      const blockHeight = blockEl?.offsetHeight || 100;
+      // Fallback to 100px only when a block hasn't been measured yet (first mount).
+      const blockHeight = blockHeights[block.id] ?? 100;
 
       const isManualBreak = block.type === "page-break";
 
@@ -228,7 +358,7 @@ export function WorksheetCanvas({
         currentPage.height += interBlockGap;
       }
 
-      // If adding this block would exceed the page, start a new page
+      // If adding this block would exceed the page, start a new page.
       if (
         !isManualBreak &&
         currentPage.height + blockHeight > usableHeight &&
@@ -255,7 +385,10 @@ export function WorksheetCanvas({
     }
 
     return result;
-  }, [state.blocks, usableHeight, getSiblingGapPx]);
+    // React Compiler flags `usableHeight` as "may be modified later" — it is a
+    // plain const derived from settings/state, so this is a false positive.
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [state.blocks, blockHeights, usableHeight, getSiblingGapPx]);
 
   return (
     <div
@@ -271,17 +404,25 @@ export function WorksheetCanvas({
           items={state.blocks.map((b) => b.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+          <div
+            className={isPresentationMode ? undefined : printFrame.className}
+            style={{
+              ...(isPresentationMode ? {} : printFrame.cssVars),
+              display: "flex",
+              flexDirection: "column",
+              gap: "32px",
+            }}
+          >
             {state.blocks.length === 0 ? (
               <div className="relative">
                 <div
                   ref={setCanvasRef}
                   style={{
-                    width: pageWidth,
-                    height: pageHeight,
+                    width: `${pageWidthMm}mm`,
+                    height: `${pageHeightMm}mm`,
                     padding: isPresentationMode
                       ? "40px 60px"
-                      : `${showHeader ? HEADER_HEIGHT : 0}px ${BODY_SIDE_PADDING}px ${footerReserveHeight}px ${BODY_SIDE_PADDING}px`,
+                      : `${showHeader ? `${PRINT_HEADER_HEIGHT_MM}mm` : 0} 20mm ${showFooter ? `${footerReserveHeight}px` : 0} 20mm`,
                     backgroundColor: "white",
                     borderRadius: "4px",
                     boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
@@ -298,7 +439,7 @@ export function WorksheetCanvas({
                   key={`page-${page.pageNum}`}
                   className="relative"
                   style={{
-                    width: pageWidth,
+                    width: `${pageWidthMm}mm`,
                     backgroundColor: "white",
                     borderRadius: "4px",
                     boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
@@ -309,7 +450,7 @@ export function WorksheetCanvas({
                       ["--worksheet-example-font" as string]: exampleFontOverride.fontFamily,
                       ["--worksheet-original-example-font" as string]: exampleFontOverride.fontFamily,
                       fontFamily: resolvedBodyFontFamily,
-                      height: pageHeight,
+                      height: isPresentationMode ? pageHeight : `${pageHeightMm}mm`,
                       boxSizing: "border-box",
                       overflow: "hidden",
                       display: "flex",
@@ -321,20 +462,21 @@ export function WorksheetCanvas({
                       }
                     }}
                   >
-                    {/* Header (brand) — fixed 30mm region */}
+                    {/* Header (brand) — fixed 30mm region, mirrors .print-header-content */}
                     {showHeader && (
                       <div
                         aria-hidden="true"
+                        className="print-header-content"
                         style={{
-                          height: HEADER_HEIGHT,
-                          padding: `${mmToPx(15)}px ${mmToPx(15)}px 0 ${mmToPx(20)}px`,
+                          height: `${PRINT_HEADER_HEIGHT_MM}mm`,
+                          padding: "15mm 15mm 0 20mm",
                           boxSizing: "border-box",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "flex-start",
                           gap: "12px",
                           fontFamily: headerFooterFont,
-                          fontSize: "9px",
+                          fontSize: "7pt",
                           color: "#666",
                           lineHeight: 1.5,
                           flexShrink: 0,
@@ -353,7 +495,7 @@ export function WorksheetCanvas({
                           )}
                           {hasLogo && (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={brandHeaderFooter.logo} alt="" style={{ height: mmToPx(8), width: "auto" }} />
+                            <img src={brandHeaderFooter.logo} alt="" style={{ height: "8mm", width: "auto" }} />
                           )}
                         </div>
                       </div>
@@ -365,8 +507,8 @@ export function WorksheetCanvas({
                       style={{
                         flex: "1 1 auto",
                         minHeight: 0,
-                        paddingLeft: BODY_SIDE_PADDING,
-                        paddingRight: BODY_SIDE_PADDING,
+                        paddingLeft: "20mm",
+                        paddingRight: "20mm",
                         fontSize: resolvedBodyFontSize,
                       }}
                     >
@@ -396,9 +538,11 @@ export function WorksheetCanvas({
                             )}
                             <div
                               ref={(el) => {
-                                if (el) {
-                                  blockRefs.current.set(block.id, el);
-                                }
+                                // Callback refs run during commit, not render. Writing to
+                                // blockRefs here is safe; the react-hooks/refs rule can't
+                                // distinguish inline callback refs from render-time reads.
+                                // eslint-disable-next-line react-hooks/refs
+                                if (el) blockRefs.current.set(block.id, el);
                               }}
                               data-block-id={block.id}
                               className={`worksheet-block worksheet-block-${block.type}`}
@@ -426,16 +570,17 @@ export function WorksheetCanvas({
                     {showFooter && (
                       <div
                         aria-hidden="true"
+                        className="print-footer-content"
                         style={{
-                          height: footerReserveHeight,
-                          padding: `0 ${mmToPx(15)}px ${mmToPx(8)}px ${mmToPx(15)}px`,
+                          height: `${footerReserveHeight}px`,
+                          padding: "0 15mm 8mm 15mm",
                           boxSizing: "border-box",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "flex-end",
                           gap: "12px",
                           fontFamily: headerFooterFont,
-                          fontSize: "9px",
+                          fontSize: "7pt",
                           color: "#666",
                           lineHeight: 1.5,
                           flexShrink: 0,

@@ -13,7 +13,8 @@ import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
-import { getPageDimensionsPx, getPrintFooterReservePx } from "@/lib/print-layout";
+import { getPageDimensionsPx } from "@/lib/print-layout";
+import { buildPrintFrame } from "@/lib/print-frame";
 
 /** Language codes that use non-Latin scripts and should default to Noto Sans */
 const NON_LATIN_LOCALES = new Set(["uk", "ru", "bg", "sr", "mk", "ar", "fa", "ps", "ur", "he", "zh", "ja", "ko", "hi", "bn", "th", "el"]);
@@ -311,7 +312,6 @@ export function WorksheetViewer({
   const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
   const showTablePrintHeader = showPrintHeader && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintHeader;
   const showTablePrintFooter = showPrintFooter && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
-  const printBottomReservePx = getPrintFooterReservePx(settings, showTablePrintFooter);
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
@@ -347,40 +347,45 @@ export function WorksheetViewer({
     h4: resolvedProfile.h4BottomMargin,
   };
 
-  const headingCssVars = {
-    ["--heading-h1-weight" as string]: String(resolvedH1Weight),
-    ["--heading-h2-weight" as string]: String(resolvedH2Weight),
-    ["--heading-h3-weight" as string]: String(resolvedH3Weight),
-    ["--heading-h4-weight" as string]: String(resolvedH4Weight),
-    ["--print-h1-bottom-margin" as string]: resolvedProfile.h1BottomMargin,
-    ["--print-h2-bottom-margin" as string]: resolvedProfile.h2BottomMargin,
-    ["--print-h3-bottom-margin" as string]: resolvedProfile.h3BottomMargin,
-    ["--print-h4-bottom-margin" as string]: resolvedProfile.h4BottomMargin,
-    ["--print-block-gap" as string]: resolvedProfile.blockGap,
-  } as React.CSSProperties;
-
-  const printCssVars = mode === "print" ? ({
-    ["--print-body-font" as string]: activeBodyFont,
-    ["--print-body-size" as string]: resolvedBodyFontSize,
-    ["--print-headline-font" as string]: headlineFont,
-    ["--print-headline-weight" as string]: String(resolvedHeadlineWeight),
-    ["--print-primary-color" as string]: brandFonts.primaryColor,
-    ["--print-h1-size" as string]: resolvedProfile.h1Size,
-    ["--print-h2-size" as string]: resolvedProfile.h2Size,
-    ["--print-h3-size" as string]: resolvedProfile.h3Size,
-    ["--print-h4-size" as string]: resolvedProfile.h4Size,
-    ["--print-h1-weight" as string]: String(resolvedH1Weight),
-    ["--print-h2-weight" as string]: String(resolvedH2Weight),
-    ["--print-h3-weight" as string]: String(resolvedH3Weight),
-    ["--print-h4-weight" as string]: String(resolvedH4Weight),
-    ["--print-header-footer-font" as string]: brandFonts.headerFooterFont,
-    ["--print-letter-spacing" as string]: resolvedLetterSpacing || "normal",
-    ["--print-tfoot-height" as string]: `${printBottomReservePx}px`,
-  } as React.CSSProperties) : undefined;
+  const printFrame = buildPrintFrame({
+    settings,
+    resolvedProfile,
+    activeBodyFont,
+    headlineFont,
+    headerFooterFont: brandFonts.headerFooterFont,
+    resolvedBodyFontSize,
+    resolvedLetterSpacing,
+    reserveFooter: showTablePrintFooter,
+    isLandscape,
+    isCanvaLandscape,
+    presence: {
+      domino: hasDominoBlock,
+      flashcards: hasFlashcardsBlock,
+      aufgabenkarten: hasAufgabenkartenBlock,
+      cardPairs: hasCardPairsBlock,
+      quartett: hasQuartettBlock,
+      taboo: hasTabooBlock,
+      tabooTen: hasTenStopWordTabooBlock,
+      syllableCards: hasSyllableCardsBlock,
+    },
+  });
 
   const viewerCssVars = {
-    ...headingCssVars,
-    ...(printCssVars || {}),
+    // In non-print mode we still want the heading weight vars available for
+    // online viewers, but not the print-* variables (which drive @page + print CSS).
+    ...(mode === "print"
+      ? printFrame.cssVars
+      : {
+          ["--heading-h1-weight" as string]: String(resolvedH1Weight),
+          ["--heading-h2-weight" as string]: String(resolvedH2Weight),
+          ["--heading-h3-weight" as string]: String(resolvedH3Weight),
+          ["--heading-h4-weight" as string]: String(resolvedH4Weight),
+          ["--print-h1-bottom-margin" as string]: resolvedProfile.h1BottomMargin,
+          ["--print-h2-bottom-margin" as string]: resolvedProfile.h2BottomMargin,
+          ["--print-h3-bottom-margin" as string]: resolvedProfile.h3BottomMargin,
+          ["--print-h4-bottom-margin" as string]: resolvedProfile.h4BottomMargin,
+          ["--print-block-gap" as string]: resolvedProfile.blockGap,
+        }),
     ["--worksheet-example-font" as string]: activeExampleFont,
     ["--worksheet-original-example-font" as string]: originalExampleFont,
     ["--brand-letter-spacing" as string]: resolvedLetterSpacing || "normal",
@@ -389,7 +394,7 @@ export function WorksheetViewer({
 
   return (
     <div
-      className={`min-h-screen ${mode === "print" ? `bg-white print-worksheet-root print-skin-final ${isLandscape ? "print-landscape" : "print-portrait"} ${isCanvaLandscape ? "print-canva" : ""} ${hasDominoBlock ? "print-has-domino" : ""} ${hasFlashcardsBlock ? "print-has-flashcards" : ""} ${hasAufgabenkartenBlock ? "print-has-aufgabenkarten" : ""} ${hasCardPairsBlock ? "print-has-card-pairs" : ""} ${hasQuartettBlock ? "print-has-quartett" : ""} ${hasTabooBlock ? "print-has-taboo" : ""} ${hasTenStopWordTabooBlock ? "print-has-taboo-ten" : ""} ${hasSyllableCardsBlock ? "print-has-syllable-cards" : ""}` : "bg-muted/30"}`}
+      className={`min-h-screen ${mode === "print" ? `bg-white ${printFrame.className}` : "bg-muted/30"}`}
       style={viewerCssVars}
     >
       {fontStylesheetUrls.map((href) => (
