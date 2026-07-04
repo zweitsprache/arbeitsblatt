@@ -1779,6 +1779,8 @@
     "letterCodeWord": "Wort",
     "letterCodeClue": "Hinweis",
     "done": "Fertig",
+    "default": "Standard",
+    "extendTopMargin": "Abstand oben erweitern",
     "itemsInOrder": "Elemente in Reihenfolge",
     "itemText": "Elementtext",
     "keepFirstLetter": "Zeichen von links behalten",

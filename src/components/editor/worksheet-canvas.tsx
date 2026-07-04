@@ -12,10 +12,12 @@ import {
 import { useEditor } from "@/store/editor-store";
 import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
+import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 import {
   applyBrandOverrides,
   resolveBrandLogo,
   resolveSubProfileHeaderFooter,
+  type WorksheetBlock,
 } from "@/types/worksheet";
 
 
@@ -104,6 +106,15 @@ export function WorksheetCanvas({
     state.brandProfile,
     state.settings.brandOverrides,
   );
+  const fontStylesheetUrls = Array.from(
+    new Set(resolvedProfile.googleFontsUrl?.trim() ? [resolvedProfile.googleFontsUrl.trim()] : []),
+  );
+  const resolvedBodyFontFamily = resolvedProfile.bodyFont || "'Encode Sans Semi Condensed', sans-serif";
+  const brandKey = (state.settings.brand || "worksheet").replace(/[^a-zA-Z0-9_-]+/g, "-");
+  const exampleFontOverride = resolveBrandFontFamilyOverride(resolvedProfile.exampleTextFont, {
+    fallbackFontFamily: resolvedBodyFontFamily,
+    generatedFamilyNamePrefix: `worksheet-example-${brandKey}`,
+  });
 
   const nonEmpty = (value?: string | null, fallback?: string) => {
     const v = value?.trim();
@@ -159,6 +170,7 @@ export function WorksheetCanvas({
   const showFooter = state.settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
   const headerFooterFont =
     resolvedProfile.headerFooterFont?.trim() || "'Encode Sans', sans-serif";
+  const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${state.settings.fontSize || 12.5}px`;
   const canvasBackgroundColor = resolvedProfile.primaryColor
     ? `color-mix(in srgb, ${resolvedProfile.primaryColor} 6%, white)`
     : "#f1f5f9";
@@ -169,8 +181,9 @@ export function WorksheetCanvas({
 
   // Break blocks into pages based on actual rendered heights
   const pages = React.useMemo(() => {
-    const result: Array<{ pageNum: number; blocks: any[] }> = [];
-    let currentPage = { pageNum: 0, blocks: [], height: 0 };
+    type CanvasPage = { pageNum: number; blocks: WorksheetBlock[]; height: number };
+    const result: CanvasPage[] = [];
+    let currentPage: CanvasPage = { pageNum: 0, blocks: [], height: 0 };
 
     for (const block of state.blocks) {
       // Get actual rendered height from ref, fallback to estimate if not measured yet
@@ -211,6 +224,10 @@ export function WorksheetCanvas({
       className="flex-1 overflow-auto canvas-scroll"
       style={{ backgroundColor: canvasBackgroundColor, scrollbarWidth: "none", msOverflowStyle: "none" }}
     >
+      {fontStylesheetUrls.map((href) => (
+        <link key={href} rel="stylesheet" href={href} />
+      ))}
+      {exampleFontOverride.fontFaceCss ? <style>{exampleFontOverride.fontFaceCss}</style> : null}
       <div className="flex justify-center pt-4 pb-8 px-4" onMouseDown={clearSelectionIfWorkspaceClick}>
         <SortableContext
           items={state.blocks.map((b) => b.id)}
@@ -251,7 +268,9 @@ export function WorksheetCanvas({
                 >
                   <div
                     style={{
-                      fontFamily: "'Encode Sans Semi Condensed', sans-serif",
+                      ["--worksheet-example-font" as string]: exampleFontOverride.fontFamily,
+                      ["--worksheet-original-example-font" as string]: exampleFontOverride.fontFamily,
+                      fontFamily: resolvedBodyFontFamily,
                       height: pageHeight,
                       boxSizing: "border-box",
                       overflow: "hidden",
@@ -310,12 +329,15 @@ export function WorksheetCanvas({
                         overflow: "hidden",
                         paddingLeft: BODY_SIDE_PADDING,
                         paddingRight: BODY_SIDE_PADDING,
+                        fontSize: resolvedBodyFontSize,
                       }}
                     >
                       {page.blocks.map((block, blockIndex) => {
                         const isDragging = !!activeId;
                         const isOverThis = overId === block.id;
                         const isActiveBlock = activeId === block.id;
+                        const previousBlock = page.blocks[blockIndex - 1];
+                        const followsNumberedHeading = previousBlock?.type === "numbered-heading";
 
                         const showAbove =
                           blockIndex === 0 &&
@@ -343,7 +365,7 @@ export function WorksheetCanvas({
                               }}
                               style={
                                 blockIndex > 0
-                                  ? { marginTop: "var(--block-gap, 6px)" }
+                                  ? { marginTop: followsNumberedHeading ? 0 : "var(--block-gap, 6px)" }
                                   : undefined
                               }
                             >
@@ -379,17 +401,17 @@ export function WorksheetCanvas({
                           flexShrink: 0,
                         }}
                       >
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: "0 1 45%", minWidth: 0 }}>
                           {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
                         </div>
-                        <div style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ flex: "0 0 10%", minWidth: 0, textAlign: "center" }}>
                           {processedFooterCenter ? (
                             <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
                           ) : state.settings.footerText ? (
                             <span>{state.settings.footerText}</span>
                           ) : null}
                         </div>
-                        <div style={{ flex: 1, textAlign: "right" }}>
+                        <div style={{ flex: "0 1 45%", minWidth: 0, textAlign: "right" }}>
                           {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
                         </div>
                       </div>

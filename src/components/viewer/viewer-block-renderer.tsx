@@ -1426,7 +1426,7 @@ function InstructionRow({
   const isOnline = mode === "online";
   return (
     <div
-      className={`flex w-full min-w-0 items-center gap-3 font-semibold ${withDivider ? "py-2 border-b" : ""} ${rowClassName || ""}`.trim()}
+      className={`flex w-full min-w-0 items-center gap-3 font-semibold ${s.instructionRow} ${withDivider ? "py-2" : ""} ${rowClassName || ""}`.trim()}
       style={{
         color: "var(--color-primary)",
         ...(style || {}),
@@ -1436,7 +1436,7 @@ function InstructionRow({
         <InstructionBadge instructionIndex={instructionIndex} />
       )}
       <div className="min-w-0 flex-1">
-        <p className="min-w-0">{instruction}</p>
+        <p className={`min-w-0 text-cv-micro ${s.instructionText}`}>{instruction}</p>
       </div>
       {trailingContent}
     </div>
@@ -1785,30 +1785,44 @@ function calculateHeadingMargin(level: number, blockGap: string | null | undefin
   return `${marginPx.toFixed(2)}px`;
 }
 
-function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor, accentColor, headingColor, blockGap }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null }) {
-  const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
-  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
-  const brandFonts = getBrandFonts(brand || "edoomio");
-  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
-  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
-  const headingMargin = calculateHeadingMargin(block.level, blockGap);
-  let topMargin = headingMargin;
-  let bottomMargin = headingMargin;
-  if (block.level === 1 && blockGap) {
+function resolveHeadingMargins(
+  level: number,
+  blockGap: string | null | undefined,
+): { marginTop: string; marginBottom: string } {
+  const headingMargin = calculateHeadingMargin(level, blockGap);
+  let marginTop = headingMargin;
+  let marginBottom = headingMargin;
+  if (level === 1 && blockGap) {
     const config = HEADING_CONFIG[1];
     const gapPx = parseFloat(blockGap);
     if (!isNaN(gapPx)) {
       const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
       const marginPx = (4 * gapPx) - lineHeightExtraSpace;
-      bottomMargin = `${marginPx.toFixed(2)}px`;
-    }
-  } else if ((block.level === 2 || block.level === 3) && blockGap) {
-    const gapPx = parseFloat(blockGap);
-    if (!isNaN(gapPx)) {
-      const marginPx = 2 * gapPx;
-      topMargin = `${marginPx.toFixed(2)}px`;
+      marginBottom = `${marginPx.toFixed(2)}px`;
     }
   }
+  return { marginTop, marginBottom };
+}
+
+function extendMarginByBlockGap(
+  margin: string,
+  blockGap: string | null | undefined,
+  multiplier: number | null | undefined,
+): string {
+  if (!blockGap || !multiplier) return margin;
+  const additions = Array.from({ length: Math.max(0, Math.floor(multiplier)) }, () => blockGap);
+  if (additions.length === 0) return margin;
+  return `calc(${[margin, ...additions].join(" + ")})`;
+}
+
+function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights, isNonLatin, isRtl: isLocaleRtl = false, translationScale, primaryColor, accentColor, headingColor, blockGap, headingBottomMargins }: { block: HeadingBlock; originalBlock?: HeadingBlock; brand?: Brand; headlineFont?: string; headingWeights?: { h1: number; h2: number; h3: number; h4: number }; isNonLatin?: boolean; isRtl?: boolean; translationScale?: number; primaryColor?: string; accentColor?: string | null; headingColor?: string; blockGap?: string | null; headingBottomMargins?: Record<string, string | null | undefined> }) {
+  const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
+  const sizes = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
+  const brandFonts = getBrandFonts(brand || "edoomio");
+  const resolvedHeadlineFont = headlineFont || brandFonts.headlineFont;
+  const resolvedHeadingWeight = headingWeights?.[`h${block.level}` as "h1" | "h2" | "h3" | "h4"] ?? brandFonts.headlineWeight;
+  const headingMargin = resolveHeadingMargins(block.level, blockGap);
+  const bottomMargin = headingBottomMargins?.[`h${block.level}`] || headingMargin.marginBottom;
   const deMarkerColor = originalBlock ? accentColor : undefined;
   const isBilingual = block.bilingual && originalBlock && originalBlock.content !== block.content;
   // Only flip a heading to RTL when it renders purely translated content
@@ -1816,7 +1830,7 @@ function HeadingView({ block, originalBlock, brand, headlineFont, headingWeights
   // stay LTR. skipTranslation headings render the original German and stay LTR.
   const applyRtl = isLocaleRtl && !block.skipTranslation && !isBilingual;
   const style: React.CSSProperties = {
-    marginTop: topMargin,
+    marginTop: headingMargin.marginTop,
     marginBottom: bottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
@@ -1985,8 +1999,11 @@ function NumberedHeadingView({
   headingNumberFormat,
   allBlocks,
   blockGap,
+  headingBottomMargins,
+  mode,
 }: {
   block: NumberedHeadingBlock;
+  mode: ViewMode;
   brand?: Brand;
   headlineFont?: string;
   headingWeights?: { h1: number; h2: number; h3: number; h4: number };
@@ -2001,6 +2018,7 @@ function NumberedHeadingView({
   headingNumberFormat?: string | null;
   allBlocks?: WorksheetBlock[];
   blockGap?: string | null;
+  headingBottomMargins?: Record<string, string | null | undefined>;
 }) {
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const sizes: Record<number, string> = { 1: "text-cv-3xl", 2: "text-cv-2xl", 3: "text-cv-xl", 4: "text-cv-lg" };
@@ -2014,34 +2032,21 @@ function NumberedHeadingView({
   const sequence = sequences?.get(block.id) ?? 1;
   const numberLabel = formatHeadingNumber(sequence, headingNumberFormat);
   const applyRtl = isLocaleRtl && !block.skipTranslation;
+  const numberSlotWidth = mode === "print" ? "20px" : "1.5rem";
   const numberSlotStyle: React.CSSProperties = {
     display: "inline-block",
-    minWidth: "1.5rem",
-    ...(applyRtl ? { marginLeft: "0.5rem" } : { marginRight: "0.5rem" }),
+    width: numberSlotWidth,
+    minWidth: numberSlotWidth,
+    ...(applyRtl ? { marginLeft: "0.75rem" } : { marginRight: "0.75rem" }),
     fontVariantNumeric: "tabular-nums",
     fontWeight: resolvedHeadingNumberWeight,
     ...(headingNumberColor ? { color: headingNumberColor } : {}),
   };
-  const headingMargin = calculateHeadingMargin(block.level, blockGap);
-  let topMargin = headingMargin;
-  let bottomMargin = headingMargin;
-  if (block.level === 1 && blockGap) {
-    const config = HEADING_CONFIG[1];
-    const gapPx = parseFloat(blockGap);
-    if (!isNaN(gapPx)) {
-      const lineHeightExtraSpace = (config.lineHeight - 1) * config.fontSize;
-      const marginPx = (4 * gapPx) - lineHeightExtraSpace;
-      bottomMargin = `${marginPx.toFixed(2)}px`;
-    }
-  } else if ((block.level === 2 || block.level === 3) && blockGap) {
-    const gapPx = parseFloat(blockGap);
-    if (!isNaN(gapPx)) {
-      const marginPx = 2 * gapPx;
-      topMargin = `${marginPx.toFixed(2)}px`;
-    }
-  }
+  const headingMargin = resolveHeadingMargins(block.level, blockGap);
+  const marginTop = extendMarginByBlockGap(headingMargin.marginTop, blockGap, block.extendTopMargin);
+  const bottomMargin = headingBottomMargins?.[`h${block.level}`] || headingMargin.marginBottom;
   const style: React.CSSProperties = {
-    marginTop: topMargin,
+    marginTop,
     marginBottom: bottomMargin,
     ...(resolvedHeadlineFont ? { fontFamily: resolvedHeadlineFont } : {}),
     fontWeight: resolvedHeadingWeight,
@@ -9348,7 +9353,6 @@ function FixSentencesView({
           <InstructionRow instruction={block.instruction} accentColor={accentColor} mode={mode} instructionIndex={instructionIndex} />
         )
       )}
-      {block.sentences.length > 0 && <SectionGap size="small" />}
       <div>
         {block.sentences.map((item, i) => {
           const correctParts = item.sentence.split(" | ").map((p) => p.trim());
@@ -12449,6 +12453,7 @@ export function ViewerBlockRenderer({
   headingNumberFormats,
   headingColors,
   headingNumberColors,
+  headingBottomMargins,
   itemNumberFormat,
   translationScale,
   blockGap,
@@ -12477,6 +12482,7 @@ export function ViewerBlockRenderer({
   headingNumberFormats?: Record<string, string>;
   headingColors?: Record<string, string>;
   headingNumberColors?: Record<string, string>;
+  headingBottomMargins?: Record<string, string | null | undefined>;
   itemNumberFormat?: string;
   isNonLatin?: boolean;
   isRtl?: boolean;
@@ -12507,7 +12513,7 @@ export function ViewerBlockRenderer({
   const renderedBlock = (() => {
   switch (block.type) {
     case "heading":
-      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap}/>;
+      return <HeadingView block={block} originalBlock={originalBlock as HeadingBlock | undefined} brand={brand} headlineFont={headlineFont} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColor={resolveHeadingColor(headingColors?.[`h${(block as HeadingBlock).level}`], primaryColor, accentColor)} blockGap={blockGap} headingBottomMargins={headingBottomMargins}/>;
     case "title":
       return <TitleView block={block as TitleBlock} originalBlock={originalBlock as TitleBlock | undefined} brand={brand} headlineFont={headlineFont} bodyFont={bodyFont} bodyFontSize={bodyFontSize} headingWeights={headingWeights} isNonLatin={isNonLatin} isRtl={_isRtl} translationScale={translationScale} primaryColor={primaryColor} accentColor={accentColor} headingColors={headingColors} blockGap={blockGap} />;
     case "numbered-heading": {
@@ -12530,6 +12536,8 @@ export function ViewerBlockRenderer({
           headingNumberFormat={headingNumberFormats?.[levelKey]}
           allBlocks={allBlocks}
           blockGap={blockGap}
+          headingBottomMargins={headingBottomMargins}
+          mode={mode}
         />
       );
     }

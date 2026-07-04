@@ -483,6 +483,7 @@ export interface NumberedHeadingBlock extends BlockBase {
   content: string;
   level: 1 | 2 | 3 | 4;
   startNumber: number;
+  extendTopMargin?: 1 | 2 | 3;
   bilingual?: boolean;
   skipTranslation?: boolean;
 }

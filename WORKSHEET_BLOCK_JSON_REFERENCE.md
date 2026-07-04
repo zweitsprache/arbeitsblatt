@@ -157,6 +157,7 @@ Notes:
   "visibility": "both",
   "content": "Section title",
   "level": 1,
+  "extendTopMargin": 1,
   "bilingual": false,
   "skipTranslation": false
 }
@@ -165,6 +166,7 @@ Notes:
 Notes:
 
 - `level` must be `1`, `2`, `3`, or `4`.
+- `extendTopMargin` is optional and must be `1`, `2`, or `3`; it adds that many `blockGap` units to the heading's top margin.
 - Numbering is sequential per heading level across the worksheet.
 - Number format per level (`h1` to `h4`) is defined in the active brand profile.
 

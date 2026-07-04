@@ -393,22 +393,49 @@ function HeadingProps({ block }: { block: HeadingBlock | NumberedHeadingBlock })
         </Select>
       </div>
       {isNumberedHeading && (
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("startNumber")}</Label>
-          <Input
-            type="number"
-            min={1}
-            value={block.startNumber}
-            onChange={(e) =>
-              dispatch({
-                type: "UPDATE_BLOCK",
-                payload: {
-                  id: block.id,
-                  updates: { startNumber: Math.max(1, Number(e.target.value) || 1) },
-                },
-              })
-            }
-          />
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("startNumber")}</Label>
+            <Input
+              type="number"
+              min={1}
+              value={block.startNumber}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: {
+                    id: block.id,
+                    updates: { startNumber: Math.max(1, Number(e.target.value) || 1) },
+                  },
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("extendTopMargin")}</Label>
+            <Select
+              value={block.extendTopMargin ? String(block.extendTopMargin) : "default"}
+              onValueChange={(value) =>
+                dispatch({
+                  type: "UPDATE_BLOCK",
+                  payload: {
+                    id: block.id,
+                    updates: { extendTopMargin: value === "default" ? undefined : Number(value) as 1 | 2 | 3 },
+                  },
+                })
+              }
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{t("default")}</SelectItem>
+                <SelectItem value="1">1x</SelectItem>
+                <SelectItem value="2">2x</SelectItem>
+                <SelectItem value="3">3x</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
       <div>

@@ -81,17 +81,46 @@
   text-transform: uppercase;
 }
 
+.instructionRow {
+  --viewer-instruction-line-height: 1.15;
+}
+
+.instructionText {
+  --viewer-instruction-text-style: default;
+}
+
+:global([data-instruction-badge-style="unboxed-small-letter"]) .instructionRow {
+  align-items: baseline;
+  column-gap: 0.75rem;
+}
+
 :global([data-instruction-badge-style="unboxed-small-letter"]) .instructionBadge {
   border-radius: 0;
   background: none;
   box-shadow: none !important;
   color: var(--viewer-instruction-badge-color, var(--color-primary));
-  font-size: 1.3em;
+  font-size: 1.1em;
   font-weight: inherit;
+  flex: 0 0 1.5rem;
+  height: auto;
   justify-content: flex-start;
+  line-height: var(--viewer-instruction-line-height);
+  min-height: 0;
+  min-width: 1.5rem;
   padding: 0;
   text-transform: lowercase;
-  transform: translateY(-0.06em);
+  width: 1.5rem;
+}
+
+:global(.print-worksheet-root [data-instruction-badge-style="unboxed-small-letter"]) .instructionBadge {
+  flex-basis: var(--viewer-badge-size);
+  min-width: var(--viewer-badge-size);
+  width: var(--viewer-badge-size);
+}
+
+:global([data-instruction-badge-style="unboxed-small-letter"]) .instructionText {
+  font-size: 1.1em;
+  line-height: var(--viewer-instruction-line-height);
 }
 
 /* ─── Handwriting ────────────────────────────────────────── */

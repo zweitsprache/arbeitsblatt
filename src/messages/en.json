@@ -1779,6 +1779,8 @@
     "letterCodeWord": "Word",
     "letterCodeClue": "Clue",
     "done": "Done",
+    "default": "Default",
+    "extendTopMargin": "Extend top margin",
     "itemsInOrder": "Order elements",
     "itemText": "Item text",
     "keepFirstLetter": "Keep characters from left",

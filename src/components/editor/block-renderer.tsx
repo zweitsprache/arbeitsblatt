@@ -704,6 +704,119 @@ function ItemNumberBadge({ index, className = "" }: { index: number; className?:
   );
 }
 
+function getEditorInstructionIndex(blocks: WorksheetBlock[], blockId: string): number | undefined {
+  let instructionCount = 0;
+  for (const block of blocks) {
+    if (
+      (block.type === "heading" && block.level === 3) ||
+      (block.type === "numbered-heading" && block.level === 3) ||
+      (block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering)
+    ) {
+      instructionCount = 0;
+      continue;
+    }
+    if ("instruction" in block && block.instruction && typeof block.instruction === "string" && block.instruction.trim()) {
+      if (block.id === blockId) return instructionCount;
+      instructionCount++;
+    }
+  }
+  return undefined;
+}
+
+function EditorInstructionLine({
+  blockId,
+  instruction,
+  editable = true,
+  rowPaddingClassName = "py-2",
+}: {
+  blockId: string;
+  instruction: React.ReactNode;
+  editable?: boolean;
+  rowPaddingClassName?: string;
+}) {
+  const { state, dispatch } = useEditor();
+  const { localeUpdate } = useLocaleAwareEdit();
+  const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
+  const instructionIndex = getEditorInstructionIndex(state.blocks, blockId);
+  const badgeStyle = resolvedBrand.instructionBadgeStyle || "default";
+  const primaryColor = resolvedBrand.primaryColor || "#1a1a1a";
+  const badgeColor = resolvedBrand.instructionBadgeColor || primaryColor;
+  const isSmallLetter = badgeStyle === "unboxed-small-letter";
+  const lineHeight = isSmallLetter ? 1.15 : 1.35;
+
+  const rowStyle: React.CSSProperties = {
+    alignItems: isSmallLetter ? "baseline" : "center",
+    color: "inherit",
+    columnGap: "0.75rem",
+    fontFamily: resolvedBrand.bodyFont,
+  };
+  const badgeStyleValue: React.CSSProperties = isSmallLetter
+    ? {
+        color: badgeColor,
+        flex: "0 0 1.5rem",
+        fontSize: "1.1em",
+        fontWeight: 600,
+        justifyContent: "flex-start",
+        lineHeight,
+        minWidth: "1.5rem",
+        textTransform: "lowercase",
+        width: "1.5rem",
+      }
+    : {
+        alignItems: "center",
+        backgroundColor: "#334155",
+        borderRadius: 3,
+        boxShadow: "inset 0 0 0 1px #334155",
+        color: "#fff",
+        fontSize: "0.55rem",
+        fontWeight: 700,
+        height: 20,
+        justifyContent: "center",
+        lineHeight: 1,
+        minWidth: 20,
+        textTransform: "uppercase",
+        width: 20,
+      };
+  const textStyle: React.CSSProperties = {
+    fontSize: isSmallLetter ? "1.1em" : "0.55rem",
+    lineHeight,
+  };
+
+  return (
+    <div className={`flex w-full min-w-0 font-semibold ${rowPaddingClassName}`} style={rowStyle}>
+      <span className="flex shrink-0 items-center" contentEditable={false} style={badgeStyleValue}>
+        {toAlphabeticLabel((instructionIndex ?? 0) + 1, !isSmallLetter)}
+      </span>
+      <p
+        className="min-w-0 flex-1 outline-none"
+        contentEditable={editable}
+        suppressContentEditableWarning
+        style={textStyle}
+        onBlur={(e) => {
+          if (!editable) return;
+          const value = e.currentTarget.textContent || "";
+          localeUpdate(blockId, "instruction", value, () =>
+            dispatch({ type: "UPDATE_BLOCK", payload: { id: blockId, updates: { instruction: value } } })
+          );
+        }}
+      >
+        {instruction}
+      </p>
+    </div>
+  );
+}
+
+const EDITOR_SECTION_GAP = {
+  "x-small": 4,
+  small: 8,
+  medium: 12,
+  large: 16,
+} as const;
+
+function EditorSectionGap({ size }: { size: keyof typeof EDITOR_SECTION_GAP }) {
+  return <div aria-hidden="true" style={{ height: EDITOR_SECTION_GAP[size] }} />;
+}
+
 function resolveHeadingOverrideColor(
   override: string | null | undefined,
   primaryColor?: string,
@@ -747,14 +860,19 @@ function resolveHeadingMargins(
       const marginPx = 4 * gapPx - lineHeightExtraSpace;
       marginBottom = `${marginPx.toFixed(2)}px`;
     }
-  } else if ((level === 2 || level === 3) && blockGap) {
-    const gapPx = parseFloat(blockGap);
-    if (!Number.isNaN(gapPx)) {
-      const marginPx = 2 * gapPx;
-      marginTop = `${marginPx.toFixed(2)}px`;
-    }
   }
   return { marginTop, marginBottom };
+}
+
+function extendMarginByBlockGap(
+  margin: string,
+  blockGap: string | null | undefined,
+  multiplier: number | null | undefined,
+): string {
+  if (!blockGap || !multiplier) return margin;
+  const additions = Array.from({ length: Math.max(0, Math.floor(multiplier)) }, () => blockGap);
+  if (additions.length === 0) return margin;
+  return `calc(${[margin, ...additions].join(" + ")})`;
 }
 
 function HeadingRenderer({ block }: { block: HeadingBlock }) {
@@ -787,6 +905,7 @@ function HeadingRenderer({ block }: { block: HeadingBlock }) {
       style={{
         fontSize: headingFontSize,
         lineHeight: headingConfig.lineHeight,
+        fontFamily: state.brandProfile.headlineFont,
         fontWeight: resolvedHeadingWeight,
         marginTop: headingMargin.marginTop,
         marginBottom: bottomMargin,
@@ -893,7 +1012,7 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
             className={`${isBody ? "text-base" : ""} ${usesBodyFont ? "font-normal" : "font-bold"} outline-none`}
             style={{
               marginBottom: index < 2 ? 0 : undefined,
-              fontFamily: usesBodyFont ? state.brandProfile.bodyFont : undefined,
+              fontFamily: usesBodyFont ? state.brandProfile.bodyFont : state.brandProfile.headlineFont,
               fontWeight: usesBodyFont ? 400 : resolvedHeadingWeightByLevel[item.level],
               ...(isBody
                 ? {}
@@ -918,16 +1037,17 @@ function TitleRenderer({ block }: { block: TitleBlock }) {
 function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
   const { state, dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
+  const resolvedBrand = applyBrandOverrides(state.brandProfile, state.settings.brandOverrides);
   const Tag = `h${block.level}` as keyof React.JSX.IntrinsicElements;
   const headingConfig = HEADING_CONFIG[block.level];
   const headingSizeKey = `h${block.level}Size` as const;
-  const headingFontSize = state.brandProfile[headingSizeKey] || `${headingConfig.fontSize}px`;
+  const headingFontSize = resolvedBrand[headingSizeKey] || `${headingConfig.fontSize}px`;
   const numberSlotStyle: React.CSSProperties = {
     display: "inline-block",
     width: "1.5rem",
     minWidth: "1.5rem",
     textAlign: "left",
-    marginRight: "0.5rem",
+    marginRight: "0.75rem",
     fontVariantNumeric: "tabular-nums",
   };
 
@@ -935,37 +1055,38 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
   const currentHeading = allNumberedHeadings.find((heading) => heading.id === block.id);
   const sequence = currentHeading?.sequence ?? 1;
   const formatKey = (`h${block.level}NumberFormat` as const);
-  const format = state.brandProfile[formatKey];
+  const format = resolvedBrand[formatKey];
   const headingColorKey = (`h${block.level}HeadingColor` as const);
   const headingNumberColorKey = (`h${block.level}HeadingNumberColor` as const);
   const headingColor = resolveHeadingOverrideColor(
-    state.brandProfile[headingColorKey],
-    state.brandProfile.primaryColor,
-    state.brandProfile.accentColor,
+    resolvedBrand[headingColorKey],
+    resolvedBrand.primaryColor,
+    resolvedBrand.accentColor,
   );
   const headingNumberColor = resolveHeadingOverrideColor(
-    state.brandProfile[headingNumberColorKey],
-    state.brandProfile.primaryColor,
-    state.brandProfile.accentColor,
+    resolvedBrand[headingNumberColorKey],
+    resolvedBrand.primaryColor,
+    resolvedBrand.accentColor,
   );
   const numberLabel = formatHeadingNumber(sequence, format);
   const resolvedHeadingWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
-    1: state.brandProfile.h1Weight ?? state.brandProfile.headlineWeight,
-    2: state.brandProfile.h2Weight ?? state.brandProfile.headlineWeight,
-    3: state.brandProfile.h3Weight ?? state.brandProfile.headlineWeight,
-    4: state.brandProfile.h4Weight ?? state.brandProfile.headlineWeight,
+    1: resolvedBrand.h1Weight ?? resolvedBrand.headlineWeight,
+    2: resolvedBrand.h2Weight ?? resolvedBrand.headlineWeight,
+    3: resolvedBrand.h3Weight ?? resolvedBrand.headlineWeight,
+    4: resolvedBrand.h4Weight ?? resolvedBrand.headlineWeight,
   };
   const resolvedHeadingWeight = resolvedHeadingWeightByLevel[block.level];
   const resolvedHeadingNumberWeightByLevel: Record<1 | 2 | 3 | 4, number> = {
-    1: state.brandProfile.h1HeadingNumberWeight ?? resolvedHeadingWeightByLevel[1],
-    2: state.brandProfile.h2HeadingNumberWeight ?? resolvedHeadingWeightByLevel[2],
-    3: state.brandProfile.h3HeadingNumberWeight ?? resolvedHeadingWeightByLevel[3],
-    4: state.brandProfile.h4HeadingNumberWeight ?? resolvedHeadingWeightByLevel[4],
+    1: resolvedBrand.h1HeadingNumberWeight ?? resolvedHeadingWeightByLevel[1],
+    2: resolvedBrand.h2HeadingNumberWeight ?? resolvedHeadingWeightByLevel[2],
+    3: resolvedBrand.h3HeadingNumberWeight ?? resolvedHeadingWeightByLevel[3],
+    4: resolvedBrand.h4HeadingNumberWeight ?? resolvedHeadingWeightByLevel[4],
   };
   const resolvedHeadingNumberWeight = resolvedHeadingNumberWeightByLevel[block.level];
-  const headingMargin = resolveHeadingMargins(block.level, state.brandProfile.blockGap);
+  const headingMargin = resolveHeadingMargins(block.level, resolvedBrand.blockGap);
+  const marginTop = extendMarginByBlockGap(headingMargin.marginTop, resolvedBrand.blockGap, block.extendTopMargin);
   const bottomMarginOverrideKey = `h${block.level}BottomMargin` as const;
-  const bottomMargin = state.brandProfile[bottomMarginOverrideKey] || headingMargin.marginBottom;
+  const bottomMargin = resolvedBrand[bottomMarginOverrideKey] || headingMargin.marginBottom;
   const numberStyle: React.CSSProperties = {
     ...numberSlotStyle,
     fontWeight: resolvedHeadingNumberWeight,
@@ -978,8 +1099,9 @@ function NumberedHeadingRenderer({ block }: { block: NumberedHeadingBlock }) {
       style={{
         fontSize: headingFontSize,
         lineHeight: headingConfig.lineHeight,
+        fontFamily: resolvedBrand.headlineFont,
         fontWeight: resolvedHeadingWeight,
-        marginTop: headingMargin.marginTop,
+        marginTop,
         marginBottom: bottomMargin,
         ...(headingColor ? { color: headingColor } : {}),
       }}
@@ -1014,7 +1136,7 @@ function TextRenderer({ block }: { block: TextBlock }) {
   const { localeUpdate } = useLocaleAwareEdit();
   const t = useTranslations("blockRenderer");
   const [showAiModal, setShowAiModal] = React.useState(false);
-  const bodyFontSize = state.brandProfile.textBaseSize || `${(state.settings.fontSize || 12.5) + 1}px`;
+  const bodyFontSize = state.brandProfile.textBaseSize || `${state.settings.fontSize || 12.5}px`;
 
   const isHinweis = block.textStyle === "hinweis";
   const isHinweisWichtig = block.textStyle === "hinweis-wichtig";
@@ -1480,7 +1602,7 @@ function ImageCardsRenderer({ block }: { block: ImageCardsBlock }) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       {/* Word Bank Preview */}
       {block.showWordBank && block.items.some(item => item.text) && (
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
@@ -1709,19 +1831,7 @@ function ImageTextTableRenderer({ block }: { block: ImageTextTableBlock }) {
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <div
-          className="text-sm text-muted-foreground outline-none"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) => {
-            const value = e.currentTarget.textContent || "";
-            localeUpdate(block.id, "instruction", value, () =>
-              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-            );
-          }}
-        >
-          {block.instruction}
-        </div>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
       )}
       <div
         className="grid gap-4"
@@ -2218,19 +2328,7 @@ function LetterCodeRenderer({ block }: { block: LetterCodeBlock }) {
 
   return (
     <div className="space-y-3">
-      <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} />
       <div>
         <div className="grid" style={{ gridTemplateColumns: `repeat(15, ${cellSizePx}px)`, justifyContent: "space-between", columnGap: 0, rowGap: `${bankGapPx}px` }}>
           {rows.flatMap((row, rowIndex) =>
@@ -2336,19 +2434,7 @@ function SegmentationRenderer({ block, interactive }: { block: SegmentationBlock
 
   return (
     <div className="space-y-2">
-      <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} />
       {block.items.map((item, index) => {
         const words = getSegmentationWords(item.text, block.casing);
         const showExample = index === exampleItemIndex && words.length > 1;
@@ -2428,20 +2514,7 @@ function MultipleChoiceRenderer({
 
   return (
     <div className="space-y-3">
-      <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-        contentEditable={!interactive}
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          if (interactive) return;
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} editable={!interactive} />
       <p
         className="font-medium outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
         contentEditable={!interactive}
@@ -2670,20 +2743,7 @@ function FillInBlankItemsRenderer({
 
   return (
     <div>
-      <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-        contentEditable={!interactive}
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          if (interactive) return;
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} editable={!interactive} />
       {block.showWordBank && wordBankAnswers.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 py-1">
           {wordBankAnswers.map((word, i) => (
@@ -2846,9 +2906,10 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
   const itemNumberFormat = state.brandProfile.itemNumberFormat || "default";
   const usePlainTextRightLabels = itemNumberFormat === "numbers-with-period";
   const isPronunciation = block.type === "pronunciation";
+  const matchingControlBoxClass = "h-4 w-4 rounded-[3px] border border-muted-foreground/40 shrink-0";
   const rowClass = isPronunciation
-    ? `flex min-h-[32.5px] items-center gap-3 border-b ${block.extendedRows ? "py-1" : "py-2"}`
-    : undefined;
+    ? `flex min-h-[32.5px] items-center gap-3 border-b ${block.extendedRows ? "py-1" : ""}`
+    : "flex min-h-[32.5px] items-center gap-3 border-b";
   const rowStyle = isPronunciation && block.extendedRows ? { minHeight: "3.5rem" } : undefined;
   const examplePairId = block.showFirstAsExample ? block.pairs[0]?.id : undefined;
   const orderedPairs = React.useMemo(() => {
@@ -2875,8 +2936,8 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
     return answer ? new Set([answer]) : new Set<string>();
   }, [block.pairs, examplePairId]);
   const lineContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const leftExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
-  const rightExampleRefs = React.useRef<Record<string, HTMLSpanElement | null>>({});
+  const leftExampleRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const rightExampleRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const [exampleLine, setExampleLine] = React.useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
   const [exampleSvgSize, setExampleSvgSize] = React.useState({ width: 0, height: 0 });
   const wordBankItems = getDeterministicPreviewOrder(
@@ -2909,9 +2970,9 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
 
       setExampleSvgSize({ width: containerRect.width, height: containerRect.height });
       setExampleLine({
-        x1: leftRect.right - containerRect.left,
+        x1: leftRect.left - containerRect.left + leftRect.width / 2,
         y1: leftRect.top - containerRect.top + leftRect.height / 2,
-        x2: rightRect.left - containerRect.left,
+        x2: rightRect.left - containerRect.left + rightRect.width / 2,
         y2: rightRect.top - containerRect.top + rightRect.height / 2,
       });
     };
@@ -2932,12 +2993,12 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
 
   return (
     <div className="space-y-3">
-      <p className="text-base text-muted-foreground">{block.instruction}</p>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
       {block.textAboveItems?.trim() && (
         <p className="text-sm whitespace-pre-line">{block.textAboveItems}</p>
       )}
       {block.showWordBank && wordBankItems.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 py-1">
+        <div className="-mt-1 flex flex-wrap items-center gap-2 py-1">
           {wordBankItems.map((word, i) => (
             <span
               key={i}
@@ -2971,9 +3032,10 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
       <div className="grid grid-cols-2" style={{ gap: "0 24px" }}>
         <div className="space-y-0">
           {isPronunciation && (
-            <div className="flex min-h-[32.5px] items-center gap-3 border-y py-2 text-sm font-semibold text-foreground">
+            <div className="flex min-h-[32.5px] items-center gap-3 border-y text-sm font-semibold text-foreground">
               <span className="w-6 shrink-0" />
               <span className="flex-1 text-right">{block.leftHeader ?? ""}</span>
+              <span className={matchingControlBoxClass} style={{ visibility: "hidden" }} aria-hidden="true" />
             </div>
           )}
           {orderedPairs.map((pair, i) => (
@@ -2984,21 +3046,24 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
             >
               <ItemNumberBadge index={i + 1} />
               <span
-                ref={pair.id === examplePairId ? (node) => {
-                  leftExampleRefs.current[pair.id] = node;
-                } : undefined}
                 className="flex-1 text-right"
                 style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
               >
                 {pair.left}
               </span>
+              <div
+                className={matchingControlBoxClass}
+                ref={pair.id === examplePairId ? (node) => {
+                  leftExampleRefs.current[pair.id] = node;
+                } : undefined}
+              />
             </div>
           ))}
         </div>
         <div className="space-y-0">
           {isPronunciation && (
-            <div className="flex min-h-[32.5px] items-center gap-3 border-y py-2 text-sm font-semibold text-foreground">
-              <span className="h-4 w-4 shrink-0" />
+            <div className="flex min-h-[32.5px] items-center gap-3 border-y text-sm font-semibold text-foreground">
+              <span className={matchingControlBoxClass} style={{ visibility: "hidden" }} aria-hidden="true" />
               <span className="flex-1">{block.rightHeader ?? ""}</span>
               <span className="w-6 shrink-0" />
             </div>
@@ -3009,11 +3074,13 @@ function MatchingRenderer({ block }: { block: MatchingBlock | PronunciationBlock
               className={rowClass ?? `flex items-center gap-3 py-2 border-b ${i === 0 ? "border-t" : ""}`}
               style={rowStyle}
             >
-              <div className="h-4 w-4 rounded-[3px] border border-muted-foreground/40 shrink-0" />
-              <span
+              <div
+                className={matchingControlBoxClass}
                 ref={pair.id === examplePairId ? (node) => {
                   rightExampleRefs.current[pair.id] = node;
                 } : undefined}
+              />
+              <span
                 className="flex-1"
                 style={pair.id === examplePairId ? { color: "#0097dc" } : undefined}
               >
@@ -3056,7 +3123,7 @@ function TextMatchingRenderer({ block }: { block: TextMatchingBlock }) {
 
   return (
     <div className="space-y-8">
-      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
+      {block.instruction ? <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} /> : null}
       {textItems.length > 0 && (
         <div className="space-y-0">
           {textItems.map((item, index) => (
@@ -3124,7 +3191,7 @@ function TwoColumnFillRenderer({ block }: { block: TwoColumnFillBlock }) {
 
   return (
     <div className="space-y-3">
-      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
+      {block.instruction ? <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} /> : null}
       {/* Word Bank */}
       {block.showWordBank && wordBankItems.length > 0 && (
         <div className="rounded p-3 border border-dashed border-muted-foreground/30">
@@ -3202,19 +3269,7 @@ function GlossaryRenderer({ block }: { block: GlossaryBlock }) {
   return (
     <div className="space-y-3">
       {block.instruction && (
-        <p
-          className="text-base text-muted-foreground outline-none"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) => {
-            const value = e.currentTarget.textContent || "";
-            localeUpdate(block.id, "instruction", value, () =>
-              dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-            );
-          }}
-        >
-          {block.instruction}
-        </p>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
       )}
       <div className="space-y-0 border-t">
         {block.pairs.map((pair, i) => (
@@ -3633,20 +3688,7 @@ function MCQMatrixRenderer({
 
   return (
     <div className="space-y-3">
-      <p
-        className="text-base text-muted-foreground outline-none"
-        contentEditable={!interactive}
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          if (interactive) return;
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} editable={!interactive} />
       {wordBankItems.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 py-1">
           {wordBankItems.map((item, index) => (
@@ -3860,20 +3902,7 @@ function MCQRowsRenderer({
 
   return (
     <div className="space-y-2">
-      <p
-        className="text-base text-muted-foreground outline-none border-b border-transparent focus:border-muted-foreground/30 transition-colors"
-        contentEditable={!interactive}
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          if (interactive) return;
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {instructionText}
-      </p>
+      <EditorInstructionLine blockId={block.id} instruction={instructionText} editable={!interactive} />
 
       <div>
         {block.items.map((item, itemIndex) => (
@@ -4178,19 +4207,7 @@ function OrderItemsRenderer({
 
   return (
     <div className="space-y-2">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
       <div>
         {sortedItems.map((item, i) => (
           <div
@@ -4662,7 +4679,29 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
   };
 
   return (
-    <div className="space-y-3">
+    <div>
+      {block.instruction ? (
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
+      ) : null}
+      {block.instruction && (block.showWordList || block.grid.length > 0) ? <EditorSectionGap size="large" /> : null}
+      {/* Word list */}
+      {block.showWordList && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {block.words.map((word, i) => (
+              <span
+                key={i}
+                className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
+                style={block.showFirstAsExample && i === 0 ? { color: "#0097dc" } : undefined}
+              >
+                {block.showFirstAsExample && i === 0 ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
+              </span>
+            ))}
+          </div>
+          {block.grid.length > 0 ? <EditorSectionGap size="medium" /> : null}
+        </>
+      )}
+
       {/* Grid */}
       {block.grid.length > 0 && (
         <div className="w-full">
@@ -4696,21 +4735,6 @@ function WordSearchRenderer({ block }: { block: WordSearchBlock }) {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Word list */}
-      {block.showWordList && (
-        <div className="flex flex-wrap gap-2">
-          {block.words.map((word, i) => (
-            <span
-              key={i}
-              className="px-2 py-0.5 bg-muted rounded text-xs font-medium uppercase tracking-wide"
-              style={block.showFirstAsExample && i === 0 ? { color: "#0097dc" } : undefined}
-            >
-              {block.showFirstAsExample && i === 0 ? <RoughExampleStrike>{word}</RoughExampleStrike> : word}
-            </span>
-          ))}
         </div>
       )}
 
@@ -4758,7 +4782,7 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
 
   return (
     <div className="space-y-3">
-      {block.instruction ? <p className="text-base text-muted-foreground">{block.instruction}</p> : null}
+      {block.instruction ? <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} /> : null}
       {block.generationError ? (
         <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {block.generationError === "word-too-long"
@@ -4778,7 +4802,6 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
           <CrosswordLayout
             grid={block.grid}
             placements={block.placements}
-            showSolutions
             cellSize="30px"
             fixedCellSize
             clueNumberFormat={state.brandProfile.itemNumberFormat || "default"}
@@ -4805,14 +4828,42 @@ function CrosswordRenderer({ block, mode }: { block: CrosswordBlock; mode: ViewM
 function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
-  const t = useTranslations("blockRenderer");
   const colorCodeEnabled = !!block.colorCode;
   const useTwoColumnCategoryLines = block.categories.length === 2 && !!block.twoColumnCategoryLines;
   const exampleItem = block.showFirstAsExample ? block.items[0] : undefined;
   const exampleItemId = exampleItem?.id;
-  const exampleCategoryId = exampleItem
-    ? block.categories.find((cat) => cat.correctItems.includes(exampleItem.id))?.id
+  const exampleCategory = exampleItem
+    ? block.categories.find((cat) => cat.correctItems.includes(exampleItem.id))
     : undefined;
+  const exampleCategoryId = exampleCategory?.id;
+  const maxItemsPerCat = Math.max(...block.categories.map((cat) => cat.correctItems.length), 0);
+  const shuffledItems = React.useMemo(() => {
+    const arr = [...block.items];
+    let seed = 0;
+    for (let i = 0; i < block.id.length; i++) {
+      seed = ((seed << 5) - seed + block.id.charCodeAt(i)) | 0;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 16807 + 0) % 2147483647;
+      const j = Math.abs(seed) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [block.items, block.id]);
+  const displayItems = shuffledItems;
+  const getItemCategory = (itemId: string) =>
+    block.categories.find((cat) => cat.correctItems.includes(itemId));
+  const getItemTheme = (itemId: string) => {
+    const category = getItemCategory(itemId);
+    return category ? getCategoryTheme(category.id) : categoryPalette[0];
+  };
+  const getCategoryExampleItem = (catId: string) =>
+    exampleCategoryId === catId ? exampleItem : undefined;
+
+  const getCategoryLabelPath = (catId: string) => {
+    const catIdx = block.categories.findIndex((cat) => cat.id === catId);
+    return `categories.${catIdx}.label`;
+  };
 
   const categoryPalette = [
     { headerBg: "#F9F1EA", headerText: "#334155", headerBorder: "#F9F1EA", itemBg: "#FCF8F5", itemText: "#334155", itemBorder: "#F9F1EA" },
@@ -4825,15 +4876,26 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
     { headerBg: "#F2F2F6", headerText: "#334155", headerBorder: "#F2F2F6", itemBg: "#F9F9FB", itemText: "#334155", itemBorder: "#F2F2F6" },
   ] as const;
 
-  const getCategoryTheme = (catId: string) => {
+  function getCategoryTheme(catId: string) {
     const catIndex = block.categories.findIndex((cat) => cat.id === catId);
     const index = catIndex >= 0 ? catIndex : 0;
     return categoryPalette[index % categoryPalette.length];
-  };
+  }
 
   const splitItemsLeftFirst = <T,>(items: T[]): [T[], T[]] => {
     const leftCount = Math.ceil(items.length / 2);
     return [items.slice(0, leftCount), items.slice(leftCount)];
+  };
+
+  const renderWritingRows = (rows: React.ReactElement[]) => {
+    if (!useTwoColumnCategoryLines) return <div>{rows}</div>;
+    const [leftRows, rightRows] = splitItemsLeftFirst(rows);
+    return (
+      <div className="grid grid-cols-2 gap-x-3">
+        <div>{leftRows}</div>
+        <div>{rightRows}</div>
+      </div>
+    );
   };
 
   const updateItem = (id: string, text: string) => {
@@ -4844,25 +4906,6 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
         updates: {
           items: block.items.map((item) =>
             item.id === id ? { ...item, text } : item
-          ),
-        },
-      },
-    });
-  };
-
-  const addItem = () => {
-    const newId = crypto.randomUUID();
-    const firstCat = block.categories[0];
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: {
-          items: [...block.items, { id: newId, text: `Item ${block.items.length + 1}` }],
-          categories: block.categories.map((cat) =>
-            cat.id === firstCat.id
-              ? { ...cat, correctItems: [...cat.correctItems, newId] }
-              : cat
           ),
         },
       },
@@ -4885,144 +4928,133 @@ function SortingCategoriesRenderer({ block }: { block: SortingCategoriesBlock })
     });
   };
 
+  const updateCategoryLabel = (catId: string, label: string) => {
+    localeUpdate(block.id, getCategoryLabelPath(catId), label, () =>
+      dispatch({
+        type: "UPDATE_BLOCK",
+        payload: {
+          id: block.id,
+          updates: {
+            categories: block.categories.map((cat) =>
+              cat.id === catId ? { ...cat, label } : cat
+            ),
+          },
+        },
+      })
+    );
+  };
+
   return (
-    <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
+    <div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
+      <div aria-hidden="true" style={{ height: 16 }} />
+      <div className="flex min-h-[49px] flex-wrap items-center gap-2">
+        {displayItems.map((item) => {
+          if (!item) return null;
+          const itemTheme = getItemTheme(item.id);
+          const isExampleItem = item.id === exampleItemId;
+          return (
+            <span
+              key={item.id}
+              className="group/item relative rounded border px-2 py-0.5"
+              style={colorCodeEnabled
+                ? {
+                    backgroundColor: itemTheme.itemBg,
+                    borderColor: itemTheme.itemBg,
+                    color: itemTheme.itemText,
+                  }
+                : undefined}
+            >
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                className="outline-none"
+                style={{ color: isExampleItem ? "#0097dc" : undefined }}
+                onBlur={(e) => {
+                  const value = e.currentTarget.textContent || "";
+                  const arrIdx = block.items.findIndex((w) => w.id === item.id);
+                  localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
+                    updateItem(item.id, value)
+                  );
+                }}
+              >
+                {isExampleItem ? <RoughExampleStrike>{item.text}</RoughExampleStrike> : item.text}
+              </span>
+              <button
+                className="absolute -right-2 -top-2 opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded bg-background transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeItem(item.id);
+                }}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </button>
+            </span>
           );
-        }}
-      >
-        {block.instruction}
+        })}
       </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${block.categories.length}, 1fr)` }}>
+      <div aria-hidden="true" style={{ height: 12 }} />
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${block.categories.length}, minmax(0, 1fr))` }}>
         {block.categories.map((cat) => {
           const catTheme = getCategoryTheme(cat.id);
-          const catItems = block.items.filter((item) =>
-            cat.correctItems.includes(item.id)
-          );
+          const categoryExampleItem = getCategoryExampleItem(cat.id);
+          const rowCount = Math.max((block.showWritingLines ?? true) ? maxItemsPerCat : 0, categoryExampleItem ? 1 : 0);
+          const rows = Array.from({ length: rowCount }).map((_, index) => {
+            const showExample = index === 0 && categoryExampleItem;
+            return (
+              <div key={`${cat.id}-row-${index}`} className="flex min-h-[32.5px] items-center gap-3">
+                <div
+                  className="relative flex-1 h-8 overflow-hidden"
+                  style={{
+                    borderBottom: "1px dashed var(--color-muted-foreground)",
+                    minWidth: 80,
+                  }}
+                >
+                  {showExample ? (
+                    <span
+                      className="absolute inset-x-0 block leading-none"
+                      style={{
+                        bottom: "6px",
+                        fontFamily: EXAMPLE_HANDWRITING_FONT,
+                        color: "#0097dc",
+                        fontSize: "18px",
+                      }}
+                    >
+                      {categoryExampleItem.text}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          });
+
           return (
-            <div key={cat.id} className="rounded-sm border border-border overflow-hidden">
+            <div key={cat.id} className="min-w-0 overflow-hidden rounded-sm">
               <div
-                className="bg-muted flex items-center pl-2.5 pr-2 py-0.5 border-t border-transparent"
+                className="flex items-center border-b border-t border-t-transparent pl-2.5 pr-2 py-0.5 rounded-bl rounded-br"
                 style={colorCodeEnabled
                   ? {
                       backgroundColor: catTheme.headerBg,
+                      color: catTheme.headerText,
                       borderTopColor: catTheme.headerBg,
-                      borderBottom: `1px solid ${catTheme.headerBorder}`,
+                      borderBottomColor: catTheme.headerBorder,
                     }
-                  : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottom: "1px solid #f8fafc" }}
+                  : { backgroundColor: "#f8fafc", borderTopColor: "#f8fafc", borderBottomColor: "#f8fafc" }}
               >
                 <span
                   className="font-semibold outline-none block"
-                  style={colorCodeEnabled ? { color: catTheme.headerText } : undefined}
                   contentEditable
                   suppressContentEditableWarning
-                  onBlur={(e) => {
-                    const value = e.currentTarget.textContent || "";
-                    const catIdx = block.categories.findIndex((c) => c.id === cat.id);
-                    localeUpdate(block.id, `categories.${catIdx}.label`, value, () =>
-                      dispatch({
-                        type: "UPDATE_BLOCK",
-                        payload: {
-                          id: block.id,
-                          updates: {
-                            categories: block.categories.map((c) =>
-                              c.id === cat.id ? { ...c, label: value } : c
-                            ),
-                          },
-                        },
-                      })
-                    );
-                  }}
+                  onBlur={(e) => updateCategoryLabel(cat.id, e.currentTarget.textContent || "")}
                 >
                   {cat.label}
                 </span>
               </div>
-              <div className="min-h-[60px]">
-                {(() => {
-                  const renderedItems = catItems.map((item) => {
-                    const isExampleItem = item.id === exampleItemId && cat.id === exampleCategoryId;
-                    return (
-                      <div
-                        key={item.id}
-                        className="group/item px-2"
-                      >
-                        <div className="flex min-h-[37px] items-center gap-3">
-                          <div className="relative flex-1 h-8 overflow-hidden border-b border-dashed border-muted-foreground/30">
-                            <span
-                              contentEditable
-                              suppressContentEditableWarning
-                              className="absolute inset-x-0 outline-none block leading-none"
-                              style={colorCodeEnabled
-                                ? {
-                                    bottom: isExampleItem ? "6px" : "4px",
-                                    color: isExampleItem ? "#0097dc" : catTheme.itemText,
-                                    fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
-                                    fontSize: isExampleItem ? "18px" : undefined,
-                                  }
-                                : {
-                                    bottom: isExampleItem ? "6px" : "4px",
-                                    color: isExampleItem ? "#0097dc" : undefined,
-                                    fontFamily: isExampleItem ? EXAMPLE_HANDWRITING_FONT : undefined,
-                                    fontSize: isExampleItem ? "18px" : undefined,
-                                  }}
-                              onBlur={(e) => {
-                                const value = e.currentTarget.textContent || "";
-                                const arrIdx = block.items.findIndex((w) => w.id === item.id);
-                                localeUpdate(block.id, `items.${arrIdx}.text`, value, () =>
-                                  updateItem(item.id, value)
-                                );
-                              }}
-                            >
-                              {item.text}
-                            </span>
-                          </div>
-                          <button
-                            className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-destructive/10 rounded transition-opacity shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeItem(item.id);
-                            }}
-                          >
-                            <X className="h-3 w-3 text-destructive" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  });
-
-                  if (!useTwoColumnCategoryLines) {
-                    return renderedItems;
-                  }
-
-                  const [leftItems, rightItems] = splitItemsLeftFirst(renderedItems);
-                  return (
-                    <div className="grid grid-cols-2 gap-x-3">
-                      <div>{leftItems}</div>
-                      <div>{rightItems}</div>
-                    </div>
-                  );
-                })()}
-              </div>
+              {renderWritingRows(rows)}
             </div>
           );
         })}
       </div>
-      <button
-        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-        onClick={(e) => {
-          e.stopPropagation();
-          addItem();
-        }}
-      >
-        <Plus className="h-3 w-3" /> {t("addItem")}
-      </button>
     </div>
   );
 }
@@ -5093,20 +5125,8 @@ function UnscrambleWordsRenderer({ block }: { block: UnscrambleWordsBlock }) {
   };
 
   return (
-    <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+    <div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       <div>
         {(() => {
@@ -5274,19 +5294,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
 
   return (
     <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       <div>
         {orderedWords.map((item, i) => {
@@ -5330,11 +5338,6 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
                       exampleGapShown = true;
                     }
 
-                    const showSolutionCircle =
-                      isCorrectChoiceBlock &&
-                      variant.isOriginal &&
-                      variantIndex !== 0 &&
-                      !showExampleChip;
                     const shouldHighlightVariant = isCorrectChoiceBlock ? variantIndex === 0 : variantIndex === 0 || variant.isOriginal;
                     const highlightClass = "border-green-300 bg-green-50 text-green-700";
 
@@ -5348,9 +5351,7 @@ function CorrectSpellingRenderer({ block }: { block: CorrectSpellingBlock | Corr
                           ? renderMissingLetterText(variant.text, showExampleGap)
                           : showExampleChip
                             ? <RoughExampleCircle>{variant.text}</RoughExampleCircle>
-                            : showSolutionCircle
-                              ? <RoughExampleCircle stroke="#15803d">{variant.text}</RoughExampleCircle>
-                              : variant.text}
+                            : variant.text}
                       </span>
                     );
                   })()
@@ -5448,19 +5449,7 @@ function FixSentencesRenderer({ block }: { block: FixSentencesBlock }) {
 
   return (
     <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       <div>
         {block.sentences.map((item, i) => (
@@ -5567,19 +5556,7 @@ function CompleteSentencesRenderer({ block }: { block: CompleteSentencesBlock })
 
   return (
     <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       <div>
         {block.sentences.map((item, i) => (
@@ -5677,19 +5654,7 @@ function StartSentencesRenderer({ block }: { block: StartSentencesBlock }) {
 
   return (
     <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       <div>
         {block.sentences.map((item, i) => (
@@ -5746,7 +5711,6 @@ function StartSentencesRenderer({ block }: { block: StartSentencesBlock }) {
 function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock }) {
   const { dispatch } = useEditor();
   const { localeUpdate } = useLocaleAwareEdit();
-  const t = useTranslations("blockRenderer");
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
 
   const updateSentence = (id: string, beginning: string) => {
@@ -5758,21 +5722,6 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
           sentences: block.sentences.map((s) =>
             s.id === id ? { ...s, beginning } : s
           ),
-        },
-      },
-    });
-  };
-
-  const addSentence = () => {
-    dispatch({
-      type: "UPDATE_BLOCK",
-      payload: {
-        id: block.id,
-        updates: {
-          sentences: [
-            ...block.sentences,
-            { id: crypto.randomUUID(), beginning: "" },
-          ],
         },
       },
     });
@@ -5792,20 +5741,8 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
   };
 
   return (
-    <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+    <div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} rowPaddingClassName="pt-2 pb-0" />
 
       <div>
         {block.sentences.map((item, i) => (
@@ -5852,28 +5789,24 @@ function TransformSentencesRenderer({ block }: { block: TransformSentencesBlock 
                 <X className="h-3 w-3 text-destructive" />
               </button>
             </div>
-            <div className="mt-1 relative min-h-[14px] border-b border-dashed border-muted-foreground/30">
-              {item.id === exampleSentenceId && item.solution ? (
-                <span
-                  className="absolute left-9 text-[1.15em]"
-                  style={{ bottom: "6px", fontFamily: "var(--font-handwriting), cursive", color: "#0097dc", fontSize: "18px" }}
-                >
-                  {item.solution}
-                </span>
-              ) : null}
+            <div className="flex min-h-[32.5px] items-center gap-3">
+              <div
+                className="relative flex-1 h-8 overflow-hidden"
+                style={{ borderBottom: "1px dashed var(--color-muted-foreground)", opacity: 1 }}
+              >
+                {item.id === exampleSentenceId && item.solution ? (
+                  <span
+                    className="absolute inset-x-0 block leading-none"
+                    style={{ bottom: "6px", fontFamily: EXAMPLE_HANDWRITING_FONT, color: "#0097dc", fontSize: "18px" }}
+                  >
+                    {item.solution}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <button
-        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-        onClick={(e) => {
-          e.stopPropagation();
-          addSentence();
-        }}
-      >
-        <Plus className="h-3 w-3" /> {t("addSentence")}
-      </button>
     </div>
   );
 }
@@ -5985,19 +5918,7 @@ function ReadingComprehensionRenderer({ block }: { block: ReadingComprehensionBl
 
   return (
     <div className="space-y-3">
-      <div
-        className="font-medium outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const value = e.currentTarget.textContent || "";
-          localeUpdate(block.id, "instruction", value, () =>
-            dispatch({ type: "UPDATE_BLOCK", payload: { id: block.id, updates: { instruction: value } } })
-          );
-        }}
-      >
-        {block.instruction}
-      </div>
+      <EditorInstructionLine blockId={block.id} instruction={block.instruction} />
 
       {isTrueFalseLayout ? (
         <div className="flex items-baseline gap-2 py-1">
@@ -7745,7 +7666,7 @@ function DialogueRenderer({
               <span
                 className="flex flex-1 min-w-0 flex-wrap items-center gap-y-1"
                 style={{
-                  fontFamily: "var(--font-handwriting)",
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
                   fontWeight: 400,
                   fontSize: "18px",
                   color: "#0097dc",
@@ -7780,7 +7701,7 @@ function DialogueRenderer({
               <span
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
                 style={{
-                  fontFamily: "var(--font-handwriting)",
+                  fontFamily: EXAMPLE_HANDWRITING_FONT,
                   fontWeight: 400,
                   fontSize: "18px",
                   color: "#15803d",
@@ -7800,7 +7721,7 @@ function DialogueRenderer({
             className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
             style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
           >
-            {variant === "default" ? (answer || '\u00A0') : '\u00A0'}
+            {'\u00A0'}
           </span>
         );
       }
@@ -7811,11 +7732,11 @@ function DialogueRenderer({
   return (
     <div>
       {block.instruction && (
-        <div className="flex min-h-[37px] items-center gap-3 border-b py-2 font-semibold text-[var(--color-primary)]">
-          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">A</span>
-          <p>{block.instruction}</p>
-        </div>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
       )}
+      {block.instruction && ((block.showWordBank && gapAnswers.length > 0) || block.items.length > 0) ? (
+        <EditorSectionGap size="medium" />
+      ) : null}
       {/* Word Bank */}
       {block.showWordBank && gapAnswers.length > 0 && (
         <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
@@ -8051,7 +7972,7 @@ function LueckenzeilenRenderer({
             className={`inline-block rounded-[3px] bg-gray-100 px-2 py-0 text-center leading-5 ${adjustedSpacing.className} text-muted-foreground text-xs`}
             style={{ minHeight: "1.25rem", ...widthStyle, ...adjustedSpacing.style }}
           >
-            {variant === "default" ? (answer || '\u00A0') : '\u00A0'}
+            {'\u00A0'}
           </span>
         );
       }
@@ -8062,11 +7983,11 @@ function LueckenzeilenRenderer({
   return (
     <div>
       {block.instruction && (
-        <div className="flex min-h-[37px] items-center gap-3 border-b py-2 font-semibold text-[var(--color-primary)]">
-          <span className="h-5 w-5 min-w-5 shrink-0 rounded-[3px] bg-slate-700 text-white flex items-center justify-center text-xs font-bold leading-none">A</span>
-          <p>{block.instruction}</p>
-        </div>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
       )}
+      {block.instruction && ((block.showWordBank && gapAnswers.length > 0) || block.items.length > 0) ? (
+        <EditorSectionGap size="medium" />
+      ) : null}
       {block.showWordBank && gapAnswers.length > 0 && (
         <div className="flex min-h-[37px] flex-wrap items-center gap-2 border-b py-2">
           <div className="flex flex-1 flex-wrap gap-2">
@@ -10646,7 +10567,7 @@ function TableBlockRenderer({ block }: { block: TableBlock }) {
       }`}
     >
       {block.instruction && (
-        <p className="text-sm text-slate-600 mb-2">{block.instruction}</p>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
       )}
       {block.description && (
         <p className="mt-2 mb-2">{block.description}</p>
@@ -10709,7 +10630,7 @@ function TableCloudBlockRenderer({ block }: { block: TableCloudBlock }) {
       }`}
     >
       {block.instruction && (
-        <p className="text-sm text-slate-600 mb-2">{block.instruction}</p>
+        <EditorInstructionLine blockId={block.id} instruction={block.instruction} editable={false} />
       )}
       {randomizedCloudRows.length > 0 || exampleCloudRow ? (
         <div className="mb-2">

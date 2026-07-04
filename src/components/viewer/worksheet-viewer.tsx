@@ -301,7 +301,7 @@ export function WorksheetViewer({
     && (block.stopWordCount === 10 || block.items.some((item) => item.subitems.length > 4))
   ));
   const hasSyllableCardsBlock = visibleBlocks.some((block) => block.type === "syllable-cards");
-  const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${(settings.fontSize || 12.5) + 1}px`;
+  const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${settings.fontSize || 12.5}px`;
   const resolvedLetterSpacing = resolvedProfile.letterSpacing?.trim() || "";
   const showPrintHeader = mode === "print" && settings.showHeader && (hasLogo || hasHeaderLeft || hasHeaderRight);
   const showPrintFooter = mode === "print" && settings.showFooter && (hasFooterLeft || hasFooterCenter || hasFooterRight);
@@ -340,6 +340,12 @@ export function WorksheetViewer({
     h2: resolvedProfile.h2HeadingNumberColor || "primary",
     h3: resolvedProfile.h3HeadingNumberColor || "primary",
     h4: resolvedProfile.h4HeadingNumberColor || "primary",
+  };
+  const headingBottomMargins = {
+    h1: resolvedProfile.h1BottomMargin,
+    h2: resolvedProfile.h2BottomMargin,
+    h3: resolvedProfile.h3BottomMargin,
+    h4: resolvedProfile.h4BottomMargin,
   };
 
   const headingCssVars = {
@@ -561,7 +567,7 @@ export function WorksheetViewer({
                           {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
                           {...(block.type === "numbered-items" && resolvedProfile.blockGap ? { style: { marginTop: `calc(2 * ${resolvedProfile.blockGap})`, marginBottom: `calc(2 * ${resolvedProfile.blockGap})` } } : {})}
                         >
-                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight, h4: resolvedH4Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} brandProfile={resolvedProfile} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} blockGap={resolvedProfile.blockGap} />
+                          <ViewerBlockRenderer block={block} mode={mode} primaryColor={brandFonts.primaryColor} accentColor={resolvedProfile.accentColor} interactiveColor={resolvedProfile.interactiveColor} headlineFont={resolvedProfile.headlineFont} headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight, h4: resolvedH4Weight }} headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }} headingNumberFormats={headingNumberFormats} headingColors={headingColors} headingNumberColors={headingNumberColors} headingBottomMargins={headingBottomMargins} itemNumberFormat={itemNumberFormat} showSolutions={showSolutions} allBlocks={visibleBlocks} brand={settings.brand || "edoomio"} brandProfile={resolvedProfile} bodyFont={activeBodyFont} originalBodyFont={baseBodyFont} bodyFontSize={resolvedBodyFontSize} originalBlock={originalBlockMap?.[block.id]} isNonLatin={isNonLatin} isRtl={isRtl} translationScale={resolvedProfile.pdfTranslationScale ?? undefined} instructionIndex={instructionIndexByBlockId.get(block.id)} blockGap={resolvedProfile.blockGap} />
                         </div>
                       ))}
                     </div>
@@ -645,6 +651,7 @@ export function WorksheetViewer({
                     headingNumberFormats={headingNumberFormats}
                     headingColors={headingColors}
                     headingNumberColors={headingNumberColors}
+                    headingBottomMargins={headingBottomMargins}
                     itemNumberFormat={itemNumberFormat}
                     allBlocks={visibleBlocks}
                     brand={settings.brand || "edoomio"}
