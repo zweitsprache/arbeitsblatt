@@ -1104,6 +1104,7 @@ function getBrandFonts(brand: string) {
 
 const EXAMPLE_HANDWRITING_FONT = "var(--worksheet-example-font, var(--font-handwriting)), cursive";
 const ItemNumberFormatContext = React.createContext<string>("default");
+const InstructionBadgeStyleContext = React.createContext<string>("default");
 
 const TASK_BLOCK_TYPES = new Set(["true-false-matrix", "mcq-matrix", "mcq-rows", "order-items", "unscramble-words"]);
 const NUMBER_BADGE_LAYOUT_CLASS = `${s.badgeToken} flex h-[var(--viewer-badge-size)] w-[var(--viewer-badge-size)] min-w-[var(--viewer-badge-size)] items-center justify-center rounded-[var(--viewer-badge-radius)] shrink-0 leading-none tabular-nums`;
@@ -1181,8 +1182,8 @@ function renderHandwrittenMatrixIndicator(color: string) {
   );
 }
 
-function formatInstructionBadgeLabel(index?: number): string {
-  return toAlphabeticLabel((index ?? 0) + 1, true);
+function formatInstructionBadgeLabel(index?: number, badgeStyle?: string | null): string {
+  return toAlphabeticLabel((index ?? 0) + 1, badgeStyle !== "unboxed-small-letter");
 }
 
 function formatItemNumberLabel(index: number, format: string | null | undefined): string {
@@ -1193,6 +1194,11 @@ function formatItemNumberLabel(index: number, format: string | null | undefined)
 function formatMatchingRightLabel(index: number, format: string | null | undefined): string {
   const letter = toAlphabeticLabel(index, false);
   return format === "numbers-with-period" ? `${letter}.` : letter;
+}
+
+function getPreviewSentenceStartIndex(block: WorksheetBlock): number {
+  const value = (block as { previewSentenceStartIndex?: unknown }).previewSentenceStartIndex;
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function ItemNumberBadge({ index, className = "" }: { index: number; className?: string }) {
@@ -1207,7 +1213,8 @@ function ItemNumberBadge({ index, className = "" }: { index: number; className?:
 }
 
 function InstructionBadge({ instructionIndex }: { instructionIndex?: number }) {
-  return <span className={`${INSTRUCTION_BADGE_CLASS} ${s.instructionBadge}`}>{formatInstructionBadgeLabel(instructionIndex)}</span>;
+  const badgeStyle = React.useContext(InstructionBadgeStyleContext);
+  return <span className={`${INSTRUCTION_BADGE_CLASS} ${s.instructionBadge}`}>{formatInstructionBadgeLabel(instructionIndex, badgeStyle)}</span>;
 }
 
 function SectionGap({ size }: { size: keyof typeof VIEWER_SECTION_GAP }) {
@@ -2395,7 +2402,7 @@ function TextView({ block, originalBlock, mode, bodyFont, originalBodyFont, body
 
   if (isMetadaten) {
     return (
-      <div className={s.textPlain} style={{ ...singleColumnTextStyle, marginBottom: "-1.75rem", color: primaryColor }}>
+      <div className={s.textPlain} style={{ ...singleColumnTextStyle, marginBottom: "calc(var(--print-block-gap, 1.5rem) * -0.5)", color: primaryColor }}>
         {renderContent(block.content, translatedDirectionStyle, isRtl ? "rtl" : undefined)}
       </div>
     );
@@ -9290,6 +9297,7 @@ function FixSentencesView({
   const isPrint = mode === "print";
   const isOnline = mode === "online";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const sentenceStartIndex = getPreviewSentenceStartIndex(block);
   // answer: Record<sentenceId, string[]> where string[] is user-ordered parts
   const userOrders = (answer as Record<string, string[]> | undefined) || {};
 
@@ -9377,7 +9385,7 @@ function FixSentencesView({
               }`}
             >
               <div className="flex items-start gap-3">
-                <ItemNumberBadge index={i + 1} className="shrink-0 mt-1" />
+                <ItemNumberBadge index={sentenceStartIndex + i + 1} className="shrink-0 mt-1" />
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-1.5">
                     {displayParts.map((part, pi) => (
@@ -9519,6 +9527,7 @@ function CompleteSentencesView({
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
   const isOnline = mode === "online";
   const ROW_CLASS = isOnline ? CONSISTENT_ROW_CLASS : CONSISTENT_ROW_CLASS_PRINT;
+  const sentenceStartIndex = getPreviewSentenceStartIndex(block);
 
   return (
     <div>
@@ -9541,7 +9550,7 @@ function CompleteSentencesView({
             key={item.id}
             className={ROW_CLASS}
           >
-            <ItemNumberBadge index={i + 1} className="shrink-0" />
+            <ItemNumberBadge index={sentenceStartIndex + i + 1} className="shrink-0" />
             <span className="shrink-0">{item.beginning}</span>
             {interactive ? (
               <input
@@ -9588,6 +9597,7 @@ function StartSentencesView({
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
   const isOnline = mode === "online";
   const rowMinHeight = isOnline ? "min-h-[49px]" : "min-h-[32.5px]";
+  const sentenceStartIndex = getPreviewSentenceStartIndex(block);
 
   return (
     <div>
@@ -9608,7 +9618,7 @@ function StartSentencesView({
         {block.sentences.map((item, i) => (
           <div key={item.id} className="flex flex-col gap-1 py-1 border-b last:border-b-0">
             <div className={`flex items-center gap-3 ${rowMinHeight}`}>
-              <ItemNumberBadge index={i + 1} className="shrink-0" />
+              <ItemNumberBadge index={sentenceStartIndex + i + 1} className="shrink-0" />
               {interactive ? (
                 <input
                   type="text"
@@ -9669,6 +9679,7 @@ function TransformSentencesView({
     : "flex min-h-[32.5px] items-center gap-3";
   const resolvedInteractiveColor = interactiveColor || "#0ea5e9";
   const exampleSentenceId = block.showFirstAsExample ? block.sentences[0]?.id : undefined;
+  const sentenceStartIndex = getPreviewSentenceStartIndex(block);
 
   return (
     <div>
@@ -9710,7 +9721,7 @@ function TransformSentencesView({
                 </div>
               ) : null}
               <div className={TRANSFORM_ROW_CLASS}>
-                <ItemNumberBadge index={i + 1} className="shrink-0" />
+                <ItemNumberBadge index={sentenceStartIndex + i + 1} className="shrink-0" />
                 <span>{item.beginning}</span>
               </div>
               {isExampleSentence ? (
@@ -11102,6 +11113,7 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
   const numberToneBg = mixColorWithWhite(primaryColor, 0.88);
   const rowToneBg = mixColorWithWhite(primaryColor, 0.96);
   const itemGap = block.itemGap ?? 8;
+  const contentBorderColor = hasBg && block.useCustomBgColor ? block.bgColor : "#e5e7eb";
   const isBilingual = block.bilingual && !!originalBlock;
   const effectiveScale = translationScale ?? (isNonLatin ? 0.9 : undefined);
   // The RTL *layout* (number badge on the right, rows reversed) applies whenever
@@ -11228,9 +11240,9 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
                 }}
               >
                 {showBilingual ? (
-                  renderBilingualColumns(originalItem.content, item.content, primaryColor)
+                  renderBilingualColumns(originalItem.content, item.content)
                 ) : (
-                  renderNumberedItemContent(item.content, undefined, undefined, contentRtl, primaryColor)
+                  renderNumberedItemContent(item.content, undefined, undefined, contentRtl)
                 )}
                 {renderSubItems(item, originalItem, parentLabel)}
               </div>
@@ -11276,14 +11288,14 @@ function NumberedItemsView({ block, originalBlock, isNonLatin, isRtl: isLocaleRt
               className="flex-1 min-w-0 px-3 py-2.5 text-foreground font-normal bg-white"
               style={{
                 borderRadius: hasBg ? (rtlLayout ? `${radius}px 0 0 ${radius}px` : `0 ${radius}px ${radius}px 0`) : `${radius}px`,
-                border: "1px solid #e5e7eb",
+                border: `1px solid ${contentBorderColor}`,
                 paddingTop: "0.875rem",
                 paddingBottom: "0.875rem",
               }}
             >
               {showBilingual
-                ? renderBilingualColumns(originalItem.content, item.content, primaryColor)
-                : renderNumberedItemContent(item.content, undefined, undefined, contentRtl, primaryColor)}
+                ? renderBilingualColumns(originalItem.content, item.content)
+                : renderNumberedItemContent(item.content, undefined, undefined, contentRtl)}
               {renderSubItems(item, originalItem, parentLabel)}
             </div>
           </div>
@@ -12491,6 +12503,7 @@ export function ViewerBlockRenderer({
 }) {
   const inheritedItemNumberFormat = React.useContext(ItemNumberFormatContext);
   const resolvedItemNumberFormat = itemNumberFormat || inheritedItemNumberFormat || "default";
+  const resolvedInstructionBadgeStyle = brandProfile?.instructionBadgeStyle || "default";
   const interactive = mode === "online";
   const noop = () => {};
 
@@ -13116,7 +13129,9 @@ export function ViewerBlockRenderer({
 
   return (
     <ItemNumberFormatContext.Provider value={resolvedItemNumberFormat}>
-      {renderedBlock}
+      <InstructionBadgeStyleContext.Provider value={resolvedInstructionBadgeStyle}>
+        {renderedBlock}
+      </InstructionBadgeStyleContext.Provider>
     </ItemNumberFormatContext.Provider>
   );
 }

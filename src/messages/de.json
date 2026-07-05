@@ -1893,6 +1893,7 @@
     "wordBankItemsPlaceholder": "Apfel\nBirne\nBanane",
     "startNumber": "Startnummer",
     "itemGap": "Abstand zwischen Punkten",
+    "useCustomBgColor": "Eigene Hintergrundfarbe verwenden",
     "subItemStyle": "Unterpunkt-Stil",
     "subItemStyleDecimal": "Unternummern (1.1, 1.2)",
     "subItemStyleLetter": "Buchstaben (a, b, c)",

@@ -5,14 +5,11 @@ import { useTranslations } from "next-intl";
 import {
   useDroppable,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { useEditor } from "@/store/editor-store";
-import { SortableBlock } from "./sortable-block";
 import { Plus } from "lucide-react";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
+import { filterBlocksByDisplay } from "@/lib/block-visibility";
+import { getFontBaselineAdjustment } from "@/lib/font-baseline";
 import {
   getPageDimensionsMm,
   getPageDimensionsPx,
@@ -28,6 +25,7 @@ import {
   resolveSubProfileHeaderFooter,
   type WorksheetBlock,
 } from "@/types/worksheet";
+import { ViewerBlockRenderer } from "@/components/viewer/viewer-block-renderer";
 
 
 function DropIndicator({ isActive }: { isActive: boolean }) {
@@ -120,6 +118,7 @@ export function WorksheetCanvas({
     const v = value?.trim();
     return v ? v : fallback ?? "";
   };
+  const resolvedHeadlineFont = nonEmpty(resolvedProfile.headlineFont, resolvedBodyFontFamily);
 
   const brandHeaderFooter = {
     logo: resolveBrandLogo(resolvedProfile, "full"),
@@ -171,6 +170,48 @@ export function WorksheetCanvas({
   const headerFooterFont =
     resolvedProfile.headerFooterFont?.trim() || "'Encode Sans', sans-serif";
   const resolvedBodyFontSize = resolvedProfile.textBaseSize || `${state.settings.fontSize || 12.5}px`;
+  const normalizeWeight = (value: unknown, fallback: number): number => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value.trim());
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  };
+  const resolvedHeadlineWeight = normalizeWeight(resolvedProfile.headlineWeight, 700);
+  const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
+  const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
+  const resolvedH3Weight = normalizeWeight(resolvedProfile.h3Weight, resolvedHeadlineWeight);
+  const resolvedH4Weight = normalizeWeight(resolvedProfile.h4Weight, resolvedHeadlineWeight);
+  const resolvedH1HeadingNumberWeight = normalizeWeight(resolvedProfile.h1HeadingNumberWeight, resolvedH1Weight);
+  const resolvedH2HeadingNumberWeight = normalizeWeight(resolvedProfile.h2HeadingNumberWeight, resolvedH2Weight);
+  const resolvedH3HeadingNumberWeight = normalizeWeight(resolvedProfile.h3HeadingNumberWeight, resolvedH3Weight);
+  const resolvedH4HeadingNumberWeight = normalizeWeight(resolvedProfile.h4HeadingNumberWeight, resolvedH4Weight);
+  const headingNumberFormats = {
+    h1: resolvedProfile.h1NumberFormat || "numbers",
+    h2: resolvedProfile.h2NumberFormat || "numbers",
+    h3: resolvedProfile.h3NumberFormat || "numbers",
+    h4: resolvedProfile.h4NumberFormat || "numbers",
+  };
+  const headingColors = {
+    h1: resolvedProfile.h1HeadingColor || "primary",
+    h2: resolvedProfile.h2HeadingColor || "primary",
+    h3: resolvedProfile.h3HeadingColor || "primary",
+    h4: resolvedProfile.h4HeadingColor || "primary",
+  };
+  const headingNumberColors = {
+    h1: resolvedProfile.h1HeadingNumberColor || "primary",
+    h2: resolvedProfile.h2HeadingNumberColor || "primary",
+    h3: resolvedProfile.h3HeadingNumberColor || "primary",
+    h4: resolvedProfile.h4HeadingNumberColor || "primary",
+  };
+  const headingBottomMargins = {
+    h1: resolvedProfile.h1BottomMargin,
+    h2: resolvedProfile.h2BottomMargin,
+    h3: resolvedProfile.h3BottomMargin,
+    h4: resolvedProfile.h4BottomMargin,
+  };
+  const itemNumberFormat = resolvedProfile.itemNumberFormat || "default";
   const canvasBackgroundColor = resolvedProfile.primaryColor
     ? `color-mix(in srgb, ${resolvedProfile.primaryColor} 6%, white)`
     : "#f1f5f9";
@@ -208,50 +249,34 @@ export function WorksheetCanvas({
   //     that the print/PDF viewer uses. This is what keeps editor typography
   //     (fonts, headings, block gaps, TipTap heading sizes/weights, block
   //     spacing rules in globals.css) identical to the Puppeteer PDF output.
-  const printFrame = React.useMemo(() => {
-    const blocks = state.blocks;
-    const hasBlock = (type: WorksheetBlock["type"]) => blocks.some((b) => b.type === type);
-    const tabooTen = blocks.some(
-      (b) =>
-        b.type === "taboo" &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (((b as any).stopWordCount === 10) ||
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (Array.isArray((b as any).items) && (b as any).items.some((i: any) => Array.isArray(i.subitems) && i.subitems.length > 4))),
-    );
-    return buildPrintFrame({
-      settings: state.settings,
-      resolvedProfile,
-      activeBodyFont: resolvedBodyFontFamily,
-      headlineFont: nonEmpty(resolvedProfile.headlineFont, resolvedBodyFontFamily),
-      headerFooterFont,
-      resolvedBodyFontSize,
-      resolvedLetterSpacing: resolvedProfile.letterSpacing?.trim() || "",
-      reserveFooter: showFooter,
-      isLandscape,
-      isCanvaLandscape,
-      presence: {
-        domino: hasBlock("domino"),
-        flashcards: hasBlock("flashcards"),
-        aufgabenkarten: hasBlock("aufgabenkarten"),
-        cardPairs: hasBlock("card-pairs"),
-        quartett: hasBlock("quartett"),
-        taboo: hasBlock("taboo"),
-        tabooTen,
-        syllableCards: hasBlock("syllable-cards"),
-      },
-    });
-  }, [
-    state.blocks,
-    state.settings,
+  const hasBlock = (type: WorksheetBlock["type"]) => state.blocks.some((b) => b.type === type);
+  const hasTenStopWordTabooBlock = state.blocks.some(
+    (b) =>
+      b.type === "taboo" &&
+      (b.stopWordCount === 10 || b.items.some((item) => item.subitems.length > 4)),
+  );
+  const printFrame = buildPrintFrame({
+    settings: state.settings,
     resolvedProfile,
-    resolvedBodyFontFamily,
+    activeBodyFont: resolvedBodyFontFamily,
+    headlineFont: resolvedHeadlineFont,
     headerFooterFont,
     resolvedBodyFontSize,
-    showFooter,
+    resolvedLetterSpacing: resolvedProfile.letterSpacing?.trim() || "",
+    reserveFooter: showFooter,
     isLandscape,
     isCanvaLandscape,
-  ]);
+    presence: {
+      domino: hasBlock("domino"),
+      flashcards: hasBlock("flashcards"),
+      aufgabenkarten: hasBlock("aufgabenkarten"),
+      cardPairs: hasBlock("card-pairs"),
+      quartett: hasBlock("quartett"),
+      taboo: hasBlock("taboo"),
+      tabooTen: hasTenStopWordTabooBlock,
+      syllableCards: hasBlock("syllable-cards"),
+    },
+  });
 
 
   const getSiblingGapPx = React.useCallback((previousBlock: WorksheetBlock | undefined, block: WorksheetBlock): number => {
@@ -261,6 +286,73 @@ export function WorksheetCanvas({
 
     return blockGapPx;
   }, [blockGapPx]);
+
+  const visibleBlocks = React.useMemo(
+    () => filterBlocksByDisplay(state.blocks, "worksheetPrint"),
+    [state.blocks],
+  );
+
+  type CanvasBlockUnit = {
+    renderId: string;
+    sourceBlockId: string;
+    block: WorksheetBlock;
+    isContinuation: boolean;
+  };
+
+  const canvasBlockUnits = React.useMemo<CanvasBlockUnit[]>(() => {
+    return visibleBlocks.flatMap((block) => {
+      const isSentenceRowsBlock =
+        block.type === "fix-sentences" ||
+        block.type === "transform-sentences" ||
+        block.type === "complete-sentences" ||
+        block.type === "start-sentences";
+
+      if (!isSentenceRowsBlock || block.sentences.length <= 1) {
+        return [{
+          renderId: block.id,
+          sourceBlockId: block.id,
+          block,
+          isContinuation: false,
+        }];
+      }
+
+      return block.sentences.map((sentence, index) => ({
+        renderId: `${block.id}:sentence:${sentence.id}`,
+        sourceBlockId: block.id,
+        block: {
+          ...block,
+          instruction: index === 0 ? block.instruction : "",
+          sentences: [sentence],
+          previewSentenceStartIndex: index,
+          ...(block.type === "fix-sentences" ||
+          block.type === "transform-sentences"
+            ? { showFirstAsExample: index === 0 ? block.showFirstAsExample : false }
+            : {}),
+        } as unknown as WorksheetBlock,
+        isContinuation: index > 0,
+      }));
+    });
+  }, [visibleBlocks]);
+
+  const instructionIndexByBlockId = React.useMemo(() => {
+    const map = new Map<string, number>();
+    let instructionCount = 0;
+    for (const block of visibleBlocks) {
+      if (
+        (block.type === "heading" && block.level === 3) ||
+        (block.type === "numbered-heading" && block.level === 3) ||
+        (block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering)
+      ) {
+        instructionCount = 0;
+        continue;
+      }
+      if ("instruction" in block && block.instruction && typeof block.instruction === "string" && block.instruction.trim()) {
+        map.set(block.id, instructionCount);
+        instructionCount++;
+      }
+    }
+    return map;
+  }, [visibleBlocks]);
 
   // ─── Block height measurement ───────────────────────────────
   // We measure block heights outside the render loop (previously the pagination
@@ -281,7 +373,7 @@ export function WorksheetCanvas({
 
   // Track the block ids currently in state.blocks so the observer effect can
   // detach stale observers when a block is removed.
-  const blockIds = React.useMemo(() => state.blocks.map((b) => b.id), [state.blocks]);
+  const blockIds = React.useMemo(() => canvasBlockUnits.map((unit) => unit.renderId), [canvasBlockUnits]);
 
   React.useLayoutEffect(() => {
     const activeIds = new Set(blockIds);
@@ -341,36 +433,39 @@ export function WorksheetCanvas({
 
   // Break blocks into pages based on measured heights.
   const pages = React.useMemo(() => {
-    type CanvasPage = { pageNum: number; blocks: WorksheetBlock[]; height: number };
+    type CanvasPage = { pageNum: number; blocks: CanvasBlockUnit[]; height: number };
     const result: CanvasPage[] = [];
     let currentPage: CanvasPage = { pageNum: 0, blocks: [], height: 0 };
 
-    for (const block of state.blocks) {
-      // Fallback to 100px only when a block hasn't been measured yet (first mount).
-      const blockHeight = blockHeights[block.id] ?? 100;
+    for (const unit of canvasBlockUnits) {
+      const block = unit.block;
+      // Fallback only when a block hasn't been measured yet (first mount).
+      // A stale zero measurement should not make pagination think a block is free.
+      const measuredBlockHeight = blockHeights[unit.renderId];
+      const blockHeight = measuredBlockHeight && measuredBlockHeight > 0 ? measuredBlockHeight : 100;
 
       const isManualBreak = block.type === "page-break";
 
-      const previousBlock = currentPage.blocks[currentPage.blocks.length - 1];
-      const interBlockGap = getSiblingGapPx(previousBlock, block);
-
-      if (!isManualBreak && interBlockGap > 0) {
-        currentPage.height += interBlockGap;
-      }
+      const previousUnit = currentPage.blocks[currentPage.blocks.length - 1];
+      let interBlockGap = previousUnit?.sourceBlockId === unit.sourceBlockId
+        ? 0
+        : getSiblingGapPx(previousUnit?.block, block);
+      const prospectiveHeight = currentPage.height + (isManualBreak ? 0 : interBlockGap) + blockHeight;
 
       // If adding this block would exceed the page, start a new page.
       if (
         !isManualBreak &&
-        currentPage.height + blockHeight > usableHeight &&
+        prospectiveHeight > usableHeight &&
         currentPage.blocks.length > 0
       ) {
         result.push(currentPage);
         currentPage = { pageNum: result.length, blocks: [], height: 0 };
+        interBlockGap = 0;
       }
 
-      currentPage.blocks.push(block);
+      currentPage.blocks.push(unit);
       if (!isManualBreak) {
-        currentPage.height += blockHeight;
+        currentPage.height += interBlockGap + blockHeight;
       }
 
       // Manual page break: finalize this page so following blocks start on a new page
@@ -388,7 +483,7 @@ export function WorksheetCanvas({
     // React Compiler flags `usableHeight` as "may be modified later" — it is a
     // plain const derived from settings/state, so this is a false positive.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  }, [state.blocks, blockHeights, usableHeight, getSiblingGapPx]);
+  }, [canvasBlockUnits, blockHeights, usableHeight, getSiblingGapPx]);
 
   return (
     <div
@@ -400,10 +495,6 @@ export function WorksheetCanvas({
       ))}
       {exampleFontOverride.fontFaceCss ? <style>{exampleFontOverride.fontFaceCss}</style> : null}
       <div className="flex justify-center pt-4 pb-8 px-4" onMouseDown={clearSelectionIfWorkspaceClick}>
-        <SortableContext
-          items={state.blocks.map((b) => b.id)}
-          strategy={verticalListSortingStrategy}
-        >
           <div
             className={isPresentationMode ? undefined : printFrame.className}
             style={{
@@ -449,6 +540,7 @@ export function WorksheetCanvas({
                     style={{
                       ["--worksheet-example-font" as string]: exampleFontOverride.fontFamily,
                       ["--worksheet-original-example-font" as string]: exampleFontOverride.fontFamily,
+                      ["--font-baseline-adjustment" as string]: getFontBaselineAdjustment(resolvedBodyFontFamily),
                       fontFamily: resolvedBodyFontFamily,
                       height: isPresentationMode ? pageHeight : `${pageHeightMm}mm`,
                       boxSizing: "border-box",
@@ -512,12 +604,16 @@ export function WorksheetCanvas({
                         fontSize: resolvedBodyFontSize,
                       }}
                     >
-                      {page.blocks.map((block, blockIndex) => {
+                      <div
+                        className="worksheet-blocks-container"
+                        data-instruction-badge-style={resolvedProfile.instructionBadgeStyle || "default"}
+                        style={{ ["--viewer-instruction-badge-color" as string]: resolvedProfile.instructionBadgeColor || resolvedProfile.primaryColor }}
+                      >
+                      {page.blocks.map((unit, blockIndex) => {
+                        const block = unit.block;
                         const isDragging = !!activeId;
                         const isOverThis = overId === block.id;
                         const isActiveBlock = activeId === block.id;
-                        const previousBlock = page.blocks[blockIndex - 1];
-
                         const showAbove =
                           blockIndex === 0 &&
                           isDragging &&
@@ -530,9 +626,15 @@ export function WorksheetCanvas({
                           isOverThis &&
                           !isActiveBlock &&
                           (blockIndex > 0 || overPosition === "below");
+                        const wrapperStyle: React.CSSProperties | undefined = {
+                          ...(unit.isContinuation ? { marginTop: 0 } : {}),
+                          ...(block.type === "numbered-items" && resolvedProfile.blockGap
+                            ? { marginTop: `calc(2 * ${resolvedProfile.blockGap})`, marginBottom: `calc(2 * ${resolvedProfile.blockGap})` }
+                            : {}),
+                        };
 
                         return (
-                          <React.Fragment key={block.id}>
+                          <React.Fragment key={unit.renderId}>
                             {blockIndex === 0 && isDragging && (
                               <DropIndicator isActive={showAbove} />
                             )}
@@ -542,20 +644,45 @@ export function WorksheetCanvas({
                                 // blockRefs here is safe; the react-hooks/refs rule can't
                                 // distinguish inline callback refs from render-time reads.
                                 // eslint-disable-next-line react-hooks/refs
-                                if (el) blockRefs.current.set(block.id, el);
+                                if (el) blockRefs.current.set(unit.renderId, el);
                               }}
-                              data-block-id={block.id}
+                              data-block-id={unit.renderId}
                               className={`worksheet-block worksheet-block-${block.type}`}
+                              {...(unit.isContinuation ? { "data-continuation": "true" } : {})}
                               {...(block.type === "text" && !!(block as { tightTop?: boolean }).tightTop ? { "data-tight": "true" } : {})}
                               {...(block.type === "heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual) } : {})}
                               {...(block.type === "numbered-heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual), "data-numbered-heading": "true" } : {})}
                               {...(block.type === "text" && (block as { textStyle?: string }).textStyle ? { "data-text-style": (block as { textStyle?: string }).textStyle } : {})}
                               {...(block.type === "page-break" && (block as { restartPageNumbering?: boolean }).restartPageNumbering ? { "data-restart-page-numbering": "true" } : {})}
-                              style={blockIndex > 0 ? { marginTop: getSiblingGapPx(previousBlock, block) } : undefined}
+                              style={Object.keys(wrapperStyle).length > 0 ? wrapperStyle : undefined}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                dispatch({ type: "SELECT_BLOCK", payload: block.id });
+                              }}
                             >
-                              <SortableBlock
+                              <ViewerBlockRenderer
                                 block={block}
                                 mode="print"
+                                primaryColor={resolvedProfile.primaryColor}
+                                accentColor={resolvedProfile.accentColor}
+                                interactiveColor={resolvedProfile.interactiveColor}
+                                headlineFont={resolvedHeadlineFont}
+                                headingWeights={{ h1: resolvedH1Weight, h2: resolvedH2Weight, h3: resolvedH3Weight, h4: resolvedH4Weight }}
+                                headingNumberWeights={{ h1: resolvedH1HeadingNumberWeight, h2: resolvedH2HeadingNumberWeight, h3: resolvedH3HeadingNumberWeight, h4: resolvedH4HeadingNumberWeight }}
+                                headingNumberFormats={headingNumberFormats}
+                                headingColors={headingColors}
+                                headingNumberColors={headingNumberColors}
+                                headingBottomMargins={headingBottomMargins}
+                                itemNumberFormat={itemNumberFormat}
+                                showSolutions={false}
+                                allBlocks={visibleBlocks}
+                                brand={state.settings.brand || "edoomio"}
+                                brandProfile={resolvedProfile}
+                                bodyFont={resolvedBodyFontFamily}
+                                originalBodyFont={resolvedBodyFontFamily}
+                                bodyFontSize={resolvedBodyFontSize}
+                                instructionIndex={instructionIndexByBlockId.get(block.id)}
+                                blockGap={resolvedProfile.blockGap}
                               />
                             </div>
                             {isDragging && !isActiveBlock && (
@@ -564,6 +691,7 @@ export function WorksheetCanvas({
                           </React.Fragment>
                         );
                       })}
+                      </div>
                     </div>
 
                     {/* Footer (brand) — fixed 25mm region */}
@@ -606,7 +734,6 @@ export function WorksheetCanvas({
               ))
             )}
           </div>
-        </SortableContext>
       </div>
     </div>
   );

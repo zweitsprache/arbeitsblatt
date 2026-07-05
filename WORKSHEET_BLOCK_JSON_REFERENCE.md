@@ -1737,6 +1737,7 @@ Allowed `layout` values:
   ],
   "startNumber": 1,
   "bgColor": "",
+  "useCustomBgColor": false,
   "borderRadius": 6,
   "itemGap": 8,
   "bilingual": false,

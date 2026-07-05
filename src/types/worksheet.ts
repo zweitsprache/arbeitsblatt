@@ -1473,6 +1473,7 @@ export interface NumberedItemsBlock extends BlockBase {
   items: NumberedItem[];
   startNumber: number;
   bgColor?: string;
+  useCustomBgColor?: boolean;
   borderRadius?: number;
   itemGap?: number;
   subItemStyle?: NumberedSubItemStyle;
@@ -2074,7 +2075,7 @@ export function getStaticBrandProfile(slug: string): BrandProfile {
     translationFontOverrides: {},
     primaryColor: fonts.primaryColor,
     interactiveColor: "#0ea5e9",
-    instructionBadgeStyle: "default",
+    instructionBadgeStyle: slug === "treffpunkt-schweiz" ? "unboxed-small-letter" : "default",
     instructionBadgeColor: null,
     logo: hasKnownIcon ? settings.logo : inferredBrandIcon,
     iconLogo: hasKnownIcon ? BRAND_ICON_LOGOS[slug] : inferredBrandIcon,
@@ -3669,6 +3670,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
     ],
     startNumber: 1,
     bgColor: "",
+    useCustomBgColor: false,
     borderRadius: 6,
     itemGap: 8,
     visibility: "both",

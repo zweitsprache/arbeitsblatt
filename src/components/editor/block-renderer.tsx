@@ -759,7 +759,6 @@ function EditorInstructionLine({
         justifyContent: "flex-start",
         lineHeight,
         minWidth: "1.5rem",
-        textTransform: "lowercase",
         width: "1.5rem",
       }
     : {
@@ -774,7 +773,6 @@ function EditorInstructionLine({
         justifyContent: "center",
         lineHeight: 1,
         minWidth: 20,
-        textTransform: "uppercase",
         width: 20,
       };
   const textStyle: React.CSSProperties = {
@@ -8362,6 +8360,7 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
   const numberToneBg = mixColorWithWhite(primaryColor, 0.88);
   const rowToneBg = mixColorWithWhite(primaryColor, 0.96);
   const itemGap = block.itemGap ?? 8;
+  const contentBorderColor = hasBg && block.useCustomBgColor ? block.bgColor : "#e5e7eb";
 
   return (
     <div style={{ display: "grid", gap: `${itemGap}px` }}>
@@ -8392,7 +8391,7 @@ function NumberedItemsRenderer({ block }: { block: NumberedItemsBlock }) {
                 className="numbered-items-richtext flex-1 min-w-0 px-3 py-2.5 text-foreground font-normal bg-white"
                 style={{
                   borderRadius: hasBg ? `0 ${radius}px ${radius}px 0` : `${radius}px`,
-                  border: "1px solid #e5e7eb",
+                  border: `1px solid ${contentBorderColor}`,
                   color: primaryColor,
                   paddingTop: "0.875rem",
                   paddingBottom: "0.875rem",

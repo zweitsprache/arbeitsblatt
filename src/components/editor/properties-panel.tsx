@@ -12198,6 +12198,13 @@ function NumberedItemsProps({ block }: { block: NumberedItemsBlock }) {
           </div>
         </div>
       </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">{t("useCustomBgColor")}</Label>
+        <Switch
+          checked={block.useCustomBgColor ?? false}
+          onCheckedChange={(checked) => update({ useCustomBgColor: checked })}
+        />
+      </div>
       <div>
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("borderRadius")}</Label>
         <Slider
