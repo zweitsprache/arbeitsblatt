@@ -17,6 +17,7 @@ import {
   BlockVisibility,
   ChOverrides,
   BrandProfile,
+  WorksheetDocument,
   getStaticBrandProfile,
   canAddBlockTypeToWorksheet,
 } from "@/types/worksheet";
@@ -53,7 +54,37 @@ interface EditorState {
   pageComposition: PageCompositionState;
 }
 
-const initialState: EditorState = {
+function createInitialEditorState(
+  initialData?: WorksheetDocument | null,
+  initialBrandProfile?: BrandProfile | null,
+): EditorState {
+  if (initialData) {
+    const migrated = migrateWorksheetLocaleDataToV2({
+      title: initialData.title,
+      blocks: initialData.blocks,
+      settings: initialData.settings,
+    });
+    const settings = { ...DEFAULT_SETTINGS, ...migrated.settings };
+    return {
+      worksheetId: initialData.id,
+      title: migrated.title,
+      slug: initialData.slug,
+      blocks: migrated.blocks,
+      settings,
+      selectedBlockId: null,
+      activeItemIndex: null,
+      viewMode: "print",
+      localeMode: "CH",
+      isDirty: false,
+      isSaving: false,
+      published: initialData.published,
+      brandProfile: initialBrandProfile ?? getStaticBrandProfile(settings.brand || "edoomio"),
+      availableBrands: [],
+      pageComposition: INITIAL_PAGE_COMPOSITION_STATE,
+    };
+  }
+
+  return {
   worksheetId: null,
   title: "Untitled Worksheet",
   slug: "",
@@ -69,7 +100,10 @@ const initialState: EditorState = {
   brandProfile: getStaticBrandProfile("edoomio"),
   availableBrands: [],
   pageComposition: INITIAL_PAGE_COMPOSITION_STATE,
-};
+  };
+}
+
+const initialState: EditorState = createInitialEditorState();
 
 // ─── Actions ─────────────────────────────────────────────────
 type EditorAction =
@@ -724,13 +758,21 @@ export function EditorProvider({
   apiEndpoint = "/api/worksheets",
   editorBasePath = "/editor",
   access,
+  initialData,
+  initialBrandProfile,
 }: {
   children: React.ReactNode;
   apiEndpoint?: string;
   editorBasePath?: string;
   access: EffectiveWorksheetEditorAccess;
+  initialData?: WorksheetDocument | null;
+  initialBrandProfile?: BrandProfile | null;
 }) {
-  const [state, rawDispatch] = useReducer(editorReducer, initialState);
+  const [state, rawDispatch] = useReducer(
+    editorReducer,
+    { initialData, initialBrandProfile },
+    ({ initialData, initialBrandProfile }) => createInitialEditorState(initialData, initialBrandProfile),
+  );
   const prevBrandSlug = useRef(state.settings.brand);
 
   // Fetch all available brands on mount

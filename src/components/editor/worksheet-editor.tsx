@@ -23,17 +23,15 @@ import { WorksheetCanvas } from "./worksheet-canvas";
 import { WorksheetCanvasV3 } from "./worksheet-canvas-v3";
 import { PropertiesPanel } from "./properties-panel";
 import { EditorToolbar } from "./editor-toolbar";
-import { WorksheetDocument, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/types/worksheet";
+import { BrandProfile, WorksheetDocument, BlockType, BLOCK_LIBRARY, WorksheetBlock } from "@/types/worksheet";
 import { BlockRenderer } from "./block-renderer";
 import { v4 as uuidv4 } from "uuid";
 import { useUserAccess } from "@/lib/user-access-client";
 import { useTranslations } from "next-intl";
 
 function EditorInner({
-  initialData,
   editorVersion,
 }: {
-  initialData?: WorksheetDocument | null;
   editorVersion: "v1" | "v2" | "v3";
 }) {
   const { state, dispatch, addBlock, canAddBlockType, save } = useEditor();
@@ -56,6 +54,14 @@ function EditorInner({
       return { overId: null, position: "below" };
     }
 
+    const canvasInsertMatch = rawOverId.match(/^canvas-insert-(before|after)-(.+)$/);
+    if (canvasInsertMatch) {
+      return {
+        overId: canvasInsertMatch[2],
+        position: canvasInsertMatch[1] === "before" ? "above" : "below",
+      };
+    }
+
     const laneMatch = rawOverId.match(/^v3-lane-(before|after)-(.+)$/);
     if (laneMatch) {
       return {
@@ -73,23 +79,6 @@ function EditorInner({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  // Load initial data
-  useEffect(() => {
-    if (initialData) {
-      dispatch({
-        type: "LOAD_WORKSHEET",
-        payload: {
-          id: initialData.id,
-          title: initialData.title,
-          slug: initialData.slug,
-          blocks: initialData.blocks,
-          settings: initialData.settings,
-          published: initialData.published,
-        },
-      });
-    }
-  }, [initialData, dispatch]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -149,7 +138,7 @@ function EditorInner({
     const rawOverId = (over?.id as string | undefined) ?? null;
     const normalizedTarget = normalizeV3DropTarget(rawOverId);
     const normalizedOverId = normalizedTarget.overId;
-    const normalizedOverPosition = rawOverId?.startsWith("v3-lane-")
+    const normalizedOverPosition = rawOverId?.startsWith("v3-lane-") || rawOverId?.startsWith("canvas-insert-")
       ? normalizedTarget.position
       : overPosition;
 
@@ -339,9 +328,11 @@ function EditorInner({
 
 export function WorksheetEditor({
   initialData,
+  initialBrandProfile,
   editorVersion = "v1",
 }: {
   initialData?: WorksheetDocument | null;
+  initialBrandProfile?: BrandProfile | null;
   editorVersion?: "v1" | "v2" | "v3";
 }) {
   const { payload, isLoading } = useUserAccess();
@@ -356,8 +347,12 @@ export function WorksheetEditor({
 
   return (
     <TooltipProvider>
-      <EditorProvider access={payload.effectiveAccess.worksheetEditor}>
-        <EditorInner initialData={initialData} editorVersion={editorVersion} />
+      <EditorProvider
+        access={payload.effectiveAccess.worksheetEditor}
+        initialData={initialData}
+        initialBrandProfile={initialBrandProfile}
+      >
+        <EditorInner editorVersion={editorVersion} />
       </EditorProvider>
     </TooltipProvider>
   );

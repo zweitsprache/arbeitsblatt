@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { auth } from "@/lib/auth/server";
 import { WorksheetEditorV2Loader } from "@/components/editor/worksheet-editor-v2-loader";
+import { loadEditorBrandProfile } from "@/lib/editor-brand-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +50,11 @@ export default async function EditWorksheetV2Page({
     createdAt: worksheet.createdAt.toISOString(),
     updatedAt: worksheet.updatedAt.toISOString(),
   };
+  const initialBrandProfile = await loadEditorBrandProfile(doc.settings.brand);
 
   return (
     <DashboardLayout>
-      <WorksheetEditorV2Loader initialData={doc} />
+      <WorksheetEditorV2Loader initialData={doc} initialBrandProfile={initialBrandProfile} />
     </DashboardLayout>
   );
 }

@@ -156,6 +156,7 @@ import { AiTextModal } from "./ai-text-modal";
 import { AiVerbExerciseModal } from "./ai-verb-exercise-modal";
 import { BingoCardsPropEditor } from "./BingoCardsPropEditor";
 import { RichTextEditor } from "./rich-text-editor";
+import { TableEditor } from "./table-editor";
 import { WorksheetTranslationDialog } from "./worksheet-translation-dialog";
 import { ImageCropDialog, CropResult } from "@/components/ui/image-crop-dialog";
 import { getChoiceGroups, updateChoiceGroup, validateChoices } from "@/lib/inline-choice-utils";
@@ -15542,9 +15543,10 @@ function ColWidthInput({
 }
 
 function TableProps({ block }: { block: TableBlock | TableCloudBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
+  const [tableOpen, setTableOpen] = React.useState(false);
 
   const tableStyles: { value: TableStyle; label: string }[] = [
     { value: "default", label: t("tableStyleDefault") },
@@ -15554,6 +15556,33 @@ function TableProps({ block }: { block: TableBlock | TableCloudBlock }) {
   ];
 
   const colCount = React.useMemo(() => countTableColumns(block.content), [block.content]);
+  const isDeOverrideMode = state.localeMode === "DE";
+  const tableContentOverride = state.settings.chOverrides?.[block.id]?.content;
+  const hasTableContentOverride = hasChOverride(block.id, "content", state.settings.chOverrides);
+  const effectiveTableContent =
+    isDeOverrideMode && tableContentOverride !== undefined
+      ? tableContentOverride
+      : block.content;
+
+  const handleTableContentChange = React.useCallback((html: string) => {
+    if (isDeOverrideMode) {
+      if (html === block.content) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content", value: html } });
+      }
+      return;
+    }
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { content: html } },
+    });
+  }, [block.content, block.id, dispatch, isDeOverrideMode]);
+
+  const clearTableContentOverride = React.useCallback(() => {
+    dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content" } });
+  }, [block.id, dispatch]);
 
   // Get current column percentages from block data
   const colPercentages = React.useMemo(() => {
@@ -15646,6 +15675,23 @@ function TableProps({ block }: { block: TableBlock | TableCloudBlock }) {
       <div>
         <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px]">
           {t("tableSettings")}
+        </div>
+
+        <div className="space-y-1.5 mt-3">
+          <Label className="text-xs">{t("tableContent")}</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setTableOpen(true)}
+          >
+            <Table2 className="mr-2 h-3.5 w-3.5" />
+            {t("tableEditContent")}
+          </Button>
+          {hasTableContentOverride ? (
+            <p className="text-[11px] text-amber-600">{t("tableContentOverrideActive")}</p>
+          ) : null}
         </div>
 
         {/* Table Style */}
@@ -15779,6 +15825,36 @@ function TableProps({ block }: { block: TableBlock | TableCloudBlock }) {
           />
         </div>
       </div>
+
+      <Dialog open={tableOpen} onOpenChange={setTableOpen}>
+        <DialogContent className="flex h-[90vh] !w-[96vw] !max-w-[96vw] flex-col overflow-hidden p-0 sm:!max-w-[96vw]">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
+            <DialogTitle>{t("tableEditContentTitle")}</DialogTitle>
+            <DialogDescription>{t("tableEditContentDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4">
+            <div className="rounded-md border bg-white">
+              <TableEditor
+                content={effectiveTableContent}
+                columnWidths={block.columnWidths}
+                onChange={handleTableContentChange}
+              />
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-5 py-3 sm:justify-between">
+            <div>
+              {hasTableContentOverride ? (
+                <Button type="button" variant="ghost" size="sm" onClick={clearTableContentOverride}>
+                  {t("tableClearContentOverride")}
+                </Button>
+              ) : null}
+            </div>
+            <Button type="button" size="sm" onClick={() => setTableOpen(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

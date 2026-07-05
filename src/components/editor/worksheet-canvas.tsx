@@ -6,7 +6,17 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 import { useEditor } from "@/store/editor-store";
-import { Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { resolveBrandFontFamilyOverride } from "@/lib/brand-font-utils";
 import { filterBlocksByDisplay } from "@/lib/block-visibility";
 import { getFontBaselineAdjustment } from "@/lib/font-baseline";
@@ -21,6 +31,8 @@ import {
 import { buildPrintFrame } from "@/lib/print-frame";
 import {
   applyBrandOverrides,
+  BLOCK_LIBRARY,
+  type BlockType,
   resolveBrandLogo,
   resolveSubProfileHeaderFooter,
   type WorksheetBlock,
@@ -40,6 +52,197 @@ function DropIndicator({ isActive }: { isActive: boolean }) {
           <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
         </div>
       )}
+    </div>
+  );
+}
+
+function BlockDropZone({
+  id,
+  side,
+}: {
+  id: string;
+  side: "before" | "after";
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`absolute left-0 right-0 z-20 ${side === "before" ? "-top-3 h-6" : "-bottom-3 h-6"}`}
+    >
+      <div
+        className={`pointer-events-none absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-sky-500 transition-opacity ${
+          isOver ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </div>
+  );
+}
+
+function BlockInsertPopover({
+  index,
+  side,
+  targetBlockId,
+}: {
+  index: number;
+  side: "before" | "after";
+  targetBlockId: string;
+}) {
+  const tb = useTranslations("blocks");
+  const tc = useTranslations("common");
+  const { state, access, dispatch, addBlock, canAddBlockType } = useEditor();
+  const [open, setOpen] = React.useState(false);
+  const availableBlocks = React.useMemo(
+    () => BLOCK_LIBRARY.filter((definition) => canAddBlockType(definition.type as BlockType)),
+    [canAddBlockType],
+  );
+  const canMoveSelectedHere =
+    access.features.reorderBlocks &&
+    !!state.selectedBlockId &&
+    state.selectedBlockId !== targetBlockId;
+
+  if (availableBlocks.length === 0 && !canMoveSelectedHere) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`absolute left-1/2 z-30 flex h-5 -translate-x-1/2 items-center gap-1 rounded-full border border-sky-300 bg-white px-2 text-[10px] font-medium text-sky-700 opacity-0 shadow-sm transition-opacity hover:bg-sky-50 group-hover/worksheet-block:opacity-100 focus-visible:opacity-100 ${
+            side === "before" ? "-top-2.5" : "-bottom-2.5"
+          }`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="center"
+        side="right"
+        className="z-50 w-72 p-1"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {canMoveSelectedHere ? (
+          <button
+            type="button"
+            className="mb-1 flex w-full items-center justify-between rounded-[4px] bg-sky-50 px-2 py-1.5 text-left text-xs font-semibold text-sky-800 hover:bg-sky-100"
+            onClick={() => {
+              if (!state.selectedBlockId) return;
+              dispatch({
+                type: "MOVE_BLOCK",
+                payload: {
+                  activeId: state.selectedBlockId,
+                  overId: targetBlockId,
+                  position: side === "before" ? "above" : "below",
+                },
+              });
+              setOpen(false);
+            }}
+          >
+            <span>{tc("move")}</span>
+            <span className="text-[10px] font-normal text-sky-700">{side}</span>
+          </button>
+        ) : null}
+        <div className="max-h-80 overflow-auto">
+          {availableBlocks.map((definition) => (
+            <button
+              key={definition.type}
+              type="button"
+              className="flex w-full flex-col rounded-[4px] px-2 py-1.5 text-left hover:bg-slate-100"
+              onClick={() => {
+                addBlock(definition.type as BlockType, index);
+                setOpen(false);
+              }}
+            >
+              <span className="text-xs font-semibold leading-tight">{tb(definition.labelKey)}</span>
+              <span className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{tb(definition.descriptionKey)}</span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function BlockStructureToolbar({
+  block,
+}: {
+  block: WorksheetBlock;
+}) {
+  const tc = useTranslations("common");
+  const tb = useTranslations("blockRenderer");
+  const { state, access, dispatch, duplicateBlock, moveBlockByStep } = useEditor();
+  const blockIndex = state.blocks.findIndex((candidate) => candidate.id === block.id);
+  const canMoveUp = access.features.reorderBlocks && blockIndex > 0;
+  const canMoveDown = access.features.reorderBlocks && blockIndex >= 0 && blockIndex < state.blocks.length - 1;
+  const canDuplicate = access.features.duplicateBlocks;
+  const canDelete = access.features.deleteBlocks;
+
+  return (
+    <div
+      className="absolute -top-8 left-0 z-40 flex gap-1 rounded-md border border-slate-200 bg-white p-1 opacity-0 shadow-sm transition-opacity group-hover/worksheet-block:opacity-100 group-focus-within/worksheet-block:opacity-100"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent"
+            disabled={!canMoveUp}
+            onClick={() => moveBlockByStep(block.id, "up")}
+          >
+            <ArrowUp className="h-3.5 w-3.5 text-slate-600" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{tb("moveBlockUp")}</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent"
+            disabled={!canMoveDown}
+            onClick={() => moveBlockByStep(block.id, "down")}
+          >
+            <ArrowDown className="h-3.5 w-3.5 text-slate-600" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{tb("moveBlockDown")}</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent"
+            disabled={!canDuplicate}
+            onClick={() => duplicateBlock(block.id)}
+          >
+            <Copy className="h-3.5 w-3.5 text-slate-600" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{tc("duplicate")}</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-red-50 disabled:opacity-35 disabled:hover:bg-transparent"
+            disabled={!canDelete}
+            onClick={() => dispatch({ type: "REMOVE_BLOCK", payload: block.id })}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{tc("delete")}</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -334,6 +537,18 @@ export function WorksheetCanvas({
     });
   }, [visibleBlocks]);
 
+  const sourceBlockIndexById = React.useMemo(() => {
+    const map = new Map<string, number>();
+    state.blocks.forEach((block, index) => map.set(block.id, index));
+    return map;
+  }, [state.blocks]);
+
+  const canvasUnitIndexByRenderId = React.useMemo(() => {
+    const map = new Map<string, number>();
+    canvasBlockUnits.forEach((unit, index) => map.set(unit.renderId, index));
+    return map;
+  }, [canvasBlockUnits]);
+
   const instructionIndexByBlockId = React.useMemo(() => {
     const map = new Map<string, number>();
     let instructionCount = 0;
@@ -614,6 +829,13 @@ export function WorksheetCanvas({
                         const isDragging = !!activeId;
                         const isOverThis = overId === block.id;
                         const isActiveBlock = activeId === block.id;
+                        const isSelectedBlock = state.selectedBlockId === block.id;
+                        const sourceBlockIndex = sourceBlockIndexById.get(unit.sourceBlockId);
+                        const globalUnitIndex = canvasUnitIndexByRenderId.get(unit.renderId) ?? -1;
+                        const previousGlobalUnit = globalUnitIndex > 0 ? canvasBlockUnits[globalUnitIndex - 1] : undefined;
+                        const nextGlobalUnit = globalUnitIndex >= 0 ? canvasBlockUnits[globalUnitIndex + 1] : undefined;
+                        const isFirstSourceUnit = previousGlobalUnit?.sourceBlockId !== unit.sourceBlockId;
+                        const isLastSourceUnit = nextGlobalUnit?.sourceBlockId !== unit.sourceBlockId;
                         const showAbove =
                           blockIndex === 0 &&
                           isDragging &&
@@ -647,7 +869,9 @@ export function WorksheetCanvas({
                                 if (el) blockRefs.current.set(unit.renderId, el);
                               }}
                               data-block-id={unit.renderId}
-                              className={`worksheet-block worksheet-block-${block.type}`}
+                              className={`worksheet-block worksheet-block-${block.type} group/worksheet-block relative ${
+                                isSelectedBlock ? "outline outline-1 outline-offset-4 outline-sky-400" : ""
+                              }`}
                               {...(unit.isContinuation ? { "data-continuation": "true" } : {})}
                               {...(block.type === "text" && !!(block as { tightTop?: boolean }).tightTop ? { "data-tight": "true" } : {})}
                               {...(block.type === "heading" ? { "data-heading-level": String((block as { level: number }).level), "data-heading-bilingual": String(!!(block as { bilingual?: boolean }).bilingual) } : {})}
@@ -660,6 +884,16 @@ export function WorksheetCanvas({
                                 dispatch({ type: "SELECT_BLOCK", payload: block.id });
                               }}
                             >
+                              {isFirstSourceUnit ? (
+                                <BlockDropZone id={`canvas-insert-before-${unit.sourceBlockId}`} side="before" />
+                              ) : null}
+                              {isLastSourceUnit ? (
+                                <BlockDropZone id={`canvas-insert-after-${unit.sourceBlockId}`} side="after" />
+                              ) : null}
+                              {isFirstSourceUnit && sourceBlockIndex !== undefined ? (
+                                <BlockInsertPopover index={sourceBlockIndex} side="before" targetBlockId={unit.sourceBlockId} />
+                              ) : null}
+                              <BlockStructureToolbar block={block} />
                               <ViewerBlockRenderer
                                 block={block}
                                 mode="print"
@@ -684,6 +918,9 @@ export function WorksheetCanvas({
                                 instructionIndex={instructionIndexByBlockId.get(block.id)}
                                 blockGap={resolvedProfile.blockGap}
                               />
+                              {isLastSourceUnit && sourceBlockIndex !== undefined ? (
+                                <BlockInsertPopover index={sourceBlockIndex + 1} side="after" targetBlockId={unit.sourceBlockId} />
+                              ) : null}
                             </div>
                             {isDragging && !isActiveBlock && (
                               <DropIndicator isActive={showBelow} />
