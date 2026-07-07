@@ -12086,7 +12086,6 @@ function StaticScheduleTable({
   };
   const timeRowStyle: React.CSSProperties = {
     ...compactRowCellStyle,
-    verticalAlign: "top",
   };
   const weekdayStyle: React.CSSProperties = {
     display: "inline-block",
@@ -12115,8 +12114,6 @@ function StaticScheduleTable({
   };
   const timeCellContentStyle: React.CSSProperties = {
     ...cellContentStyle,
-    alignItems: "flex-start",
-    paddingTop: 4,
   };
 
   return (
@@ -12176,7 +12173,7 @@ function StaticScheduleTable({
                 </td>
                 {showRoom && <td style={compactRowCellStyle}><div style={{ ...cellContentStyle, paddingRight: 22 }}>{item.room}</div></td>}
                 <td style={rowCellStyle}>
-                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-start", width: "100%", minWidth: 0, paddingTop: 4, paddingBottom: 4, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                  <div style={{ ...cellContentStyle, flexDirection: "column", alignItems: "flex-start", justifyContent: "center", width: "100%", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                   {showBilingualTitle ? (
                     <div style={{ ...bilingualPairStyle, marginBottom: originalItem.description || item.description ? "2px" : 0 }}>
                       <div style={{ width: "100%", fontWeight: 700, whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word" }}>{originalItem.title}</div>
