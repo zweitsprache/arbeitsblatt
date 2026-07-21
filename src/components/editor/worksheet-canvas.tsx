@@ -453,11 +453,14 @@ export function WorksheetCanvas({
   //     (fonts, headings, block gaps, TipTap heading sizes/weights, block
   //     spacing rules in globals.css) identical to the Puppeteer PDF output.
   const hasBlock = (type: WorksheetBlock["type"]) => state.blocks.some((b) => b.type === type);
+  const hasTabooBlock = hasBlock("taboo");
   const hasTenStopWordTabooBlock = state.blocks.some(
     (b) =>
       b.type === "taboo" &&
       (b.stopWordCount === 10 || b.items.some((item) => item.subitems.length > 4)),
   );
+  const useDedicatedTabooPrintHeader = isLandscape && hasTabooBlock;
+  const useDedicatedTabooPrintFooter = isLandscape && hasTabooBlock && showFooter;
   const printFrame = buildPrintFrame({
     settings: state.settings,
     resolvedProfile,
@@ -758,6 +761,7 @@ export function WorksheetCanvas({
                       ["--font-baseline-adjustment" as string]: getFontBaselineAdjustment(resolvedBodyFontFamily),
                       fontFamily: resolvedBodyFontFamily,
                       height: isPresentationMode ? pageHeight : `${pageHeightMm}mm`,
+                      position: "relative",
                       boxSizing: "border-box",
                       overflow: "hidden",
                       display: "flex",
@@ -770,7 +774,7 @@ export function WorksheetCanvas({
                     }}
                   >
                     {/* Header (brand) — fixed 30mm region, mirrors .print-header-content */}
-                    {showHeader && (
+                    {showHeader && !useDedicatedTabooPrintHeader && (
                       <div
                         aria-hidden="true"
                         className="print-header-content"
@@ -808,14 +812,46 @@ export function WorksheetCanvas({
                       </div>
                     )}
 
+                    {showHeader && useDedicatedTabooPrintHeader && !hasTenStopWordTabooBlock && (
+                      <div
+                        aria-hidden="true"
+                        className="print-taboo-header"
+                        style={{
+                          position: "absolute",
+                          top: "15mm",
+                          left: "20mm",
+                          right: "15mm",
+                          zIndex: 10,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <div>
+                          {hasHeaderLeft ? (
+                            <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                          ) : (
+                            hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                          )}
+                        </div>
+                        <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: "12px" }}>
+                          {hasHeaderLeft && hasHeaderRight && (
+                            <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                          )}
+                          {hasLogo && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={brandHeaderFooter.logo} alt="" style={{ height: "8mm", width: "auto" }} />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Blocks on this page — body region with left/right padding only */}
                     <div
                       className="print-body-content"
                       style={{
                         flex: "1 1 auto",
                         minHeight: 0,
-                        paddingLeft: "20mm",
-                        paddingRight: "20mm",
+                        paddingLeft: useDedicatedTabooPrintHeader ? 0 : "20mm",
+                        paddingRight: useDedicatedTabooPrintHeader ? 0 : "20mm",
                         fontSize: resolvedBodyFontSize,
                       }}
                     >
@@ -932,7 +968,7 @@ export function WorksheetCanvas({
                     </div>
 
                     {/* Footer (brand) — fixed 25mm region */}
-                    {showFooter && (
+                    {showFooter && !useDedicatedTabooPrintFooter && (
                       <div
                         aria-hidden="true"
                         className="print-footer-content"
@@ -962,6 +998,35 @@ export function WorksheetCanvas({
                           ) : null}
                         </div>
                         <div style={{ flex: "0 1 45%", minWidth: 0, textAlign: "right" }}>
+                          {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+                        </div>
+                      </div>
+                    )}
+
+                    {showFooter && useDedicatedTabooPrintFooter && !hasTenStopWordTabooBlock && (
+                      <div
+                        aria-hidden="true"
+                        className="print-taboo-footer"
+                        style={{
+                          position: "absolute",
+                          left: "15mm",
+                          right: "15mm",
+                          bottom: "8mm",
+                          zIndex: 10,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <div>
+                          {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+                        </div>
+                        <div>
+                          {processedFooterCenter ? (
+                            <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                          ) : state.settings.footerText ? (
+                            <span>{state.settings.footerText}</span>
+                          ) : null}
+                        </div>
+                        <div>
                           {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
                         </div>
                       </div>
