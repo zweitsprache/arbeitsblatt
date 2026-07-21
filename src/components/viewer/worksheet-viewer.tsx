@@ -308,10 +308,12 @@ export function WorksheetViewer({
   const suppressCanvaSideRail = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasAufgabenkartenBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
   const useDedicatedCardPrintHeader = mode === "print" && isCanvaLandscape && (hasDominoBlock || hasFlashcardsBlock || hasAufgabenkartenBlock || hasCardPairsBlock || hasQuartettBlock || hasTabooBlock || hasSyllableCardsBlock);
   const useDedicatedCardPrintFooter = false;
+  const useDedicatedTabooPrintHeader = mode === "print" && isLandscape && hasTabooBlock;
+  const useDedicatedTabooPrintFooter = mode === "print" && isLandscape && hasTabooBlock && showPrintFooter;
   const useDedicatedQuartettPrintFooter = mode === "print" && isCanvaLandscape && (hasQuartettBlock || hasTabooBlock) && showPrintFooter;
   const useCanvaSideRail = mode === "print" && isCanvaLandscape && !suppressCanvaSideRail && (showPrintHeader || showPrintFooter);
-  const showTablePrintHeader = showPrintHeader && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintHeader;
-  const showTablePrintFooter = showPrintFooter && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter;
+  const showTablePrintHeader = showPrintHeader && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintHeader && !useDedicatedTabooPrintHeader;
+  const showTablePrintFooter = showPrintFooter && !hasTenStopWordTabooBlock && !useCanvaSideRail && !useDedicatedCardPrintFooter && !useDedicatedQuartettPrintFooter && !useDedicatedTabooPrintFooter;
   const resolvedHeadlineWeight = normalizeWeight(brandFonts.headlineWeight, 700);
   const resolvedH1Weight = normalizeWeight(resolvedProfile.h1Weight, resolvedHeadlineWeight);
   const resolvedH2Weight = normalizeWeight(resolvedProfile.h2Weight, resolvedHeadlineWeight);
@@ -458,6 +460,38 @@ export function WorksheetViewer({
           )}
           {useDedicatedQuartettPrintFooter && (
             <div className="print-canva-side-footer print-quartett-rotated-footer" aria-hidden="true">
+              <div>
+                {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
+              </div>
+              <div>
+                {processedFooterCenter ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedFooterCenter }} />
+                ) : settings.footerText ? (
+                  <span>{settings.footerText}</span>
+                ) : null}
+              </div>
+              <div>
+                {hasFooterRight && <span dangerouslySetInnerHTML={{ __html: processedFooterRight }} />}
+              </div>
+            </div>
+          )}
+          {useDedicatedTabooPrintHeader && !hasTenStopWordTabooBlock && showPrintHeader && (
+            <div className="print-taboo-header" aria-hidden="true">
+              <div>
+                {hasHeaderLeft ? (
+                  <span dangerouslySetInnerHTML={{ __html: processedHeaderLeft }} />
+                ) : (
+                  hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />
+                )}
+              </div>
+              <div style={{ textAlign: "right", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: "12px" }}>
+                {hasHeaderLeft && hasHeaderRight && <span dangerouslySetInnerHTML={{ __html: processedHeaderRight }} />}
+                {hasLogo && <img src={brandSettings.logo} alt="" />}
+              </div>
+            </div>
+          )}
+          {useDedicatedTabooPrintFooter && !hasTenStopWordTabooBlock && (
+            <div className="print-taboo-footer" aria-hidden="true">
               <div>
                 {hasFooterLeft && <span dangerouslySetInnerHTML={{ __html: processedFooterLeft }} />}
               </div>

@@ -8092,7 +8092,57 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [csvMode, setCsvMode] = React.useState<"replace" | "append">("replace");
 
-  const parseCsvLine = (line: string): string[] => {
+  const detectCsvDelimiter = (lines: string[]): ";" | "," | "\t" => {
+    const countDelimiterOutsideQuotes = (line: string, delimiter: ";" | "," | "\t") => {
+      let count = 0;
+      let inQuotes = false;
+
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        const nextChar = line[index + 1];
+
+        if (char === '"') {
+          if (inQuotes && nextChar === '"') {
+            index += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (!inQuotes && char === delimiter) {
+          count += 1;
+        }
+      }
+
+      return count;
+    };
+
+    const candidates: Array<"\t" | ";" | ","> = ["\t", ";", ","];
+    const totals = new Map<"\t" | ";" | ",", number>(
+      candidates.map((candidate) => [candidate, 0])
+    );
+
+    for (const line of lines) {
+      for (const candidate of candidates) {
+        totals.set(
+          candidate,
+          (totals.get(candidate) ?? 0) + countDelimiterOutsideQuotes(line, candidate)
+        );
+      }
+    }
+
+    let best: "\t" | ";" | "," = "\t";
+    for (const candidate of candidates) {
+      if ((totals.get(candidate) ?? 0) > (totals.get(best) ?? 0)) {
+        best = candidate;
+      }
+    }
+
+    return best;
+  };
+
+  const parseCsvLine = (line: string, delimiter: ";" | "," | "\t"): string[] => {
     const values: string[] = [];
     let current = "";
     let inQuotes = false;
@@ -8111,7 +8161,7 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
         continue;
       }
 
-      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
+      if (!inQuotes && char === delimiter) {
         values.push(current.trim());
         current = "";
         continue;
@@ -8121,6 +8171,12 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
     }
 
     values.push(current.trim());
+
+    // Tolerate accidental trailing separators at line end (e.g. TSV with a trailing tab).
+    while (values.length > 1 && values[values.length - 1] === "") {
+      values.pop();
+    }
+
     return values;
   };
 
@@ -8139,7 +8195,8 @@ function SortingCategoriesProps({ block }: { block: SortingCategoriesBlock }) {
       return;
     }
 
-    const parsedRows = lines.map(parseCsvLine);
+    const delimiter = detectCsvDelimiter(lines);
+    const parsedRows = lines.map((line) => parseCsvLine(line, delimiter));
     const maxColumns = Math.max(...parsedRows.map((row) => row.length));
 
     if (maxColumns > 2) {
@@ -12353,7 +12410,57 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     })),
   });
 
-  const parseCsvLine = (line: string): string[] => {
+  const detectCsvDelimiter = (lines: string[]): ";" | "," | "\t" => {
+    const countDelimiterOutsideQuotes = (line: string, delimiter: ";" | "," | "\t") => {
+      let count = 0;
+      let inQuotes = false;
+
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        const nextChar = line[index + 1];
+
+        if (char === '"') {
+          if (inQuotes && nextChar === '"') {
+            index += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (!inQuotes && char === delimiter) {
+          count += 1;
+        }
+      }
+
+      return count;
+    };
+
+    const candidates: Array<"\t" | ";" | ","> = ["\t", ";", ","];
+    const totals = new Map<"\t" | ";" | ",", number>(
+      candidates.map((candidate) => [candidate, 0])
+    );
+
+    for (const line of lines) {
+      for (const candidate of candidates) {
+        totals.set(
+          candidate,
+          (totals.get(candidate) ?? 0) + countDelimiterOutsideQuotes(line, candidate)
+        );
+      }
+    }
+
+    let best: "\t" | ";" | "," = "\t";
+    for (const candidate of candidates) {
+      if ((totals.get(candidate) ?? 0) > (totals.get(best) ?? 0)) {
+        best = candidate;
+      }
+    }
+
+    return best;
+  };
+
+  const parseCsvLine = (line: string, delimiter: ";" | "," | "\t"): string[] => {
     const values: string[] = [];
     let current = "";
     let inQuotes = false;
@@ -12372,7 +12479,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
         continue;
       }
 
-      if (!inQuotes && (char === ";" || char === "," || char === "\t")) {
+      if (!inQuotes && char === delimiter) {
         values.push(current.trim());
         current = "";
         continue;
@@ -12382,6 +12489,12 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
     }
 
     values.push(current.trim());
+
+    // Tolerate accidental trailing separators at line end (e.g. TSV with a trailing tab).
+    while (values.length > 1 && values[values.length - 1] === "") {
+      values.pop();
+    }
+
     return values;
   };
 
@@ -12482,7 +12595,8 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
       return;
     }
 
-    const parsedRows = lines.map(parseCsvLine);
+    const delimiter = detectCsvDelimiter(lines);
+    const parsedRows = lines.map((line) => parseCsvLine(line, delimiter));
     const maxColumns = Math.max(...parsedRows.map((row) => row.length));
 
     let importedItems: CardListBlock["items"] = [];
@@ -12499,7 +12613,7 @@ function CardListProps({ block, kind }: { block: CardListBlock; kind: "quartett"
           content: row[1] ?? "",
         }))
       );
-    } else if (kind === "taboo" && maxColumns === tabooStopWordCount + 1) {
+    } else if (kind === "taboo" && maxColumns >= 3 && maxColumns <= tabooStopWordCount + 1) {
       importedItems = buildTabooItemsFromColumns(parsedRows);
     } else {
       setCsvError(labels.tooManyColumns);

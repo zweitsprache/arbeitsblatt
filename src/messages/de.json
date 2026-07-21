@@ -1683,7 +1683,7 @@
     "shufflePairs": "Paare mischen",
     "tabooCsvImportHelp": "CSV-Import: Eine Spalte erstellt pro Zeile ein TABOO-Wort. Zwei Spalten verwenden Wort,Stoppwort und gruppieren Zeilen mit gleichem Wort. Vollständige Kartenzeilen verwenden das Wort gefolgt von der eingestellten Anzahl Stoppwörter.",
     "tabooCsvPlaceholder": "Apfel\nBirne\nBanane\nTraube\n\nObst;Frucht\nObst;Baum\nObst;rot\nObst;süss\n\nApfel;Frucht;Baum;rot;süss\nZug;Schiene;Bahnhof;Gleis;Reise",
-    "tabooCsvTooManyColumns": "Der TABOO-CSV-Import unterstützt nur 1, 2 oder die eingestellte vollständige Kartenspaltenzahl.",
+    "tabooCsvTooManyColumns": "Der TABOO-CSV-Import unterstützt nur 1, 2 oder bis zur eingestellten vollständigen Kartenspaltenzahl.",
     "tabooExportCards": "Karten exportieren",
     "tabooExportCardsFailed": "Die TABOO-Karten konnten nicht exportiert werden.",
     "tabooExportCardsLoading": "Karten werden exportiert…",

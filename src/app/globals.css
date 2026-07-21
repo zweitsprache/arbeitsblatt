@@ -896,8 +896,70 @@
   padding: 0;
 }
 
+.print-worksheet-root.print-landscape.print-has-taboo .print-body-content {
+  padding: 0;
+}
+
 .print-worksheet-root.print-has-taboo-ten .print-body-content {
   padding: 0;
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-header {
+  position: fixed;
+  top: 15mm;
+  left: 20mm;
+  right: 15mm;
+  z-index: 10;
+  pointer-events: none;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #666;
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-header img {
+  display: block;
+  height: 8mm;
+  max-height: 8mm;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-footer {
+  position: fixed;
+  left: 15mm;
+  right: 15mm;
+  bottom: 8mm;
+  z-index: 10;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 45% 10% 45%;
+  align-items: end;
+  font-family: var(--print-header-footer-font);
+  font-size: 7pt;
+  font-weight: 400;
+  line-height: 1.5;
+  color: hsl(var(--foreground));
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-footer > div {
+  min-width: 0;
+  text-align: left;
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-footer > div:nth-child(2) {
+  text-align: center;
+}
+
+.print-worksheet-root.print-landscape.print-has-taboo .print-taboo-footer > div:last-child {
+  text-align: right;
 }
 
 .print-worksheet-root.print-has-taboo-ten .print-taboo-ten-header {

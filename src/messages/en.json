@@ -1683,7 +1683,7 @@
     "shufflePairs": "Shuffle pairs",
     "tabooCsvImportHelp": "CSV import: one column creates one TABOO card word per row. Two columns use word,stop word and group rows with the same word. Full-card rows use word followed by the configured number of stop words.",
     "tabooCsvPlaceholder": "Apple\nPear\nBanana\nGrape\n\nFruit;food\nFruit;tree\nFruit;red\nFruit;sweet\n\nApple;fruit;tree;red;sweet\nTrain;rail;station;track;travel",
-    "tabooCsvTooManyColumns": "TABOO CSV import supports only 1, 2, or the configured full-card column count.",
+    "tabooCsvTooManyColumns": "TABOO CSV import supports only 1, 2, or up to the configured full-card column count.",
     "tabooExportCards": "Export cards",
     "tabooExportCardsFailed": "Could not export TABOO cards.",
     "tabooExportCardsLoading": "Exporting cards…",
