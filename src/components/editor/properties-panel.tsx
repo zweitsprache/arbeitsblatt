@@ -6384,15 +6384,43 @@ function AufgabenkartenProps({ block }: { block: AufgabenkartenBlock }) {
 }
 
 function TextProps({ block }: { block: TextBlock }) {
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("properties");
   const tc = useTranslations("common");
   const { upload } = useUpload();
   const [showAiModal, setShowAiModal] = React.useState(false);
+  const [textOpen, setTextOpen] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const [cropOpen, setCropOpen] = React.useState(false);
+
+  const hasTextContentOverride = hasChOverride(block.id, "content", state.settings.chOverrides);
+  const textContentOverride = state.settings.chOverrides?.[block.id]?.content;
+  const effectiveTextContent =
+    state.localeMode === "DE" && textContentOverride !== undefined
+      ? textContentOverride
+      : block.content;
+
+  const handleTextContentChange = React.useCallback((html: string) => {
+    if (state.localeMode === "DE") {
+      if (html === block.content) {
+        dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content" } });
+      } else {
+        dispatch({ type: "SET_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content", value: html } });
+      }
+      return;
+    }
+
+    dispatch({
+      type: "UPDATE_BLOCK",
+      payload: { id: block.id, updates: { content: html } },
+    });
+  }, [block.content, block.id, dispatch, state.localeMode]);
+
+  const clearTextContentOverride = React.useCallback(() => {
+    dispatch({ type: "CLEAR_CH_OVERRIDE", payload: { blockId: block.id, fieldPath: "content" } });
+  }, [block.id, dispatch]);
 
   const handleFileSelected = (file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -6448,15 +6476,27 @@ function TextProps({ block }: { block: TextBlock }) {
     <div className="space-y-3">
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{tc("content")}</Label>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full gap-2 text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
-          onClick={() => setShowAiModal(true)}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          {t("aiGenerateText")}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-pink-700 border-pink-200 hover:bg-pink-50 hover:text-pink-800"
+            onClick={() => setShowAiModal(true)}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {t("aiGenerateText")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTextOpen(true)}
+          >
+            {t("textEditContent")}
+          </Button>
+        </div>
+        {hasTextContentOverride ? (
+          <p className="text-[11px] text-amber-700">{t("textContentOverrideActive")}</p>
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider px-2 py-1.5 bg-sky-50 rounded-[4px] block">{t("textStyle")}</Label>
@@ -6653,6 +6693,35 @@ function TextProps({ block }: { block: TextBlock }) {
         onOpenChange={setShowAiModal}
         blockId={block.id}
       />
+      <Dialog open={textOpen} onOpenChange={setTextOpen}>
+        <DialogContent className="flex h-[90vh] !w-[96vw] !max-w-[96vw] flex-col overflow-hidden p-0 sm:!max-w-[96vw]">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
+            <DialogTitle>{t("textEditContentTitle")}</DialogTitle>
+            <DialogDescription>{t("textEditContentDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4">
+            <div className="rounded-md border bg-white p-2">
+              <RichTextEditor
+                content={effectiveTextContent}
+                onChange={handleTextContentChange}
+                placeholder={t("textCommentPlaceholder")}
+              />
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-5 py-3 sm:justify-between">
+            <div>
+              {hasTextContentOverride ? (
+                <Button type="button" variant="ghost" size="sm" onClick={clearTextContentOverride}>
+                  {t("tableClearContentOverride")}
+                </Button>
+              ) : null}
+            </div>
+            <Button type="button" size="sm" onClick={() => setTextOpen(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ImageCropDialog
         imageSrc={cropSrc}
         open={cropOpen}
