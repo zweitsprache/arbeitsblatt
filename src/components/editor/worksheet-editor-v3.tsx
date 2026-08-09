@@ -10,5 +10,5 @@ export function WorksheetEditorV3({
   initialData?: WorksheetDocument | null;
   initialBrandProfile?: BrandProfile | null;
 }) {
-  return <WorksheetEditor initialData={initialData} initialBrandProfile={initialBrandProfile} editorVersion="v3" />;
+  return <WorksheetEditor initialData={initialData} initialBrandProfile={initialBrandProfile} editorVersion="v1" />;
 }
