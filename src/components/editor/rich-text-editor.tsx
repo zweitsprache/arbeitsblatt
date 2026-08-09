@@ -302,7 +302,12 @@ export function RichTextEditor({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div ref={wrapperRef} className={wrapperClassName ?? "rounded-md border border-input bg-background"}>
+      <div
+        ref={wrapperRef}
+        className={wrapperClassName ?? "rounded-md border border-input bg-background"}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
         {/* Toolbar – only shown when this editor has focus */}
         {editable && showToolbar && (
           <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-1.5 py-1" onFocus={handleToolbarFocusIn}>
